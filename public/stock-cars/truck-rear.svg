@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" fill="none">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1a1a2e"/>
+      <stop offset="100%" stop-color="#2d3436"/>
+    </linearGradient>
+    <linearGradient id="road" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#2c2c2c"/>
+      <stop offset="100%" stop-color="#1a1a1a"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="800" fill="url(#sky)"/>
+
+  <!-- Road surface -->
+  <rect x="0" y="560" width="1200" height="240" fill="url(#road)"/>
+
+  <!-- Truck bed -->
+  <rect x="250" y="280" width="700" height="30" fill="#3d3d3d"/>
+  <rect x="250" y="310" width="700" height="200" fill="none" stroke="#3d3d3d" stroke-width="6"/>
+
+  <!-- Cab — slightly raised -->
+  <path d="M280 310 L310 200 Q320 170 370 160 L830 160 Q880 170 890 200 L920 310 Z" fill="#2c3e50"/>
+
+  <!-- Rear window -->
+  <path d="M340 210 L355 185 Q365 170 390 170 L810 170 Q835 170 845 185 L860 210 Z" fill="#1a1a2e" opacity="0.8"/>
+
+  <!-- Tailgate -->
+  <rect x="260" y="310" width="680" height="230" fill="#34495e"/>
+
+  <!-- Tailgate handle -->
+  <rect x="520" y="400" width="160" height="8" rx="4" fill="#555"/>
+
+  <!-- Tail lights — wide rectangles -->
+  <rect x="250" y="510" width="70" height="30" rx="4" fill="#e74c3c"/>
+  <rect x="880" y="510" width="70" height="30" rx="4" fill="#e74c3c"/>
+  <rect x="250" y="510" width="70" height="30" rx="4" fill="#ff6b6b" opacity="0.3"/>
+  <rect x="880" y="510" width="70" height="30" rx="4" fill="#ff6b6b" opacity="0.3"/>
+
+  <!-- License plate area (centered on tailgate) -->
+  <rect x="500" y="460" width="200" height="50" rx="4" fill="#ddd" stroke="#999" stroke-width="2"/>
+  <text x="600" y="492" text-anchor="middle" font-family="sans-serif" font-size="18" fill="#333">PLATE</text>
+
+  <!-- Bumper -->
+  <rect x="240" y="545" width="720" height="16" rx="5" fill="#222"/>
+
+  <!-- Hitch -->
+  <rect x="565" y="565" width="70" height="20" rx="4" fill="#333"/>
+  <circle cx="600" cy="580" r="8" fill="#444" stroke="#555" stroke-width="2"/>
+
+  <!-- Ground shadow -->
+  <ellipse cx="600" cy="570" rx="380" ry="20" fill="black" opacity="0.3"/>
+</svg>

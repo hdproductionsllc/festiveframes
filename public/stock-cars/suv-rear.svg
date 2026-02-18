@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" fill="none">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1a1a2e"/>
+      <stop offset="100%" stop-color="#2d3436"/>
+    </linearGradient>
+    <linearGradient id="road" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#2c2c2c"/>
+      <stop offset="100%" stop-color="#1a1a1a"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="800" fill="url(#sky)"/>
+
+  <!-- Road surface -->
+  <rect x="0" y="540" width="1200" height="260" fill="url(#road)"/>
+  <rect x="550" y="700" width="100" height="20" rx="2" fill="#444" opacity="0.5"/>
+
+  <!-- SUV body — taller and boxier -->
+  <path d="M280 500 L300 240 Q310 210 360 200 L840 200 Q890 210 900 240 L920 500 Z" fill="#34495e"/>
+  <path d="M260 500 L260 610 Q260 630 280 630 L920 630 Q940 630 940 610 L940 500 Z" fill="#34495e"/>
+
+  <!-- Rear window -->
+  <path d="M330 250 L345 220 Q355 205 380 205 L820 205 Q845 205 855 220 L870 250 Z" fill="#1a1a2e" opacity="0.8"/>
+
+  <!-- Roof rack hints -->
+  <rect x="350" y="195" width="500" height="4" rx="2" fill="#555"/>
+
+  <!-- Tail lights — taller for SUV -->
+  <rect x="265" y="500" width="50" height="50" rx="6" fill="#e74c3c"/>
+  <rect x="885" y="500" width="50" height="50" rx="6" fill="#e74c3c"/>
+  <rect x="265" y="500" width="50" height="50" rx="6" fill="#ff6b6b" opacity="0.3"/>
+  <rect x="885" y="500" width="50" height="50" rx="6" fill="#ff6b6b" opacity="0.3"/>
+
+  <!-- License plate area (centered) -->
+  <rect x="500" y="560" width="200" height="50" rx="4" fill="#ddd" stroke="#999" stroke-width="2"/>
+  <text x="600" y="592" text-anchor="middle" font-family="sans-serif" font-size="18" fill="#333">PLATE</text>
+
+  <!-- Bumper -->
+  <rect x="320" y="610" width="560" height="14" rx="5" fill="#222"/>
+
+  <!-- Spare tire hint -->
+  <circle cx="600" cy="440" r="45" fill="#2a2a2a" stroke="#444" stroke-width="2"/>
+  <circle cx="600" cy="440" r="20" fill="#333"/>
+
+  <!-- Ground shadow -->
+  <ellipse cx="600" cy="640" rx="360" ry="18" fill="black" opacity="0.3"/>
+</svg>

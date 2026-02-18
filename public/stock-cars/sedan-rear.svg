@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" fill="none">
+  <!-- Sky gradient -->
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1a1a2e"/>
+      <stop offset="100%" stop-color="#2d3436"/>
+    </linearGradient>
+    <linearGradient id="road" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#2c2c2c"/>
+      <stop offset="100%" stop-color="#1a1a1a"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="800" fill="url(#sky)"/>
+
+  <!-- Road surface -->
+  <rect x="0" y="500" width="1200" height="300" fill="url(#road)"/>
+  <rect x="550" y="680" width="100" height="20" rx="2" fill="#444" opacity="0.5"/>
+
+  <!-- Car body -->
+  <path d="M300 480 L340 340 Q350 300 400 280 L800 280 Q850 300 860 340 L900 480 Z" fill="#2c3e50"/>
+  <path d="M280 480 L280 580 Q280 600 300 600 L900 600 Q920 600 920 580 L920 480 Z" fill="#2c3e50"/>
+
+  <!-- Rear window -->
+  <path d="M360 340 L380 300 Q390 285 420 285 L780 285 Q810 285 820 300 L840 340 Z" fill="#1a1a2e" opacity="0.8"/>
+
+  <!-- Tail lights -->
+  <rect x="285" y="490" width="60" height="25" rx="5" fill="#e74c3c"/>
+  <rect x="855" y="490" width="60" height="25" rx="5" fill="#e74c3c"/>
+  <rect x="285" y="490" width="60" height="25" rx="5" fill="#ff6b6b" opacity="0.3"/>
+  <rect x="855" y="490" width="60" height="25" rx="5" fill="#ff6b6b" opacity="0.3"/>
+
+  <!-- License plate area (centered) -->
+  <rect x="500" y="530" width="200" height="50" rx="4" fill="#ddd" stroke="#999" stroke-width="2"/>
+  <text x="600" y="562" text-anchor="middle" font-family="sans-serif" font-size="18" fill="#333">PLATE</text>
+
+  <!-- Bumper details -->
+  <rect x="350" y="580" width="500" height="12" rx="4" fill="#222"/>
+  <rect x="520" y="595" width="160" height="5" rx="2" fill="#333"/>
+
+  <!-- Ground shadow -->
+  <ellipse cx="600" cy="610" rx="340" ry="15" fill="black" opacity="0.3"/>
+</svg>
