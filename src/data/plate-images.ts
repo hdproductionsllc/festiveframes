@@ -12,7 +12,7 @@ const REPO_BASE = "https://raw.githubusercontent.com/jonkeegan/us-license-plates
 // High-quality local plates in /public/plates/ (Wikimedia Commons, CC-BY-SA)
 const localPlates: Record<string, string> = {
   CA: "/plates/california.jpg",
-  MO: "/plates/missouri.png",
+  MO: "/plates/missouri.jpg",
 };
 
 const plateImageFiles: Record<string, string> = {
