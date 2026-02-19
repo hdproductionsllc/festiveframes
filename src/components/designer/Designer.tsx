@@ -149,8 +149,8 @@ export function Designer() {
           {/* Palette — left side on desktop */}
           <TilePalette />
 
-          {/* Main content area */}
-          <div className="flex-1 flex flex-col gap-4 min-w-0">
+          {/* Main content area — sticky on desktop so it follows scroll */}
+          <div className="flex-1 flex flex-col gap-4 min-w-0 md:sticky md:top-4 md:self-start">
             {/* State selector + tab toggle row */}
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">

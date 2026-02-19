@@ -51,7 +51,7 @@ export function QuickActions() {
       icon: "🪞",
       onClick: () => { mirrorTopSlots(); sfx("shimmer"); },
       disabled: false,
-      title: "Mirror top slots left to right",
+      title: "Mirror left side to right (all rails + wings)",
     },
     {
       label: "Clear",

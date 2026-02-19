@@ -9,19 +9,29 @@ import { valentinesSet } from "./valentines";
 import { stPatricksSet } from "./st-patricks";
 import { newYearsSet } from "./new-years";
 import { hanukkahSet } from "./hanukkah";
+import { sakuraSet } from "./sakura";
+import { lunarNewYearSet } from "./lunar-new-year";
+import { diaDeMuertosSet } from "./dia-de-muertos";
+import { kwanzaaSet } from "./kwanzaa";
+import { diwaliSet } from "./diwali";
 
-// Ordered: Essentials first, then chronologically through the year
+// Ordered: Essentials first, holidays chronologically, then cultural sets
 export const tileSets: TileSet[] = [
   essentialsSet,
   newYearsSet,
+  lunarNewYearSet,
   valentinesSet,
   stPatricksSet,
   easterSet,
   fourthOfJulySet,
   halloweenSet,
+  diaDeMuertosSet,
+  diwaliSet,
   thanksgivingSet,
+  kwanzaaSet,
   hanukkahSet,
   christmasSet,
+  sakuraSet,
 ];
 
 const setMap = new Map<string, TileSet>(tileSets.map((s) => [s.id, s]));

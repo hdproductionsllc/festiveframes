@@ -161,18 +161,55 @@ export const useDesignStore = create<DesignState>()(
         mirrorTopSlots: () => {
           set((state) => {
             const newSlots = { ...state.slots };
-            const topCount = state.frameConfig.topSlots;
-            const half = Math.floor(topCount / 2);
-            for (let i = 0; i < half; i++) {
+            const { topSlots, leftSlots, rightSlots, wings, wingColumns } = state.frameConfig;
+
+            // Mirror top rail: left half → right half
+            const topHalf = Math.floor(topSlots / 2);
+            for (let i = 0; i < topHalf; i++) {
               const leftId = `frame:top-${i}`;
-              const rightId = `frame:top-${topCount - 1 - i}`;
-              const leftTile = state.slots[leftId];
-              if (leftTile) {
-                newSlots[rightId] = { ...leftTile };
+              const rightId = `frame:top-${topSlots - 1 - i}`;
+              if (state.slots[leftId]) {
+                newSlots[rightId] = { ...state.slots[leftId] };
               } else {
                 delete newSlots[rightId];
               }
             }
+
+            // Mirror left rail → right rail (same row index)
+            const sideCount = Math.min(leftSlots, rightSlots);
+            for (let i = 0; i < sideCount; i++) {
+              const leftId = `frame:left-${i}`;
+              const rightId = `frame:right-${i}`;
+              if (state.slots[leftId]) {
+                newSlots[rightId] = { ...state.slots[leftId] };
+              } else {
+                delete newSlots[rightId];
+              }
+            }
+
+            // Mirror bottom-left → bottom-right
+            const bl = state.slots["frame:bottom-left-0"];
+            if (bl) {
+              newSlots["frame:bottom-right-0"] = { ...bl };
+            } else {
+              delete newSlots["frame:bottom-right-0"];
+            }
+
+            // Mirror wing-left → wing-right (same flat index)
+            if (wings && wingColumns > 0) {
+              const wingRows = leftSlots + 1;
+              const totalWingSlots = wingColumns * wingRows;
+              for (let i = 0; i < totalWingSlots; i++) {
+                const leftId = `frame:wing-left-${i}`;
+                const rightId = `frame:wing-right-${i}`;
+                if (state.slots[leftId]) {
+                  newSlots[rightId] = { ...state.slots[leftId] };
+                } else {
+                  delete newSlots[rightId];
+                }
+              }
+            }
+
             return {
               ...pushHistory(),
               slots: newSlots,

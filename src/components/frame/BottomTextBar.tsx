@@ -40,7 +40,6 @@ export function BottomTextBar({ config, qrConfig, x, y, width, height }: BottomT
             color: config.textColor,
             fontSize,
             letterSpacing: config.letterSpacing,
-            paddingRight: qrConfig.enabled ? qrSize + 8 : 0,
           }}
         >
           {config.text || "YOUR TEXT HERE"}
