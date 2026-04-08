@@ -1,11 +1,14 @@
 // ─── Tile System ────────────────────────────────────────────
 
+export type TileStyle = "emoji" | "photorealistic";
+
 export interface TileSet {
   id: string;
   name: string;
   icon: string; // representative emoji for set selector
   description: string;
   price: number;
+  style?: TileStyle; // defaults to "emoji" when omitted
   pieces: TilePiece[];
   presets: DesignPreset[];
 }

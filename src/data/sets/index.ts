@@ -15,6 +15,7 @@ import { diaDeMuertosSet } from "./dia-de-muertos";
 import { kwanzaaSet } from "./kwanzaa";
 import { diwaliSet } from "./diwali";
 import { militarySet } from "./military";
+import { militaryRealisticSet } from "./military-realistic";
 
 // Ordered: Essentials first, holidays chronologically, then cultural/themed sets
 export const tileSets: TileSet[] = [
@@ -34,6 +35,7 @@ export const tileSets: TileSet[] = [
   christmasSet,
   sakuraSet,
   militarySet,
+  militaryRealisticSet,
 ];
 
 const setMap = new Map<string, TileSet>(tileSets.map((s) => [s.id, s]));
