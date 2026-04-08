@@ -106,6 +106,10 @@ const DIE_CUT_ELIGIBLE = new Set([
   "clock", "trumpet", "party-face", "champagne-bottle", "balloon",
   // Hanukkah
   "menorah", "star-of-david", "blue-heart",
+  // Military & Veteran
+  "medal", "gold-medal", "flag", "eagle", "star", "glowing-star",
+  "anchor", "shield", "airplane", "helicopter", "ribbon", "salute",
+  "swords", "purple-heart", "dove", "flexed",
 ]);
 
 export function canDieCut(pieceId: string): boolean {
