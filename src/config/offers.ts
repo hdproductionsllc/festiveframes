@@ -62,4 +62,5 @@ export function formatUsd(cents: number): string {
 export const ALPHABET_ADDON = {
   priceCents: 1000,
   productName: "Full A-Z & 0-9 Letter Set",
+  maxQty: 20,
 };

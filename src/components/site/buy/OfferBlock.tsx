@@ -16,15 +16,15 @@ export function OfferBlock() {
   const setSelection = useBuyStore((s) => s.setSelection);
   const quantity = useBuyStore((s) => s.quantity);
   const setQuantity = useBuyStore((s) => s.setQuantity);
-  const addAlphabet = useBuyStore((s) => s.addAlphabet);
-  const setAddAlphabet = useBuyStore((s) => s.setAddAlphabet);
+  const alphabetQty = useBuyStore((s) => s.alphabetQty);
+  const setAlphabetQty = useBuyStore((s) => s.setAlphabetQty);
 
   const { checkout, pending, error } = useCheckout();
 
   const bundleSelected = selection === "bundle";
   const unitPrice = bundleSelected ? offer.bundlePrice : offer.singlePrice;
   const baseTotal = unitPrice * quantity;
-  const addonTotal = addAlphabet ? ALPHABET_ADDON.priceCents : 0;
+  const addonTotal = ALPHABET_ADDON.priceCents * alphabetQty;
   const total = baseTotal + addonTotal;
 
   const unitNoun = bundleSelected ? "bundle" : "set";
@@ -161,23 +161,43 @@ export function OfferBlock() {
             {bundleSelected ? ` (${setsTotal} sets total)` : ""}
           </p>
 
-          <label className="mt-4 flex cursor-pointer items-start gap-3 border-t border-brand-navy/10 pt-4 text-sm text-brand-ink">
-            <input
-              type="checkbox"
-              checked={addAlphabet}
-              onChange={(e) => setAddAlphabet(e.target.checked)}
-              className="mt-0.5 h-4 w-4 accent-brand-red"
-            />
-            <span>
-              Add the full A-Z &amp; 0-9 letter set{" "}
+          <div className="mt-4 flex items-start justify-between gap-3 border-t border-brand-navy/10 pt-4">
+            <div className="text-sm text-brand-ink">
+              A-Z &amp; 0-9 letter set{" "}
               <span className="font-semibold text-brand-navy">
-                +{formatUsd(ALPHABET_ADDON.priceCents)}
+                +{formatUsd(ALPHABET_ADDON.priceCents)} each
               </span>
               <span className="mt-0.5 block text-xs text-brand-ink/70">
-                One letter set, spell anything you want on the bottom bar.
+                Add as many as you want to spell anything on the bottom bar.
               </span>
-            </span>
-          </label>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setAlphabetQty(alphabetQty - 1)}
+                disabled={alphabetQty <= 0}
+                aria-label="Fewer letter sets"
+                className="flex h-8 w-8 items-center justify-center rounded-md border border-brand-navy/30 text-lg text-brand-navy disabled:opacity-40"
+              >
+                −
+              </button>
+              <span
+                aria-live="polite"
+                className="w-6 text-center font-mkt-display text-lg font-bold text-brand-navy"
+              >
+                {alphabetQty}
+              </span>
+              <button
+                type="button"
+                onClick={() => setAlphabetQty(alphabetQty + 1)}
+                disabled={alphabetQty >= ALPHABET_ADDON.maxQty}
+                aria-label="More letter sets"
+                className="flex h-8 w-8 items-center justify-center rounded-md border border-brand-navy/30 text-lg text-brand-navy disabled:opacity-40"
+              >
+                +
+              </button>
+            </div>
+          </div>
 
           <div className="mt-4 space-y-1 border-t border-brand-navy/10 pt-4 text-sm text-brand-ink/90">
             <div className="flex justify-between">
@@ -186,9 +206,9 @@ export function OfferBlock() {
               </span>
               <span>{formatUsd(baseTotal)}</span>
             </div>
-            {addAlphabet && (
+            {alphabetQty > 0 && (
               <div className="flex justify-between">
-                <span>A-Z &amp; 0-9 letter set</span>
+                <span>{alphabetQty} x A-Z &amp; 0-9 letter set</span>
                 <span>{formatUsd(addonTotal)}</span>
               </div>
             )}

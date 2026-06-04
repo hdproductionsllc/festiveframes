@@ -32,7 +32,7 @@ interface CheckoutRequest {
   selection: OfferSelection;
   kitIds: string[];
   quantity: number;
-  addAlphabet: boolean;
+  alphabetQty: number;
 }
 
 /**
@@ -60,7 +60,7 @@ function parseBody(body: unknown):
     return { ok: false, error: "Invalid request body." };
   }
 
-  const { selection, kitIds, quantity, addAlphabet } = body as Record<string, unknown>;
+  const { selection, kitIds, quantity, alphabetQty } = body as Record<string, unknown>;
 
   // selection
   if (selection !== "single" && selection !== "bundle") {
@@ -100,10 +100,18 @@ function parseBody(body: unknown):
     return { ok: false, error: "One or more kits are unavailable." };
   }
 
-  // addAlphabet: optional boolean add-on flag; anything other than true is false.
+  // alphabetQty: optional letter-set add-on count (0..max). Anything invalid -> 0.
+  const addonQty =
+    typeof alphabetQty === "number" &&
+    Number.isInteger(alphabetQty) &&
+    alphabetQty >= 0 &&
+    alphabetQty <= ALPHABET_ADDON.maxQty
+      ? alphabetQty
+      : 0;
+
   return {
     ok: true,
-    data: { selection, kitIds: ids, quantity, addAlphabet: addAlphabet === true },
+    data: { selection, kitIds: ids, quantity, alphabetQty: addonQty },
   };
 }
 
@@ -140,10 +148,10 @@ function buildLineItems(
     });
   }
 
-  // Optional add-on: one A-Z & 0-9 letter set, server-priced from config.
-  if (data.addAlphabet) {
+  // Optional add-on: N A-Z & 0-9 letter sets, server-priced from config.
+  if (data.alphabetQty > 0) {
     items.push({
-      quantity: 1,
+      quantity: data.alphabetQty,
       price_data: {
         currency: offer.currency,
         unit_amount: ALPHABET_ADDON.priceCents,
@@ -213,7 +221,7 @@ export async function POST(request: Request): Promise<NextResponse> {
         selection: data.selection,
         kitIds: data.kitIds.join(","),
         quantity: String(data.quantity),
-        addAlphabet: String(data.addAlphabet),
+        alphabetQty: String(data.alphabetQty),
       },
     });
 

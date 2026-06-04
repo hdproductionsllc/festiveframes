@@ -33,7 +33,7 @@ export function useCheckout() {
     setPending(true);
 
     // Read fresh state at click time (not stale render-time values).
-    const { selectedKitId, secondKitId, quantity, addAlphabet } = useBuyStore.getState();
+    const { selectedKitId, secondKitId, quantity, alphabetQty } = useBuyStore.getState();
     const selection = selectionOverride ?? useBuyStore.getState().selection;
 
     const kitIds =
@@ -48,7 +48,7 @@ export function useCheckout() {
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ selection, kitIds, quantity, addAlphabet }),
+        body: JSON.stringify({ selection, kitIds, quantity, alphabetQty }),
       });
 
       const data = (await res.json().catch(() => ({}))) as CheckoutResponse;

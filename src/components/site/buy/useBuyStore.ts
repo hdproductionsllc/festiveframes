@@ -2,7 +2,7 @@
 
 import { create } from "zustand";
 import { getKit, getActiveKits } from "@/config/kits";
-import { offer, type OfferSelection } from "@/config/offers";
+import { offer, ALPHABET_ADDON, type OfferSelection } from "@/config/offers";
 
 // ─────────────────────────────────────────────────────────────
 // Buy-page client state. Holds the visitor's current selection so the
@@ -39,6 +39,12 @@ function clampQty(n: number): number {
   return Math.min(MAX_QTY, Math.max(MIN_QTY, Math.round(n)));
 }
 
+/** Clamp the letter-set add-on quantity to an integer in [0, max]. */
+function clampAddon(n: number): number {
+  if (!Number.isFinite(n)) return 0;
+  return Math.min(ALPHABET_ADDON.maxQty, Math.max(0, Math.round(n)));
+}
+
 interface BuyState {
   selectedKitId: string;
   selection: OfferSelection;
@@ -49,8 +55,8 @@ interface BuyState {
   hydrated: boolean;
   /** Visitor claimed the FOURTH promo from the popup; show the code chip. */
   promoClaimed: boolean;
-  /** Optional A-Z & 0-9 letter-set add-on (+$10). */
-  addAlphabet: boolean;
+  /** A-Z & 0-9 letter-set add-on quantity (+$10 each, 0 = none). */
+  alphabetQty: number;
 
   hydrate: (kitParam: string | null) => void;
   setSelectedKit: (id: string) => void;
@@ -58,7 +64,7 @@ interface BuyState {
   setSecondKit: (id: string) => void;
   setQuantity: (n: number) => void;
   claimPromo: () => void;
-  setAddAlphabet: (value: boolean) => void;
+  setAlphabetQty: (n: number) => void;
 }
 
 /** Mirror the current selected kit into localStorage + the ?kit= query. */
@@ -85,7 +91,7 @@ export const useBuyStore = create<BuyState>((set, get) => ({
   quantity: MIN_QTY,
   hydrated: false,
   promoClaimed: false,
-  addAlphabet: false,
+  alphabetQty: 0,
 
   hydrate: (kitParam) => {
     // Already hydrated once; do not stomp user interaction on re-mounts.
@@ -133,7 +139,7 @@ export const useBuyStore = create<BuyState>((set, get) => ({
 
   claimPromo: () => set({ promoClaimed: true }),
 
-  setAddAlphabet: (value) => set({ addAlphabet: value }),
+  setAlphabetQty: (n) => set({ alphabetQty: clampAddon(n) }),
 }));
 
 export { MIN_QTY, MAX_QTY, DEFAULT_KIT_ID, isActiveKitId, clampQty };
