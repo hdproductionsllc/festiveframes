@@ -131,7 +131,7 @@ export const copy: Copy = {
     metaDescription:
       "The Freedom Frame Set: a snap-on license plate frame kit made in St. Louis for July 4. Comes loaded with 40+ patriotic tiles. Install once, swap tiles forever.",
     heroH1: "Customizable License Plate Frames with Snap-On Tiles",
-    heroSubhead: "Pick a kit that's already you. Install once. Swap tiles forever.",
+    heroSubhead: "Install once. Swap tiles forever.",
     primaryCta: { label: "Shop July 4 Kits", href: "/buy" },
     secondaryCta: { label: "See what's inside", href: "/buy" },
 
