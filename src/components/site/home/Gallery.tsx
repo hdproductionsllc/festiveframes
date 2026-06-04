@@ -37,10 +37,6 @@ const slots: Slot[] = [
     alt: "A Festive Frames kit on the back of a parked car on a tree-lined St. Louis street",
     src: "/gallery/on-car.jpg",
   },
-  {
-    label: "Festival booth",
-    alt: "The Festive Frames booth at a July 4 festival with kits on display",
-  },
 ];
 
 export function Gallery() {
@@ -51,7 +47,7 @@ export function Gallery() {
           id="gallery-heading"
           className="text-3xl font-bold uppercase tracking-tight text-brand-cream sm:text-4xl"
         >
-          On the road and at the booth
+          On the road
         </h2>
 
         <div className="mt-10 grid auto-rows-[200px] grid-cols-2 gap-4 sm:auto-rows-[240px] lg:grid-cols-3">
