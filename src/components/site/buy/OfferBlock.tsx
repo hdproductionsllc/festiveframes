@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { copy } from "@/content/copy";
 import { getKit } from "@/config/kits";
-import { offer, formatUsd } from "@/config/offers";
+import { offer, formatUsd, ALPHABET_ADDON } from "@/config/offers";
 import { track } from "@/lib/analytics";
 import { useBuyStore, ACTIVE_KITS } from "./useBuyStore";
 import { useCheckout } from "./useCheckout";
@@ -20,6 +20,8 @@ export function OfferBlock() {
   const selection = useBuyStore((s) => s.selection);
   const setSelection = useBuyStore((s) => s.setSelection);
   const setSecondKit = useBuyStore((s) => s.setSecondKit);
+  const addAlphabet = useBuyStore((s) => s.addAlphabet);
+  const setAddAlphabet = useBuyStore((s) => s.setAddAlphabet);
 
   const { checkout, pending, error } = useCheckout();
   const [mixOpen, setMixOpen] = useState(false);
@@ -165,6 +167,24 @@ export function OfferBlock() {
             </button>
           </div>
         </div>
+
+        <label className="mx-auto mt-6 flex max-w-md cursor-pointer items-start gap-3 rounded-lg border border-brand-navy/15 bg-brand-cream-soft px-4 py-3 text-sm text-brand-ink">
+          <input
+            type="checkbox"
+            checked={addAlphabet}
+            onChange={(e) => setAddAlphabet(e.target.checked)}
+            className="mt-0.5 h-4 w-4 accent-brand-red"
+          />
+          <span>
+            Add the full A-Z &amp; 0-9 letter set{" "}
+            <span className="font-semibold text-brand-navy">
+              +{formatUsd(ALPHABET_ADDON.priceCents)}
+            </span>
+            <span className="mt-0.5 block text-xs text-brand-ink/70">
+              Spell anything you want on the bottom bar.
+            </span>
+          </span>
+        </label>
 
         <div className="mt-8">
           <QuantitySelector />

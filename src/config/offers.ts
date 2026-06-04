@@ -54,3 +54,12 @@ export function formatUsd(cents: number): string {
   const dollars = cents / 100;
   return Number.isInteger(dollars) ? `$${dollars}` : `$${dollars.toFixed(2)}`;
 }
+
+/**
+ * Optional checkout add-on: the full A-Z & 0-9 letter set for the bottom bar.
+ * Server-priced like everything else; the client only ever sends a boolean.
+ */
+export const ALPHABET_ADDON = {
+  priceCents: 1000,
+  productName: "Full A-Z & 0-9 Letter Set",
+};

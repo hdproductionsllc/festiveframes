@@ -19,7 +19,7 @@ import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 
 import { getStripe } from "@/lib/stripe";
-import { offer, type OfferSelection } from "@/config/offers";
+import { offer, ALPHABET_ADDON, type OfferSelection } from "@/config/offers";
 import { getActiveKits, getKit } from "@/config/kits";
 import { SITE_URL, season } from "@/config/season";
 
@@ -32,6 +32,7 @@ interface CheckoutRequest {
   selection: OfferSelection;
   kitIds: string[];
   quantity: number;
+  addAlphabet: boolean;
 }
 
 /**
@@ -59,7 +60,7 @@ function parseBody(body: unknown):
     return { ok: false, error: "Invalid request body." };
   }
 
-  const { selection, kitIds, quantity } = body as Record<string, unknown>;
+  const { selection, kitIds, quantity, addAlphabet } = body as Record<string, unknown>;
 
   // selection
   if (selection !== "single" && selection !== "bundle") {
@@ -99,9 +100,10 @@ function parseBody(body: unknown):
     return { ok: false, error: "One or more kits are unavailable." };
   }
 
+  // addAlphabet: optional boolean add-on flag; anything other than true is false.
   return {
     ok: true,
-    data: { selection, kitIds: ids, quantity },
+    data: { selection, kitIds: ids, quantity, addAlphabet: addAlphabet === true },
   };
 }
 
@@ -112,33 +114,45 @@ function parseBody(body: unknown):
 function buildLineItems(
   data: CheckoutRequest,
 ): Stripe.Checkout.SessionCreateParams.LineItem[] {
+  const items: Stripe.Checkout.SessionCreateParams.LineItem[] = [];
+
   if (data.selection === "single") {
     const kit = getKit(data.kitIds[0]);
-    return [
-      {
-        quantity: data.quantity,
-        price_data: {
-          currency: offer.currency,
-          unit_amount: offer.singlePrice,
-          product_data: { name: kit?.name ?? "Festive Frames Kit" },
-        },
+    items.push({
+      quantity: data.quantity,
+      price_data: {
+        currency: offer.currency,
+        unit_amount: offer.singlePrice,
+        product_data: { name: kit?.name ?? "Festive Frames Kit" },
       },
-    ];
-  }
-
-  // bundle: ALWAYS 6900 for the pair, regardless of which two kits.
-  const nameA = getKit(data.kitIds[0])?.name ?? "Festive Frames Kit";
-  const nameB = getKit(data.kitIds[1])?.name ?? "Festive Frames Kit";
-  return [
-    {
+    });
+  } else {
+    // bundle: ALWAYS 6900 for the pair, regardless of which two kits.
+    const nameA = getKit(data.kitIds[0])?.name ?? "Festive Frames Kit";
+    const nameB = getKit(data.kitIds[1])?.name ?? "Festive Frames Kit";
+    items.push({
       quantity: data.quantity,
       price_data: {
         currency: offer.currency,
         unit_amount: offer.bundlePrice,
         product_data: { name: `Two-Kit Bundle: ${nameA} + ${nameB}` },
       },
-    },
-  ];
+    });
+  }
+
+  // Optional add-on: one A-Z & 0-9 letter set, server-priced from config.
+  if (data.addAlphabet) {
+    items.push({
+      quantity: 1,
+      price_data: {
+        currency: offer.currency,
+        unit_amount: ALPHABET_ADDON.priceCents,
+        product_data: { name: ALPHABET_ADDON.productName },
+      },
+    });
+  }
+
+  return items;
 }
 
 export async function POST(request: Request): Promise<NextResponse> {
@@ -200,6 +214,7 @@ export async function POST(request: Request): Promise<NextResponse> {
         selection: data.selection,
         kitIds: data.kitIds.join(","),
         quantity: String(data.quantity),
+        addAlphabet: String(data.addAlphabet),
       },
     });
 

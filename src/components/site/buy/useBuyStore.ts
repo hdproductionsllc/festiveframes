@@ -49,6 +49,8 @@ interface BuyState {
   hydrated: boolean;
   /** Visitor claimed the FOURTH promo from the popup; show the code chip. */
   promoClaimed: boolean;
+  /** Optional A-Z & 0-9 letter-set add-on (+$10). */
+  addAlphabet: boolean;
 
   hydrate: (kitParam: string | null) => void;
   setSelectedKit: (id: string) => void;
@@ -56,6 +58,7 @@ interface BuyState {
   setSecondKit: (id: string) => void;
   setQuantity: (n: number) => void;
   claimPromo: () => void;
+  setAddAlphabet: (value: boolean) => void;
 }
 
 /** Mirror the current selected kit into localStorage + the ?kit= query. */
@@ -82,6 +85,7 @@ export const useBuyStore = create<BuyState>((set, get) => ({
   quantity: MIN_QTY,
   hydrated: false,
   promoClaimed: false,
+  addAlphabet: false,
 
   hydrate: (kitParam) => {
     // Already hydrated once; do not stomp user interaction on re-mounts.
@@ -128,6 +132,8 @@ export const useBuyStore = create<BuyState>((set, get) => ({
   setQuantity: (n) => set({ quantity: clampQty(n) }),
 
   claimPromo: () => set({ promoClaimed: true }),
+
+  setAddAlphabet: (value) => set({ addAlphabet: value }),
 }));
 
 export { MIN_QTY, MAX_QTY, DEFAULT_KIT_ID, isActiveKitId, clampQty };
