@@ -1,14 +1,21 @@
+import Image from "next/image";
 import { copy } from "@/content/copy";
 
-// Server Component. Local-production trust band. The trust paragraph in copy.ts
-// already uses soft material wording and carries the TODO-VERIFY note at the
-// source. St. Louis local make is the anchor here.
+// Server Component. Local-production trust band, anchored by the Festive Frames
+// "Made in the USA / EST. 2026 / St. Louis" seal.
 export function TrustSection() {
   return (
     <section className="paper-grain" aria-labelledby="trust-heading">
       <div className="mx-auto max-w-3xl px-4 py-16 text-center sm:px-6 sm:py-20">
+        <Image
+          src="/brand/seal.png"
+          alt="Festive Frames, made in the USA, established 2026, St. Louis, Missouri"
+          width={176}
+          height={176}
+          className="mx-auto mb-6 h-32 w-32 sm:h-40 sm:w-40"
+        />
         <p className="font-mkt-display text-sm font-semibold uppercase tracking-[0.2em] text-brand-red">
-          Made in St. Louis
+          Made in the USA
         </p>
         <h2
           id="trust-heading"

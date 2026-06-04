@@ -55,14 +55,23 @@ export function BuiltToLast() {
   const { heading, body } = copy.buy.builtToLast;
   return (
     <section className="star-field text-brand-cream" aria-labelledby="built-to-last-heading">
-      <div className="mx-auto max-w-3xl px-4 py-14 sm:px-6 sm:py-16">
-        <h2
-          id="built-to-last-heading"
-          className="text-2xl font-bold uppercase tracking-tight text-brand-cream sm:text-3xl"
-        >
-          {heading}
-        </h2>
-        <p className="mt-4 text-base leading-relaxed text-brand-cream/85">{body}</p>
+      <div className="mx-auto flex max-w-3xl flex-col items-center gap-6 px-4 py-14 text-center sm:flex-row sm:gap-8 sm:px-6 sm:py-16 sm:text-left">
+        <Image
+          src="/brand/made-in-usa.png"
+          alt="Made in the USA, St. Louis, Missouri"
+          width={160}
+          height={160}
+          className="h-28 w-28 shrink-0 sm:h-36 sm:w-36"
+        />
+        <div>
+          <h2
+            id="built-to-last-heading"
+            className="text-2xl font-bold uppercase tracking-tight text-brand-cream sm:text-3xl"
+          >
+            {heading}
+          </h2>
+          <p className="mt-4 text-base leading-relaxed text-brand-cream/85">{body}</p>
+        </div>
       </div>
     </section>
   );
