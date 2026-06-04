@@ -39,3 +39,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# source image drops at repo root (Ideogram/reference photos).
+# Real, optimized site assets live under /public and are committed.
+/*.png
+/*.jpg
+/*.jpeg
+/*.JPG
+/*.webp

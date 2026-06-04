@@ -26,7 +26,7 @@ export default function CheckoutPage() {
 
   // No order data — redirect back to designer
   if (!order) {
-    router.replace("/");
+    router.replace("/build");
     return null;
   }
 

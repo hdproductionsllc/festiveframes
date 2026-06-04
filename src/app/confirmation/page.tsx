@@ -25,7 +25,7 @@ export default function ConfirmationPage() {
 
   // No submitted order — redirect
   if (!order || !submittedAt) {
-    router.replace("/");
+    router.replace("/build");
     return null;
   }
 
@@ -33,7 +33,7 @@ export default function ConfirmationPage() {
 
   function handleDesignAnother() {
     clear();
-    router.push("/");
+    router.push("/build");
   }
 
   return (

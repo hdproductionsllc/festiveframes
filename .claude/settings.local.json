@@ -90,7 +90,10 @@
       "Bash(tasklist:*)",
       "Bash(wmic:*)",
       "Bash(git remote add:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(railway:*)",
+      "Bash(RAILWAY_TOKEN=39c49a84-0fd7-4dd1-931a-e9683d20437a railway whoami 2>&1)",
+      "Bash(export:*)"
     ]
   }
 }
