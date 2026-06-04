@@ -11,7 +11,6 @@ import {
   WhatsInKit,
   HowItWorks,
   BuiltToLast,
-  TrustStrip,
   BuyFaq,
 } from "@/components/site/buy/StaticSections";
 
@@ -62,7 +61,6 @@ export default async function BuyPage({
       <WhatsInKit />
       <HowItWorks />
       <BuiltToLast />
-      <TrustStrip />
       <BuyFaq />
       {/* Spacer so the fixed mobile buy bar never overlaps the footer/FAQ. */}
       <div aria-hidden="true" className="h-20 lg:hidden" />

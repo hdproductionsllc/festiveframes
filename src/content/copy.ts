@@ -207,7 +207,8 @@ export const copy: Copy = {
       items: [
         "Frame rail that fits all standard US plates, installs once with your existing screws",
         "40+ tiles, more than you see in the photo",
-        "Full A-Z and 0-9 letter set for the bottom bar",
+        "Ready-made bottom-bar phrases: LAND OF THE FREE, HOME OF THE BRAVE, LET FREEDOM RING, STL, 314, and SHOW-ME STATE",
+        "Full A-Z and 0-9 letter set so you can spell anything you want",
         "Quick-start card",
       ],
       caption:

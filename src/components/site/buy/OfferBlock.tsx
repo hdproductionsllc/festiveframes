@@ -49,17 +49,17 @@ export function OfferBlock() {
           One set, two ways to get it.
         </h2>
 
-        <div className="mt-10 grid items-start gap-6 lg:grid-cols-2">
+        <div className="mt-10 grid items-stretch gap-6 lg:grid-cols-2">
           {/* CARD A - single kit. Complete on its own. */}
           <div
-            className={`flex flex-col rounded-xl border bg-brand-cream-soft p-6 transition-colors ${
+            className={`flex h-full flex-col rounded-xl border bg-brand-cream-soft p-6 transition-colors ${
               !bundleSelected ? "border-brand-red" : "border-brand-navy/15"
             }`}
           >
             <h3 className="font-mkt-display text-xl font-bold uppercase tracking-tight text-brand-navy">
               {copy.buy.offer.single.title} - {formatUsd(offer.singlePrice)}
             </h3>
-            <ul className="mt-4 space-y-2 text-sm text-brand-ink/85">
+            <ul className="mt-4 flex-1 space-y-2 text-sm text-brand-ink/85">
               <li className="flex gap-2">
                 <span aria-hidden="true" className="text-brand-red">
                   ✓
@@ -91,7 +91,7 @@ export function OfferBlock() {
 
           {/* CARD B - bundle. Preselected, dominant, badged. */}
           <div
-            className={`relative flex flex-col rounded-xl border-2 bg-brand-cream-soft p-6 shadow-lg lg:scale-[1.03] ${
+            className={`relative flex h-full flex-col rounded-xl border-2 bg-brand-cream-soft p-6 shadow-lg ${
               bundleSelected ? "border-brand-red" : "border-brand-navy/25"
             }`}
           >
@@ -102,7 +102,7 @@ export function OfferBlock() {
             <h3 className="mt-2 font-mkt-display text-2xl font-bold uppercase tracking-tight text-brand-navy">
               {copy.buy.offer.bundle.title} - {formatUsd(offer.bundlePrice)}
             </h3>
-            <ul className="mt-4 space-y-2 text-sm text-brand-ink/85">
+            <ul className="mt-4 flex-1 space-y-2 text-sm text-brand-ink/85">
               {copy.buy.offer.bundle.items.map((item) => (
                 <li key={item} className="flex gap-2">
                   <span aria-hidden="true" className="text-brand-red">
