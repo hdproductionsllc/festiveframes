@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { copy } from "@/content/copy";
 
 // Server Components (no "use client"). All the static, recognition-and-trust
@@ -80,19 +81,26 @@ export function TrustStrip() {
         </h2>
         <p className="mt-3 text-base text-brand-ink/80">{caption}</p>
 
-        {/* PLACEHOLDER: photo strip of real cars/booth at St. Louis July 4
-            events, 4-6 landscape crops. No reviews, ratings, or counters. */}
+        {/* Product look shots (staged, not real-customer/event photos — copy is
+            worded accordingly). No reviews, ratings, or counters. */}
         <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {[0, 1, 2, 3].map((i) => (
+          {[
+            "/kits/merica-mode-thumb.jpg",
+            "/kits/stl-pride-thumb.jpg",
+            "/kits/game-day-thumb.jpg",
+            "/kits/family-ride-thumb.jpg",
+          ].map((src) => (
             <div
-              key={i}
-              role="img"
-              aria-label="Festive Frames frame spotted on a car at a St. Louis July 4 event"
-              className="flex aspect-square items-center justify-center rounded-md border border-brand-navy/15 bg-brand-navy-soft/10"
+              key={src}
+              className="relative aspect-[4/5] overflow-hidden rounded-md border border-brand-navy/15"
             >
-              <span className="font-mkt-display text-[10px] font-semibold uppercase tracking-widest text-brand-navy/40">
-                Event photo
-              </span>
+              <Image
+                src={src}
+                alt="The Freedom Frame Set on a car around St. Louis"
+                fill
+                sizes="(min-width: 640px) 25vw, 50vw"
+                className="object-cover vintage-photo"
+              />
             </div>
           ))}
         </div>

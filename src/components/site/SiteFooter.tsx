@@ -64,7 +64,7 @@ export function SiteFooter() {
 
       <div className="border-t border-brand-navy-soft/40">
         <p className="mx-auto max-w-6xl px-4 py-4 text-xs text-brand-cream/60 sm:px-6">
-          &copy; {year} Festive Frames. All rights reserved.
+          &copy; {year} Festive Frames. Proudly made in the USA in St. Louis, Missouri. All rights reserved.
         </p>
       </div>
     </footer>

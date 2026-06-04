@@ -151,7 +151,7 @@ export const copy: Copy = {
     // automotive plastics, deliberately NOT named). Tiles are UV printed, so
     // the colors-stay-bright claim is supported.
     trust:
-      "Designed, built, and tested right here in St. Louis. The frame and tiles are made from the same tough, hard plastic that is already on your car, like the bumpers and trim, so they shrug off the full swing of Midwest weather, from icy winters to brutal summer heat. The tiles are UV printed, so the colors stay bright in the sun. Built and tested to last.",
+      "Proudly made in the USA, designed and built right here in St. Louis. The frame and tiles use the same tough, hard plastic that is already on your car, like the bumpers and trim, so they shrug off the full swing of Midwest weather, from icy winters to brutal summer heat. The tiles are UV printed, so the colors stay bright in the sun. Built and tested to last.",
 
     faq: [
       {
@@ -216,7 +216,7 @@ export const copy: Copy = {
 
     howItWorks: {
       heading: "How it works",
-      line: "Snap the frame on. Click in tiles. Swap forever.",
+      line: "It bolts on in minutes using the same two screws that already hold a frame to your plate, no drilling and no new hardware. Then the tiles snap into the border by hand, no tools. Swap them whenever you want.",
     },
 
     builtToLast: {
@@ -224,12 +224,12 @@ export const copy: Copy = {
       // Material in plain language (same hard automotive plastics, not named).
       // Tiles are UV printed, so the colors-stay-bright claim is supported.
       body:
-        "The frame and tiles are made from the same tough, hard plastic that is already on your car, like the bumpers and trim. Designed, built, and tested right here in St. Louis for the full swing of Midwest weather, from icy winters to brutal summer heat, sun, and rain. The tiles are UV printed, so the colors stay bright in the sun. Built and tested to last.",
+        "Proudly made in the USA, designed and built right here in St. Louis. The frame and tiles use the same tough, hard plastic as your car's bumpers and trim, with a solid, satisfying snap and a real quality feel in the hand. The artwork is UV printed so it stays bright and weatherproof through sun, rain, and snow. Beautiful, durable, and built to last for years.",
     },
 
     trust: {
-      heading: "Spotted at St. Louis July 4 events",
-      caption: "Out in the wild on real cars around town.",
+      heading: "Out around St. Louis",
+      caption: "A few looks at the Freedom Frame Set on the road.",
     },
 
     offer: {

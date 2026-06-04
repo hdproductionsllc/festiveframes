@@ -13,7 +13,7 @@ export function Hero() {
         {/* Copy column */}
         <div>
           <p className="vintage-eyebrow font-mkt-display text-sm font-semibold uppercase text-brand-gold">
-            Roadside Americana, made in St. Louis
+Made in the USA, St. Louis, Missouri
           </p>
           <h1 className="mt-4 font-mkt-display text-4xl font-bold uppercase leading-[1.05] tracking-tight text-brand-cream sm:text-5xl lg:text-6xl">
             {heroH1}
