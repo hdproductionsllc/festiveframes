@@ -29,6 +29,12 @@ export function TrustSection() {
         <p className="mx-auto mt-5 max-w-prose text-lg leading-relaxed text-brand-ink/90">
           {copy.home.trust}
         </p>
+        <a
+          href="#faq"
+          className="mt-6 inline-block font-semibold text-brand-red underline underline-offset-4 hover:text-brand-navy focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy"
+        >
+          Learn more in the FAQ
+        </a>
       </div>
     </section>
   );

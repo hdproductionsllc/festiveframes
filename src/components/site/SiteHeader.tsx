@@ -13,15 +13,17 @@ export function SiteHeader() {
           className="inline-flex items-center rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-gold"
           aria-label="Festive Frames home"
         >
-          <span className="inline-flex rounded-md bg-brand-cream-soft px-3 py-2 shadow-sm ring-1 ring-brand-navy/10">
-            <Image
-              src="/brand/wordmark.png"
-              alt="Festive Frames"
-              width={300}
-              height={100}
-              priority
-              className="h-20 w-auto sm:h-24"
-            />
+          <span className="inline-flex rounded-lg bg-brand-cream-soft p-1.5 shadow-sm ring-1 ring-brand-navy/10">
+            <span className="inline-flex rounded-md border-2 border-brand-navy/30 px-3 py-1.5">
+              <Image
+                src="/brand/wordmark.png"
+                alt="Festive Frames"
+                width={300}
+                height={100}
+                priority
+                className="h-20 w-auto sm:h-24"
+              />
+            </span>
           </span>
         </Link>
 

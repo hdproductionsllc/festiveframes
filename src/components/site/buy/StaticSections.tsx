@@ -56,13 +56,23 @@ export function BuiltToLast() {
   return (
     <section className="star-field text-brand-cream" aria-labelledby="built-to-last-heading">
       <div className="mx-auto flex max-w-3xl flex-col items-center gap-6 px-4 py-14 text-center sm:flex-row sm:gap-8 sm:px-6 sm:py-16 sm:text-left">
-        <Image
-          src="/brand/made-in-usa.png"
-          alt="Made in the USA, St. Louis, Missouri"
-          width={160}
-          height={160}
-          className="h-28 w-28 shrink-0 sm:h-36 sm:w-36"
-        />
+        <div
+          role="img"
+          aria-label="Made in the USA, St. Louis, Missouri"
+          className="flex h-28 w-28 shrink-0 flex-col items-center justify-center rounded-full border-4 border-brand-navy bg-brand-cream-soft text-center shadow-md sm:h-36 sm:w-36"
+        >
+          <span aria-hidden="true" className="text-3xl leading-none text-brand-gold sm:text-4xl">
+            ★
+          </span>
+          <span className="mt-1 font-mkt-display text-[11px] font-bold uppercase leading-tight tracking-widest text-brand-navy sm:text-xs">
+            Made in
+            <br />
+            the USA
+          </span>
+          <span className="mt-1 font-mkt-display text-[8px] uppercase tracking-wider text-brand-navy/70 sm:text-[10px]">
+            St. Louis, MO
+          </span>
+        </div>
         <div>
           <h2
             id="built-to-last-heading"

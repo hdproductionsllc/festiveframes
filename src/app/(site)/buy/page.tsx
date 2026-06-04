@@ -6,7 +6,6 @@ import { BuyHero } from "@/components/site/buy/BuyHero";
 import { KitPicker } from "@/components/site/buy/KitPicker";
 import { OfferBlock } from "@/components/site/buy/OfferBlock";
 import { StickyBuyBar } from "@/components/site/buy/StickyBuyBar";
-import { July4Popup } from "@/components/site/buy/July4Popup";
 import {
   WhatsInKit,
   HowItWorks,
@@ -65,7 +64,6 @@ export default async function BuyPage({
       {/* Spacer so the fixed mobile buy bar never overlaps the footer/FAQ. */}
       <div aria-hidden="true" className="h-20 lg:hidden" />
       <StickyBuyBar />
-      <July4Popup />
     </>
   );
 }

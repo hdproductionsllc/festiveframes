@@ -236,9 +236,9 @@ export const copy: Copy = {
       single: {
         title: "Freedom Frame Set",
         items: [
-          "Frame",
+          "Frame rail",
           "40+ tiles, more than pictured",
-          "Full A-Z and 0-9 letter set",
+          "Ready-made bottom-bar phrases",
         ],
         cta: "Buy Now",
       },

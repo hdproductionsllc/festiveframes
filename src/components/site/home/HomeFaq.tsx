@@ -8,7 +8,7 @@ export function HomeFaq() {
   const { faq } = copy.home;
 
   return (
-    <section className="star-field text-brand-cream" aria-labelledby="faq-heading">
+    <section id="faq" className="star-field text-brand-cream" aria-labelledby="faq-heading">
       <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6 sm:py-20">
         <h2
           id="faq-heading"

@@ -207,7 +207,6 @@ export async function POST(request: Request): Promise<NextResponse> {
           },
         },
       ],
-      allow_promotion_codes: true,
       success_url: `${baseUrl}/thanks?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${baseUrl}/buy`,
       metadata: {
