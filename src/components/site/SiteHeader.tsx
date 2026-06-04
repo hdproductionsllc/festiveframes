@@ -17,10 +17,10 @@ export function SiteHeader() {
             <Image
               src="/brand/wordmark.png"
               alt="Festive Frames"
-              width={176}
-              height={60}
+              width={300}
+              height={100}
               priority
-              className="h-14 w-auto sm:h-16"
+              className="h-20 w-auto sm:h-24"
             />
           </span>
         </Link>
