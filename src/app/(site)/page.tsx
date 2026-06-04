@@ -109,14 +109,8 @@ function buildJsonLd() {
       {
         "@type": "ListItem",
         position: 2,
-        name: "Shop Kits",
+        name: "Shop the Freedom Frame Set",
         item: `${SITE_URL}/buy`,
-      },
-      {
-        "@type": "ListItem",
-        position: 3,
-        name: "Design Your Own",
-        item: `${SITE_URL}/build`,
       },
     ],
   };

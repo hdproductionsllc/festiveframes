@@ -46,18 +46,18 @@ export const kits: Kit[] = [
   // ─── TIER 1 ────────────────────────────────────────────────
   {
     id: "american-classic",
-    name: "American Classic Kit",
-    identityLine: "For the proud-to-be-American crowd, every age.",
+    name: "Freedom Frame Set",
+    identityLine: "For everyone who celebrates the Fourth out loud.",
     cardLine: "July 4 ready in 10 seconds.",
     tier: 1,
     price: KIT_PRICE_CENTS,
     stripePriceId: "", // TODO: set after creating the Stripe price for american-classic
     contents: [
-      "USA word tiles",
-      "Red, white, and blue solid tiles",
-      "Stars pattern tiles",
-      "Fireworks accent tile",
-      "LAND OF THE FREE word set",
+      "40+ red, white, and blue tiles",
+      "USA and LAND OF THE FREE word tiles",
+      "Stars, stripes, and fireworks tiles",
+      "Full A-Z and 0-9 letter set for the bottom bar",
+      "More tiles than pictured, so you can mix and match",
     ],
     // PLACEHOLDER: product hero, 1200x1500 (4:5 portrait)
     heroImage: "/kits/american-classic-hero.jpg",
@@ -86,7 +86,7 @@ export const kits: Kit[] = [
     // PLACEHOLDER: catalog thumbnail, 800x1000 (4:5 portrait)
     thumbnailImage: "/kits/merica-mode-thumb.jpg",
     limited: false,
-    active: true,
+    active: false,
   },
   {
     id: "stl-pride",
@@ -107,7 +107,7 @@ export const kits: Kit[] = [
     // PLACEHOLDER: catalog thumbnail, 800x1000 (4:5 portrait)
     thumbnailImage: "/kits/stl-pride-thumb.jpg",
     limited: false,
-    active: true,
+    active: false,
   },
   {
     id: "game-day",
@@ -128,7 +128,7 @@ export const kits: Kit[] = [
     // PLACEHOLDER: catalog thumbnail, 800x1000 (4:5 portrait)
     thumbnailImage: "/kits/game-day-thumb.jpg",
     limited: false,
-    active: true,
+    active: false,
   },
 
   // ─── TIER 2 ────────────────────────────────────────────────
@@ -153,7 +153,7 @@ export const kits: Kit[] = [
     // PLACEHOLDER: catalog thumbnail, 800x1000 (4:5 portrait)
     thumbnailImage: "/kits/family-ride-thumb.jpg",
     limited: false,
-    active: true,
+    active: false,
   },
   {
     id: "july-4-limited",
@@ -174,7 +174,7 @@ export const kits: Kit[] = [
     // PLACEHOLDER: catalog thumbnail, 800x1000 (4:5 portrait)
     thumbnailImage: "/kits/july-4-limited-thumb.jpg",
     limited: true,
-    active: true,
+    active: false,
   },
 
   // ─── FUTURE (not yet live) ─────────────────────────────────

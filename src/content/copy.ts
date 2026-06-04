@@ -129,11 +129,11 @@ export const copy: Copy = {
     metaTitle:
       "Custom License Plate Frames with Snap-On Tiles | Festive Frames",
     metaDescription:
-      "Snap-on license plate frame kits made in St. Louis. Patriotic, funny, game day, and family designs. Install once, swap tiles forever. Shop July 4 kits.",
+      "The Freedom Frame Set: a snap-on license plate frame kit made in St. Louis for July 4. Comes loaded with 40+ patriotic tiles. Install once, swap tiles forever.",
     heroH1: "Customizable License Plate Frames with Snap-On Tiles",
     heroSubhead: "Pick a kit that's already you. Install once. Swap tiles forever.",
     primaryCta: { label: "Shop July 4 Kits", href: "/buy" },
-    secondaryCta: { label: "Design Yours", href: "/build" },
+    secondaryCta: { label: "See what's inside", href: "/buy" },
 
     whatItIs: [
       "One frame installs on your plate a single time.",
@@ -179,8 +179,8 @@ export const copy: Copy = {
           "The frame and tiles are made from the same tough, hard plastic that is already on your car, like the bumpers and trim, and they are built and tested for the full range of St. Louis weather, from freezing winters to summer heat, sun, and rain. The tiles are UV printed, so the colors stay bright. For automated car washes with heavy brushes, a gentle or touch-free wash is your safest bet.",
       },
       {
-        question: "Can I mix kits?",
-        answer: "Yes. Every tile fits every frame. Two kits are $69.",
+        question: "Can I get more than one?",
+        answer: "Yes. Every tile fits every frame, and two sets are $69.",
       },
       {
         question: "When do new kits drop?",
@@ -196,22 +196,22 @@ export const copy: Copy = {
   buy: {
     metaTitle: "Shop July 4 Kits | Festive Frames",
     metaDescription:
-      "Shop snap-on license plate frame kits: patriotic, funny, game day, and family car accessories. Install once, swap tiles forever. Free St. Louis pickup.",
+      "Shop the Freedom Frame Set: a snap-on license plate frame kit loaded with 40+ patriotic tiles. Install once, swap tiles forever. Free St. Louis pickup.",
     h1: "Make your license plate the most fun part of your car.",
     subhead: "Pick your kit. Snap it on. Swap it forever.",
     ctaSubline: "Free festival pickup July 3-4, or $5 flat shipping.",
     guarantee: "30-day guarantee. If you do not love it, send it back.",
 
     whatsInKit: {
-      heading: "What's in every kit",
+      heading: "What's in the kit",
       items: [
         "Frame rail that fits all standard US plates, installs once with your existing screws",
-        "The kit's tile set",
-        "Starter alphabet tiles",
+        "40+ tiles, more than you see in the photo",
+        "Full A-Z and 0-9 letter set for the bottom bar",
         "Quick-start card",
       ],
       caption:
-        "Everything you need to customize your car today. Buy once, change endlessly.",
+        "Comes loaded with 40+ tiles, more than you see here, so you can mix, match, and restyle any time. Buy once, change endlessly.",
     },
 
     howItWorks: {
@@ -234,22 +234,22 @@ export const copy: Copy = {
 
     offer: {
       single: {
-        title: "July 4 Kit",
+        title: "Freedom Frame Set",
         items: [
           "Frame",
-          "The kit's tile set",
-          "Starter alphabet tiles",
+          "40+ tiles, more than pictured",
+          "Full A-Z and 0-9 letter set",
         ],
         cta: "Buy Now",
       },
       bundle: {
-        title: "Two-Kit Bundle",
+        title: "Two-Set Bundle",
         items: [
-          "Everything in the kit, x2",
+          "Everything in the set, x2",
           "One for you, one for a gift or the second car",
         ],
         cta: "Buy Now",
-        mixLabel: "Mix kits",
+        mixLabel: "Two sets",
       },
     },
 
@@ -319,7 +319,7 @@ export const copy: Copy = {
       body: "Know someone whose ride needs this? Send them the link.",
       shareText: "I just grabbed a Festive Frames kit. Snap-on plate frames you swap whenever you want.",
     },
-    builderCta: { label: "Design your next look in the Builder", href: "/build" },
+    builderCta: { label: "Back to the shop", href: "/buy" },
   },
 
   anchorPhrases: [

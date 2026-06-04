@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import type Stripe from "stripe";
 
 import { copy } from "@/content/copy";
@@ -213,16 +212,6 @@ export default async function ThanksPage({ searchParams }: ThanksPageProps) {
           <div className="mt-3">
             <SharePrompt url={shareUrl} shareText={copy.thanks.share.shareText} />
           </div>
-        </div>
-
-        {/* Builder cross-link */}
-        <div className="mt-10">
-          <Link
-            href={copy.thanks.builderCta.href}
-            className="inline-block font-semibold text-brand-red underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy"
-          >
-            {copy.thanks.builderCta.label}
-          </Link>
         </div>
       </div>
     </section>

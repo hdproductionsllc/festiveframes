@@ -34,9 +34,13 @@ interface CheckoutRequest {
   quantity: number;
 }
 
-/** Base origin for success/cancel URLs. Env wins, constant is the fallback. */
-function getBaseUrl(): string {
-  return process.env.SITE_URL || SITE_URL;
+/**
+ * Base origin for success/cancel URLs. The live request origin wins so
+ * checkout returns to whatever domain the visitor is actually on; env and
+ * the compiled constant are fallbacks. Pricing is unaffected by this.
+ */
+function getBaseUrl(request: Request): string {
+  return request.headers.get("origin") || process.env.SITE_URL || SITE_URL;
 }
 
 function badRequest(error: string): NextResponse {
@@ -163,7 +167,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     );
   }
 
-  const baseUrl = getBaseUrl();
+  const baseUrl = getBaseUrl(request);
 
   try {
     const session = await stripe.checkout.sessions.create({

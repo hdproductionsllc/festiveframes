@@ -71,4 +71,4 @@ export const season: Season = {
 };
 
 /** Canonical site origin. Used for canonical URLs and QR codes. */
-export const SITE_URL = "https://festiveframes.com"; // TODO: confirm domain
+export const SITE_URL = "https://festiveframes.co"; // confirmed domain: festiveframes.co (.co, not .com)

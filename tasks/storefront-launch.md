@@ -1,5 +1,7 @@
 # Festive Frames — Storefront / Conversion Site (v4) — Launch Plan
 
+> ✅ DEPLOYED 2026-06-04 — live at https://festiveframes-production.up.railway.app (commit 962a3dd, Railway auto-deploy from master). All routes 200. Remaining to transact: set Stripe env vars in Railway (see tasks/LAUNCH_CHECKLIST.md).
+
 Hard launch: live + phone-tested on cellular by **June 26, 2026**. Event date: **July 4, 2026**.
 Source spec: `FESTIVE_FRAMES_FULL_SITE_PROMPT_v4.md`. This plan records the **resolved deltas** from that spec.
 

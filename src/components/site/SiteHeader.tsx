@@ -13,14 +13,14 @@ export function SiteHeader() {
           className="inline-flex items-center rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-gold"
           aria-label="Festive Frames home"
         >
-          <span className="inline-flex rounded-md bg-brand-cream-soft px-3 py-1.5 shadow-sm ring-1 ring-brand-navy/10">
+          <span className="inline-flex rounded-md bg-brand-cream-soft px-3 py-2 shadow-sm ring-1 ring-brand-navy/10">
             <Image
               src="/brand/wordmark.png"
               alt="Festive Frames"
               width={176}
               height={60}
               priority
-              className="h-7 w-auto sm:h-8"
+              className="h-11 w-auto sm:h-12"
             />
           </span>
         </Link>
@@ -28,15 +28,9 @@ export function SiteHeader() {
         <nav aria-label="Primary" className="flex items-center gap-1 sm:gap-2">
           <Link
             href="/buy"
-            className="rounded-md px-3 py-2 text-sm font-semibold uppercase tracking-wide text-brand-cream/90 transition-colors hover:text-brand-gold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-gold"
-          >
-            Shop
-          </Link>
-          <Link
-            href="/build"
             className="rounded-md border border-brand-gold/70 px-3 py-2 text-sm font-semibold uppercase tracking-wide text-brand-gold transition-colors hover:bg-brand-gold hover:text-brand-navy-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-gold"
           >
-            Builder
+            Shop
           </Link>
         </nav>
       </div>

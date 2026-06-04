@@ -41,10 +41,11 @@ The PNGs are 1024px, which holds up sharp at 300 dpi up to about
 `width` in `scripts/generate-qr.mjs` and regenerate so the print stays
 crisp.
 
-## Important: regenerate after the domain is confirmed
+## Important: regenerate after any domain change
 
-`SITE_URL` in `src/config/season.ts` is currently
-`https://festiveframes.com` and marked `TODO: confirm domain`. If the
-production domain changes, **update `SITE_URL` first, then re-run
+`SITE_URL` in `src/config/season.ts` is the confirmed production domain
+`https://festiveframes.co` (note: `.co`, not `.com`). The codes in this
+folder already encode `festiveframes.co` URLs. If the production domain
+ever changes again, **update `SITE_URL` first, then re-run
 `node scripts/generate-qr.mjs`** so every printed code points at the
 live site. Do not reprint until that is confirmed.

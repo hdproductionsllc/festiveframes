@@ -44,19 +44,18 @@ export function SiteFooter() {
             </li>
             <li>
               <Link
-                href="/build"
+                href="/privacy"
                 className="text-brand-cream/90 transition-colors hover:text-brand-gold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-gold"
               >
-                Open the builder
+                Privacy
               </Link>
             </li>
             <li>
-              {/* CONTACT PLACEHOLDER: replace with real support address later. */}
               <a
-                href="mailto:hello@festiveframes.com"
+                href="mailto:hello@festiveframes.co"
                 className="text-brand-cream/90 transition-colors hover:text-brand-gold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-gold"
               >
-                hello@festiveframes.com
+                hello@festiveframes.co
               </a>
             </li>
           </ul>

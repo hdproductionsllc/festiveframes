@@ -19,12 +19,13 @@ export function KitShowcase() {
             id="kits-heading"
             className="text-3xl font-bold uppercase tracking-tight text-brand-cream sm:text-4xl"
           >
-            Six kits, each one already someone.
+            Meet the Freedom Frame Set.
           </h2>
           <p className="mt-4 text-lg leading-relaxed text-brand-cream/80">
-            Pick the kit that reads like you. Every kit is{" "}
-            {formatUsd(offer.singlePrice)} and arrives complete. Add a second
-            kit for {formatUsd(offer.bundlePrice)}.
+            July 4 ready in seconds. Comes loaded with 40+ tiles, more than you
+            see here, so you can mix, match, and restyle any time. One set is{" "}
+            {formatUsd(offer.singlePrice)}, or grab two for{" "}
+            {formatUsd(offer.bundlePrice)}.
           </p>
         </div>
 

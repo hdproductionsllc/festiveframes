@@ -26,6 +26,9 @@ export function OfferBlock() {
 
   const selectedKit = getKit(selectedKitId);
   const bundleSelected = selection === "bundle";
+  // Single-product launch: with one active kit there is no second kit to mix,
+  // so the bundle is simply two of the one set and the mix control is hidden.
+  const multipleKits = ACTIVE_KITS.length > 1;
 
   function buy(which: "single" | "bundle") {
     // Record an offer toggle only when the choice actually changes.
@@ -43,7 +46,7 @@ export function OfferBlock() {
           id="offer-heading"
           className="text-center text-2xl font-bold uppercase tracking-tight text-brand-navy sm:text-3xl"
         >
-          Choose your kit
+          One set, two ways to get it.
         </h2>
 
         <div className="mt-10 grid items-start gap-6 lg:grid-cols-2">
@@ -110,42 +113,47 @@ export function OfferBlock() {
               ))}
             </ul>
 
-            {/* Optional mix-kits control. Never required; default = two of the same. */}
-            <div className="mt-4">
-              <button
-                type="button"
-                onClick={() => setMixOpen((v) => !v)}
-                aria-expanded={mixOpen}
-                aria-controls="mix-kit-picker"
-                className="text-sm font-semibold text-brand-navy underline underline-offset-4 hover:text-brand-red focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy"
-              >
-                {copy.buy.offer.bundle.mixLabel}
-                {secondKitId !== selectedKitId ? ` (${getKit(secondKitId)?.name})` : ""}
-              </button>
+            {/* Optional mix-kits control. Only meaningful when there is more
+                than one active kit. With a single product the bundle is simply
+                two of the one set, so the control is hidden. Never required;
+                default = two of the same. */}
+            {multipleKits && (
+              <div className="mt-4">
+                <button
+                  type="button"
+                  onClick={() => setMixOpen((v) => !v)}
+                  aria-expanded={mixOpen}
+                  aria-controls="mix-kit-picker"
+                  className="text-sm font-semibold text-brand-navy underline underline-offset-4 hover:text-brand-red focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy"
+                >
+                  {copy.buy.offer.bundle.mixLabel}
+                  {secondKitId !== selectedKitId ? ` (${getKit(secondKitId)?.name})` : ""}
+                </button>
 
-              {mixOpen && (
-                <div id="mix-kit-picker" className="mt-3">
-                  <label
-                    htmlFor="second-kit"
-                    className="block text-xs font-medium uppercase tracking-wide text-brand-ink/70"
-                  >
-                    Second kit
-                  </label>
-                  <select
-                    id="second-kit"
-                    value={secondKitId}
-                    onChange={(e) => setSecondKit(e.target.value)}
-                    className="mt-1 w-full rounded-md border border-brand-navy/30 bg-brand-white px-3 py-2 text-sm text-brand-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy"
-                  >
-                    {ACTIVE_KITS.map((kit) => (
-                      <option key={kit.id} value={kit.id}>
-                        {kit.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-            </div>
+                {mixOpen && (
+                  <div id="mix-kit-picker" className="mt-3">
+                    <label
+                      htmlFor="second-kit"
+                      className="block text-xs font-medium uppercase tracking-wide text-brand-ink/70"
+                    >
+                      Second kit
+                    </label>
+                    <select
+                      id="second-kit"
+                      value={secondKitId}
+                      onChange={(e) => setSecondKit(e.target.value)}
+                      className="mt-1 w-full rounded-md border border-brand-navy/30 bg-brand-white px-3 py-2 text-sm text-brand-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy"
+                    >
+                      {ACTIVE_KITS.map((kit) => (
+                        <option key={kit.id} value={kit.id}>
+                          {kit.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+            )}
 
             <button
               type="button"

@@ -13,6 +13,10 @@ export function KitPicker() {
   const selectedKitId = useBuyStore((s) => s.selectedKitId);
   const setSelectedKit = useBuyStore((s) => s.setSelectedKit);
 
+  // Single-product launch: with one active kit there is nothing to pick, so
+  // render nothing. The full picker stays intact for when more kits return.
+  if (ACTIVE_KITS.length <= 1) return null;
+
   return (
     <section className="paper-grain" aria-labelledby="kit-picker-heading">
       <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-16">

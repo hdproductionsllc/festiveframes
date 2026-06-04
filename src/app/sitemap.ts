@@ -1,9 +1,10 @@
 import type { MetadataRoute } from "next";
 import { SITE_URL } from "@/config/season";
 
-// XML sitemap served at /sitemap.xml. Only the two indexable pages belong here:
-// the marketing home and the interactive builder. The conversion page (/buy),
-// the order page (/thanks), and API routes are intentionally excluded.
+// XML sitemap served at /sitemap.xml. Only the indexable marketing pages
+// belong here: the home page and the privacy policy. The conversion page
+// (/buy), the order page (/thanks), the builder (/build, unlinked for launch),
+// and API routes are intentionally excluded.
 export default function sitemap(): MetadataRoute.Sitemap {
   const lastModified = new Date();
 
@@ -15,10 +16,10 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 1,
     },
     {
-      url: `${SITE_URL}/build`,
+      url: `${SITE_URL}/privacy`,
       lastModified,
-      changeFrequency: "weekly",
-      priority: 0.8,
+      changeFrequency: "yearly",
+      priority: 0.3,
     },
   ];
 }
