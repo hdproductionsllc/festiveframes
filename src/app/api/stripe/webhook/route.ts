@@ -13,6 +13,7 @@ import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 
 import { getStripe } from "@/lib/stripe";
+import { sendOrderEmails } from "@/lib/email";
 
 export const runtime = "nodejs";
 
@@ -56,7 +57,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     const session = event.data.object as Stripe.Checkout.Session;
     const metadata = session.metadata ?? {};
 
-    // Structured order record for fulfillment prep.
+    // Structured order record (also visible in Railway logs).
     console.log(
       "[stripe-webhook] Order confirmed:",
       JSON.stringify({
@@ -69,11 +70,43 @@ export async function POST(request: Request): Promise<NextResponse> {
         currency: session.currency,
         customerEmail: session.customer_details?.email ?? null,
         customerName: session.customer_details?.name ?? null,
-        shippingOption: session.shipping_cost?.shipping_rate ?? null,
       }),
     );
 
-    // TODO: email David for pickup prep.
+    // Send the customer confirmation + admin order emails. Best-effort: a
+    // failure here must never fail the webhook (Stripe would otherwise retry).
+    try {
+      const full = await stripe.checkout.sessions.retrieve(session.id, {
+        expand: ["line_items"],
+      });
+      const items = (full.line_items?.data ?? []).map((li) => ({
+        name: li.description ?? "Festive Frames",
+        quantity: li.quantity ?? 1,
+        amountCents: li.amount_total ?? 0,
+      }));
+      const shippingCents = full.shipping_cost?.amount_total ?? 0;
+      // Shipping address shape varies by Stripe API version; read defensively.
+      const collected =
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (full as any).collected_information?.shipping_details ??
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (full as any).shipping_details ??
+        null;
+
+      await sendOrderEmails({
+        sessionId: full.id,
+        customerEmail: full.customer_details?.email ?? null,
+        customerName: full.customer_details?.name ?? collected?.name ?? null,
+        items,
+        totalCents: full.amount_total ?? 0,
+        currency: full.currency ?? "usd",
+        fulfillment: shippingCents > 0 ? "shipping" : "pickup",
+        shippingName: collected?.name ?? full.customer_details?.name ?? null,
+        shippingAddress: collected?.address ?? null,
+      });
+    } catch (err) {
+      console.error("[stripe-webhook] order email step failed:", err);
+    }
   }
 
   return NextResponse.json({ received: true }, { status: 200 });

@@ -28,8 +28,23 @@ buyers, in the Stripe dashboard for this account:
       already surfaces the field at checkout).
 - [ ] Register webhook endpoint https://festiveframes.com/api/stripe/webhook -> set its
       signing secret as STRIPE_WEBHOOK_SECRET in Vercel.
-- [ ] Apple Pay / Google Pay: verify the festiveframes.com domain in Stripe (Payment methods).
-- [ ] Wire the webhook "email David for pickup prep" TODO (src/app/api/stripe/webhook/route.ts).
+- [ ] Apple Pay / Google Pay: verify the domain in Stripe (Settings -> Payment method domains).
+
+## Order emails + webhook (code is DONE; needs config to fire)
+The webhook now sends a branded customer confirmation AND an admin order email via Resend
+(src/lib/email.ts). It no-ops gracefully until configured. To turn it on:
+- [ ] **Register the webhook** in Stripe: Developers -> Webhooks -> Add endpoint ->
+      `https://<live-domain>/api/stripe/webhook`, event `checkout.session.completed`.
+      Copy its **Signing secret** (`whsec_...`).
+- [ ] In **Railway Variables** set: `STRIPE_WEBHOOK_SECRET` (the whsec above),
+      `RESEND_API_KEY` (from resend.com), `EMAIL_FROM` (e.g. `Festive Frames <orders@festiveframes.co>`),
+      `ADMIN_ORDER_EMAIL` (your inbox).
+- [ ] **Resend domain:** verify your sending domain in Resend (add its DKIM/SPF DNS records) so
+      `EMAIL_FROM` can use @festiveframes.co. Until verified, use Resend's test sender / your own email.
+- [ ] (Optional belt-and-suspenders) Stripe -> Settings -> Customer emails -> enable
+      "Successful payments" so Stripe also sends its own receipt.
+- [ ] Test: real order in live mode (or `stripe trigger checkout.session.completed`) -> confirm the
+      customer email + your admin email both arrive, and /thanks renders the order.
 
 ## Still to build (storefront phases)
 - [ ] SEO assets: sitemap.xml, robots.txt, OG image (code-rendered via @vercel/og).
