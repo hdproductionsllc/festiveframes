@@ -151,7 +151,7 @@ export const copy: Copy = {
     // automotive plastics, deliberately NOT named). Tiles are UV printed, so
     // the colors-stay-bright claim is supported.
     trust:
-      "Proudly made in the USA, designed and built right here in St. Louis. The frame and tiles use the same tough, hard plastic that is already on your car, like the bumpers and trim, so they shrug off the full swing of Midwest weather, from icy winters to brutal summer heat. The tiles are UV printed, so the colors stay bright in the sun. Built and tested to last.",
+      "Designed and made right here in St. Louis, USA. The frame installs once with your existing plate screws, and the decorative tiles snap on and off in seconds, so you can restyle whenever you want. Every tile is UV printed for a crisp, vivid finish.",
 
     faq: [
       {
@@ -176,7 +176,7 @@ export const copy: Copy = {
         // Tiles are UV printed (fade-resistant). Keep the heavy-brush car-wash
         // note: that is mechanical abrasion, a separate real caution.
         answer:
-          "The frame bolts on like any license plate frame and stays put. The tiles are made from the same tough, hard plastic as your car's bumpers and trim and are UV printed, so they hold their color through sun, rain, and snow. Heading into a car wash? The tiles pop off in seconds, so we recommend taking them off first and snapping them back on after.",
+          "The frame bolts on like any license plate frame and stays put, and the tiles snap on and off in seconds with no tools. Every tile is UV printed for a crisp, vivid finish. For a car wash, we recommend popping the tiles off first and snapping them back on after.",
       },
       {
         question: "Can I get more than one?",
@@ -220,11 +220,11 @@ export const copy: Copy = {
     },
 
     builtToLast: {
-      heading: "Built to last",
+      heading: "Designed and made in St. Louis",
       // Material in plain language (same hard automotive plastics, not named).
       // Tiles are UV printed, so the colors-stay-bright claim is supported.
       body:
-        "Proudly made in the USA, designed and built right here in St. Louis. The frame and tiles use the same tough, hard plastic as your car's bumpers and trim, with a solid, satisfying snap and a real quality feel in the hand. The artwork is UV printed so it stays bright and weatherproof through sun, rain, and snow. Beautiful, durable, and built to last for years.",
+        "Festive Frames is designed and made in the USA, right here in St. Louis. A sturdy plastic frame installs once with your existing plate screws, and the decorative tiles snap on and off in seconds with no tools, with a satisfying click and a real quality feel in the hand. Every tile is UV printed for a crisp, vivid finish.",
     },
 
     trust: {
@@ -274,7 +274,7 @@ export const copy: Copy = {
         // Matches the homepage weather answer (plain-language material, UV-printed tiles).
         question: "What about weather and car washes?",
         answer:
-          "The frame bolts on like any license plate frame and stays put. The tiles are made from the same tough, hard plastic as your car's bumpers and trim and are UV printed, so they hold their color through sun, rain, and snow. Heading into a car wash? The tiles pop off in seconds, so we recommend taking them off first and snapping them back on after.",
+          "The frame bolts on like any license plate frame and stays put, and the tiles snap on and off in seconds with no tools. Every tile is UV printed for a crisp, vivid finish. For a car wash, we recommend popping the tiles off first and snapping them back on after.",
       },
       {
         question: "Pickup or shipping?",
