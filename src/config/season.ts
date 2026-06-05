@@ -5,31 +5,11 @@
 // Current season: July 4, 2026.
 // ─────────────────────────────────────────────────────────────
 
-export interface SeasonPromo {
-  /** Discount code customers enter at checkout. */
-  code: string;
-  /** Discount amount in cents. */
-  amountOffCents: number;
-  /** Short human label used in popup/banner copy. */
-  label: string;
-}
-
-export interface SeasonPopup {
-  /** Popup headline. */
-  title: string;
-  /** Popup body copy (reuses the promo label). */
-  body: string;
-}
-
 export interface Season {
   /** Stable theme key for this season's styling/content. */
   theme: string;
   /** Seasonal hero image path (placeholder until photography lands). */
   heroImage: string;
-  /** Active promo code config. */
-  promo: SeasonPromo;
-  /** Seasonal popup content. */
-  popup: SeasonPopup;
   /** Order-by date for guaranteed pre-event delivery (ISO 8601). */
   orderByDate: string;
   /** Festival window start (ISO 8601). */
@@ -46,21 +26,10 @@ export interface Season {
   shippingLabel: string;
 }
 
-const promo: SeasonPromo = {
-  code: "FOURTH",
-  amountOffCents: 500,
-  label: "code FOURTH for $5 off, today only.",
-};
-
 export const season: Season = {
   theme: "july4-2026",
   // PLACEHOLDER: seasonal hero, 2400x1350 (16:9 landscape)
   heroImage: "/season/july4-2026-hero.jpg",
-  promo,
-  popup: {
-    title: "Happy Fourth of July!",
-    body: `Use ${promo.label}`,
-  },
   orderByDate: "2026-06-28",
   festivalStart: "2026-07-03",
   festivalEnd: "2026-07-04",
@@ -71,4 +40,6 @@ export const season: Season = {
 };
 
 /** Canonical site origin. Used for canonical URLs and QR codes. */
-export const SITE_URL = "https://festiveframes.co"; // confirmed domain: festiveframes.co (.co, not .com)
+// STOPGAP: festiveframes.co serves a parked lander, so point canonicals/OG/sitemap
+// at the live Railway origin. Revert to https://festiveframes.co once DNS points to Railway.
+export const SITE_URL = "https://festiveframes-production.up.railway.app";

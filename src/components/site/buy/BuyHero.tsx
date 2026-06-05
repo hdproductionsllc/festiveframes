@@ -4,8 +4,7 @@ import { useEffect } from "react";
 import Image from "next/image";
 import { copy } from "@/content/copy";
 import { getKit } from "@/config/kits";
-import { offer, priceFor, formatUsd } from "@/config/offers";
-import { season } from "@/config/season";
+import { offer, priceFor, formatUsd, ALPHABET_ADDON } from "@/config/offers";
 import { useBuyStore } from "./useBuyStore";
 import { useCheckout } from "./useCheckout";
 
@@ -18,7 +17,8 @@ export function BuyHero({ initialKit }: { initialKit: string | null }) {
   const hydrate = useBuyStore((s) => s.hydrate);
   const selectedKitId = useBuyStore((s) => s.selectedKitId);
   const selection = useBuyStore((s) => s.selection);
-  const promoClaimed = useBuyStore((s) => s.promoClaimed);
+  const quantity = useBuyStore((s) => s.quantity);
+  const alphabetQty = useBuyStore((s) => s.alphabetQty);
 
   const { checkout, pending, error } = useCheckout();
 
@@ -28,7 +28,10 @@ export function BuyHero({ initialKit }: { initialKit: string | null }) {
   }, [hydrate, initialKit]);
 
   const kit = getKit(selectedKitId) ?? getKit(initialKit ?? "american-classic")!;
-  const price = formatUsd(priceFor(selection));
+  // Live total that matches exactly what the server will charge: the selected
+  // pack times quantity, plus the letter-set add-on times its quantity.
+  const total =
+    priceFor(selection) * quantity + ALPHABET_ADDON.priceCents * alphabetQty;
   const selectionLabel =
     selection === "bundle"
       ? `${copy.buy.offer.bundle.title} - ${formatUsd(offer.bundlePrice)}`
@@ -81,18 +84,8 @@ export function BuyHero({ initialKit }: { initialKit: string | null }) {
               disabled={pending}
               className="inline-flex items-center justify-center rounded-md bg-brand-red px-7 py-3.5 text-base font-semibold uppercase tracking-wide text-brand-white transition-colors hover:bg-brand-red/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-gold disabled:opacity-70"
             >
-              {pending ? "Starting checkout..." : `Buy Now - ${price}`}
+              {pending ? "Starting checkout..." : `Buy Now - ${formatUsd(total)}`}
             </button>
-
-            {promoClaimed && (
-              <span
-                className="inline-flex items-center gap-1.5 rounded-md border border-brand-gold/70 bg-brand-gold/15 px-3 py-2 text-sm font-semibold uppercase tracking-wide text-brand-gold"
-                aria-label={`Promo code ${season.promo.code} applies at checkout`}
-              >
-                <span aria-hidden="true">★</span>
-                Code {season.promo.code} ready at checkout
-              </span>
-            )}
           </div>
 
           <p className="mt-3 text-sm text-brand-cream/75">{copy.buy.ctaSubline}</p>

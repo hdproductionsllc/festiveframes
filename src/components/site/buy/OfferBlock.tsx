@@ -78,6 +78,7 @@ export function OfferBlock() {
               type="button"
               onClick={() => select(card.which)}
               aria-pressed={card.selected}
+              aria-label={`Select ${card.title}, ${formatUsd(card.price)}`}
               className={`relative flex h-full flex-col rounded-xl border-2 bg-brand-cream-soft p-6 text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy ${
                 card.popular ? "shadow-lg" : ""
               } ${
@@ -217,6 +218,17 @@ export function OfferBlock() {
               <span>{formatUsd(total)}</span>
             </div>
           </div>
+
+          {/* Screen-reader-only running total. Visually hidden, announced
+              politely whenever the selection, quantity, or add-on changes. */}
+          <span aria-live="polite" className="sr-only">
+            {quantity} {packTitle}
+            {quantity > 1 ? "s" : ""}
+            {alphabetQty > 0
+              ? ` and ${alphabetQty} letter set${alphabetQty > 1 ? "s" : ""}`
+              : ""}
+            . Total {formatUsd(total)}.
+          </span>
 
           <button
             type="button"

@@ -64,6 +64,7 @@ export async function POST(request: Request): Promise<NextResponse> {
         selection: metadata.selection ?? null,
         kitIds: metadata.kitIds ?? null,
         quantity: metadata.quantity ?? null,
+        alphabetQty: metadata.alphabetQty ?? null,
         amountTotal: session.amount_total,
         currency: session.currency,
         customerEmail: session.customer_details?.email ?? null,

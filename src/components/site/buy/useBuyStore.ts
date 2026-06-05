@@ -53,8 +53,6 @@ interface BuyState {
   quantity: number;
   /** Whether the store has hydrated from the URL/localStorage yet. */
   hydrated: boolean;
-  /** Visitor claimed the FOURTH promo from the popup; show the code chip. */
-  promoClaimed: boolean;
   /** A-Z & 0-9 letter-set add-on quantity (+$10 each, 0 = none). */
   alphabetQty: number;
 
@@ -63,7 +61,6 @@ interface BuyState {
   setSelection: (selection: OfferSelection) => void;
   setSecondKit: (id: string) => void;
   setQuantity: (n: number) => void;
-  claimPromo: () => void;
   setAlphabetQty: (n: number) => void;
 }
 
@@ -90,7 +87,6 @@ export const useBuyStore = create<BuyState>((set, get) => ({
   secondKitId: DEFAULT_KIT_ID,
   quantity: MIN_QTY,
   hydrated: false,
-  promoClaimed: false,
   alphabetQty: 0,
 
   hydrate: (kitParam) => {
@@ -136,8 +132,6 @@ export const useBuyStore = create<BuyState>((set, get) => ({
   },
 
   setQuantity: (n) => set({ quantity: clampQty(n) }),
-
-  claimPromo: () => set({ promoClaimed: true }),
 
   setAlphabetQty: (n) => set({ alphabetQty: clampAddon(n) }),
 }));

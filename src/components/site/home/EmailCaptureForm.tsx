@@ -41,7 +41,8 @@ export function EmailCaptureForm() {
         role="status"
         className="rounded-md border border-brand-gold/60 bg-brand-navy-soft/40 px-4 py-3 text-base font-medium text-brand-cream"
       >
-        You are on the list. Watch your inbox for the next kit drop.
+        You are on the list. Watch your inbox for new tile drops and seasonal
+        sets.
       </p>
     );
   }
@@ -67,7 +68,7 @@ export function EmailCaptureForm() {
         placeholder="you@example.com"
         aria-invalid={status === "error"}
         aria-describedby={status === "error" ? "email-capture-error" : undefined}
-        className="w-full rounded-md border border-brand-navy-soft/60 bg-brand-cream-soft px-4 py-3 text-base text-brand-ink placeholder:text-brand-ink/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-gold"
+        className="w-full rounded-md border border-brand-navy-soft/60 bg-brand-cream-soft px-4 py-3 text-base text-brand-ink placeholder:text-brand-ink/65 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-gold"
       />
       <button
         type="submit"

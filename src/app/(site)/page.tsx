@@ -27,15 +27,13 @@ export const metadata: Metadata = {
     siteName: copy.site.brandName,
     title: copy.home.metaTitle,
     description: copy.home.metaDescription,
-    // No explicit images: the code-rendered file-convention OG image at
-    // src/app/opengraph-image.tsx is wired in automatically by Next, resolved
-    // to an absolute URL via metadataBase in the root layout.
+    images: [`${SITE_URL}/opengraph-image`],
   },
   twitter: {
     card: "summary_large_image",
     title: copy.home.metaTitle,
     description: copy.home.metaDescription,
-    // Twitter image is supplied by the same file-convention OG image.
+    images: [`${SITE_URL}/opengraph-image`],
   },
 };
 
@@ -65,6 +63,7 @@ function buildJsonLd() {
     "@type": "Product",
     name: americanClassic?.name ?? "American Classic Kit",
     description: americanClassic?.identityLine,
+    image: `${SITE_URL}/kits/american-classic-thumb.jpg`,
     brand: { "@type": "Brand", name: copy.site.brandName },
     offers: {
       "@type": "Offer",

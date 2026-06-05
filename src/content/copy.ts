@@ -127,12 +127,12 @@ export const copy: Copy = {
 
   home: {
     metaTitle:
-      "Custom License Plate Frames with Snap-On Tiles | Festive Frames",
+      "Custom License Plate Frames with Snap-On Tiles",
     metaDescription:
       "The Freedom Frame Set: a snap-on license plate frame kit made in St. Louis for July 4. Comes loaded with 40+ patriotic tiles. Install once, swap tiles forever.",
     heroH1: "Customizable License Plate Frames with Snap-On Tiles",
     heroSubhead: "Install once. Swap tiles forever.",
-    primaryCta: { label: "Shop July 4 Kits", href: "/buy" },
+    primaryCta: { label: "Shop the Freedom Frame Set", href: "/buy" },
     secondaryCta: { label: "See what's inside", href: "/buy" },
 
     whatItIs: [
@@ -166,9 +166,9 @@ export const copy: Copy = {
       },
       {
         question: "Do tiles stay on at highway speed?",
-        // TODO-VERIFY: confirm secure-hold claim with road testing before launch.
+        // TODO-VERIFY: confirm secure-hold claim with road testing.
         answer:
-          "Tiles are designed to lock into the frame and hold during normal highway driving. We are finalizing road testing and will share the results before launch.",
+          "The tiles lock into the frame and are designed to stay put during normal highway driving.",
       },
       {
         question: "What about weather and car washes?",
@@ -183,22 +183,22 @@ export const copy: Copy = {
         answer: "Yes. Every tile fits every frame, and two sets are $69.",
       },
       {
-        question: "When do new kits drop?",
+        question: "When do new tiles drop?",
         answer:
-          "New kits arrive every season. The email list gets first access.",
+          "New tile drops and seasonal sets arrive throughout the year. The email list gets first access.",
       },
     ],
 
     emailCapturePrompt: "Kit drops, festival stops, early access. No spam, ever.",
-    ctaHeading: "Pick your kit and make it yours.",
+    ctaHeading: "Make your plate yours.",
   },
 
   buy: {
-    metaTitle: "Shop July 4 Kits | Festive Frames",
+    metaTitle: "Shop the Freedom Frame Set",
     metaDescription:
       "Shop the Freedom Frame Set: a snap-on license plate frame kit loaded with 40+ patriotic tiles. Install once, swap tiles forever. Free St. Louis pickup.",
     h1: "Make your license plate the most fun part of your car.",
-    subhead: "Pick your kit. Snap it on. Swap it forever.",
+    subhead: "Snap it on. Swap it forever.",
     ctaSubline: "Free festival pickup July 3-4, or $5 flat shipping.",
     guarantee: "30-day guarantee. If you do not love it, send it back.",
 
@@ -287,13 +287,13 @@ export const copy: Copy = {
   },
 
   build: {
-    metaTitle: "Design Your Own License Plate Frame | Festive Frames",
+    metaTitle: "Design Your Own License Plate Frame",
     metaDescription:
       "Design a custom snap-on license plate frame online. Arrange tiles, words, and icons into a personalized frame, then order your kit. Made in St. Louis.",
   },
 
   thanks: {
-    metaTitle: "Order Confirmed | Festive Frames",
+    metaTitle: "Order Confirmed",
     metaDescription:
       "Your Festive Frames kit is reserved. See your order details and what comes next.",
     headline: "You're in. Your kit is reserved.",

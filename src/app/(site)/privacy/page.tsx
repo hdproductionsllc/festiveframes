@@ -15,7 +15,7 @@ const PRIVACY_URL = `${SITE_URL}/privacy`;
 const CONTACT_EMAIL = "hello@festiveframes.co";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy | Festive Frames",
+  title: "Privacy Policy",
   description:
     "How Festive Frames collects, uses, and protects your information when you browse our site, join our email list, or place an order.",
   alternates: { canonical: PRIVACY_URL },
@@ -136,9 +136,6 @@ export default function PrivacyPage() {
             <li>
               Whether you have already seen or dismissed our seasonal popup, so
               we do not keep showing it.
-            </li>
-            <li>
-              Analytics cookies that help us measure site usage in aggregate.
             </li>
           </ul>
           <p className="mt-3">

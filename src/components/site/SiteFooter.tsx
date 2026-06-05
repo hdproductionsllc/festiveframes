@@ -23,16 +23,16 @@ export function SiteFooter() {
           </span>
           <p className="max-w-prose text-sm leading-relaxed text-brand-cream/80">
             Festive Frames makes customizable snap-on license plate frame kits.
-            Pick a curated kit or design your own in the builder with decorative
-            snap-on tiles, then make it yours for the season, the road trip, or
-            the everyday drive.
+            Each kit comes with decorative snap-on tiles you press into the frame
+            to dress up your plate for the season, the road trip, or the everyday
+            drive.
           </p>
         </div>
 
         <nav aria-label="Footer" className="text-sm">
-          <h2 className="mb-3 font-mkt-display text-xs font-semibold uppercase tracking-widest text-brand-cream/60">
+          <p className="mb-3 font-mkt-display text-xs font-semibold uppercase tracking-widest text-brand-cream/60">
             Explore
-          </h2>
+          </p>
           <ul className="space-y-2">
             <li>
               <Link
@@ -48,6 +48,22 @@ export function SiteFooter() {
                 className="text-brand-cream/90 transition-colors hover:text-brand-gold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-gold"
               >
                 Privacy
+              </Link>
+            </li>
+            <li>
+              <Link
+                href="/returns"
+                className="text-brand-cream/90 transition-colors hover:text-brand-gold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-gold"
+              >
+                Returns &amp; Refunds
+              </Link>
+            </li>
+            <li>
+              <Link
+                href="/terms"
+                className="text-brand-cream/90 transition-colors hover:text-brand-gold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-gold"
+              >
+                Terms
               </Link>
             </li>
             <li>

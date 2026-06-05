@@ -36,6 +36,8 @@ interface ThanksPageProps {
 interface OrderView {
   kitNames: string[];
   quantityLabel: string;
+  /** Count of A-Z & 0-9 letter set add-ons purchased (0 when none). */
+  alphabetQty: number;
   selection: "single" | "bundle" | null;
   /** true = festival pickup (free), false = shipped, null = unknown. */
   isPickup: boolean | null;
@@ -70,6 +72,13 @@ function buildOrderView(session: Stripe.Checkout.Session): OrderView {
       .filter((d): d is string => Boolean(d));
   }
 
+  // Letter-set add-on count. Guard NaN / invalid values to 0.
+  const parsedAlphabetQty = Number.parseInt(metadata.alphabetQty ?? "", 10);
+  const alphabetQty =
+    Number.isFinite(parsedAlphabetQty) && parsedAlphabetQty > 0
+      ? parsedAlphabetQty
+      : 0;
+
   const quantity = metadata.quantity ? Number(metadata.quantity) : null;
   const unit = selection === "bundle" ? "bundle" : "kit";
   const quantityLabel =
@@ -91,7 +100,7 @@ function buildOrderView(session: Stripe.Checkout.Session): OrderView {
     quantity: quantity && Number.isFinite(quantity) ? quantity : 1,
   };
 
-  return { kitNames, quantityLabel, selection, isPickup, analytics };
+  return { kitNames, quantityLabel, alphabetQty, selection, isPickup, analytics };
 }
 
 /** Safely retrieve and shape the order. Returns null on any failure. */
@@ -156,6 +165,12 @@ export default async function ThanksPage({ searchParams }: ThanksPageProps) {
             )}
             {order.quantityLabel && (
               <p className="mt-3 text-base text-brand-ink/80">{order.quantityLabel}</p>
+            )}
+            {order.alphabetQty > 0 && (
+              <p className="mt-3 text-base text-brand-ink/80">
+                {order.alphabetQty} x A-Z &amp; 0-9 letter set
+                {order.alphabetQty > 1 ? "s" : ""}
+              </p>
             )}
           </div>
         ) : (
