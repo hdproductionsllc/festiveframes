@@ -176,7 +176,7 @@ export const copy: Copy = {
         // Tiles are UV printed (fade-resistant). Keep the heavy-brush car-wash
         // note: that is mechanical abrasion, a separate real caution.
         answer:
-          "The frame and tiles are made from the same tough, hard plastic that is already on your car, like the bumpers and trim, and they are built and tested for the full range of St. Louis weather, from freezing winters to summer heat, sun, and rain. The tiles are UV printed, so the colors stay bright. For automated car washes with heavy brushes, a gentle or touch-free wash is your safest bet.",
+          "The frame bolts on like any license plate frame and stays put. The tiles are made from the same tough, hard plastic as your car's bumpers and trim and are UV printed, so they hold their color through sun, rain, and snow. Heading into a car wash? The tiles pop off in seconds, so we recommend taking them off first and snapping them back on after.",
       },
       {
         question: "Can I get more than one?",
@@ -274,7 +274,7 @@ export const copy: Copy = {
         // Matches the homepage weather answer (plain-language material, UV-printed tiles).
         question: "What about weather and car washes?",
         answer:
-          "The frame and tiles are made from the same tough, hard plastic that is already on your car, like the bumpers and trim, and they are built and tested for the full range of St. Louis weather, from freezing winters to summer heat, sun, and rain. The tiles are UV printed, so the colors stay bright. For automated car washes with heavy brushes, a gentle or touch-free wash is your safest bet.",
+          "The frame bolts on like any license plate frame and stays put. The tiles are made from the same tough, hard plastic as your car's bumpers and trim and are UV printed, so they hold their color through sun, rain, and snow. Heading into a car wash? The tiles pop off in seconds, so we recommend taking them off first and snapping them back on after.",
       },
       {
         question: "Pickup or shipping?",
