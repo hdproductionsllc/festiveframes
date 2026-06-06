@@ -80,7 +80,7 @@ function buildJsonLd() {
     name: americanClassic?.name ?? "Freedom Frame Set",
     description:
       "A customizable, snap-on license plate frame kit with 40+ interchangeable patriotic tiles. Install once, swap tiles forever. Designed and made in St. Louis, USA.",
-    image: [`${SITE_URL}/kits/american-classic-thumb.jpg`, `${SITE_URL}/designs/design-3.png`],
+    image: [`${SITE_URL}/kits/american-classic-thumb.jpg`, `${SITE_URL}/designs/design-250.png`],
     brand: { "@type": "Brand", name: copy.site.brandName },
     category: "License Plate Frames",
     offers: {
