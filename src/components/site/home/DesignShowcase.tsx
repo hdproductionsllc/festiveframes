@@ -5,8 +5,8 @@ import Image from "next/image";
 // Transparent PNGs sit on the cream card so the frames read cleanly.
 
 const FEATURED = {
-  src: "/designs/design-5.png",
-  alt: "Festive Frames license plate frame with eagle, American flag and liberty bell tiles, a 1776 top bar and a USA bottom bar",
+  src: "/designs/design-250.png",
+  alt: "Festive Frames license plate frame for America's 250th, with a 250 YEARS top bar and patriotic flag, star, firework, and 1776 to 2026 tiles",
 };
 
 const DESIGNS = [
@@ -21,6 +21,10 @@ const DESIGNS = [
   {
     src: "/designs/design-4.png",
     alt: "Festive Frames license plate frame with a bold red and white star border and a HOME OF THE BRAVE bottom bar",
+  },
+  {
+    src: "/designs/design-5.png",
+    alt: "Festive Frames license plate frame with eagle, American flag and liberty bell tiles, a 1776 top bar and a USA bottom bar",
   },
 ];
 

@@ -3,6 +3,7 @@ import { copy } from "@/content/copy";
 import { getKit, getActiveKits } from "@/config/kits";
 import { offer } from "@/config/offers";
 import { SITE_URL } from "@/config/season";
+import { Countdown } from "@/components/site/buy/Countdown";
 import { Hero } from "@/components/site/home/Hero";
 import { WhatItIs } from "@/components/site/home/WhatItIs";
 import { KitShowcase } from "@/components/site/home/KitShowcase";
@@ -163,6 +164,7 @@ export default function HomePage() {
         // JSON-LD is static, server-rendered, and built from trusted config.
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
+      <Countdown />
       <Hero />
       <TrustSection />
       <WhatItIs />
