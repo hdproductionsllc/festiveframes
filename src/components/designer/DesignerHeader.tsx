@@ -6,11 +6,10 @@ import { useUIStore } from "@/stores/ui-store";
 
 interface DesignerHeaderProps {
   onExport: () => void;
-  onOrder: () => void;
-  isOrdering?: boolean;
+  onExportParts: () => void;
 }
 
-export function DesignerHeader({ onExport, onOrder, isOrdering }: DesignerHeaderProps) {
+export function DesignerHeader({ onExport, onExportParts }: DesignerHeaderProps) {
   const designName = useDesignStore((s) => s.designName);
   const setDesignName = useDesignStore((s) => s.setDesignName);
   const updatedAt = useDesignStore((s) => s.updatedAt);
@@ -69,15 +68,15 @@ export function DesignerHeader({ onExport, onOrder, isOrdering }: DesignerHeader
           {exportState === "exporting" ? "Saving..." : "Save Image"}
         </button>
         <button
-          onClick={onOrder}
-          disabled={!hasDesign || isOrdering}
+          onClick={onExportParts}
+          disabled={!hasDesign}
           className="px-5 py-2.5 rounded-lg text-sm font-bold transition-all active:scale-95
             disabled:opacity-40 disabled:cursor-not-allowed
             bg-gradient-to-r from-brand-gold to-yellow-500 text-black
             hover:from-yellow-400 hover:to-yellow-500
             shadow-[0_0_12px_rgba(255,215,0,0.3)] hover:shadow-[0_0_20px_rgba(255,215,0,0.5)]"
         >
-          {isOrdering ? "Preparing..." : "Order This Design"}
+          Export Parts List
         </button>
       </div>
     </header>

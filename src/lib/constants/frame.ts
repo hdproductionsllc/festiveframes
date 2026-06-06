@@ -12,6 +12,7 @@ export const DEFAULT_FRAME_CONFIG: FrameConfig = {
   heightInches: 7.88,
   tileSizeInches: 0.985,
   topSlots: 14,
+  bottomSlots: 14,
   leftSlots: 6,
   rightSlots: 6,
   wings: false,
@@ -72,6 +73,7 @@ export function getTotalWidthInches(config: FrameConfig): number {
 
 // Bottom bar fonts — system fonts first (instant), then lightweight Google Fonts
 export const BOTTOM_BAR_FONTS = [
+  { id: "stars-stripes", name: "Stars & Stripes", family: "'Stars and Stripes', 'Bebas Neue', sans-serif" },
   { id: "impact", name: "Impact", family: "Impact, 'Arial Black', sans-serif" },
   { id: "arial-black", name: "Arial Black", family: "'Arial Black', 'Arial Bold', sans-serif" },
   { id: "georgia", name: "Georgia", family: "Georgia, 'Times New Roman', serif" },

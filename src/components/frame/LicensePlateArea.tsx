@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { getPlateDesign } from "@/data/plates";
-import { getPlateImageUrl } from "@/data/plate-images";
+import { getPlateImageUrl, getPlateImageDisplay } from "@/data/plate-images";
 
 interface LicensePlateAreaProps {
   x: number;
@@ -26,6 +26,7 @@ const PLATE_NUMBER_FONT = "'LICENSE PLATE USA', 'Barlow Condensed', 'Arial Narro
 export function LicensePlateArea({ x, y, width, height, plateState }: LicensePlateAreaProps) {
   const plate = getPlateDesign(plateState);
   const plateImageUrl = getPlateImageUrl(plateState);
+  const plateImageDisplay = getPlateImageDisplay(plateState);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageFailed, setImageFailed] = useState(false);
 
@@ -76,8 +77,14 @@ export function LicensePlateArea({ x, y, width, height, plateState }: LicensePla
             onError={() => setImageFailed(true)}
             draggable={false}
             loading="eager"
-            className="absolute inset-0 w-full h-full object-cover"
-            style={{ opacity: imageLoaded ? 1 : 0, transition: "opacity 0.4s ease-out" }}
+            className="absolute inset-0 w-full h-full"
+            style={{
+              opacity: imageLoaded ? 1 : 0,
+              transition: "opacity 0.4s ease-out",
+              objectFit: plateImageDisplay.objectFit,
+              objectPosition: plateImageDisplay.objectPosition,
+              transform: plateImageDisplay.scale !== 1 ? `scale(${plateImageDisplay.scale})` : undefined,
+            }}
           />
         )}
 

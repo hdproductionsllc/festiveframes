@@ -55,7 +55,7 @@ export function PaletteTile({ piece }: PaletteTileProps) {
             src={piece.artworkUrl}
             alt={piece.name}
             className="rounded-md"
-            style={{ width: "82%", height: "82%", objectFit: "contain" }}
+            style={{ width: "100%", height: "100%", objectFit: "cover" }}
             draggable={false}
           />
         ) : hasArt ? (

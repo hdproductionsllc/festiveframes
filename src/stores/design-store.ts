@@ -6,16 +6,30 @@ import type {
   QRCodeConfig,
   FrameConfig,
   DesignPreset,
+  TextBarPlacement,
+  TextBarRow,
+  PlacedTextBar,
 } from "@/lib/types";
 import { DEFAULT_FRAME_CONFIG, getWingFrameConfig, getStandardConfig } from "@/lib/constants/frame";
 import { DEFAULT_BOTTOM_BAR, DEFAULT_QR_CODE } from "@/lib/constants/defaults";
 import { getAllSlotIds } from "@/lib/utils/slot-generator";
+import {
+  measureTextBarUnits,
+  coveredSlotIds,
+  clampStartIndex,
+  rowLength,
+} from "@/lib/utils/text-bar";
 import { MAX_HISTORY_DEPTH } from "@/lib/constants/frame";
+
+function makeTextBarId(existing: PlacedTextBar[]): string {
+  return `tb-${Date.now().toString(36)}-${existing.length}`;
+}
 
 interface HistorySnapshot {
   slots: Record<string, PlacedTile>;
   bottomBar: BottomBarConfig;
   frameConfig: FrameConfig;
+  textBars: PlacedTextBar[];
 }
 
 interface DesignState {
@@ -23,9 +37,11 @@ interface DesignState {
   designName: string;
   plateState: string; // state abbreviation, e.g. "CA"
   slots: Record<string, PlacedTile>;
-  bottomBar: BottomBarConfig;
+  bottomBar: BottomBarConfig; // draft for the NEXT text bar to be placed
   qrCode: QRCodeConfig;
   frameConfig: FrameConfig;
+  textBars: PlacedTextBar[]; // bars placed on the frame
+  selectedBarId: string | null; // bar currently being edited in the panel
   updatedAt: number;
 
   // History
@@ -37,6 +53,7 @@ interface DesignState {
   removeTile: (slotId: string) => void;
   fillAll: (pieceId: string, setId: string) => void;
   randomFill: (pieces: Array<{ pieceId: string; setId: string }>) => void;
+  fillEmpty: (pieces: Array<{ pieceId: string; setId: string }>) => void;
   mirrorTopSlots: () => void;
   alternateSlots: (
     pieceA: { pieceId: string; setId: string },
@@ -45,8 +62,16 @@ interface DesignState {
   clearAll: () => void;
   applyPreset: (preset: DesignPreset) => void;
 
-  // Actions — bottom bar
+  // Actions — bottom bar (the draft)
   updateBottomBar: (updates: Partial<BottomBarConfig>) => void;
+
+  // Actions — text bars (draggable slogan bars)
+  placeTextBar: (row: TextBarRow, startIndex: number) => void;
+  moveTextBar: (id: string, row: TextBarRow, startIndex: number) => void;
+  removeTextBar: (id: string) => void;
+  selectBar: (id: string | null) => void;
+  updateTextBar: (id: string, updates: Partial<BottomBarConfig>) => void;
+  updateTextBarQr: (id: string, enabled: boolean) => void;
 
   // Actions — QR
   updateQRCode: (updates: Partial<QRCodeConfig>) => void;
@@ -72,11 +97,13 @@ function createSnapshot(state: {
   slots: Record<string, PlacedTile>;
   bottomBar: BottomBarConfig;
   frameConfig: FrameConfig;
+  textBars: PlacedTextBar[];
 }): HistorySnapshot {
   return {
     slots: { ...state.slots },
     bottomBar: { ...state.bottomBar },
     frameConfig: { ...state.frameConfig },
+    textBars: state.textBars.map((b) => ({ ...b, config: { ...b.config } })),
   };
 }
 
@@ -102,17 +129,23 @@ export const useDesignStore = create<DesignState>()(
         bottomBar: { ...DEFAULT_BOTTOM_BAR },
         qrCode: { ...DEFAULT_QR_CODE },
         frameConfig: { ...DEFAULT_FRAME_CONFIG },
+        textBars: [],
+        selectedBarId: null,
         dieCut: false,
         updatedAt: Date.now(),
         history: [],
         historyIndex: -1,
 
         placeTile: (slotId, pieceId, setId) => {
-          set((state) => ({
-            ...pushHistory(),
-            slots: { ...state.slots, [slotId]: { pieceId, setId } },
-            updatedAt: Date.now(),
-          }));
+          set((state) => {
+            // Slots under a text bar are blocked.
+            if (coveredSlotIds(state.textBars).includes(slotId)) return state;
+            return {
+              ...pushHistory(),
+              slots: { ...state.slots, [slotId]: { pieceId, setId } },
+              updatedAt: Date.now(),
+            };
+          });
         },
 
         removeTile: (slotId) => {
@@ -158,10 +191,26 @@ export const useDesignStore = create<DesignState>()(
           });
         },
 
+        fillEmpty: (pieces) => {
+          set((state) => {
+            if (pieces.length === 0) return state;
+            const newSlots = { ...state.slots };
+            let changed = false;
+            for (const id of getAllSlotIds(state.frameConfig)) {
+              if (newSlots[id]) continue;
+              const piece = pieces[Math.floor(Math.random() * pieces.length)];
+              newSlots[id] = { pieceId: piece.pieceId, setId: piece.setId };
+              changed = true;
+            }
+            if (!changed) return state;
+            return { ...pushHistory(), slots: newSlots, updatedAt: Date.now() };
+          });
+        },
+
         mirrorTopSlots: () => {
           set((state) => {
             const newSlots = { ...state.slots };
-            const { topSlots, leftSlots, rightSlots, wings, wingColumns } = state.frameConfig;
+            const { topSlots, bottomSlots, leftSlots, rightSlots, wings, wingColumns } = state.frameConfig;
 
             // Mirror top rail: left half → right half
             const topHalf = Math.floor(topSlots / 2);
@@ -187,12 +236,16 @@ export const useDesignStore = create<DesignState>()(
               }
             }
 
-            // Mirror bottom-left → bottom-right
-            const bl = state.slots["frame:bottom-left-0"];
-            if (bl) {
-              newSlots["frame:bottom-right-0"] = { ...bl };
-            } else {
-              delete newSlots["frame:bottom-right-0"];
+            // Mirror bottom rail: left half → right half (same as top)
+            const bottomHalf = Math.floor(bottomSlots / 2);
+            for (let i = 0; i < bottomHalf; i++) {
+              const leftId = `frame:bottom-${i}`;
+              const rightId = `frame:bottom-${bottomSlots - 1 - i}`;
+              if (state.slots[leftId]) {
+                newSlots[rightId] = { ...state.slots[leftId] };
+              } else {
+                delete newSlots[rightId];
+              }
             }
 
             // Mirror wing-left → wing-right (same flat index)
@@ -238,6 +291,8 @@ export const useDesignStore = create<DesignState>()(
           set(() => ({
             ...pushHistory(),
             slots: {},
+            textBars: [],
+            selectedBarId: null,
             updatedAt: Date.now(),
           }));
         },
@@ -259,6 +314,92 @@ export const useDesignStore = create<DesignState>()(
             bottomBar: { ...state.bottomBar, ...updates },
             updatedAt: Date.now(),
           }));
+        },
+
+        placeTextBar: (row, startIndex) => {
+          set((state) => {
+            const maxUnits = rowLength(state.frameConfig, row);
+            const config = { ...state.bottomBar };
+            const widthUnits = measureTextBarUnits(config, state.qrCode.enabled, maxUnits);
+            const start = clampStartIndex(startIndex, widthUnits, maxUnits);
+            const bar: PlacedTextBar = {
+              id: makeTextBarId(state.textBars),
+              row,
+              startIndex: start,
+              widthUnits,
+              config,
+              qr: state.qrCode.enabled,
+            };
+            // Tiles under the bar are kept (just hidden) so moving/removing the
+            // bar never leaves a hole. The parts list excludes covered tiles.
+            return {
+              ...pushHistory(),
+              textBars: [...state.textBars, bar],
+              selectedBarId: bar.id,
+              updatedAt: Date.now(),
+            };
+          });
+        },
+
+        moveTextBar: (id, row, startIndex) => {
+          set((state) => {
+            const bar = state.textBars.find((b) => b.id === id);
+            if (!bar) return state;
+            const maxUnits = rowLength(state.frameConfig, row);
+            const start = clampStartIndex(startIndex, bar.widthUnits, maxUnits);
+            const moved: PlacedTextBar = { ...bar, row, startIndex: start };
+            return {
+              ...pushHistory(),
+              textBars: state.textBars.map((b) => (b.id === id ? moved : b)),
+              updatedAt: Date.now(),
+            };
+          });
+        },
+
+        removeTextBar: (id) => {
+          set((state) => ({
+            ...pushHistory(),
+            textBars: state.textBars.filter((b) => b.id !== id),
+            selectedBarId: state.selectedBarId === id ? null : state.selectedBarId,
+            updatedAt: Date.now(),
+          }));
+        },
+
+        selectBar: (id) => {
+          set({ selectedBarId: id });
+        },
+
+        updateTextBar: (id, updates) => {
+          set((state) => {
+            const bar = state.textBars.find((b) => b.id === id);
+            if (!bar) return state;
+            const config = { ...bar.config, ...updates };
+            const maxUnits = rowLength(state.frameConfig, bar.row);
+            const widthUnits = measureTextBarUnits(config, bar.qr, maxUnits);
+            const startIndex = clampStartIndex(bar.startIndex, widthUnits, maxUnits);
+            const updated: PlacedTextBar = { ...bar, config, widthUnits, startIndex };
+            return {
+              ...pushHistory(),
+              textBars: state.textBars.map((b) => (b.id === id ? updated : b)),
+              updatedAt: Date.now(),
+            };
+          });
+        },
+
+        updateTextBarQr: (id, enabled) => {
+          set((state) => {
+            const bar = state.textBars.find((b) => b.id === id);
+            if (!bar) return state;
+            const maxUnits = rowLength(state.frameConfig, bar.row);
+            const widthUnits = measureTextBarUnits(bar.config, enabled, maxUnits);
+            const startIndex = clampStartIndex(bar.startIndex, widthUnits, maxUnits);
+            const updated: PlacedTextBar = { ...bar, qr: enabled, widthUnits, startIndex };
+            return {
+              ...pushHistory(),
+              textBars: state.textBars.map((b) => (b.id === id ? updated : b)),
+              updatedAt: Date.now(),
+            };
+          });
         },
 
         updateQRCode: (updates) => {
@@ -342,6 +483,7 @@ export const useDesignStore = create<DesignState>()(
               slots: { ...snapshot.slots },
               bottomBar: { ...snapshot.bottomBar },
               frameConfig: { ...snapshot.frameConfig },
+              textBars: snapshot.textBars.map((b) => ({ ...b, config: { ...b.config } })),
               historyIndex: state.historyIndex - 1,
               updatedAt: Date.now(),
             };
@@ -357,6 +499,7 @@ export const useDesignStore = create<DesignState>()(
               slots: { ...snapshot.slots },
               bottomBar: { ...snapshot.bottomBar },
               frameConfig: { ...snapshot.frameConfig },
+              textBars: snapshot.textBars.map((b) => ({ ...b, config: { ...b.config } })),
               historyIndex: state.historyIndex + 1,
               updatedAt: Date.now(),
             };
@@ -368,29 +511,54 @@ export const useDesignStore = create<DesignState>()(
       };
     },
     {
-      name: "festive-frames-design",
+      name: "festive-frames-design-v3",
+      // NOTE: the design (slots, textBars) and the draft bar styling are NOT
+      // persisted — refreshing clears the design, reseeds a fresh random July
+      // 4th layout, and resets the bar to the loud default.
       partialize: (state) => ({
         designName: state.designName,
         plateState: state.plateState,
-        slots: state.slots,
-        bottomBar: state.bottomBar,
-        qrCode: state.qrCode,
         frameConfig: state.frameConfig,
         dieCut: state.dieCut,
         updatedAt: state.updatedAt,
       }),
       merge: (persisted, current) => {
-        const merged = { ...current, ...(persisted as object) };
-        // Migrate legacy configs without wing properties
-        const fc = (merged as DesignState).frameConfig;
-        if (fc && fc.wingWidthInches === undefined) {
-          (merged as DesignState).frameConfig = {
-            ...fc,
-            wingWidthInches: 0,
-            wingColumns: 0,
-          };
+        const merged = { ...current, ...(persisted as object) } as DesignState;
+        const fc = merged.frameConfig;
+        if (fc) {
+          // Migrate legacy configs without wing properties
+          if (fc.wingWidthInches === undefined) {
+            fc.wingWidthInches = 0;
+            fc.wingColumns = 0;
+          }
+          // Migrate configs predating the full bottom row
+          if (fc.bottomSlots === undefined) {
+            fc.bottomSlots = fc.topSlots ?? 14;
+          }
         }
-        return merged as DesignState;
+        // Migrate legacy corner slot ids → ends of the new bottom row
+        if (merged.slots) {
+          const bs = merged.frameConfig?.bottomSlots ?? 14;
+          const s = { ...merged.slots } as Record<string, PlacedTile>;
+          if (s["frame:bottom-left-0"]) {
+            s["frame:bottom-0"] = s["frame:bottom-left-0"];
+            delete s["frame:bottom-left-0"];
+          }
+          if (s["frame:bottom-right-0"]) {
+            s[`frame:bottom-${bs - 1}`] = s["frame:bottom-right-0"];
+            delete s["frame:bottom-right-0"];
+          }
+          merged.slots = s;
+        }
+        // Migrate single text bar → array of placed bars
+        if (merged.textBars === undefined) {
+          const legacy = (merged as unknown as { textBar?: TextBarPlacement | null }).textBar;
+          merged.textBars = legacy
+            ? [{ id: "tb-legacy", ...legacy, config: { ...merged.bottomBar }, qr: merged.qrCode?.enabled ?? false }]
+            : [];
+        }
+        delete (merged as unknown as { textBar?: unknown }).textBar;
+        return merged;
       },
     }
   )

@@ -25,7 +25,7 @@ export interface TilePiece {
 
 // ─── Frame Layout ───────────────────────────────────────────
 
-export type SlotZone = "top" | "left" | "right" | "bottom-left" | "bottom-right" | "wing-left" | "wing-right";
+export type SlotZone = "top" | "left" | "right" | "bottom" | "wing-left" | "wing-right";
 
 export interface FrameSlot {
   id: string; // e.g. "frame:top-0", "frame:left-2"
@@ -42,6 +42,7 @@ export interface FrameConfig {
   heightInches: number;
   tileSizeInches: number;
   topSlots: number;
+  bottomSlots: number;
   leftSlots: number;
   rightSlots: number;
   wings: boolean;
@@ -72,6 +73,28 @@ export interface QRCodeConfig {
   enabled: boolean;
   url: string;
   size: number; // px
+}
+
+// ─── Text Bar ───────────────────────────────────────────────
+// The text bar is a draggable object placed on the top or bottom tile row.
+// Its width auto-fits the text, snapped up to a whole number of tile units.
+
+export type TextBarRow = "top" | "bottom";
+
+export interface TextBarPlacement {
+  row: TextBarRow;
+  startIndex: number; // first covered slot index in that row
+  widthUnits: number; // number of tile units the bar spans
+}
+
+/**
+ * A text bar placed on the frame. Each one carries its own frozen content and
+ * styling so multiple independent slogans can live on the same design.
+ */
+export interface PlacedTextBar extends TextBarPlacement {
+  id: string;
+  config: BottomBarConfig;
+  qr: boolean; // whether the QR rides inside this bar
 }
 
 export interface FrameDesign {

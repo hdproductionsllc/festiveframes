@@ -15,6 +15,36 @@ const localPlates: Record<string, string> = {
   MO: "/plates/missouri-festive.png",
 };
 
+/**
+ * Per-plate framing. Source photos are cropped differently — some are tight
+ * to the plate, others include car-body margin — so each gets its own fit so
+ * the plate fills the cutout consistently.
+ *   scale > 1  → zoom in (crop margin); scale < 1 → zoom out (show more)
+ */
+export interface PlateImageDisplay {
+  objectFit: "cover" | "contain";
+  scale: number;
+  objectPosition: string;
+}
+
+const DEFAULT_DISPLAY: PlateImageDisplay = {
+  objectFit: "cover",
+  scale: 1,
+  objectPosition: "center",
+};
+
+const plateDisplay: Record<string, Partial<PlateImageDisplay>> = {
+  // Tight crop, was getting clipped at the edges — show the whole plate.
+  CA: { objectFit: "contain", scale: 1 },
+  // Photo includes a little car-body margin — zoom so the plate fills the
+  // cutout, nudged left of center (the plate sits right in the source).
+  MO: { objectFit: "cover", scale: 1.14, objectPosition: "42% 50%" },
+};
+
+export function getPlateImageDisplay(stateAbbr: string): PlateImageDisplay {
+  return { ...DEFAULT_DISPLAY, ...plateDisplay[stateAbbr] };
+}
+
 const plateImageFiles: Record<string, string> = {
   AL: "Alabama_Standard_Plate.jpg",
   AK: "blue-n-gold.png",

@@ -39,8 +39,9 @@ export function RailSlot({ slot, placedTile, isOver }: RailSlotProps) {
       ? "cursor-pointer"
       : "cursor-default";
 
-  // Slight inset so tiles sit inside the rail groove
-  const inset = slot.width * 0.08;
+  // Gapless: placed tiles fill the whole cell so neighbors butt edge-to-edge
+  // (0.985" grid). Empty slots keep a hair of inset to show the recessed groove.
+  const inset = placedTile ? 0 : slot.width * 0.08;
 
   return (
     <div

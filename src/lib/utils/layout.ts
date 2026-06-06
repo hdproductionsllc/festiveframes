@@ -62,29 +62,6 @@ export function getPlateArea(
 }
 
 /**
- * Bottom bar area — spans between inner left and right rails (not into wings).
- */
-export function getBottomBarArea(
-  config: FrameConfig,
-  containerWidth: number
-): { x: number; y: number; width: number; height: number } {
-  const scale = getScale(config, containerWidth);
-  const tileSize = config.tileSizeInches * scale;
-  const containerHeight = getContainerHeight(config, containerWidth);
-  const wingOffset = getWingOffsetPx(config, containerWidth);
-
-  const height = tileSize;
-  const y = containerHeight - height;
-
-  return {
-    x: wingOffset + tileSize, // after wing + inner left rail tile
-    y,
-    width: config.widthInches * scale - tileSize * 2, // between inner rails
-    height,
-  };
-}
-
-/**
  * Wing area bounds (for groove rendering). Returns null when wings are off.
  */
 export function getWingArea(

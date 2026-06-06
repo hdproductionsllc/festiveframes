@@ -218,3 +218,23 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--color-surface-500);
 }
+
+/* Print only the production parts list (ExportPartsList modal). */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .print-parts,
+  .print-parts * {
+    visibility: visible;
+  }
+  .print-parts {
+    position: absolute;
+    inset: 0;
+    max-height: none;
+    width: 100%;
+    max-width: none;
+    box-shadow: none;
+    overflow: visible;
+  }
+}

@@ -5,3 +5,14 @@
    Libre Franklin) instead. */
 @import url('https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:wght@500;600;700;800&family=Bebas+Neue&family=Inter:wght@400;500;600;700&family=Oswald:wght@400;500;600;700&family=Raleway:wght@600;700;800&family=Righteous&family=Russo+One&family=Teko:wght@500;600;700&display=swap');
 @import url('https://fonts.cdnfonts.com/css/license-plate-usa');
+
+/* Stars & Stripes — a free font that isn't on a CDN. Drop the file at
+   public/fonts/stars-and-stripes.(woff2|ttf) and it becomes the default text-bar
+   face automatically; until then the stack falls back to Bebas Neue. */
+@font-face {
+  font-family: 'Stars and Stripes';
+  src: url('/fonts/stars-and-stripes.woff2') format('woff2'),
+       url('/fonts/stars-and-stripes.ttf') format('truetype');
+  font-weight: 400 700;
+  font-display: swap;
+}

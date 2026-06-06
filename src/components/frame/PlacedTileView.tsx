@@ -36,7 +36,7 @@ export function PlacedTileView({ pieceId, width, height, animate }: PlacedTileVi
         <img
           src={piece.artworkUrl}
           alt={piece.name}
-          style={{ width: "82%", height: "82%", objectFit: "contain" }}
+          style={{ width: "100%", height: "100%", objectFit: "cover" }}
           draggable={false}
         />
       ) : hasCustomArtwork(pieceId) ? (

@@ -81,26 +81,23 @@ export function generateSlots(
     });
   }
 
-  // ─── Bottom Corners ──────────────────────────────────
-  slots.push({
-    id: makeSlotId("bottom-left", 0),
-    zone: "bottom-left",
-    index: 0,
-    x: wingOffset,
-    y: bottomY,
-    width: tileSize,
-    height: tileSize,
-  });
+  // ─── Bottom Rail ───────────────────────────────────────
+  // A full row of tiles, identical to the top rail (gapless, includes corners).
+  const bottomStep = config.bottomSlots > 1
+    ? (config.widthInches - config.tileSizeInches) / (config.bottomSlots - 1)
+    : 0;
 
-  slots.push({
-    id: makeSlotId("bottom-right", 0),
-    zone: "bottom-right",
-    index: 0,
-    x: wingOffset + innerWidth - tileSize,
-    y: bottomY,
-    width: tileSize,
-    height: tileSize,
-  });
+  for (let i = 0; i < config.bottomSlots; i++) {
+    slots.push({
+      id: makeSlotId("bottom", i),
+      zone: "bottom",
+      index: i,
+      x: wingOffset + i * bottomStep * scale,
+      y: bottomY,
+      width: tileSize,
+      height: tileSize,
+    });
+  }
 
   // ─── Wing Tiles ────────────────────────────────────────
   // Each wing has wingColumns tile columns × (leftSlots + 1) rows.
@@ -162,10 +159,9 @@ export function generateSlots(
 function getZoneSlotCount(config: FrameConfig, zone: SlotZone): number {
   switch (zone) {
     case "top": return config.topSlots;
+    case "bottom": return config.bottomSlots;
     case "left": return config.leftSlots;
     case "right": return config.rightSlots;
-    case "bottom-left": return 1;
-    case "bottom-right": return 1;
     case "wing-left":
     case "wing-right":
       return config.wingColumns > 0 ? config.wingColumns * (config.leftSlots + 1) : 0;
@@ -189,10 +185,9 @@ export function getSlotIdsByZone(
 export function getAllSlotIds(config: FrameConfig): string[] {
   return [
     ...getSlotIdsByZone(config, "top"),
+    ...getSlotIdsByZone(config, "bottom"),
     ...getSlotIdsByZone(config, "left"),
     ...getSlotIdsByZone(config, "right"),
-    ...getSlotIdsByZone(config, "bottom-left"),
-    ...getSlotIdsByZone(config, "bottom-right"),
     ...getSlotIdsByZone(config, "wing-left"),
     ...getSlotIdsByZone(config, "wing-right"),
   ];

@@ -1,9 +1,11 @@
 "use client";
 
 import { forwardRef, useImperativeHandle, useRef } from "react";
-import type { FrameConfig, PlacedTile, BottomBarConfig, QRCodeConfig } from "@/lib/types";
+import { useDraggable } from "@dnd-kit/core";
+import type { FrameConfig, PlacedTile, BottomBarConfig, QRCodeConfig, PlacedTextBar } from "@/lib/types";
 import { getTotalWidthInches } from "@/lib/constants/frame";
 import { useFrameLayout } from "@/hooks/useFrameLayout";
+import { useDesignStore } from "@/stores/design-store";
 import { RailSlot } from "./RailSlot";
 import { LicensePlateArea } from "./LicensePlateArea";
 import { BottomTextBar } from "./BottomTextBar";
@@ -28,16 +30,67 @@ const GROOVE_V_RTL = "linear-gradient(90deg, rgba(0,0,0,0.3) 0%, rgba(255,255,25
 const GROOVE_BORDER_DARK = "1px solid rgba(0,0,0,0.5)";
 const GROOVE_BORDER_LIGHT = "1px solid rgba(255,255,255,0.03)";
 
+/** A placed text bar — draggable to move, or drag off the frame to remove. */
+function PlacedBar({
+  bar,
+  rect,
+  qrCode,
+  selected,
+  onSelect,
+}: {
+  bar: PlacedTextBar;
+  rect: { x: number; y: number; width: number; height: number };
+  qrCode: QRCodeConfig;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  const { setNodeRef, attributes, listeners, isDragging } = useDraggable({
+    id: `placed-textbar:${bar.id}`,
+    data: { type: "placed-textbar", id: bar.id },
+  });
+  return (
+    <div
+      ref={setNodeRef}
+      {...attributes}
+      {...listeners}
+      onClick={onSelect}
+      title="Click to edit · drag to move · drag off the frame to remove"
+      className={`absolute cursor-grab active:cursor-grabbing ${isDragging ? "opacity-40" : ""}`}
+      style={{
+        left: rect.x,
+        top: rect.y,
+        width: rect.width,
+        height: rect.height,
+        touchAction: "none",
+        zIndex: selected ? 2 : 1,
+        boxShadow: selected ? "0 0 0 2px #FFD700" : undefined,
+        borderRadius: 3,
+      }}
+    >
+      <BottomTextBar
+        config={bar.config}
+        qrConfig={{ ...qrCode, enabled: bar.qr }}
+        x={0}
+        y={0}
+        width={rect.width}
+        height={rect.height}
+      />
+    </div>
+  );
+}
+
 export const FrameCanvas = forwardRef<FrameCanvasHandle, FrameCanvasProps>(
   function FrameCanvas({ frameConfig, slots, bottomBar, qrCode, plateState, overSlotId }, ref) {
     const frameRef = useRef<HTMLDivElement>(null);
+    const textBars = useDesignStore((s) => s.textBars);
+    const selectedBarId = useDesignStore((s) => s.selectedBarId);
+    const selectBar = useDesignStore((s) => s.selectBar);
     const {
       containerRef,
       containerWidth,
       containerHeight,
       slots: frameSlots,
       plateArea,
-      bottomBarArea,
     } = useFrameLayout(frameConfig);
 
     useImperativeHandle(ref, () => ({
@@ -50,6 +103,14 @@ export const FrameCanvas = forwardRef<FrameCanvasHandle, FrameCanvasProps>(
     const hasWings = frameConfig.wings && frameConfig.wingColumns > 0;
     const wingPx = hasWings ? frameConfig.wingWidthInches * scale : 0;
     const innerWidthPx = frameConfig.widthInches * scale;
+
+    // Each bar sits over a run of top/bottom slots (gapless: step == tile).
+    const barRect = (bar: PlacedTextBar) => ({
+      x: wingPx + bar.startIndex * tileSize,
+      y: bar.row === "top" ? 0 : containerHeight - tileSize,
+      width: bar.widthUnits * tileSize,
+      height: tileSize,
+    });
 
     return (
       <div ref={containerRef} className="w-full flex flex-col items-center">
@@ -89,14 +150,15 @@ export const FrameCanvas = forwardRef<FrameCanvasHandle, FrameCanvasProps>(
             />
           )}
 
-          {/* Left rail groove */}
+          {/* Left rail groove — stops above the bottom rail */}
           {containerWidth > 0 && (
             <div
-              className="absolute bottom-0"
+              className="absolute"
               style={{
                 left: wingPx + tileSize * 0.1,
                 width: tileSize * 0.8,
                 top: tileSize,
+                bottom: tileSize,
                 background: GROOVE_V_LTR,
                 borderLeft: GROOVE_BORDER_DARK,
                 borderRight: GROOVE_BORDER_LIGHT,
@@ -104,14 +166,15 @@ export const FrameCanvas = forwardRef<FrameCanvasHandle, FrameCanvasProps>(
             />
           )}
 
-          {/* Right rail groove */}
+          {/* Right rail groove — stops above the bottom rail */}
           {containerWidth > 0 && (
             <div
-              className="absolute bottom-0"
+              className="absolute"
               style={{
                 left: wingPx + innerWidthPx - tileSize + tileSize * 0.1,
                 width: tileSize * 0.8,
                 top: tileSize,
+                bottom: tileSize,
                 background: GROOVE_V_RTL,
                 borderLeft: GROOVE_BORDER_LIGHT,
                 borderRight: GROOVE_BORDER_DARK,
@@ -119,30 +182,14 @@ export const FrameCanvas = forwardRef<FrameCanvasHandle, FrameCanvasProps>(
             />
           )}
 
-          {/* Bottom-left groove */}
+          {/* Bottom rail groove — full inner width, mirrors the top rail */}
           {containerWidth > 0 && containerHeight > 0 && (
             <div
               className="absolute"
               style={{
-                left: wingPx + tileSize * 0.1,
+                left: wingPx,
+                width: innerWidthPx,
                 bottom: tileSize * 0.1,
-                width: tileSize * 0.8,
-                height: tileSize * 0.8,
-                background: GROOVE_H,
-                borderTop: GROOVE_BORDER_DARK,
-                borderBottom: GROOVE_BORDER_LIGHT,
-              }}
-            />
-          )}
-
-          {/* Bottom-right groove */}
-          {containerWidth > 0 && containerHeight > 0 && (
-            <div
-              className="absolute"
-              style={{
-                left: wingPx + innerWidthPx - tileSize + tileSize * 0.1,
-                bottom: tileSize * 0.1,
-                width: tileSize * 0.8,
                 height: tileSize * 0.8,
                 background: GROOVE_H,
                 borderTop: GROOVE_BORDER_DARK,
@@ -156,11 +203,12 @@ export const FrameCanvas = forwardRef<FrameCanvasHandle, FrameCanvasProps>(
             <div key={`wing-grooves-${col}`}>
               {/* Wing-left column groove */}
               <div
-                className="absolute bottom-0"
+                className="absolute"
                 style={{
                   left: wingPx - (col + 1) * tileSize + tileSize * 0.1,
                   width: tileSize * 0.8,
                   top: tileSize,
+                  bottom: tileSize,
                   background: GROOVE_V_LTR,
                   borderLeft: GROOVE_BORDER_DARK,
                   borderRight: GROOVE_BORDER_LIGHT,
@@ -195,11 +243,12 @@ export const FrameCanvas = forwardRef<FrameCanvasHandle, FrameCanvasProps>(
 
               {/* Wing-right column groove */}
               <div
-                className="absolute bottom-0"
+                className="absolute"
                 style={{
                   left: wingPx + innerWidthPx + col * tileSize + tileSize * 0.1,
                   width: tileSize * 0.8,
                   top: tileSize,
+                  bottom: tileSize,
                   background: GROOVE_V_RTL,
                   borderLeft: GROOVE_BORDER_LIGHT,
                   borderRight: GROOVE_BORDER_DARK,
@@ -255,17 +304,18 @@ export const FrameCanvas = forwardRef<FrameCanvasHandle, FrameCanvasProps>(
             />
           ))}
 
-          {/* Bottom text bar */}
-          {bottomBarArea && (
-            <BottomTextBar
-              config={bottomBar}
-              qrConfig={qrCode}
-              x={bottomBarArea.x}
-              y={bottomBarArea.y}
-              width={bottomBarArea.width}
-              height={bottomBarArea.height}
-            />
-          )}
+          {/* Text bars — draggable; drag off the frame to remove */}
+          {containerWidth > 0 &&
+            textBars.map((bar) => (
+              <PlacedBar
+                key={bar.id}
+                bar={bar}
+                rect={barRect(bar)}
+                qrCode={qrCode}
+                selected={bar.id === selectedBarId}
+                onSelect={() => selectBar(bar.id)}
+              />
+            ))}
 
           {/* Frame edge highlight */}
           <div
