@@ -132,6 +132,78 @@ export function ExportPartsList({
     a.click();
   }
 
+  // Print a clean, self-contained document in its own window. This avoids the
+  // app's fixed-overlay DOM (which repeats per page when printed).
+  async function printSheet() {
+    const esc = (s: unknown) =>
+      String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c] as string));
+    const origin = window.location.origin;
+
+    const bars = await Promise.all(
+      textBars.map(async (b) => {
+        const el = barRefs.current[b.id];
+        if (!el) return null;
+        try {
+          const src = await captureFrameAsDataUrl(el, { pixelRatio: 2, backgroundColor: b.config.backgroundColor });
+          const dim = `${b.widthUnits} × 1 · ${(b.widthUnits * tileIn).toFixed(2)}″ × ${tileIn.toFixed(2)}″`;
+          return { text: b.config.text, dim, src };
+        } catch {
+          return null;
+        }
+      })
+    );
+
+    const win = window.open("", "_blank");
+    if (!win) return; // popup blocked
+
+    const rowsHtml = rows
+      .map(
+        (r) =>
+          `<tr><td class="mono">${esc(r.sku)}</td><td><div class="tile">${
+            r.artworkUrl
+              ? `<img src="${origin}${esc(r.artworkUrl)}"/>`
+              : `<span class="sw" style="background:${esc(r.color)}"></span>`
+          }<span>${esc(r.name)}</span></div></td><td class="mono">${esc(r.color)}</td><td class="qty">${r.qty}</td></tr>`
+      )
+      .join("");
+
+    const barsHtml = bars
+      .filter((b): b is { text: string; dim: string; src: string } => b !== null)
+      .map((b) => `<div class="bar"><div class="cap">“${esc(b.text)}” · ${esc(b.dim)}</div><img src="${b.src}"/></div>`)
+      .join("");
+
+    const html = `<!doctype html><html><head><meta charset="utf-8"><title>${esc(slug)} parts list</title><style>
+      *{box-sizing:border-box;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+      body{margin:24px;color:#111}h1{font-size:18px;margin:0 0 4px}
+      .meta{font-size:12px;color:#444;margin-bottom:12px}
+      .mock{width:100%;border:1px solid #ddd;border-radius:6px;margin-bottom:16px}
+      table{width:100%;border-collapse:collapse;font-size:12px}
+      th,td{text-align:left;padding:4px 6px;border-bottom:1px solid #eee}
+      th{color:#666}td.qty,th.qty{text-align:right}
+      .mono{font-family:ui-monospace,monospace;font-size:11px}
+      .tile{display:flex;align-items:center;gap:6px}
+      .tile img{width:22px;height:22px;object-fit:cover;border:1px solid #ddd;border-radius:3px}
+      .sw{width:18px;height:18px;border:1px solid #ccc;border-radius:3px;display:inline-block}
+      .total td{font-weight:bold;border-top:2px solid #ccc}
+      h2{font-size:13px;margin:18px 0 6px}
+      .bar{margin-bottom:10px;page-break-inside:avoid}
+      .bar .cap{font-size:11px;color:#444;margin-bottom:2px}
+      .bar img{display:block;max-width:100%;border:1px solid #ddd}
+    </style></head><body>
+      <h1>Festive Frames — Parts List</h1>
+      <div class="meta">Order #${esc(orderNumber || "—")} · Customer ${esc(customerName || "—")} · ${esc(designName)} · Plate ${esc(plateState)} · QR ${qrCode.enabled ? esc(qrCode.url) : "off"}</div>
+      ${frameImage ? `<img class="mock" src="${frameImage}"/>` : ""}
+      <table><thead><tr><th>Part #</th><th>Tile</th><th>Color</th><th class="qty">Qty</th></tr></thead>
+      <tbody>${rowsHtml}<tr class="total"><td colspan="3">Total tiles</td><td class="qty">${totalTiles}</td></tr></tbody></table>
+      ${barsHtml ? `<h2>Custom parts — text bars</h2>${barsHtml}` : ""}
+      <script>window.onload=function(){window.focus();window.print()};window.onafterprint=function(){window.close()}<\/script>
+    </body></html>`;
+
+    win.document.open();
+    win.document.write(html);
+    win.document.close();
+  }
+
   return (
     <div
       role="dialog"
@@ -284,7 +356,7 @@ export function ExportPartsList({
           </button>
           <button
             type="button"
-            onClick={() => window.print()}
+            onClick={printSheet}
             className="rounded-md border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100"
           >
             Print / Save PDF
