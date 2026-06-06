@@ -16,7 +16,7 @@ export function Testimonials() {
           From the people who make it
         </h2>
 
-        <div className="mt-10 grid gap-6 sm:grid-cols-2">
+        <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {testimonials.map((t) => (
             <figure
               key={t.name}

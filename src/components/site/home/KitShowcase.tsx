@@ -1,81 +1,83 @@
 import Link from "next/link";
 import Image from "next/image";
-import { getActiveKits } from "@/config/kits";
+import { getKit } from "@/config/kits";
 import { offer, formatUsd } from "@/config/offers";
+import { copy } from "@/content/copy";
+import { FoundingScarcity } from "@/components/site/FoundingScarcity";
 
-// Server Component. One card per active kit. Card headings double as SEO
-// phrases (patriotic / funny / St. Louis pride / game day / family road trip /
-// July 4 limited edition license plate frame kit). Cards share one photo
-// framing so they read as a single product family. The limited kit shows a
-// "Limited" badge. Each card links to /buy?kit=<id> for selection persistence.
+// Server Component. Single-product feature for the Freedom Frame Set (our one
+// launch kit), framed as the America's-250th Founding Edition. Two-column
+// image + details so one product reads as a hero, not a lonely card in a grid.
 export function KitShowcase() {
-  const kits = getActiveKits();
+  const kit = getKit("american-classic");
+  const items = copy.buy.whatsInKit.items;
 
   return (
-    <section className="star-field text-brand-cream" aria-labelledby="kits-heading">
-      <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
-        <div className="max-w-2xl">
-          <h2
-            id="kits-heading"
-            className="text-3xl font-bold uppercase tracking-tight text-brand-cream sm:text-4xl"
-          >
-            Meet the Freedom Frame Set.
-          </h2>
-          <p className="mt-4 text-lg leading-relaxed text-brand-cream/80">
-            July 4 ready in seconds. Comes loaded with 40+ tiles, more than you
-            see here, so you can mix, match, and restyle any time. One set is{" "}
-            {formatUsd(offer.singlePrice)}, or grab two for{" "}
-            {formatUsd(offer.bundlePrice)}.
-          </p>
+    <section className="star-field text-brand-cream" aria-labelledby="kit-heading">
+      <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 py-16 sm:px-6 sm:py-20 lg:grid-cols-2 lg:gap-12">
+        {/* Product image — a real built design */}
+        <div className="order-first lg:order-last">
+          <div className="plate-frame">
+            <div className="relative aspect-[1.86] w-full overflow-hidden rounded-md bg-brand-navy-soft/40">
+              <Image
+                src="/designs/design-3.png"
+                alt="Freedom Frame Set: a snap-on license plate frame loaded with patriotic firework, star, and stripe tiles, with LET FREEDOM RING on the bottom bar"
+                fill
+                sizes="(min-width: 1024px) 50vw, 100vw"
+                className="object-contain"
+              />
+            </div>
+          </div>
         </div>
 
-        <ul className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {kits.map((kit) => (
-            <li
-              key={kit.id}
-              className="group flex flex-col overflow-hidden rounded-lg border border-brand-navy-soft/50 bg-brand-navy-soft/30"
+        {/* Details */}
+        <div>
+          <FoundingScarcity dark />
+          <h2
+            id="kit-heading"
+            className="mt-4 font-mkt-display text-3xl font-bold uppercase tracking-tight text-brand-cream sm:text-4xl"
+          >
+            Meet the Freedom Frame Set
+          </h2>
+          {kit?.identityLine && (
+            <p className="mt-2 text-lg font-semibold text-brand-gold">{kit.identityLine}</p>
+          )}
+          <p className="mt-4 text-lg leading-relaxed text-brand-cream/85">
+            Our Founding Edition for America&rsquo;s 250th. The frame installs in seconds, then 40+
+            snap-on tiles, including the new firework bursts, let you restyle it for the Fourth, a
+            parade, game day, or any season, as often as you like.
+          </p>
+
+          <ul className="mt-6 space-y-2.5">
+            {items.map((it) => (
+              <li key={it} className="flex gap-2.5 leading-relaxed text-brand-cream/85">
+                <span aria-hidden="true" className="mt-1 shrink-0 text-brand-gold">★</span>
+                <span>{it}</span>
+              </li>
+            ))}
+          </ul>
+
+          <p className="mt-6 text-lg font-semibold text-brand-cream">
+            One set {formatUsd(offer.singlePrice)}
+            <span className="text-brand-cream/60"> · </span>
+            Two for {formatUsd(offer.bundlePrice)}
+          </p>
+
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+            <Link
+              href="/buy"
+              className="inline-flex items-center justify-center rounded-md bg-brand-red px-6 py-3 text-base font-semibold uppercase tracking-wide text-brand-white transition-colors hover:bg-brand-red/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-gold"
             >
-              {/* Thumbnail.
-                  PLACEHOLDER: catalog thumbnail per kit, 800x1000 (4:5 portrait).
-                  Consistent framing across all cards so they read as one family. */}
-              <div className="relative aspect-[4/5] overflow-hidden bg-brand-navy-soft/50">
-                <Image
-                  src={kit.thumbnailImage}
-                  alt={`${kit.name} snap-on license plate frame kit on a car. ${kit.identityLine}`}
-                  fill
-                  sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
-                  className="object-cover vintage-photo transition-transform duration-300 group-hover:scale-[1.03]"
-                />
-                {kit.limited && (
-                  <span className="absolute left-3 top-3 rounded-sm bg-brand-gold px-2 py-1 font-mkt-display text-xs font-bold uppercase tracking-widest text-brand-navy-deep">
-                    Limited
-                  </span>
-                )}
-              </div>
-
-              <div className="flex flex-1 flex-col p-5">
-                <h3 className="font-mkt-display text-xl font-bold uppercase tracking-tight text-brand-cream">
-                  {kit.name}
-                </h3>
-                <p className="mt-2 text-sm font-medium text-brand-gold">
-                  {kit.identityLine}
-                </p>
-                <p className="mt-2 flex-1 text-sm leading-relaxed text-brand-cream/80">
-                  {kit.cardLine}
-                </p>
-
-                <Link
-                  href={`/buy?kit=${kit.id}`}
-                  className="mt-5 inline-flex items-center gap-1 self-start rounded-md border border-brand-gold/70 px-4 py-2 text-sm font-semibold uppercase tracking-wide text-brand-gold transition-colors hover:bg-brand-gold hover:text-brand-navy-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-gold"
-                  aria-label={`Shop the ${kit.name}`}
-                >
-                  Shop this kit
-                  <span aria-hidden="true">&rarr;</span>
-                </Link>
-              </div>
-            </li>
-          ))}
-        </ul>
+              {copy.home.founding.cta}
+            </Link>
+            <Link
+              href="/buy"
+              className="inline-flex items-center justify-center rounded-md border border-brand-gold/70 px-6 py-3 text-base font-semibold uppercase tracking-wide text-brand-gold transition-colors hover:bg-brand-gold hover:text-brand-navy-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-gold"
+            >
+              See everything inside
+            </Link>
+          </div>
+        </div>
       </div>
     </section>
   );

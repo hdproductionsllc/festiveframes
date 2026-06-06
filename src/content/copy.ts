@@ -299,9 +299,15 @@ export const copy: Copy = {
       },
       {
         quote:
-          "I started Festive Frames because I was tired of picking one license plate frame and living with it forever. Install it once, then change the whole look in ten seconds. We make every set here in St. Louis and stand behind it for 30 days.",
+          "I obsess over the fit and the snap. The frame installs once with your existing screws, and every tile locks in clean and pops off in seconds. We build and test these in St. Louis for highway speeds, car washes, and real weather, and we stand behind every one for 30 days.",
+        name: "Bill Laupan",
+        role: "Engineer, Festive Frames",
+      },
+      {
+        quote:
+          "As a photographer, I care about how things look and how they let you express yourself. That is exactly what this is: your car becomes a little canvas you can restyle whenever you want. I love seeing what people come up with.",
         name: "Henry David",
-        role: "Founder, Festive Frames",
+        role: "Photographer & founder, Festive Frames",
       },
     ],
 

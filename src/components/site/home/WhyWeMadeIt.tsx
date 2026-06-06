@@ -15,7 +15,7 @@ export function WhyWeMadeIt() {
         >
           {story.heading}
         </h2>
-        <p className="mt-5 max-w-2xl text-lg leading-relaxed text-brand-ink/90">{story.body}</p>
+        <p className="mt-5 max-w-3xl text-lg leading-relaxed text-brand-ink/90">{story.body}</p>
 
         <ul className="mt-10 grid gap-6 sm:grid-cols-2">
           {story.reasons.map((r) => (
