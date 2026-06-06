@@ -102,7 +102,7 @@ export const useDesignStore = create<DesignState>()(
         bottomBar: { ...DEFAULT_BOTTOM_BAR },
         qrCode: { ...DEFAULT_QR_CODE },
         frameConfig: { ...DEFAULT_FRAME_CONFIG },
-        dieCut: true,
+        dieCut: false,
         updatedAt: Date.now(),
         history: [],
         historyIndex: -1,
