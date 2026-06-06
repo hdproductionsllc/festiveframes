@@ -36,8 +36,9 @@ const DEFAULT_DISPLAY: PlateImageDisplay = {
 const plateDisplay: Record<string, Partial<PlateImageDisplay>> = {
   // Tight crop, was getting clipped at the edges — show the whole plate.
   CA: { objectFit: "contain", scale: 1 },
-  // Source is pre-cropped to the plate bounds (centered), so just cover it.
-  MO: { objectFit: "cover", scale: 1, objectPosition: "center" },
+  // Pre-cropped to the plate bounds; "contain" shows the whole plate (it's
+  // ~1.65:1, not 2:1, so cover would crop the banner/dates) — no zoom.
+  MO: { objectFit: "contain", scale: 1, objectPosition: "center" },
 };
 
 export function getPlateImageDisplay(stateAbbr: string): PlateImageDisplay {

@@ -51,11 +51,13 @@ export function getPlateArea(
   const plateWidth = config.plateWidthInches * scale;
   const plateHeight = config.plateHeightInches * scale;
 
-  const sideGap = (config.widthInches - config.plateWidthInches) / 2;
+  // Center the plate in the inner frame on BOTH axes (was using the width gap
+  // for the vertical offset, which floated the plate too high).
+  const topGap = (config.heightInches - config.plateHeightInches) / 2;
 
   return {
     x: wingOffset + (innerWidth - plateWidth) / 2,
-    y: sideGap * scale,
+    y: topGap * scale,
     width: plateWidth,
     height: plateHeight,
   };
