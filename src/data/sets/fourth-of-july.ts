@@ -250,6 +250,32 @@ export const fourthOfJulySet: TileSet = {
       backgroundColor: "#1B2A4A",
     },
 
+    // ─── Fireworks ─────────────────────────────────────────────
+    {
+      id: "july4th:firework-night",
+      setId: "july4th",
+      name: "Firework (Night)",
+      artworkUrl: `${P}/firework-night.png`,
+      emoji: "🎆",
+      backgroundColor: "#16223D",
+    },
+    {
+      id: "july4th:firework-sky",
+      setId: "july4th",
+      name: "Firework Sky",
+      artworkUrl: `${P}/firework-sky.png`,
+      emoji: "🎆",
+      backgroundColor: "#16223D",
+    },
+    {
+      id: "july4th:firework-rwb",
+      setId: "july4th",
+      name: "Firework Burst",
+      artworkUrl: `${P}/firework-rwb.png`,
+      emoji: "🎆",
+      backgroundColor: "#FFFFFF",
+    },
+
     // ─── Red / white / blue basics ────────────────────────────
     {
       id: "july4th:solid-red",
