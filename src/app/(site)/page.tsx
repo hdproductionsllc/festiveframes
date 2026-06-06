@@ -6,6 +6,7 @@ import { SITE_URL } from "@/config/season";
 import { Hero } from "@/components/site/home/Hero";
 import { WhatItIs } from "@/components/site/home/WhatItIs";
 import { KitShowcase } from "@/components/site/home/KitShowcase";
+import { DesignShowcase } from "@/components/site/home/DesignShowcase";
 import { HowItWorks } from "@/components/site/home/HowItWorks";
 import { Gallery } from "@/components/site/home/Gallery";
 import { TrustSection } from "@/components/site/home/TrustSection";
@@ -78,7 +79,7 @@ function buildJsonLd() {
     name: americanClassic?.name ?? "Freedom Frame Set",
     description:
       "A customizable, snap-on license plate frame kit with 40+ interchangeable patriotic tiles. Install once, swap tiles forever. Designed and made in St. Louis, USA.",
-    image: [`${SITE_URL}/kits/american-classic-thumb.jpg`],
+    image: [`${SITE_URL}/kits/american-classic-thumb.jpg`, `${SITE_URL}/designs/design-3.png`],
     brand: { "@type": "Brand", name: copy.site.brandName },
     category: "License Plate Frames",
     offers: {
@@ -164,6 +165,7 @@ export default function HomePage() {
       <TrustSection />
       <WhatItIs />
       <KitShowcase />
+      <DesignShowcase />
       <HowItWorks />
       <Gallery />
       <Testimonials />

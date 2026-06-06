@@ -33,13 +33,21 @@ export async function captureFrameAsDataUrl(
   const opts = {
     pixelRatio: options?.pixelRatio ?? 2,
     backgroundColor: options?.backgroundColor ?? "#1a1a1a",
-    cacheBust: true,
     filter: (node: HTMLElement) => !(node instanceof HTMLElement && node.dataset.exportIgnore),
   };
 
+  // Wait for fonts (the bottom-bar face) and every image to be decoded.
+  const fonts = (document as unknown as { fonts?: { ready?: Promise<unknown> } }).fonts;
+  if (fonts?.ready) {
+    try {
+      await fonts.ready;
+    } catch {
+      /* ignore */
+    }
+  }
   await waitForImages(element);
   // First pass primes html-to-image's internal resource cache; on mobile the
-  // first render frequently omits images, so we render again and return that.
+  // first render frequently omits images, so we render twice and return the 2nd.
   await toPng(element, opts);
   await waitForImages(element);
   return toPng(element, opts);
