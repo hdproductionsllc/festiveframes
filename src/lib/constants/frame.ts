@@ -1,12 +1,19 @@
 import type { FrameConfig } from "@/lib/types";
 
+// Gapless unit grid: 1 unit = the tile edge (0.985"). The frame is an exact
+// integer number of units on each side so tiles butt edge-to-edge with no gaps
+// and clean corners (per the engineer's 0.985" spec).
+//   width  = 14 units x 0.985 = 13.79"   (topStep resolves to exactly 1 tile)
+//   height =  8 units x 0.985 =  7.88"   (1 top + 6 side + 1 bottom row)
+// The bottom bar (getBottomBarArea) is 1 unit tall and spans between the corner
+// tiles = 12 x 1 units, centered. The 12x6 plate sits inside the ring.
 export const DEFAULT_FRAME_CONFIG: FrameConfig = {
-  widthInches: 13.5,
-  heightInches: 7.5,
-  tileSizeInches: 1.25,
-  topSlots: 11,
-  leftSlots: 5,
-  rightSlots: 5,
+  widthInches: 13.79,
+  heightInches: 7.88,
+  tileSizeInches: 0.985,
+  topSlots: 14,
+  leftSlots: 6,
+  rightSlots: 6,
   wings: false,
   wingWidthInches: 0,
   wingColumns: 0,
