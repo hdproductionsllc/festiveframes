@@ -36,7 +36,7 @@ export function measureTextBarUnits(
   textPx += cfg.letterSpacing * (fontPx / 28) * Math.max(0, text.length - 1);
 
   const padX = U * 0.8; // ~0.4 unit breathing room each side
-  const qrPx = qrEnabled ? U * 1.1 : 0; // QR (~0.85u) + gap
+  const qrPx = qrEnabled ? 2 * U : 0; // reserve QR width on BOTH sides → text stays centered
   const totalPx = (textPx + padX + qrPx) * 1.05; // 5% safety
 
   let units = Math.ceil(totalPx / U);

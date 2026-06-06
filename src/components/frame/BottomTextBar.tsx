@@ -33,16 +33,16 @@ export function BottomTextBar({ config, qrConfig, x, y, width, height }: BottomT
     };
   }, []);
 
-  // Right padding reserves space for the QR so text never slides under it,
-  // for any alignment.
-  const rightPad = qrConfig.enabled ? qrSize + 16 : PAD_X;
+  // Reserve the QR's width on BOTH sides so the text stays centered on the bar
+  // (a one-sided reserve would shove centered text off-center — looks janky).
+  const sidePad = PAD_X + (qrConfig.enabled ? qrSize + 8 : 0);
 
   // Shrink the font until the text fits — guarantees no cut-off, whatever the
   // quantized bar width turned out to be.
   useLayoutEffect(() => {
     const span = spanRef.current;
     if (!span) return;
-    const avail = width - PAD_X - rightPad;
+    const avail = width - sidePad * 2;
     if (avail <= 0) return;
     let fs = baseFontSize;
     span.style.fontSize = `${fs}px`;
@@ -83,8 +83,8 @@ export function BottomTextBar({ config, qrConfig, x, y, width, height }: BottomT
         className="relative flex h-full w-full items-center"
         style={{
           justifyContent: config.textAlign === "left" ? "flex-start" : config.textAlign === "right" ? "flex-end" : "center",
-          paddingLeft: PAD_X,
-          paddingRight: rightPad,
+          paddingLeft: sidePad,
+          paddingRight: sidePad,
         }}
       >
         <span

@@ -12,7 +12,7 @@ const REPO_BASE = "https://raw.githubusercontent.com/jonkeegan/us-license-plates
 // High-quality local plates in /public/plates/ (Wikimedia Commons, CC-BY-SA)
 const localPlates: Record<string, string> = {
   CA: "/plates/california.jpg",
-  MO: "/plates/missouri-festive.png",
+  MO: "/plates/missouri-festive-centered.png", // bounds-cropped so the plate is centered
 };
 
 /**
@@ -36,9 +36,8 @@ const DEFAULT_DISPLAY: PlateImageDisplay = {
 const plateDisplay: Record<string, Partial<PlateImageDisplay>> = {
   // Tight crop, was getting clipped at the edges — show the whole plate.
   CA: { objectFit: "contain", scale: 1 },
-  // Photo includes a little car-body margin — zoom so the plate fills the
-  // cutout. Higher objectPosition X pulls the plate left to recenter it.
-  MO: { objectFit: "cover", scale: 1.14, objectPosition: "62% 50%" },
+  // Source is pre-cropped to the plate bounds (centered), so just cover it.
+  MO: { objectFit: "cover", scale: 1, objectPosition: "center" },
 };
 
 export function getPlateImageDisplay(stateAbbr: string): PlateImageDisplay {
