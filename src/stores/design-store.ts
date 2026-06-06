@@ -320,7 +320,9 @@ export const useDesignStore = create<DesignState>()(
           set((state) => {
             const maxUnits = rowLength(state.frameConfig, row);
             const config = { ...state.bottomBar };
-            const widthUnits = measureTextBarUnits(config, state.qrCode.enabled, maxUnits);
+            // QR on for the first bar only; additional bars start without it.
+            const qr = state.textBars.length === 0 ? state.qrCode.enabled : false;
+            const widthUnits = measureTextBarUnits(config, qr, maxUnits);
             // New bars land centered on the row (odd width + odd row = exact center).
             // `startIndex` (the drop point) only decides top vs bottom; drag to move.
             void startIndex;
@@ -331,7 +333,7 @@ export const useDesignStore = create<DesignState>()(
               startIndex: start,
               widthUnits,
               config,
-              qr: state.qrCode.enabled,
+              qr,
             };
             // Tiles under the bar are kept (just hidden) so moving/removing the
             // bar never leaves a hole. The parts list excludes covered tiles.

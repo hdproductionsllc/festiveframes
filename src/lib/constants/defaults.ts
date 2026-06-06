@@ -11,7 +11,7 @@ export const DEFAULT_BOTTOM_BAR: BottomBarConfig = {
 };
 
 export const DEFAULT_QR_CODE: QRCodeConfig = {
-  enabled: false,
+  enabled: true, // first text bar gets the QR by default
   url: "https://festiveframes.co",
   size: 40,
 };
