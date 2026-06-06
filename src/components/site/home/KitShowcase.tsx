@@ -15,19 +15,24 @@ export function KitShowcase() {
   return (
     <section className="star-field text-brand-cream" aria-labelledby="kit-heading">
       <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 py-16 sm:px-6 sm:py-20 lg:grid-cols-2 lg:gap-12">
-        {/* Product image — a real built design */}
-        <div className="order-first lg:order-last">
-          <div className="plate-frame">
-            <div className="relative aspect-[1.86] w-full overflow-hidden rounded-md bg-brand-navy-soft/40">
-              <Image
-                src="/designs/design-3.png"
-                alt="Freedom Frame Set: a snap-on license plate frame with red, white and blue starburst tiles around a Missouri plate and a LET FREEDOM RING bottom bar"
-                fill
-                sizes="(min-width: 1024px) 50vw, 100vw"
-                className="object-contain"
-              />
+        {/* Two real built designs — show the range of looks from one kit */}
+        <div className="order-first space-y-4 lg:order-last">
+          {[
+            {
+              src: "/designs/design-3.png",
+              alt: "Freedom Frame Set with red, white and blue starburst tiles and a LET FREEDOM RING bottom bar",
+            },
+            {
+              src: "/designs/design-4.png",
+              alt: "Freedom Frame Set with a bold red and white star border and a HOME OF THE BRAVE bottom bar",
+            },
+          ].map((d) => (
+            <div key={d.src} className="plate-frame">
+              <div className="relative aspect-[1.86] w-full overflow-hidden rounded-md bg-brand-navy-soft/40">
+                <Image src={d.src} alt={d.alt} fill sizes="(min-width: 1024px) 50vw, 100vw" className="object-contain" />
+              </div>
             </div>
-          </div>
+          ))}
         </div>
 
         {/* Details */}
@@ -58,9 +63,11 @@ export function KitShowcase() {
           </ul>
 
           <p className="mt-6 text-lg font-semibold text-brand-cream">
-            One set {formatUsd(offer.singlePrice)}
-            <span className="text-brand-cream/60"> · </span>
-            Two for {formatUsd(offer.bundlePrice)}
+            Two-set bundle {formatUsd(offer.bundlePrice)}
+            <span className="font-normal text-brand-cream/70"> — one for each car, or one to gift</span>
+          </p>
+          <p className="mt-1 text-sm text-brand-cream/60">
+            Just need one? A single set is {formatUsd(offer.singlePrice)}.
           </p>
 
           <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">

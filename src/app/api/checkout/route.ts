@@ -222,6 +222,8 @@ export async function POST(request: Request): Promise<NextResponse> {
         kitIds: data.kitIds.join(","),
         quantity: String(data.quantity),
         alphabetQty: String(data.alphabetQty),
+        // Kits in this order (bundle = 2 per unit), for the Founding-Edition counter.
+        founding_kits: String(data.selection === "bundle" ? data.quantity * 2 : data.quantity),
       },
     });
 

@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { FOUNDING, foundingRemaining } from "@/config/founding";
+import { FOUNDING } from "@/config/founding";
+import { getFoundingCounts } from "@/lib/founding-status";
 
-// Thin sitewide urgency bar (above the header on all marketing pages). Honest:
-// the count comes from the real FOUNDING cap/claimed.
-export function AnnouncementBar() {
-  const remaining = foundingRemaining();
-  const countLine = FOUNDING.claimed > 0 ? `${remaining} of ${FOUNDING.cap} left` : `Only ${FOUNDING.cap} made`;
+// Thin sitewide urgency bar (above the header on all marketing pages). The
+// count is live from the real cap + kits sold (lib/founding-status).
+export async function AnnouncementBar() {
+  const { claimed, remaining, cap } = await getFoundingCounts();
+  const countLine = claimed > 0 ? `${remaining} of ${cap} left` : `Only ${cap} made`;
 
   return (
     <Link

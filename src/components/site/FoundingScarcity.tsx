@@ -1,24 +1,23 @@
-import { FOUNDING, foundingRemaining } from "@/config/founding";
+import { FOUNDING } from "@/config/founding";
+import { getFoundingCounts } from "@/lib/founding-status";
 import { copy } from "@/content/copy";
 
-// Honest scarcity: the 250-unit cap is real. Once FOUNDING.claimed reflects real
-// orders (> 0), it shows a live "X claimed · Y of 250 left" progress counter;
-// before any real sales it states the cap. Never seed `claimed` with a fake
-// number — fake scarcity is the same FTC violation class as fake reviews.
-export function FoundingScarcity({ dark = false, center = false }: { dark?: boolean; center?: boolean }) {
-  const remaining = foundingRemaining();
-  const { claimed, cap } = FOUNDING;
+// Honest, LIVE scarcity. The count comes from the real cap + base offset + kits
+// sold through Stripe (see lib/founding-status). Shows "X claimed · Y of 250
+// left" with a progress bar once any are claimed.
+export async function FoundingScarcity({ dark = false, center = false }: { dark?: boolean; center?: boolean }) {
+  const { claimed, remaining, cap } = await getFoundingCounts();
   const counting = claimed > 0;
   const pct = Math.min(100, Math.max(2, Math.round((claimed / cap) * 100)));
 
   return (
-    <div className={`flex w-full max-w-sm flex-col gap-2 ${center ? "items-center text-center" : "items-start"}`}>
+    <div className={`flex w-full max-w-sm flex-col gap-2 ${center ? "mx-auto items-center text-center" : "items-start"}`}>
       <span className="w-fit rounded-full bg-brand-red px-3 py-1 font-mkt-display text-xs font-bold uppercase tracking-widest text-brand-white">
         {FOUNDING.occasion} · {FOUNDING.edition}
       </span>
 
       {counting ? (
-        <div className={`w-full ${center ? "mx-auto" : ""}`}>
+        <div className="w-full">
           <p className={`text-sm font-bold ${dark ? "text-brand-gold" : "text-brand-red"}`}>
             {claimed} claimed
             <span className={`font-medium ${dark ? "text-brand-cream/85" : "text-brand-ink/75"}`}>

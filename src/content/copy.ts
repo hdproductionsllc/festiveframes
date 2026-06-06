@@ -301,13 +301,13 @@ export const copy: Copy = {
         quote:
           "I obsess over the fit and the snap. The frame installs once with your existing screws, and every tile locks in clean and pops off in seconds. We build and test these in St. Louis for highway speeds, car washes, and real weather, and we stand behind every one for 30 days.",
         name: "Bill Laupan",
-        role: "Engineer, Festive Frames",
+        role: "Engineer & product designer, Festive Frames",
       },
       {
         quote:
           "As a photographer, I care about how things look and how they let you express yourself. That is exactly what this is: your car becomes a little canvas you can restyle whenever you want. I love seeing what people come up with.",
         name: "Henry David",
-        role: "Photographer & founder, Festive Frames",
+        role: "Photographer & product designer, Festive Frames",
       },
     ],
 
