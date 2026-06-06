@@ -3,14 +3,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { track } from "@/lib/analytics";
 
-const STORAGE_KEY = "ff:onboarding:build";
+const STORAGE_KEY = "ff:onboarding:build:v2";
 
 type View = "intro" | "tour";
 
 const TOUR_STEPS = [
-  { n: 1, title: "Type your text", body: "Add your message in the bottom bar so the frame reads exactly how you want." },
-  { n: 2, title: "Add tiles and colors", body: "Drag tiles from the left panel onto the frame, then pick their colors." },
-  { n: 3, title: "Preview it", body: "Switch to On Your Car to see your design before you order." },
+  { n: 1, title: "Drag tiles onto the frame", body: "The frame opens with a random design — drag tiles from the left panel onto any slot to make it your own." },
+  { n: 2, title: "Add a text bar", body: "Drag the text bar onto the top or bottom row, type your slogan, and style it. Click a placed bar anytime to edit it." },
+  { n: 3, title: "Export the parts list", body: "When it looks right, hit Export Parts List for the production sheet — tiles, colors, and printable text bars." },
 ] as const;
 
 /**

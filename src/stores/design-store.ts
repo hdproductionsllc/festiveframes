@@ -321,7 +321,10 @@ export const useDesignStore = create<DesignState>()(
             const maxUnits = rowLength(state.frameConfig, row);
             const config = { ...state.bottomBar };
             const widthUnits = measureTextBarUnits(config, state.qrCode.enabled, maxUnits);
-            const start = clampStartIndex(startIndex, widthUnits, maxUnits);
+            // New bars land centered on the row (odd width + odd row = exact center).
+            // `startIndex` (the drop point) only decides top vs bottom; drag to move.
+            void startIndex;
+            const start = clampStartIndex(Math.round((maxUnits - widthUnits) / 2), widthUnits, maxUnits);
             const bar: PlacedTextBar = {
               id: makeTextBarId(state.textBars),
               row,

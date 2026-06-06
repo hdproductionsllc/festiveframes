@@ -37,8 +37,8 @@ const plateDisplay: Record<string, Partial<PlateImageDisplay>> = {
   // Tight crop, was getting clipped at the edges — show the whole plate.
   CA: { objectFit: "contain", scale: 1 },
   // Photo includes a little car-body margin — zoom so the plate fills the
-  // cutout, nudged left of center (the plate sits right in the source).
-  MO: { objectFit: "cover", scale: 1.14, objectPosition: "42% 50%" },
+  // cutout. Higher objectPosition X pulls the plate left to recenter it.
+  MO: { objectFit: "cover", scale: 1.14, objectPosition: "62% 50%" },
 };
 
 export function getPlateImageDisplay(stateAbbr: string): PlateImageDisplay {

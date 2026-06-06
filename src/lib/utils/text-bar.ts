@@ -39,8 +39,12 @@ export function measureTextBarUnits(
   const qrPx = qrEnabled ? U * 1.1 : 0; // QR (~0.85u) + gap
   const totalPx = (textPx + padX + qrPx) * 1.05; // 5% safety
 
-  const units = Math.ceil(totalPx / U);
-  return Math.max(2, Math.min(maxUnits, units));
+  let units = Math.ceil(totalPx / U);
+  // Force ODD width so the bar can sit perfectly centered on an odd-width row
+  // (e.g. 13-wide top/bottom): (rowLen - width) must be even to split evenly.
+  if (units % 2 === 0) units += 1;
+  const maxOdd = maxUnits % 2 === 0 ? maxUnits - 1 : maxUnits;
+  return Math.max(3, Math.min(maxOdd, units));
 }
 
 /**
