@@ -2,6 +2,8 @@ import type { TileSet } from "@/lib/types";
 
 // Becky Newman's Independence Day artwork (die-cut "snappet" stickers).
 const A = "/tiles/july4";
+// Bold geometric pattern tiles (AI bursts + programmatic diagonal stripes).
+const P = "/tiles/patterns";
 
 export const fourthOfJulySet: TileSet = {
   id: "july4th",
@@ -107,6 +109,120 @@ export const fourthOfJulySet: TileSet = {
       artworkUrl: `${A}/uncle-sam-hat.png`,
       emoji: "🎩",
       backgroundColor: "#FFFFFF",
+    },
+
+    // ─── Bold patterns & bursts ───────────────────────────────
+    {
+      id: "july4th:sunburst",
+      setId: "july4th",
+      name: "Starburst",
+      artworkUrl: `${P}/sunburst.png`,
+      emoji: "🎆",
+      backgroundColor: "#FFFFFF",
+    },
+    {
+      id: "july4th:star-bold",
+      setId: "july4th",
+      name: "Bold Star",
+      artworkUrl: `${P}/star-bold.png`,
+      emoji: "⭐",
+      backgroundColor: "#1B2A4A",
+    },
+    {
+      id: "july4th:halftone-star",
+      setId: "july4th",
+      name: "Halftone Star",
+      artworkUrl: `${P}/halftone-star.png`,
+      emoji: "💥",
+      backgroundColor: "#FFFFFF",
+    },
+    {
+      id: "july4th:flag-block",
+      setId: "july4th",
+      name: "Flag Block",
+      artworkUrl: `${P}/flag-block.png`,
+      emoji: "🇺🇸",
+      backgroundColor: "#1B2A4A",
+    },
+    {
+      id: "july4th:pinwheel",
+      setId: "july4th",
+      name: "Pinwheel",
+      artworkUrl: `${P}/pinwheel.png`,
+      emoji: "🌀",
+      backgroundColor: "#FFFFFF",
+    },
+    {
+      id: "july4th:bunting",
+      setId: "july4th",
+      name: "Bunting",
+      artworkUrl: `${P}/bunting-scallop.png`,
+      emoji: "🎊",
+      backgroundColor: "#FFFFFF",
+    },
+    {
+      id: "july4th:stripes-vertical",
+      setId: "july4th",
+      name: "Vertical Stripes",
+      artworkUrl: `${P}/stripes-vertical.png`,
+      emoji: "🟥",
+      backgroundColor: "#C8102E",
+    },
+    {
+      id: "july4th:star-field",
+      setId: "july4th",
+      name: "Star Field",
+      artworkUrl: `${P}/star-field.png`,
+      emoji: "✨",
+      backgroundColor: "#1B2A4A",
+    },
+    {
+      id: "july4th:diag-rw-right",
+      setId: "july4th",
+      name: "Red/White ╱",
+      artworkUrl: `${P}/stripe-diag-rw-right.png`,
+      emoji: "🔴",
+      backgroundColor: "#C8102E",
+    },
+    {
+      id: "july4th:diag-rw-left",
+      setId: "july4th",
+      name: "Red/White ╲",
+      artworkUrl: `${P}/stripe-diag-rw-left.png`,
+      emoji: "🔴",
+      backgroundColor: "#C8102E",
+    },
+    {
+      id: "july4th:diag-nw-right",
+      setId: "july4th",
+      name: "Navy/White ╱",
+      artworkUrl: `${P}/stripe-diag-nw-right.png`,
+      emoji: "🔵",
+      backgroundColor: "#1B2A4A",
+    },
+    {
+      id: "july4th:diag-nw-left",
+      setId: "july4th",
+      name: "Navy/White ╲",
+      artworkUrl: `${P}/stripe-diag-nw-left.png`,
+      emoji: "🔵",
+      backgroundColor: "#1B2A4A",
+    },
+    {
+      id: "july4th:diag-rn-right",
+      setId: "july4th",
+      name: "Red/Navy ╱",
+      artworkUrl: `${P}/stripe-diag-rn-right.png`,
+      emoji: "🟥",
+      backgroundColor: "#C8102E",
+    },
+    {
+      id: "july4th:diag-rn-left",
+      setId: "july4th",
+      name: "Red/Navy ╲",
+      artworkUrl: `${P}/stripe-diag-rn-left.png`,
+      emoji: "🟥",
+      backgroundColor: "#C8102E",
     },
 
     // ─── Red / white / blue basics ────────────────────────────
