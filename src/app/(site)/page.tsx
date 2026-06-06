@@ -10,6 +10,8 @@ import { HowItWorks } from "@/components/site/home/HowItWorks";
 import { Gallery } from "@/components/site/home/Gallery";
 import { TrustSection } from "@/components/site/home/TrustSection";
 import { HomeFaq } from "@/components/site/home/HomeFaq";
+import { Testimonials } from "@/components/site/home/Testimonials";
+import { SeoContent } from "@/components/site/home/SeoContent";
 import { CtaEmail } from "@/components/site/home/CtaEmail";
 
 // Marketing homepage at "/". Server Component (no "use client"); the only
@@ -46,11 +48,14 @@ function buildJsonLd() {
   const productPrice = ((americanClassic?.price ?? offer.singlePrice) / 100).toFixed(2);
 
   const organization = {
-    "@type": "Organization",
+    "@type": ["Organization", "OnlineStore"],
     "@id": `${SITE_URL}/#organization`,
     name: copy.site.brandName,
     url: SITE_URL,
     slogan: copy.site.tagline,
+    logo: `${SITE_URL}/brand/seal.png`,
+    image: `${SITE_URL}/brand/seal.png`,
+    areaServed: "US",
     address: {
       "@type": "PostalAddress",
       addressLocality: "St. Louis",
@@ -59,18 +64,43 @@ function buildJsonLd() {
     },
   };
 
+  const website = {
+    "@type": "WebSite",
+    "@id": `${SITE_URL}/#website`,
+    url: SITE_URL,
+    name: copy.site.brandName,
+    publisher: { "@id": `${SITE_URL}/#organization` },
+  };
+
   const product = {
     "@type": "Product",
-    name: americanClassic?.name ?? "American Classic Kit",
-    description: americanClassic?.identityLine,
-    image: `${SITE_URL}/kits/american-classic-thumb.jpg`,
+    "@id": `${SITE_URL}/#product`,
+    name: americanClassic?.name ?? "Freedom Frame Set",
+    description:
+      "A customizable, snap-on license plate frame kit with 40+ interchangeable patriotic tiles. Install once, swap tiles forever. Designed and made in St. Louis, USA.",
+    image: [`${SITE_URL}/kits/american-classic-thumb.jpg`],
     brand: { "@type": "Brand", name: copy.site.brandName },
+    category: "License Plate Frames",
     offers: {
       "@type": "Offer",
       price: productPrice,
       priceCurrency: offer.currency.toUpperCase(),
       availability: "https://schema.org/InStock",
+      itemCondition: "https://schema.org/NewCondition",
+      priceValidUntil: "2026-12-31",
       url: `${SITE_URL}/buy?kit=american-classic`,
+      seller: { "@id": `${SITE_URL}/#organization` },
+      shippingDetails: {
+        "@type": "OfferShippingDetails",
+        shippingRate: { "@type": "MonetaryAmount", value: "5.00", currency: "USD" },
+        shippingDestination: { "@type": "DefinedRegion", addressCountry: "US" },
+      },
+      hasMerchantReturnPolicy: {
+        "@type": "MerchantReturnPolicy",
+        applicableCountry: "US",
+        returnPolicyCategory: "https://schema.org/MerchantReturnFiniteReturnWindow",
+        merchantReturnDays: 30,
+      },
     },
   };
 
@@ -116,7 +146,7 @@ function buildJsonLd() {
 
   return {
     "@context": "https://schema.org",
-    "@graph": [organization, product, faqPage, itemList, breadcrumbList],
+    "@graph": [organization, website, product, faqPage, itemList, breadcrumbList],
   };
 }
 
@@ -136,6 +166,8 @@ export default function HomePage() {
       <KitShowcase />
       <HowItWorks />
       <Gallery />
+      <Testimonials />
+      <SeoContent />
       <HomeFaq />
       <CtaEmail />
     </>

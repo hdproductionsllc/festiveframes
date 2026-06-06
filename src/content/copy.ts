@@ -19,6 +19,25 @@ export interface HowItWorksStep {
   step: string;
 }
 
+/** A maker/artist quote. Honest, attributed - never a fake customer review. */
+export interface Testimonial {
+  quote: string;
+  name: string;
+  role: string;
+}
+
+export interface SeoSection {
+  heading: string;
+  body: string;
+}
+
+/** Long-form, search-intent content block (SEO + answer-engine optimization). */
+export interface SeoBlock {
+  heading: string;
+  intro: string;
+  sections: SeoSection[];
+}
+
 export interface HomeCopy {
   metaTitle: string;
   metaDescription: string;
@@ -38,6 +57,10 @@ export interface HomeCopy {
   emailCapturePrompt: string;
   /** Closing call-to-action heading. */
   ctaHeading: string;
+  /** Long-form SEO/AIO content block. */
+  seo: SeoBlock;
+  /** Maker + artist testimonials (attributed, not customer reviews). */
+  testimonials: Testimonial[];
 }
 
 export interface SiteCopy {
@@ -187,10 +210,83 @@ export const copy: Copy = {
         answer:
           "New tile drops and seasonal sets arrive throughout the year. The email list gets first access.",
       },
+      {
+        question: "What is a snap-on license plate frame?",
+        answer:
+          "It is a license plate frame that installs once over your plate, then holds interchangeable decorative tiles that snap into the border by hand. You swap the tiles to change the look without ever removing the frame.",
+      },
+      {
+        question: "What comes in the Freedom Frame Set?",
+        answer:
+          "One frame rail that fits all standard US plates, plus 40+ patriotic tiles - American flags, stars, stripes, chevrons, and firework bursts - and ready-made bottom-bar phrases like LAND OF THE FREE and HOME OF THE BRAVE. It arrives complete and ready to snap on.",
+      },
+      {
+        question: "Is this a good Fourth of July gift?",
+        answer:
+          "Yes. It is a made-in-USA, ready-to-go car gift for anyone who celebrates the Fourth out loud. Many people order two and keep one for a second car or to give away.",
+      },
+      {
+        question: "Where is it made?",
+        answer:
+          "Every frame and tile is designed and made in St. Louis, USA.",
+      },
+      {
+        question: "How much does a Festive Frames kit cost?",
+        answer:
+          "One Freedom Frame Set is $39, and two sets are $69. Pick up free at our St. Louis festival booth July 3-4, or get it shipped anywhere in the US for a $5 flat rate.",
+      },
+      {
+        question: "Will it damage my car or plate?",
+        answer:
+          "No. It installs with the same two screws that already hold a frame to your plate, with no drilling and no new hardware, and the tiles snap on and off by hand with no adhesive.",
+      },
     ],
 
     emailCapturePrompt: "Kit drops, festival stops, early access. No spam, ever.",
     ctaHeading: "Make your plate yours.",
+
+    seo: {
+      heading: "Custom license plate frames you actually want to look at",
+      intro:
+        "Festive Frames makes customizable, snap-on license plate frames with interchangeable decorative tiles. Install the frame once with your existing plate screws, then snap patriotic tiles, stars, stripes, flags, and fireworks, into the border and swap them whenever the season or the mood changes. It is a personalized license plate frame that fits all standard US plates in all 50 states, designed and made in St. Louis, USA.",
+      sections: [
+        {
+          heading: "A patriotic license plate frame for the Fourth of July",
+          body:
+            "The Freedom Frame Set is built for Independence Day. Dress up your car with a red, white, and blue license plate frame loaded with American flag tiles, bold stars, chevrons, and firework bursts. It is the easy 4th of July car decoration that takes ten seconds to restyle, and because the tiles pop right off, the same frame carries you into every holiday and game day after.",
+        },
+        {
+          heading: "Snap-on, swappable, and tool-free",
+          body:
+            "Most decorative license plate frames lock you into one look. This one does not. The interchangeable tiles snap into the rail by hand, with no tools and no adhesive, so you can mix and match designs or spell out phrases like LAND OF THE FREE on the bottom bar. Buy the frame once, change it endlessly.",
+        },
+        {
+          heading: "Made in the USA and built for the road",
+          body:
+            "Every frame and tile is designed and made in St. Louis. They are vetted for real driving: highway speeds, automatic car washes, and the full swing of weather from icy winters to summer sun. The tiles are UV printed so the colors stay bright, and the frame sits on the plate border only, so it never covers your plate numbers, registration sticker, or state name.",
+        },
+        {
+          heading: "A car gift that is actually fun",
+          body:
+            "Looking for a gift for the car lover, the proud American, or the neighbor who decorates for every holiday? A Festive Frames kit is a personalized, made-in-USA license plate frame that arrives complete and ready to snap on. Order two and keep one for the second car.",
+        },
+      ],
+    },
+
+    testimonials: [
+      {
+        quote:
+          "I design every tile to read from a block away: big, bold, and unmistakably American. Seeing my artwork snap onto someone's car, and knowing they can restyle it any time, is the whole dream.",
+        name: "Becky Newman",
+        role: "Tile artist, Festive Frames",
+      },
+      {
+        quote:
+          "I started Festive Frames because I was tired of picking one license plate frame and living with it forever. Install it once, then change the whole look in ten seconds. We make every set here in St. Louis and stand behind it for 30 days.",
+        name: "Henry David",
+        role: "Founder, Festive Frames",
+      },
+    ],
   },
 
   buy: {
