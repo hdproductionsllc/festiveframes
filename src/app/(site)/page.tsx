@@ -9,6 +9,7 @@ import { KitShowcase } from "@/components/site/home/KitShowcase";
 import { DesignShowcase } from "@/components/site/home/DesignShowcase";
 import { HowItWorks } from "@/components/site/home/HowItWorks";
 import { Gallery } from "@/components/site/home/Gallery";
+import { WhyWeMadeIt } from "@/components/site/home/WhyWeMadeIt";
 import { TrustSection } from "@/components/site/home/TrustSection";
 import { HomeFaq } from "@/components/site/home/HomeFaq";
 import { Testimonials } from "@/components/site/home/Testimonials";
@@ -168,6 +169,7 @@ export default function HomePage() {
       <DesignShowcase />
       <HowItWorks />
       <Gallery />
+      <WhyWeMadeIt />
       <Testimonials />
       <SeoContent />
       <HomeFaq />

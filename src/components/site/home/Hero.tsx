@@ -1,20 +1,19 @@
 import Link from "next/link";
 import Image from "next/image";
 import { copy } from "@/content/copy";
+import { FoundingScarcity } from "@/components/site/FoundingScarcity";
 
 // Server Component. Homepage hero. Holds the single <h1> for the page.
 // Dark navy star-field band so the cream sections below feel like daylight.
 export function Hero() {
-  const { heroH1, heroSubhead, primaryCta, secondaryCta } = copy.home;
+  const { heroH1, heroSubhead, primaryCta, secondaryCta, founding } = copy.home;
 
   return (
     <section className="star-field text-brand-cream">
       <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 py-16 sm:px-6 sm:py-20 lg:grid-cols-2 lg:gap-12 lg:py-24">
         {/* Copy column */}
         <div>
-          <p className="vintage-eyebrow font-mkt-display text-sm font-semibold uppercase text-brand-gold">
-Made in the USA, St. Louis, Missouri
-          </p>
+          <FoundingScarcity dark />
           <h1 className="mt-4 font-mkt-display text-4xl font-bold uppercase leading-[1.05] tracking-tight text-brand-cream sm:text-5xl lg:text-6xl">
             {heroH1}
           </h1>
@@ -27,7 +26,7 @@ Made in the USA, St. Louis, Missouri
               href={primaryCta.href}
               className="inline-flex items-center justify-center rounded-md bg-brand-red px-6 py-3 text-base font-semibold uppercase tracking-wide text-brand-white transition-colors hover:bg-brand-red/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-gold"
             >
-              {primaryCta.label}
+              {founding.cta}
             </Link>
             <Link
               href={secondaryCta.href}

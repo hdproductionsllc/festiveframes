@@ -38,6 +38,19 @@ export interface SeoBlock {
   sections: SeoSection[];
 }
 
+/** Founding Edition scarcity copy (the cap number lives in config/founding.ts). */
+export interface FoundingCopy {
+  scarcityLine: string;
+  cta: string;
+}
+
+/** Honest "why we built this" maker story (replaces fake customer reviews). */
+export interface StoryCopy {
+  heading: string;
+  body: string;
+  reasons: { title: string; body: string }[];
+}
+
 export interface HomeCopy {
   metaTitle: string;
   metaDescription: string;
@@ -61,6 +74,10 @@ export interface HomeCopy {
   seo: SeoBlock;
   /** Maker + artist testimonials (attributed, not customer reviews). */
   testimonials: Testimonial[];
+  /** Founding Edition scarcity copy. */
+  founding: FoundingCopy;
+  /** "Why we built this" maker story. */
+  story: StoryCopy;
 }
 
 export interface SiteCopy {
@@ -287,6 +304,36 @@ export const copy: Copy = {
         role: "Founder, Festive Frames",
       },
     ],
+
+    founding: {
+      scarcityLine:
+        "Our launch run for America's 250th birthday. Once these are claimed, the Founding Edition is gone for good.",
+      cta: "Claim your Founding kit",
+    },
+
+    story: {
+      heading: "Made by Midwest folks who wanted driving to be more fun",
+      body:
+        "We are a small crew in St. Louis. We got tired of license plate frames that do one boring thing forever, so we built one you can restyle in ten seconds. No overseas factory, no committee, no nonsense. Just people who figure your car should get to celebrate too. We are kicking it off with a Founding Edition for America's 250th, and we are pretty proud of how it turned out. Here is why we think you will like it.",
+      reasons: [
+        {
+          title: "Install once, restyle forever",
+          body: "Bolt the frame on a single time with your existing plate screws. After that you never touch tools again.",
+        },
+        {
+          title: "Snap-on tiles, ten-second swaps",
+          body: "Tiles click into the border by hand. Change your whole look for the season, the holiday, or the mood in seconds.",
+        },
+        {
+          title: "Designed and made in St. Louis",
+          body: "Every frame and tile is made right here in the USA, and the tiles are UV printed so the colors stay bright.",
+        },
+        {
+          title: "Built for the real world",
+          body: "Vetted for highway speeds, automatic car washes, and the full swing of weather, from icy winters to summer sun.",
+        },
+      ],
+    },
   },
 
   buy: {

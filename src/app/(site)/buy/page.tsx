@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { copy } from "@/content/copy";
 import { getKit } from "@/config/kits";
 import { Countdown } from "@/components/site/buy/Countdown";
+import { FoundingScarcity } from "@/components/site/FoundingScarcity";
 import { BuyHero } from "@/components/site/buy/BuyHero";
 import { KitPicker } from "@/components/site/buy/KitPicker";
 import { OfferBlock } from "@/components/site/buy/OfferBlock";
@@ -54,6 +55,9 @@ export default async function BuyPage({
   return (
     <>
       <Countdown />
+      <div className="mx-auto max-w-6xl px-4 pt-8 sm:px-6">
+        <FoundingScarcity center />
+      </div>
       <BuyHero initialKit={initialKit} />
       <KitPicker />
       <OfferBlock />
