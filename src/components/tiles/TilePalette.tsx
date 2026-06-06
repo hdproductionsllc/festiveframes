@@ -23,11 +23,16 @@ export function TilePalette() {
       <div className="md:hidden">
         <button
           onClick={toggleMobilePalette}
-          className="fixed bottom-4 right-4 z-40 w-14 h-14 rounded-full bg-brand-red text-white
-            flex items-center justify-center shadow-lg active:scale-95 transition-transform"
+          className="fixed bottom-4 left-4 z-40 inline-flex items-center gap-2 rounded-full
+            bg-brand-red px-4 py-3 text-sm font-bold text-white shadow-lg
+            active:scale-95 transition-transform"
+          style={{
+            left: "max(1rem, env(safe-area-inset-left))",
+            bottom: "max(1rem, env(safe-area-inset-bottom))",
+          }}
           aria-label="Open tile palette"
         >
-          <span className="text-2xl">🎨</span>
+          <span className="text-xl leading-none">🎨</span> Tiles
         </button>
 
         {mobilePaletteOpen && (
