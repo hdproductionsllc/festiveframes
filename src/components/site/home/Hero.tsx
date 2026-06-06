@@ -6,7 +6,7 @@ import { FoundingScarcity } from "@/components/site/FoundingScarcity";
 // Server Component. Homepage hero. Holds the single <h1> for the page.
 // Dark navy star-field band so the cream sections below feel like daylight.
 export function Hero() {
-  const { heroH1, heroSubhead, primaryCta, secondaryCta, founding } = copy.home;
+  const { heroH1, heroSubhead, secondaryCta, founding } = copy.home;
 
   return (
     <section className="star-field text-brand-cream">
@@ -23,7 +23,7 @@ export function Hero() {
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
             <Link
-              href={primaryCta.href}
+              href="#get-yours"
               className="inline-flex items-center justify-center rounded-md bg-brand-red px-6 py-3 text-base font-semibold uppercase tracking-wide text-brand-white transition-colors hover:bg-brand-red/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-gold"
             >
               {founding.cta}

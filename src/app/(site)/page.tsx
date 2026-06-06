@@ -6,6 +6,7 @@ import { SITE_URL } from "@/config/season";
 import { Hero } from "@/components/site/home/Hero";
 import { WhatItIs } from "@/components/site/home/WhatItIs";
 import { KitShowcase } from "@/components/site/home/KitShowcase";
+import { OfferBlock } from "@/components/site/buy/OfferBlock";
 import { DesignShowcase } from "@/components/site/home/DesignShowcase";
 import { HowItWorks } from "@/components/site/home/HowItWorks";
 import { Gallery } from "@/components/site/home/Gallery";
@@ -166,6 +167,10 @@ export default function HomePage() {
       <TrustSection />
       <WhatItIs />
       <KitShowcase />
+      {/* In-page buy block so the homepage converts without a second page hop. */}
+      <div id="get-yours" className="scroll-mt-24">
+        <OfferBlock />
+      </div>
       <DesignShowcase />
       <HowItWorks />
       <Gallery />
