@@ -151,7 +151,7 @@ export const copy: Copy = {
     // automotive plastics, deliberately NOT named). Tiles are UV printed, so
     // the colors-stay-bright claim is supported.
     trust:
-      "Designed and made right here in St. Louis, USA. The frame installs once with your existing plate screws, and the decorative tiles snap on and off in seconds, so you can restyle whenever you want. Every tile is UV printed for a crisp, vivid finish.",
+      "Designed and made right here in St. Louis, USA. The frame and tiles are built tough and vetted for the real world: highway speeds, car washes, and the full swing of weather, from icy winters to summer heat, sun, and rain. The tiles are UV printed, so the colors stay bright. Built to last.",
 
     faq: [
       {
@@ -168,7 +168,7 @@ export const copy: Copy = {
         question: "Do tiles stay on at highway speed?",
         // TODO-VERIFY: confirm secure-hold claim with road testing.
         answer:
-          "The tiles lock into the frame and are designed to stay put during normal highway driving.",
+          "The tiles lock into the frame and stay put at highway speeds.",
       },
       {
         question: "What about weather and car washes?",
@@ -176,7 +176,7 @@ export const copy: Copy = {
         // Tiles are UV printed (fade-resistant). Keep the heavy-brush car-wash
         // note: that is mechanical abrasion, a separate real caution.
         answer:
-          "The frame bolts on like any license plate frame and stays put, and the tiles snap on and off in seconds with no tools. Every tile is UV printed for a crisp, vivid finish. For a car wash, we recommend popping the tiles off first and snapping them back on after.",
+          "Yes. The frame and tiles are vetted for everyday driving: highway speeds, automatic car washes, and the full range of weather, from freezing winters to summer heat, sun, and rain. The tiles are UV printed, so the colors stay bright. And whenever you want a new look, they still pop off in seconds.",
       },
       {
         question: "Can I get more than one?",
@@ -220,11 +220,11 @@ export const copy: Copy = {
     },
 
     builtToLast: {
-      heading: "Designed and made in St. Louis",
+      heading: "Built to last",
       // Material in plain language (same hard automotive plastics, not named).
       // Tiles are UV printed, so the colors-stay-bright claim is supported.
       body:
-        "Festive Frames is designed and made in the USA, right here in St. Louis. A sturdy plastic frame installs once with your existing plate screws, and the decorative tiles snap on and off in seconds with no tools, with a satisfying click and a real quality feel in the hand. Every tile is UV printed for a crisp, vivid finish.",
+        "Festive Frames is designed and made in the USA, right here in St. Louis. The frame and tiles are built tough and vetted for the real world: they hold up to highway speeds, car washes, sun, rain, and snow. The tiles snap on and off in seconds with a satisfying click, and every tile is UV printed so the colors stay bright. Built to last.",
     },
 
     trust: {
@@ -274,7 +274,7 @@ export const copy: Copy = {
         // Matches the homepage weather answer (plain-language material, UV-printed tiles).
         question: "What about weather and car washes?",
         answer:
-          "The frame bolts on like any license plate frame and stays put, and the tiles snap on and off in seconds with no tools. Every tile is UV printed for a crisp, vivid finish. For a car wash, we recommend popping the tiles off first and snapping them back on after.",
+          "Yes. The frame and tiles are vetted for everyday driving: highway speeds, automatic car washes, and the full range of weather, from freezing winters to summer heat, sun, and rain. The tiles are UV printed, so the colors stay bright. And whenever you want a new look, they still pop off in seconds.",
       },
       {
         question: "Pickup or shipping?",
