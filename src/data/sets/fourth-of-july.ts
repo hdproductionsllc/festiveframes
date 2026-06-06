@@ -225,6 +225,31 @@ export const fourthOfJulySet: TileSet = {
       backgroundColor: "#C8102E",
     },
 
+    {
+      id: "july4th:chevron-rw",
+      setId: "july4th",
+      name: "Chevron R/W",
+      artworkUrl: `${P}/chevron-rw.png`,
+      emoji: "〽️",
+      backgroundColor: "#C8102E",
+    },
+    {
+      id: "july4th:chevron-nw",
+      setId: "july4th",
+      name: "Chevron Navy/W",
+      artworkUrl: `${P}/chevron-nw.png`,
+      emoji: "〽️",
+      backgroundColor: "#1B2A4A",
+    },
+    {
+      id: "july4th:chevron-rwb",
+      setId: "july4th",
+      name: "Chevron R/W/B",
+      artworkUrl: `${P}/chevron-rwb.png`,
+      emoji: "〽️",
+      backgroundColor: "#1B2A4A",
+    },
+
     // ─── Red / white / blue basics ────────────────────────────
     {
       id: "july4th:solid-red",

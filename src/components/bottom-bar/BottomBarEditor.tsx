@@ -4,7 +4,6 @@ import { useDraggable } from "@dnd-kit/core";
 import { useDesignStore } from "@/stores/design-store";
 import { BOTTOM_BAR_MAX_CHARS } from "@/lib/constants/frame";
 import { JULY4_SLOGANS } from "@/data/slogans";
-import { autoColorFromTiles } from "@/lib/utils/auto-color";
 import { FontSelector } from "./FontSelector";
 import { ColorPicker } from "@/components/ui/ColorPicker";
 import { Slider } from "@/components/ui/Slider";
@@ -160,21 +159,9 @@ export function BottomBarEditor() {
       <FontSelector value={cfg.fontFamily} onChange={(fontFamily) => setCfg({ fontFamily })} />
 
       {/* Colors */}
-      <div className="space-y-2">
-        <div className="flex gap-4">
-          <ColorPicker label="Text" value={cfg.textColor} onChange={(textColor) => setCfg({ textColor })} />
-          <ColorPicker label="Background" value={cfg.backgroundColor} onChange={(backgroundColor) => setCfg({ backgroundColor })} />
-        </div>
-        <button
-          onClick={async () => {
-            const match = await autoColorFromTiles(useDesignStore.getState().slots);
-            if (match) setCfg(match);
-          }}
-          className="w-full rounded-md border border-surface-600 bg-surface-900 px-3 py-1.5 text-xs
-            font-medium text-surface-200 hover:bg-surface-800 transition-colors"
-        >
-          🎨 Match colors to tiles
-        </button>
+      <div className="flex gap-4">
+        <ColorPicker label="Text" value={cfg.textColor} onChange={(textColor) => setCfg({ textColor })} />
+        <ColorPicker label="Background" value={cfg.backgroundColor} onChange={(backgroundColor) => setCfg({ backgroundColor })} />
       </div>
 
       {/* Alignment */}
