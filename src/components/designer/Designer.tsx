@@ -11,8 +11,7 @@ import { FrameCanvas, type FrameCanvasHandle } from "@/components/frame/FrameCan
 import { TilePalette } from "@/components/tiles/TilePalette";
 import { BottomBarEditor } from "@/components/bottom-bar/BottomBarEditor";
 import { StateSelector } from "@/components/frame/StateSelector";
-import { exportFrameAsPng } from "@/lib/utils/export";
-import { captureFrameAsDataUrl } from "@/lib/utils/capture";
+import { composeFrameImage } from "@/lib/utils/compose-frame";
 import { playSound } from "@/lib/utils/sound";
 import { getSet } from "@/data/sets/index";
 
@@ -57,12 +56,16 @@ export function Designer() {
   }, [randomFill]);
 
   const handleExport = useCallback(async () => {
-    const el = canvasRef.current?.getElement();
-    if (!el) return;
-
     setExportState("exporting");
     try {
-      await exportFrameAsPng(el, designName);
+      const dataUrl = await composeFrameImage();
+      const safe =
+        (designName || "frame-design").replace(/[^a-zA-Z0-9 -]/g, "").trim().replace(/ /g, "-").toLowerCase() ||
+        "frame-design";
+      const a = document.createElement("a");
+      a.href = dataUrl;
+      a.download = `${safe}.png`;
+      a.click();
       setExportState("done");
       if (soundEnabled) playSound("chime");
       setTimeout(() => setExportState("idle"), 2000);
@@ -73,19 +76,13 @@ export function Designer() {
     }
   }, [designName, setExportState, soundEnabled]);
 
-  // Capture a mockup of the frame, then open the production parts list.
+  // Compose a mockup of the frame (canvas-based, iOS-safe), then open the parts list.
   const handleExportParts = useCallback(async () => {
-    const el = canvasRef.current?.getElement();
-    if (el) {
-      try {
-        const dataUrl = await captureFrameAsDataUrl(el, {
-          pixelRatio: 2,
-          backgroundColor: "#1a1a1a",
-        });
-        setFrameImage(dataUrl);
-      } catch {
-        setFrameImage(null);
-      }
+    try {
+      const dataUrl = await composeFrameImage();
+      setFrameImage(dataUrl);
+    } catch {
+      setFrameImage(null);
     }
     setShowParts(true);
   }, []);

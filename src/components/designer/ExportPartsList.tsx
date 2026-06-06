@@ -1,11 +1,10 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { useDesignStore } from "@/stores/design-store";
 import { getPiece } from "@/data/sets";
 import { coveredSlotIds } from "@/lib/utils/text-bar";
-import { captureFrameAsDataUrl } from "@/lib/utils/capture";
-import { BottomTextBar } from "@/components/frame/BottomTextBar";
+import { composeBarImage } from "@/lib/utils/compose-frame";
 
 // Short, stable part-number prefixes per set. Falls back to the first 3 letters.
 const SET_CODE: Record<string, string> = {
@@ -19,8 +18,6 @@ function skuFor(pieceId: string): string {
   const code = SET_CODE[setId] ?? setId.slice(0, 3).toUpperCase();
   return `${code}-${slug.toUpperCase().replace(/[^A-Z0-9]+/g, "-")}`;
 }
-
-const UNIT_PX = 180; // print resolution per tile unit for downloaded text bars
 
 interface Row {
   sku: string;
@@ -55,7 +52,6 @@ export function ExportPartsList({
 
   const [orderNumber, setOrderNumber] = useState("");
   const [customerName, setCustomerName] = useState("");
-  const barRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const rows = useMemo<Row[]>(() => {
     const counts = new Map<string, number>();
@@ -119,13 +115,8 @@ export function ExportPartsList({
   }
 
   async function downloadBarPng(barId: string, sku: string) {
-    const el = barRefs.current[barId];
-    if (!el) return;
-    const bar = textBars.find((b) => b.id === barId);
-    const dataUrl = await captureFrameAsDataUrl(el, {
-      pixelRatio: 2,
-      backgroundColor: bar?.config.backgroundColor ?? "#FFFFFF",
-    });
+    const dataUrl = await composeBarImage(barId);
+    if (!dataUrl) return;
     const a = document.createElement("a");
     a.href = dataUrl;
     a.download = `${slug}${orderNumber ? `-${orderNumber}` : ""}-${sku}.png`;
@@ -141,15 +132,10 @@ export function ExportPartsList({
 
     const bars = await Promise.all(
       textBars.map(async (b) => {
-        const el = barRefs.current[b.id];
-        if (!el) return null;
-        try {
-          const src = await captureFrameAsDataUrl(el, { pixelRatio: 2, backgroundColor: b.config.backgroundColor });
-          const dim = `${b.widthUnits} × 1 · ${(b.widthUnits * tileIn).toFixed(2)}″ × ${tileIn.toFixed(2)}″`;
-          return { text: b.config.text, dim, src };
-        } catch {
-          return null;
-        }
+        const src = await composeBarImage(b.id);
+        if (!src) return null;
+        const dim = `${b.widthUnits} × 1 · ${(b.widthUnits * tileIn).toFixed(2)}″ × ${tileIn.toFixed(2)}″`;
+        return { text: b.config.text, dim, src };
       })
     );
 
@@ -362,28 +348,6 @@ export function ExportPartsList({
             Print / Save PDF
           </button>
         </div>
-      </div>
-
-      {/* Offscreen high-res renders of each text bar, for PNG download. */}
-      <div aria-hidden style={{ position: "fixed", left: -100000, top: 0, pointerEvents: "none" }}>
-        {textBars.map((b) => (
-          <div
-            key={b.id}
-            ref={(el) => {
-              barRefs.current[b.id] = el;
-            }}
-            style={{ position: "relative", width: b.widthUnits * UNIT_PX, height: UNIT_PX, overflow: "hidden" }}
-          >
-            <BottomTextBar
-              config={b.config}
-              qrConfig={{ ...qrCode, enabled: b.qr }}
-              x={0}
-              y={0}
-              width={b.widthUnits * UNIT_PX}
-              height={UNIT_PX}
-            />
-          </div>
-        ))}
       </div>
     </div>
   );
