@@ -5,30 +5,22 @@ import Image from "next/image";
 // Transparent PNGs sit on the cream card so the frames read cleanly.
 
 const FEATURED = {
-  src: "/designs/design-250.png",
-  alt: "Festive Frames license plate frame celebrating America's 250th, with a 250 YEARS top bar and patriotic flag, star, firework, and 1776-2026 tiles",
+  src: "/designs/design-5.png",
+  alt: "Festive Frames license plate frame with eagle, American flag and liberty bell tiles, a 1776 top bar and a USA bottom bar",
 };
 
 const DESIGNS = [
-  {
-    src: "/designs/design-3.png",
-    alt: "Patriotic Festive Frames license plate frame with red, white and blue starburst tiles and a LET FREEDOM RING bottom bar",
-  },
-  {
-    src: "/designs/design-4.png",
-    alt: "Festive Frames license plate frame with a bold red and white star border and a HOME OF THE BRAVE bottom bar",
-  },
   {
     src: "/designs/design-1.png",
     alt: "Festive Frames license plate frame with firework bursts, American flags, stars and chevron tiles around a Missouri plate",
   },
   {
-    src: "/designs/design-5.png",
-    alt: "Festive Frames license plate frame with eagle, American flag and liberty bell tiles, a 1776 top bar and a USA bottom bar",
-  },
-  {
     src: "/designs/design-2.png",
     alt: "Red, white and blue Festive Frames license plate frame with pinwheel tiles and a LET FREEDOM RING bottom bar",
+  },
+  {
+    src: "/designs/design-4.png",
+    alt: "Festive Frames license plate frame with a bold red and white star border and a HOME OF THE BRAVE bottom bar",
   },
 ];
 

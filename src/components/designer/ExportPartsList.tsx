@@ -85,6 +85,7 @@ export function ExportPartsList({
       ["Order #", orderNumber],
       ["Customer", customerName],
       ["Design", designName],
+      ["Tile size (in)", tileIn.toFixed(3)],
       ["Plate", plateState],
       ["QR", qrCode.enabled ? qrCode.url : "off"],
       [],
@@ -328,6 +329,7 @@ export function ExportPartsList({
         )}
 
         <dl className="mt-4 space-y-1 text-xs text-gray-600">
+          <div><span className="font-semibold">Tile size:</span> {tileIn.toFixed(3)} in square (each tile)</div>
           <div><span className="font-semibold">Plate:</span> {plateState}</div>
           <div><span className="font-semibold">QR:</span> {qrCode.enabled ? qrCode.url : "off"}</div>
         </dl>

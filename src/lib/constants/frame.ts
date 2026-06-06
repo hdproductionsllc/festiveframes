@@ -4,13 +4,13 @@ import type { FrameConfig } from "@/lib/types";
 // perimeter is a 13 x 7 ring = 36 tiles: top & bottom rows of 13 (incl. the
 // corners) plus 5 tiles down each side between them. Each side is an exact
 // integer number of units so tiles butt edge-to-edge with clean corners.
-//   width  = 13 units x 0.982 = 12.766"  (topStep resolves to exactly 1 tile)
-//   height =  7 units x 0.982 =  6.874"  (1 top + 5 side + 1 bottom row)
+//   width  = 13 units x 0.991 = 12.883"  (topStep resolves to exactly 1 tile)
+//   height =  7 units x 0.991 =  6.937"  (1 top + 5 side + 1 bottom row)
 // The 12x6 plate sits behind the ring; the frame overlaps the plate's margin.
 export const DEFAULT_FRAME_CONFIG: FrameConfig = {
-  widthInches: 12.766,
-  heightInches: 6.874,
-  tileSizeInches: 0.982,
+  widthInches: 12.883,
+  heightInches: 6.937,
+  tileSizeInches: 0.991,
   topSlots: 13,
   bottomSlots: 13,
   leftSlots: 5,

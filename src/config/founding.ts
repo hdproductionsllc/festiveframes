@@ -8,7 +8,7 @@
 // the trust the rest of the site is built on.
 export const FOUNDING = {
   cap: 250,
-  claimed: 0,
+  claimed: 27, // 223 of 250 left (keep this honest — update as real orders come in)
   edition: "Founding Edition",
   occasion: "America's 250th",
 } as const;

@@ -20,8 +20,8 @@ export function KitShowcase() {
           <div className="plate-frame">
             <div className="relative aspect-[1.86] w-full overflow-hidden rounded-md bg-brand-navy-soft/40">
               <Image
-                src="/designs/design-250.png"
-                alt="Freedom Frame Set decorated for America's 250th: a snap-on license plate frame with a 250 YEARS top bar and patriotic tiles - American flags, stars, fireworks, liberty bells, and 1776 to 2026"
+                src="/designs/design-3.png"
+                alt="Freedom Frame Set: a snap-on license plate frame with red, white and blue starburst tiles around a Missouri plate and a LET FREEDOM RING bottom bar"
                 fill
                 sizes="(min-width: 1024px) 50vw, 100vw"
                 className="object-contain"

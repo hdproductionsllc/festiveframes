@@ -516,7 +516,7 @@ export const useDesignStore = create<DesignState>()(
       };
     },
     {
-      name: "festive-frames-design-v4",
+      name: "festive-frames-design-v5",
       // NOTE: the design (slots, textBars) and the draft bar styling are NOT
       // persisted — refreshing clears the design, reseeds a fresh random July
       // 4th layout, and resets the bar to the loud default.

@@ -41,14 +41,14 @@ export function Hero() {
             Swap public/season/july4-2026-hero.webp to update (see tasks/IMAGE_MANIFEST.md). */}
         <div className="order-first lg:order-last">
           <div className="plate-frame">
-            <div className="relative aspect-[16/9] w-full overflow-hidden rounded-md">
+            <div className="relative aspect-[1.86] w-full overflow-hidden rounded-md">
               <Image
-                src="/season/july4-2026-hero.png"
-                alt="A Festive Frames kit snapped onto the license plate of a parked car at golden hour, red, white and blue star and firework tiles around the border"
+                src="/designs/design-250.png"
+                alt="Festive Frames license plate frame for America's 250th, with a 250 YEARS top bar and patriotic flag, star, firework, and 1776 to 2026 tiles around the border"
                 fill
                 priority
                 sizes="(min-width: 1024px) 50vw, 100vw"
-                className="object-cover vintage-photo"
+                className="object-contain"
               />
             </div>
           </div>

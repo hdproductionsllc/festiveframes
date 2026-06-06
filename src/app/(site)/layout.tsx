@@ -1,3 +1,4 @@
+import { AnnouncementBar } from "@/components/site/AnnouncementBar";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { SiteFooter } from "@/components/site/SiteFooter";
 
@@ -17,6 +18,7 @@ export default function SiteLayout({
       >
         Skip to content
       </a>
+      <AnnouncementBar />
       <SiteHeader />
       <main id="main" tabIndex={-1} className="flex-1">
         {children}
