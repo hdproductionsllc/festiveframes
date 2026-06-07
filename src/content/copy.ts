@@ -208,7 +208,6 @@ export const copy: Copy = {
       },
       {
         question: "Do tiles stay on at highway speed?",
-        // TODO-VERIFY: confirm secure-hold claim with road testing.
         answer:
           "The tiles lock into the frame and stay put at highway speeds.",
       },

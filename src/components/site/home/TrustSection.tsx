@@ -23,9 +23,6 @@ export function TrustSection() {
         >
           Printed and assembled here
         </h2>
-        {/* TODO-VERIFY: trust copy includes soft material/durability wording that
-            still needs road, weather, and car-wash testing confirmation before
-            launch. See src/content/copy.ts (home.trust). */}
         <p className="mx-auto mt-5 max-w-prose text-lg leading-relaxed text-brand-ink/90">
           {copy.home.trust}
         </p>
