@@ -22,32 +22,42 @@ function Stars({ n }: { n: number }) {
   );
 }
 
-// Auto-rotating quote carousel. Renders stars only when an item has a rating
-// (real customer reviews); maker quotes show name + role and no stars.
+// Auto-rotating quote carousel. All items are stacked in a single grid cell, so
+// the container is always as tall as the LONGEST review — no layout shift as it
+// rotates. Only the active item is visible (cross-fade). Stars show only for
+// items with a rating (real customer reviews); maker quotes show name + role.
 export function ReviewsCarousel({ reviews, intervalMs = 5000 }: { reviews: CarouselReview[]; intervalMs?: number }) {
-  const [i, setI] = useState(0);
+  const [idx, setIdx] = useState(0);
 
   useEffect(() => {
     if (reviews.length <= 1) return;
-    const id = setInterval(() => setI((p) => (p + 1) % reviews.length), intervalMs);
+    const id = setInterval(() => setIdx((p) => (p + 1) % reviews.length), intervalMs);
     return () => clearInterval(id);
   }, [reviews.length, intervalMs]);
 
   if (reviews.length === 0) return null;
-  const idx = Math.min(i, reviews.length - 1);
-  const r = reviews[idx];
 
   return (
     <div className="mx-auto max-w-2xl text-center">
-      <div key={idx} style={{ animation: "ff-fade 0.5s ease" }}>
-        {typeof r.rating === "number" && <Stars n={r.rating} />}
-        <blockquote className="mx-auto mt-4 text-xl leading-relaxed text-brand-ink/90 sm:text-2xl">
-          &ldquo;{r.quote}&rdquo;
-        </blockquote>
-        <p className="mt-5 text-sm font-semibold text-brand-navy">
-          {r.name}
-          {r.role && <span className="block font-normal text-brand-ink/60">{r.role}</span>}
-        </p>
+      <div className="grid">
+        {reviews.map((r, n) => (
+          <div
+            key={n}
+            aria-hidden={n !== idx}
+            className={`col-start-1 row-start-1 transition-opacity duration-500 ${
+              n === idx ? "opacity-100" : "pointer-events-none opacity-0"
+            }`}
+          >
+            {typeof r.rating === "number" && <Stars n={r.rating} />}
+            <blockquote className="mx-auto mt-4 text-xl leading-relaxed text-brand-ink/90 sm:text-2xl">
+              &ldquo;{r.quote}&rdquo;
+            </blockquote>
+            <p className="mt-5 text-sm font-semibold text-brand-navy">
+              {r.name}
+              {r.role && <span className="block font-normal text-brand-ink/60">{r.role}</span>}
+            </p>
+          </div>
+        ))}
       </div>
 
       {reviews.length > 1 && (
@@ -56,7 +66,7 @@ export function ReviewsCarousel({ reviews, intervalMs = 5000 }: { reviews: Carou
             <button
               key={d}
               type="button"
-              onClick={() => setI(d)}
+              onClick={() => setIdx(d)}
               aria-label={`Show review ${d + 1}`}
               aria-current={d === idx}
               className={`h-2 w-2 rounded-full transition-colors ${
