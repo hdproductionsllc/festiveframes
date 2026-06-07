@@ -219,6 +219,12 @@ body {
   background: var(--color-surface-500);
 }
 
+/* Reviews/testimonial carousel cross-fade. */
+@keyframes ff-fade {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
 /* Print only the production parts list (ExportPartsList modal). */
 @media print {
   body * {
