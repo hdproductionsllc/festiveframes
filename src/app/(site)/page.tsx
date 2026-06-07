@@ -8,6 +8,7 @@ import { Hero } from "@/components/site/home/Hero";
 import { WhatItIs } from "@/components/site/home/WhatItIs";
 import { KitShowcase } from "@/components/site/home/KitShowcase";
 import { OfferBlock } from "@/components/site/buy/OfferBlock";
+import { CustomerReviews } from "@/components/site/home/CustomerReviews";
 import { DesignShowcase } from "@/components/site/home/DesignShowcase";
 import { HowItWorks } from "@/components/site/home/HowItWorks";
 import { Gallery } from "@/components/site/home/Gallery";
@@ -50,6 +51,8 @@ export const metadata: Metadata = {
 function buildJsonLd() {
   const americanClassic = getKit("american-classic");
   const productPrice = ((americanClassic?.price ?? offer.singlePrice) / 100).toFixed(2);
+  const reviews = copy.home.reviews;
+  const ratingValue = (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1);
 
   const organization = {
     "@type": ["Organization", "OnlineStore"],
@@ -106,6 +109,19 @@ function buildJsonLd() {
         merchantReturnDays: 30,
       },
     },
+    aggregateRating: {
+      "@type": "AggregateRating",
+      ratingValue,
+      reviewCount: reviews.length,
+      bestRating: 5,
+      worstRating: 1,
+    },
+    review: reviews.map((r) => ({
+      "@type": "Review",
+      reviewRating: { "@type": "Rating", ratingValue: r.rating, bestRating: 5, worstRating: 1 },
+      author: { "@type": "Person", name: r.name },
+      reviewBody: r.quote,
+    })),
   };
 
   const faqPage = {
@@ -173,6 +189,7 @@ export default function HomePage() {
       <div id="get-yours" className="scroll-mt-24">
         <OfferBlock />
       </div>
+      <CustomerReviews />
       <DesignShowcase />
       <HowItWorks />
       <Gallery />

@@ -198,3 +198,40 @@ export async function sendOrderEmails(o: OrderEmailData): Promise<void> {
     console.warn("[email] ADMIN_ORDER_EMAIL not set; skipping admin notification.");
   }
 }
+
+export interface ReviewSubmission {
+  rating: number;
+  body: string;
+  name: string;
+}
+
+/**
+ * Emails a customer-submitted review to the team to vet and (if genuine) add
+ * to the live reviews. No-ops gracefully when Resend isn't configured.
+ */
+export async function sendReviewEmail(r: ReviewSubmission): Promise<void> {
+  const apiKey = process.env.RESEND_API_KEY;
+  const adminTo = process.env.ADMIN_ORDER_EMAIL;
+  if (!apiKey || !adminTo) {
+    console.warn("[email] review (not sent, missing config):", r);
+    return;
+  }
+  const from = process.env.EMAIL_FROM || "Festive Frames <onboarding@resend.dev>";
+  const stars = "★".repeat(r.rating) + "☆".repeat(Math.max(0, 5 - r.rating));
+  const resend = new Resend(apiKey);
+  try {
+    await resend.emails.send({
+      from,
+      to: adminTo,
+      subject: `New review (${r.rating}/5) from ${r.name}`,
+      html: shell(
+        `New review - ${stars}`,
+        `<p style="margin:0 0 8px;color:${NAVY};font-size:15px;font-weight:bold;">${escapeHtml(r.name)}</p>
+         <blockquote style="margin:0;color:${INK};font-size:14px;line-height:1.6;font-style:italic;">&ldquo;${escapeHtml(r.body)}&rdquo;</blockquote>
+         <p style="margin:16px 0 0;color:${INK};font-size:12px;opacity:0.7;">Verify this is genuine, then add it to src/content/copy.ts (home.reviews) to publish.</p>`,
+      ),
+    });
+  } catch (err) {
+    console.error("[email] review email failed:", err);
+  }
+}

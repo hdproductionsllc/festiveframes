@@ -6,6 +6,7 @@ import { getKit } from "@/config/kits";
 import { getStripe } from "@/lib/stripe";
 import { EmailCaptureForm } from "@/components/site/home/EmailCaptureForm";
 import { SharePrompt } from "@/components/site/thanks/SharePrompt";
+import { LeaveReview } from "@/components/site/thanks/LeaveReview";
 import { PurchaseTracker } from "@/components/site/thanks/PurchaseTracker";
 import { SITE_URL, season } from "@/config/season";
 
@@ -199,6 +200,20 @@ export default async function ThanksPage({ searchParams }: ThanksPageProps) {
             <p className="mt-2 text-base text-brand-ink/85">{copy.thanks.shipping.body}</p>
           </div>
         )}
+
+        {/* Review prompt — collected reviews are emailed to the team to vet,
+            then the genuine ones are published to the homepage carousel. */}
+        <div className="mt-12 border-t border-brand-navy-soft/30 pt-10">
+          <h2 className="font-mkt-display text-2xl font-bold uppercase tracking-tight text-brand-navy">
+            Loved it? Leave a review
+          </h2>
+          <p className="mt-2 max-w-prose text-base text-brand-ink/85">
+            Tell us what you did with it and how it went. We feature real reviews on the site.
+          </p>
+          <div className="mt-4 max-w-md">
+            <LeaveReview />
+          </div>
+        </div>
 
         {/* Future tile drops tease (the ONLY place this lives) + email capture */}
         <div className="mt-12 border-t border-brand-navy-soft/30 pt-10">

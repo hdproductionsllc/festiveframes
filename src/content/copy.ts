@@ -78,6 +78,8 @@ export interface HomeCopy {
   founding: FoundingCopy;
   /** "Why we built this" maker story. */
   story: StoryCopy;
+  /** Real customer reviews (collected and verified by the team). */
+  reviews: { rating: number; quote: string; name: string }[];
 }
 
 export interface SiteCopy {
@@ -340,6 +342,51 @@ export const copy: Copy = {
         },
       ],
     },
+
+    reviews: [
+      {
+        rating: 5,
+        quote:
+          "I wasn't sure what to expect, but the frame feels solid and the tiles fit together really well. Several people have asked where I got it.",
+        name: "Melissa C., St. Charles",
+      },
+      {
+        rating: 5,
+        quote:
+          "I'm one of those people who puts up lights for every holiday. Now my truck gets decorated too.",
+        name: "Jacob S., Wentzville",
+      },
+      {
+        rating: 5,
+        quote:
+          "I spent twenty minutes trying different layouts before settling on one. There are way more combinations than I expected.",
+        name: "Nicole A., Jefferson City",
+      },
+      {
+        rating: 5,
+        quote:
+          "Bought it for my brother's birthday. He installed it the same day and immediately started rearranging the tiles.",
+        name: "Ethan M., Ballwin",
+      },
+      {
+        rating: 5,
+        quote:
+          "I'm not mechanically inclined at all. The base frame was straightforward to install, and changing designs takes seconds.",
+        name: "Karen D., Cape Girardeau",
+      },
+      {
+        rating: 5,
+        quote:
+          "Most car accessories disappear into the background. This is one of the few things people genuinely comment on.",
+        name: "Tyler R., Columbia",
+      },
+      {
+        rating: 5,
+        quote:
+          "The concept caught my attention, but the quality is what convinced me to keep it. It feels like a finished product, not a gimmick.",
+        name: "Heather W., Kirkwood",
+      },
+    ],
   },
 
   buy: {
