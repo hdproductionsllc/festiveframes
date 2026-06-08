@@ -30,7 +30,6 @@ export interface OrderEmailData {
   items: OrderItem[];
   totalCents: number;
   currency: string;
-  fulfillment: "pickup" | "shipping";
   shippingName: string | null;
   shippingAddress: {
     line1?: string | null;
@@ -76,11 +75,6 @@ function escapeHtml(s: string): string {
 }
 
 function fulfillmentBlock(o: OrderEmailData): string {
-  if (o.fulfillment === "pickup") {
-    return `
-      <p style="margin:0 0 4px;color:${INK};font-size:14px;"><strong>Pickup:</strong> Free festival pickup, July 3-4.</p>
-      <p style="margin:0;color:${INK};font-size:13px;opacity:0.8;">Show your confirmation at the Festive Frames booth.</p>`;
-  }
   const a = o.shippingAddress;
   const lines = [
     o.shippingName,

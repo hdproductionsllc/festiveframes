@@ -137,8 +137,6 @@ export interface ThanksCopy {
   genericHeadline: string;
   /** Generic supporting line for the fallback state. */
   genericBody: string;
-  /** Festival pickup fulfillment block. */
-  pickup: { heading: string; body: string; instruction: string };
   /** Shipping fulfillment block. */
   shipping: { heading: string; body: string };
   /** Future tile-drop tease (the ONLY place this lives). */
@@ -251,7 +249,7 @@ export const copy: Copy = {
       {
         question: "How much does a Festive Frames kit cost?",
         answer:
-          "One Freedom Frame Set is $39, and two sets are $69. Pick up free at our St. Louis festival booth July 3-4, or get it shipped anywhere in the US for a $5 flat rate.",
+          "One Freedom Frame Set is $39, and two sets are $69. It ships anywhere in the US for a $5 flat rate. Order by June 28 to get it before the Fourth.",
       },
       {
         question: "Will it damage my car or plate?",
@@ -260,7 +258,7 @@ export const copy: Copy = {
       },
     ],
 
-    emailCapturePrompt: "Kit drops, festival stops, early access. No spam, ever.",
+    emailCapturePrompt: "Kit drops and early access. No spam, ever.",
     ctaHeading: "Make your plate yours.",
 
     seo: {
@@ -391,10 +389,10 @@ export const copy: Copy = {
   buy: {
     metaTitle: "Shop the Freedom Frame Set",
     metaDescription:
-      "Shop the Freedom Frame Set: a snap-on license plate frame kit loaded with 40+ patriotic tiles. Install once, swap tiles forever. Free St. Louis pickup.",
+      "Shop the Freedom Frame Set: a snap-on license plate frame kit loaded with 40+ patriotic tiles. Install once, swap tiles forever. Ships nationwide, $5 flat rate.",
     h1: "Make your license plate the most fun part of your car.",
     subhead: "Snap it on. Swap it forever.",
-    ctaSubline: "Free festival pickup July 3-4, or $5 flat shipping.",
+    ctaSubline: "$5 flat US shipping. Order by June 28 to get it before the Fourth.",
     guarantee: "30-day guarantee. If you do not love it, send it back.",
 
     whatsInKit: {
@@ -472,9 +470,9 @@ export const copy: Copy = {
           "Yes. The frame and tiles are vetted for everyday driving: highway speeds, automatic car washes, and the full range of weather, from freezing winters to summer heat, sun, and rain. The tiles are UV printed, so the colors stay bright. And whenever you want a new look, they still pop off in seconds.",
       },
       {
-        question: "Pickup or shipping?",
+        question: "How does shipping work?",
         answer:
-          "Pick up free at our festival booth July 3-4, or get it shipped anywhere in the US for a $5 flat rate.",
+          "We ship anywhere in the US for a $5 flat rate. Order by June 28 to get yours before the Fourth.",
       },
     ],
 
@@ -495,11 +493,6 @@ export const copy: Copy = {
     genericHeadline: "You're in. Your kit is reserved.",
     genericBody:
       "Your order is confirmed. Check your email for the receipt and the details on getting your kit.",
-    pickup: {
-      heading: "Festival pickup, July 3-4",
-      body: "Come grab your kit at our festival booth on July 3 or 4.",
-      instruction: "Show this screen at the booth and we will hand it right over.",
-    },
     shipping: {
       heading: "On its way to you",
       body: "We pack and ship from St. Louis. Your kit ships to the address you entered, and your emailed receipt has the details.",

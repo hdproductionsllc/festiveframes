@@ -1,8 +1,8 @@
 import Image from "next/image";
 
-// Server Component. Gallery of real lifestyle shots plus a placeholder for the
-// post-launch festival booth photo. Every image carries descriptive, SEO-rich
-// alt text; below-the-fold images lazy-load by default via next/image.
+// Server Component. Gallery of real lifestyle shots. Every image carries
+// descriptive, SEO-rich alt text; below-the-fold images lazy-load by default
+// via next/image.
 
 interface Slot {
   /** Short on-tile label (used as caption / placeholder text). */

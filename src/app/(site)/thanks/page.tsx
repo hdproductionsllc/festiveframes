@@ -40,8 +40,6 @@ interface OrderView {
   /** Count of A-Z & 0-9 letter set add-ons purchased (0 when none). */
   alphabetQty: number;
   selection: "single" | "bundle" | null;
-  /** true = festival pickup (free), false = shipped, null = unknown. */
-  isPickup: boolean | null;
   /** Raw values for the analytics `purchase` event (primitives only). */
   analytics: {
     kitIds: string;
@@ -87,13 +85,6 @@ function buildOrderView(session: Stripe.Checkout.Session): OrderView {
       ? `${quantity} ${unit}${quantity > 1 ? "s" : ""}`
       : "";
 
-  // Fulfillment: a zero shipping amount means festival pickup was chosen.
-  let isPickup: boolean | null = null;
-  const shippingAmount = session.shipping_cost?.amount_total;
-  if (typeof shippingAmount === "number") {
-    isPickup = shippingAmount === 0;
-  }
-
   // Raw, primitive analytics values. Prefer the trusted metadata kit ids
   // (already a comma-joined string); fall back to empty when absent.
   const analytics = {
@@ -101,7 +92,7 @@ function buildOrderView(session: Stripe.Checkout.Session): OrderView {
     quantity: quantity && Number.isFinite(quantity) ? quantity : 1,
   };
 
-  return { kitNames, quantityLabel, alphabetQty, selection, isPickup, analytics };
+  return { kitNames, quantityLabel, alphabetQty, selection, analytics };
 }
 
 /** Safely retrieve and shape the order. Returns null on any failure. */
@@ -180,19 +171,8 @@ export default async function ThanksPage({ searchParams }: ThanksPageProps) {
           </p>
         )}
 
-        {/* Fulfillment block: pickup vs shipping (only when we know) */}
-        {order?.isPickup === true && (
-          <div className="mt-6 rounded-lg border border-brand-gold/50 bg-brand-navy-soft/30 px-6 py-6">
-            <h2 className="font-mkt-display text-xl font-bold uppercase tracking-tight text-brand-navy">
-              {copy.thanks.pickup.heading}
-            </h2>
-            <p className="mt-2 text-base text-brand-ink/85">{copy.thanks.pickup.body}</p>
-            <p className="mt-2 text-base font-semibold text-brand-navy">
-              {copy.thanks.pickup.instruction}
-            </p>
-          </div>
-        )}
-        {order?.isPickup === false && (
+        {/* All orders ship from St. Louis. */}
+        {order && (
           <div className="mt-6 rounded-lg border border-brand-navy-soft/40 bg-brand-cream-soft px-6 py-6">
             <h2 className="font-mkt-display text-xl font-bold uppercase tracking-tight text-brand-navy">
               {copy.thanks.shipping.heading}

@@ -200,13 +200,6 @@ export async function POST(request: Request): Promise<NextResponse> {
         {
           shipping_rate_data: {
             type: "fixed_amount",
-            display_name: season.freePickupLabel,
-            fixed_amount: { amount: 0, currency: offer.currency },
-          },
-        },
-        {
-          shipping_rate_data: {
-            type: "fixed_amount",
             display_name: season.shippingLabel,
             fixed_amount: {
               amount: season.flatShippingCents,

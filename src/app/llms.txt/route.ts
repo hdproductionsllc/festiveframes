@@ -23,7 +23,7 @@ export function GET() {
 - Durability: vetted for highway speeds, automatic car washes, and all weather. Tiles are UV printed so colors stay bright.
 - Made in: St. Louis, USA.
 - Price: one set ${single}, two sets ${bundle} (USD).
-- Fulfillment: free pickup at the St. Louis festival booth July 3-4, 2026, or $5 flat-rate US shipping.
+- Fulfillment: $5 flat-rate US shipping. Order by June 28, 2026 to get it before the Fourth.
 - Returns: 30-day guarantee.
 
 ## What people search for that this answers

@@ -5,20 +5,20 @@ import { season } from "@/config/season";
 
 // Client island. Shipping-cutoff messaging driven entirely by season dates:
 //   - before orderByDate (2026-06-28): "Order by June 28..." + live countdown
-//   - orderByDate .. eventDate (inclusive day): festival pickup message
+//   - orderByDate .. eventDate (inclusive day): last-call shipping message
 //   - after the event: hidden
 // Renders nothing until mounted so server and first client paint agree (the
 // live clock is client-only).
 
 const ORDER_BY = new Date(`${season.orderByDate}T23:59:59-05:00`);
-// Festival window runs through the end of the event day.
-const FESTIVAL_END = new Date(`${season.festivalEnd}T23:59:59-05:00`);
+// Last-call window runs through the end of the event day.
+const EVENT_END = new Date(`${season.eventDate}T23:59:59-05:00`);
 
-type Phase = "preorder" | "festival" | "ended";
+type Phase = "preorder" | "lastcall" | "ended";
 
 function phaseFor(now: Date): Phase {
   if (now <= ORDER_BY) return "preorder";
-  if (now <= FESTIVAL_END) return "festival";
+  if (now <= EVENT_END) return "lastcall";
   return "ended";
 }
 
@@ -53,11 +53,11 @@ export function Countdown() {
   const phase = phaseFor(now);
   if (phase === "ended") return null;
 
-  if (phase === "festival") {
+  if (phase === "lastcall") {
     return (
-      <section aria-label="Festival pickup" className="bg-brand-navy text-brand-cream">
+      <section aria-label="Last call" className="bg-brand-navy text-brand-cream">
         <div className="mx-auto max-w-6xl px-4 py-4 text-center text-sm font-semibold uppercase tracking-wide sm:px-6">
-          Order now, pick up free at our festival booth July 3-4.
+          Last call for the Fourth &mdash; order now and we&rsquo;ll ship it fast.
         </div>
       </section>
     );

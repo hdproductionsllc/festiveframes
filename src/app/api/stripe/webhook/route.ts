@@ -3,7 +3,7 @@
 //
 // Verifies the Stripe signature against the RAW request body and the
 // STRIPE_WEBHOOK_SECRET. On checkout.session.completed it logs a
-// structured order record so David can prep festival pickups.
+// structured order record so David can prep and ship orders.
 //
 // IMPORTANT: signature verification requires the unparsed body. We read
 // request.text() and never request.json() here.
@@ -84,7 +84,6 @@ export async function POST(request: Request): Promise<NextResponse> {
         quantity: li.quantity ?? 1,
         amountCents: li.amount_total ?? 0,
       }));
-      const shippingCents = full.shipping_cost?.amount_total ?? 0;
       // Shipping address shape varies by Stripe API version; read defensively.
       const collected =
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -100,7 +99,6 @@ export async function POST(request: Request): Promise<NextResponse> {
         items,
         totalCents: full.amount_total ?? 0,
         currency: full.currency ?? "usd",
-        fulfillment: shippingCents > 0 ? "shipping" : "pickup",
         shippingName: collected?.name ?? full.customer_details?.name ?? null,
         shippingAddress: collected?.address ?? null,
       });
