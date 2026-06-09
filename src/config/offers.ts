@@ -58,8 +58,14 @@ export function formatUsd(cents: number): string {
 /**
  * Optional checkout add-on: the full A-Z & 0-9 letter set for the bottom bar.
  * Server-priced like everything else; the client only ever sends a boolean.
+ *
+ * PARKED (June 2026): the letter set is not part of the current offering but
+ * may come back. `enabled: false` hides the UI stepper and makes the checkout
+ * API ignore any letter-set quantity. To relaunch, flip `enabled` to true —
+ * all UI, pricing, and order-metadata plumbing stays intact.
  */
 export const ALPHABET_ADDON = {
+  enabled: false,
   priceCents: 1000,
   productName: "Full A-Z & 0-9 Letter Set",
   maxQty: 20,

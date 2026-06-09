@@ -68,7 +68,9 @@ export function OfferBlock() {
           Get your Founding kit
         </h2>
         <p className="mt-3 text-center text-sm text-brand-ink/70">
-          Pick a pack, set your quantity, and add the letter set if you want it.
+          {ALPHABET_ADDON.enabled
+            ? "Pick a pack, set your quantity, and add the letter set if you want it."
+            : "Pick a pack and set your quantity."}
         </p>
 
         <div className="mt-10 grid gap-6 lg:grid-cols-5 lg:items-start">
@@ -145,24 +147,26 @@ export function OfferBlock() {
               {bundleSelected ? ` (${setsTotal} sets total)` : ""}
             </p>
 
-            <div className="mt-4 flex items-start justify-between gap-3 border-t border-brand-navy/10 pt-4">
-              <div className="text-sm text-brand-ink">
-                A-Z &amp; 0-9 letter set{" "}
-                <span className="font-semibold text-brand-navy">+{formatUsd(ALPHABET_ADDON.priceCents)} each</span>
-                <span className="mt-0.5 block text-xs text-brand-ink/70">Spell anything on the bottom bar.</span>
+            {ALPHABET_ADDON.enabled && (
+              <div className="mt-4 flex items-start justify-between gap-3 border-t border-brand-navy/10 pt-4">
+                <div className="text-sm text-brand-ink">
+                  A-Z &amp; 0-9 letter set{" "}
+                  <span className="font-semibold text-brand-navy">+{formatUsd(ALPHABET_ADDON.priceCents)} each</span>
+                  <span className="mt-0.5 block text-xs text-brand-ink/70">Spell anything on the bottom bar.</span>
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  <button type="button" onClick={() => setAlphabetQty(alphabetQty - 1)} disabled={alphabetQty <= 0} aria-label="Fewer letter sets" className={stepperBtn}>
+                    −
+                  </button>
+                  <span aria-live="polite" className="w-6 text-center font-mkt-display text-lg font-bold text-brand-navy">
+                    {alphabetQty}
+                  </span>
+                  <button type="button" onClick={() => setAlphabetQty(alphabetQty + 1)} disabled={alphabetQty >= ALPHABET_ADDON.maxQty} aria-label="More letter sets" className={stepperBtn}>
+                    +
+                  </button>
+                </div>
               </div>
-              <div className="flex shrink-0 items-center gap-2">
-                <button type="button" onClick={() => setAlphabetQty(alphabetQty - 1)} disabled={alphabetQty <= 0} aria-label="Fewer letter sets" className={stepperBtn}>
-                  −
-                </button>
-                <span aria-live="polite" className="w-6 text-center font-mkt-display text-lg font-bold text-brand-navy">
-                  {alphabetQty}
-                </span>
-                <button type="button" onClick={() => setAlphabetQty(alphabetQty + 1)} disabled={alphabetQty >= ALPHABET_ADDON.maxQty} aria-label="More letter sets" className={stepperBtn}>
-                  +
-                </button>
-              </div>
-            </div>
+            )}
 
             <div className="mt-4 space-y-1 border-t border-brand-navy/10 pt-4 text-sm text-brand-ink/90">
               <div className="flex justify-between">

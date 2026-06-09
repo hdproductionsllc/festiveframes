@@ -53,10 +53,9 @@ export const kits: Kit[] = [
     price: KIT_PRICE_CENTS,
     stripePriceId: "", // TODO: set after creating the Stripe price for american-classic
     contents: [
-      "40+ red, white, and blue tiles",
-      "USA and LAND OF THE FREE word tiles",
+      "50+ red, white, and blue tiles",
+      "Ready-made slogans like USA and LAND OF THE FREE",
       "Stars, stripes, and fireworks tiles",
-      "Full A-Z and 0-9 letter set for the bottom bar",
       "More tiles than pictured, so you can mix and match",
     ],
     // PLACEHOLDER: product hero, 1200x1500 (4:5 portrait)

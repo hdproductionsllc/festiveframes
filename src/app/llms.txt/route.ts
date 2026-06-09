@@ -16,7 +16,7 @@ export function GET() {
 
 ## Product: Freedom Frame Set
 - A customizable, snap-on license plate frame with interchangeable decorative tiles.
-- Tiles: 40+ patriotic tiles (American flags, stars, stripes, chevrons, firework bursts) plus ready-made bottom-bar phrases like LAND OF THE FREE and HOME OF THE BRAVE.
+- Tiles: 50+ patriotic tiles (American flags, stars, stripes, chevrons, firework bursts) plus ready-made bottom-bar phrases like LAND OF THE FREE and HOME OF THE BRAVE.
 - Fit: all standard US license plates, all 50 states.
 - Install: uses your existing two plate screws - no drilling, no new hardware. Tiles snap on and off by hand, no tools.
 - Legal: sits on the plate border only; never covers the plate number, registration sticker, or state name.

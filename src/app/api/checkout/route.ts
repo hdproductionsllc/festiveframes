@@ -101,7 +101,10 @@ function parseBody(body: unknown):
   }
 
   // alphabetQty: optional letter-set add-on count (0..max). Anything invalid -> 0.
+  // While the add-on is parked (ALPHABET_ADDON.enabled = false), always 0 so a
+  // crafted request can't order one.
   const addonQty =
+    ALPHABET_ADDON.enabled &&
     typeof alphabetQty === "number" &&
     Number.isInteger(alphabetQty) &&
     alphabetQty >= 0 &&

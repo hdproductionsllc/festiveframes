@@ -169,7 +169,7 @@ export const copy: Copy = {
     metaTitle:
       "Custom License Plate Frames with Snap-On Tiles",
     metaDescription:
-      "The Freedom Frame Set: a snap-on license plate frame kit made in St. Louis for July 4. Comes loaded with 40+ patriotic tiles. Install once, swap tiles forever.",
+      "The Freedom Frame Set: a snap-on license plate frame kit made in St. Louis for July 4. Comes loaded with 50+ patriotic tiles. Install once, swap tiles forever.",
     heroH1: "Customizable License Plate Frames with Snap-On Tiles",
     heroSubhead: "Install once. Swap tiles forever.",
     primaryCta: { label: "Shop the Freedom Frame Set", href: "/buy" },
@@ -234,7 +234,7 @@ export const copy: Copy = {
       {
         question: "What comes in the Freedom Frame Set?",
         answer:
-          "One frame rail that fits all standard US plates, plus 40+ patriotic tiles - American flags, stars, stripes, chevrons, and firework bursts - and ready-made bottom-bar phrases like LAND OF THE FREE and HOME OF THE BRAVE. It arrives complete and ready to snap on.",
+          "One frame rail that fits all standard US plates, plus 50+ patriotic tiles - American flags, stars, stripes, chevrons, and firework bursts - and ready-made bottom-bar phrases like LAND OF THE FREE and HOME OF THE BRAVE. It arrives complete and ready to snap on.",
       },
       {
         question: "Is this a good Fourth of July gift?",
@@ -389,7 +389,7 @@ export const copy: Copy = {
   buy: {
     metaTitle: "Shop the Freedom Frame Set",
     metaDescription:
-      "Shop the Freedom Frame Set: a snap-on license plate frame kit loaded with 40+ patriotic tiles. Install once, swap tiles forever. Ships nationwide, $5 flat rate.",
+      "Shop the Freedom Frame Set: a snap-on license plate frame kit loaded with 50+ patriotic tiles. Install once, swap tiles forever. Ships nationwide, $5 flat rate.",
     h1: "Make your license plate the most fun part of your car.",
     subhead: "Snap it on. Swap it forever.",
     ctaSubline: "$5 flat US shipping. Order by June 28 to get it before the Fourth.",
@@ -399,12 +399,12 @@ export const copy: Copy = {
       heading: "What's in the kit",
       items: [
         "Frame rail that fits all standard US plates, installs once with your existing screws",
-        "40+ tiles, more than you see in the photo",
-        "Ready-made bottom-bar phrases: LAND OF THE FREE, HOME OF THE BRAVE, LET FREEDOM RING, I ♥ STL, 314, and SHOW-ME STATE",
+        "50+ tiles, more than you see in the photo",
+        "Ready-made bottom-bar slogans: USA, LAND OF THE FREE, HOME OF THE BRAVE, and LET FREEDOM RING",
         "Quick-start card",
       ],
       caption:
-        "Comes loaded with 40+ tiles, more than you see here, so you can mix, match, and restyle any time. Buy once, change endlessly.",
+        "Comes loaded with 50+ tiles, more than you see here, so you can mix, match, and restyle any time. Buy once, change endlessly.",
     },
 
     howItWorks: {
@@ -430,7 +430,7 @@ export const copy: Copy = {
         title: "Freedom Frame Set",
         items: [
           "Frame rail",
-          "40+ tiles, more than pictured",
+          "50+ tiles, more than pictured",
           "Ready-made bottom-bar phrases",
         ],
         cta: "Buy Now",

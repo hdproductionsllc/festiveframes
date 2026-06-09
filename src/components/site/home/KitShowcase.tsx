@@ -48,7 +48,7 @@ export function KitShowcase() {
             <p className="mt-2 text-lg font-semibold text-brand-gold">{kit.identityLine}</p>
           )}
           <p className="mt-4 text-lg leading-relaxed text-brand-cream/85">
-            Our Founding Edition for America&rsquo;s 250th. The frame installs in seconds, then 40+
+            Our Founding Edition for America&rsquo;s 250th. The frame installs in seconds, then 50+
             snap-on tiles, including the new firework bursts, let you restyle it for the Fourth, a
             parade, game day, or any season, as often as you like.
           </p>

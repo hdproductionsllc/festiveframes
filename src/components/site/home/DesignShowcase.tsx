@@ -40,7 +40,7 @@ export function DesignShowcase() {
             One frame, endless looks
           </h2>
           <p className="mt-4 text-lg leading-relaxed text-brand-ink/90">
-            Every Freedom Frame Set comes with 40+ snap-on tiles, so you can restyle the same frame
+            Every Freedom Frame Set comes with 50+ snap-on tiles, so you can restyle the same frame
             as often as you like. Here are a few looks built right from the kit.
           </p>
         </div>
