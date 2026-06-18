@@ -31,6 +31,7 @@ export const season: Season = {
 };
 
 /** Canonical site origin. Used for canonical URLs and QR codes. */
-// STOPGAP: festiveframes.co serves a parked lander, so point canonicals/OG/sitemap
-// at the live Railway origin. Revert to https://festiveframes.co once DNS points to Railway.
-export const SITE_URL = "https://festiveframes-production.up.railway.app";
+// The store is served on the www subdomain (Railway can't verify the apex behind
+// Cloudflare's CNAME flattening); the bare festiveframes.co 301-redirects to www at
+// the Cloudflare edge.
+export const SITE_URL = "https://www.festiveframes.co";
