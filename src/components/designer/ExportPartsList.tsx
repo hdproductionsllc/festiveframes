@@ -5,6 +5,7 @@ import { useDesignStore } from "@/stores/design-store";
 import { getPiece } from "@/data/sets";
 import { coveredSlotIds } from "@/lib/utils/text-bar";
 import { composeBarImage } from "@/lib/utils/compose-frame";
+import { composeEufyPrintSheets } from "@/lib/utils/eufy-print";
 
 // Short, stable part-number prefixes per set. Falls back to the first 3 letters.
 const SET_CODE: Record<string, string> = {
@@ -52,6 +53,8 @@ export function ExportPartsList({
 
   const [orderNumber, setOrderNumber] = useState("");
   const [customerName, setCustomerName] = useState("");
+  const [eufyBusy, setEufyBusy] = useState(false);
+  const [eufyStatus, setEufyStatus] = useState<string | null>(null);
 
   const rows = useMemo<Row[]>(() => {
     const counts = new Map<string, number>();
@@ -113,6 +116,36 @@ export function ExportPartsList({
     a.download = `${slug}${orderNumber ? `-${orderNumber}` : ""}-parts-list.csv`;
     a.click();
     URL.revokeObjectURL(url);
+  }
+
+  // Generate eufyMake E1 print sheet(s): each placed tile's artwork laid onto
+  // the physical jig grid, transparent PNG at print DPI. One file per jig load.
+  async function downloadEufySheets() {
+    setEufyBusy(true);
+    setEufyStatus(null);
+    try {
+      const { sheets, pocketsPerSheet, printedTiles, skippedBlankTiles } = await composeEufyPrintSheets();
+      if (sheets.length === 0) {
+        setEufyStatus(
+          skippedBlankTiles > 0
+            ? `No printable artwork — ${skippedBlankTiles} solid-color blank tile(s) don't get UV-printed.`
+            : "No tiles placed yet."
+        );
+        return;
+      }
+      sheets.forEach((dataUrl, i) => {
+        const a = document.createElement("a");
+        a.href = dataUrl;
+        a.download = `${slug}${orderNumber ? `-${orderNumber}` : ""}-eufy-sheet-${i + 1}-of-${sheets.length}.png`;
+        a.click();
+      });
+      const blanks = skippedBlankTiles > 0 ? ` · ${skippedBlankTiles} blank tile(s) skipped (no artwork)` : "";
+      setEufyStatus(
+        `${sheets.length} sheet${sheets.length > 1 ? "s" : ""} · ${printedTiles} tile face${printedTiles > 1 ? "s" : ""} · ${pocketsPerSheet} pockets/jig${blanks}`
+      );
+    } finally {
+      setEufyBusy(false);
+    }
   }
 
   async function downloadBarPng(barId: string, sku: string) {
@@ -349,7 +382,19 @@ export function ExportPartsList({
           >
             Print / Save PDF
           </button>
+          <button
+            type="button"
+            onClick={downloadEufySheets}
+            disabled={eufyBusy}
+            className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-60"
+            title="Tile artwork laid out to the physical jig — import into eufyMake Studio and print"
+          >
+            {eufyBusy ? "Building…" : "eufyMake print sheet"}
+          </button>
         </div>
+        {eufyStatus && (
+          <p className="mt-2 text-xs text-gray-500 print:hidden">{eufyStatus}</p>
+        )}
       </div>
     </div>
   );
