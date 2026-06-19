@@ -20,6 +20,16 @@ function skuFor(pieceId: string): string {
   return `${code}-${slug.toUpperCase().replace(/[^A-Z0-9]+/g, "-")}`;
 }
 
+/** Decode a PNG data URL into a Blob (for object-URL downloads / file sharing). */
+function dataUrlToBlob(dataUrl: string): Blob {
+  const [head, b64] = dataUrl.split(",");
+  const mime = head.match(/:(.*?);/)?.[1] ?? "image/png";
+  const bin = atob(b64);
+  const u8 = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+  return new Blob([u8], { type: mime });
+}
+
 interface Row {
   sku: string;
   name: string;
@@ -119,12 +129,14 @@ export function ExportPartsList({
   }
 
   // Generate eufyMake E1 print sheet(s): each placed tile's artwork laid onto
-  // the physical jig grid, transparent PNG at print DPI. One file per jig load.
+  // the physical jig grid, transparent PNG. Hands off via the native share/save
+  // sheet on mobile (so the user can Save to Files/Photos) and a direct download
+  // on desktop. Never fails silently.
   async function downloadEufySheets() {
     setEufyBusy(true);
     setEufyStatus(null);
     try {
-      const { sheets, pocketsPerSheet, printedTiles, skippedBlankTiles } = await composeEufyPrintSheets();
+      const { sheets, pocketsPerSheet, printedTiles, skippedBlankTiles, dpi } = await composeEufyPrintSheets();
       if (sheets.length === 0) {
         setEufyStatus(
           skippedBlankTiles > 0
@@ -133,16 +145,45 @@ export function ExportPartsList({
         );
         return;
       }
-      sheets.forEach((dataUrl, i) => {
-        const a = document.createElement("a");
-        a.href = dataUrl;
-        a.download = `${slug}${orderNumber ? `-${orderNumber}` : ""}-eufy-sheet-${i + 1}-of-${sheets.length}.png`;
-        a.click();
-      });
+
+      const baseName = `${slug}${orderNumber ? `-${orderNumber}` : ""}`;
+      const files = sheets.map(
+        (dataUrl, i) =>
+          new File([dataUrlToBlob(dataUrl)], `${baseName}-eufy-sheet-${i + 1}-of-${sheets.length}.png`, {
+            type: "image/png",
+          })
+      );
+
+      // Mobile: native share sheet → "Save to Files / Photos". Desktop or any
+      // failure: fall back to a direct object-URL download.
+      let shared = false;
+      if (typeof navigator.canShare === "function" && navigator.canShare({ files }) && typeof navigator.share === "function") {
+        try {
+          await navigator.share({ files, title: "eufyMake print sheet" });
+          shared = true;
+        } catch (err) {
+          if (err instanceof DOMException && err.name === "AbortError") return; // user dismissed — don't also download
+          // otherwise fall through to download
+        }
+      }
+      if (!shared) {
+        files.forEach((file) => {
+          const url = URL.createObjectURL(file);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = file.name;
+          a.click();
+          URL.revokeObjectURL(url);
+        });
+      }
+
+      const dpiNote = dpi < 720 ? ` · ${dpi} DPI (scaled for this device — still prints at 9.9×3.3″)` : "";
       const blanks = skippedBlankTiles > 0 ? ` · ${skippedBlankTiles} blank tile(s) skipped (no artwork)` : "";
       setEufyStatus(
-        `${sheets.length} sheet${sheets.length > 1 ? "s" : ""} · ${printedTiles} tile face${printedTiles > 1 ? "s" : ""} · ${pocketsPerSheet} pockets/jig${blanks}`
+        `${sheets.length} sheet${sheets.length > 1 ? "s" : ""} · ${printedTiles} tile face${printedTiles > 1 ? "s" : ""} · ${pocketsPerSheet} pockets/jig${dpiNote}${blanks}`
       );
+    } catch {
+      setEufyStatus("Couldn't build the print sheet on this device — try a desktop/laptop (also where you import it into eufyMake).");
     } finally {
       setEufyBusy(false);
     }
