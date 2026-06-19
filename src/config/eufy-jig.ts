@@ -33,8 +33,10 @@ export const EUFY_JIG: EufyJigConfig = {
   sheetWidthInches: 9.9,
   sheetHeightInches: 3.3,
   dpi: 720,
-  // Full square tile face (matches the 0.991" tile edge) so art prints edge-to-edge.
-  tileFaceInches: 0.991,
+  // Matches the artwork square in the .ai proof, so each tile keeps the frame-lip
+  // border the jig has (~0.08" from the outer tiles to the 9.9x3.3 sheet edge).
+  // The jig's outer footprint IS 9.9x3.3, so this PNG aligns corner-to-corner.
+  tileFaceInches: 0.946,
   // Even-grid fit through the 27 detected pocket circles, top-left origin.
   colCentersInches: [0.5573, 1.6545, 2.7517, 3.849, 4.9462, 6.0435, 7.1407, 8.2379, 9.3352],
   // Top row first, then middle, then bottom.
