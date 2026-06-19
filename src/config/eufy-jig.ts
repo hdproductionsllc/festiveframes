@@ -1,14 +1,19 @@
 // ─── eufyMake E1 jig geometry ───────────────────────────────
 //
 // Ground truth for the physical 3D-printed tray that holds blank tiles on the
-// eufyMake E1 UV printer bed. These numbers were measured directly from
-// `Popsicle 9x3 Test.ai` (the jig proof): a 9.9" x 3.3" sheet with a 3-row x
-// 9-col grid of pockets, each holding one square tile face-up.
+// eufyMake E1 UV printer bed. A 9.9" x 3.3" sheet with a 3-row x 9-col grid of
+// round pockets, each holding one square tile face-up.
 //
-// The print-sheet renderer lands each tile's artwork on these exact centers so
-// the printed PNG registers to the physical tray. The prototype tray matches
-// these values; when the tray is refined, edit ONLY this file — nothing else in
-// the print pipeline hard-codes geometry.
+// IMPORTANT: pocket centers are derived from the ROUND POCKET outlines in
+// `Popsicle 9x3 Test.ai`, not the popsicle artwork (which the designer placed
+// off-center inside each pocket with a few thou of jitter). The 27 circle rings
+// were detected from a 720-DPI render and least-squares fit to a perfectly even
+// grid (col pitch 1.097", row pitch 1.095", max residual 0.02"). Pocket
+// diameter measured 0.837". This is what makes the print register to the tray.
+//
+// The print-sheet renderer centers each tile's artwork on these points. The
+// prototype tray matches these values; when the tray is refined, edit ONLY this
+// file — nothing else in the print pipeline hard-codes geometry.
 
 export interface EufyJigConfig {
   /** Jig sheet size in inches (also the printable PNG size at `dpi`). */
@@ -16,7 +21,7 @@ export interface EufyJigConfig {
   sheetHeightInches: number;
   /** Output resolution. 720 matches the tile art's native ~651px square. */
   dpi: number;
-  /** Printable square face per tile, inches (slightly inset from the 0.991" tile edge). */
+  /** Printable square face per tile, inches. Fills the full tile top (no inset margin). */
   tileFaceInches: number;
   /** Pocket center X positions, inches from the sheet's top-left, left → right. */
   colCentersInches: number[];
@@ -28,11 +33,12 @@ export const EUFY_JIG: EufyJigConfig = {
   sheetWidthInches: 9.9,
   sheetHeightInches: 3.3,
   dpi: 720,
-  tileFaceInches: 0.946,
-  // Measured from the .ai (pt ÷ 72, averaged across the three rows).
-  colCentersInches: [0.5625, 1.6458, 2.7639, 3.8472, 4.9444, 6.0278, 7.1458, 8.2292, 9.3472],
-  // Top-left origin: top row first, then middle, then bottom.
-  rowCentersInches: [0.5556, 1.65, 2.7444],
+  // Full square tile face (matches the 0.991" tile edge) so art prints edge-to-edge.
+  tileFaceInches: 0.991,
+  // Even-grid fit through the 27 detected pocket circles, top-left origin.
+  colCentersInches: [0.5573, 1.6545, 2.7517, 3.849, 4.9462, 6.0435, 7.1407, 8.2379, 9.3352],
+  // Top row first, then middle, then bottom.
+  rowCentersInches: [0.5546, 1.6494, 2.7443],
 };
 
 /** Total tile pockets on one jig sheet (reading order: row-major, top row first). */
