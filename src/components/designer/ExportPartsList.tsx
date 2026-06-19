@@ -279,54 +279,8 @@ export function ExportPartsList({
           </div>
         )}
 
-        {rows.length === 0 ? (
-          <p className="mt-4 text-sm text-gray-600">No tiles placed yet. Add tiles, then export.</p>
-        ) : (
-          <table className="mt-5 w-full border-collapse text-sm">
-            <thead>
-              <tr className="border-b text-left text-gray-500">
-                <th className="py-1">Part #</th>
-                <th className="py-1">Tile</th>
-                <th className="py-1">Color</th>
-                <th className="py-1 text-right">Qty</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r) => (
-                <tr key={r.pieceId} className="border-b last:border-0">
-                  <td className="py-1 pr-2 font-mono text-xs">{r.sku}</td>
-                  <td className="py-1">
-                    <div className="flex items-center gap-2">
-                      {r.artworkUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={r.artworkUrl} alt="" className="h-7 w-7 rounded border border-gray-200 object-cover" />
-                      ) : (
-                        <span
-                          className="h-7 w-7 rounded border border-gray-300"
-                          style={{ background: r.color }}
-                        />
-                      )}
-                      {r.name}
-                    </div>
-                  </td>
-                  <td className="py-1">
-                    <span className="inline-flex items-center gap-1 font-mono text-xs text-gray-600">
-                      <span className="inline-block h-3 w-3 rounded-sm border border-gray-300" style={{ background: r.color }} />
-                      {r.color}
-                    </span>
-                  </td>
-                  <td className="py-1 text-right font-semibold">{r.qty}</td>
-                </tr>
-              ))}
-              <tr className="border-t-2 border-gray-300">
-                <td className="py-1 font-semibold" colSpan={3}>
-                  Total tiles
-                </td>
-                <td className="py-1 text-right font-bold">{totalTiles}</td>
-              </tr>
-            </tbody>
-          </table>
-        )}
+        {/* Tile parts list is intentionally not shown in the UI — it's still
+            generated for the CSV / print export below. */}
 
         {/* Custom parts — text bars */}
         {textBars.length > 0 && (
