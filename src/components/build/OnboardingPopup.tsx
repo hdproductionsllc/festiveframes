@@ -10,7 +10,7 @@ type View = "intro" | "tour";
 const TOUR_STEPS = [
   { n: 1, title: "Drag tiles onto the frame", body: "The frame opens with a random design — drag tiles from the left panel onto any slot to make it your own." },
   { n: 2, title: "Add a text bar", body: "Drag the text bar onto the top or bottom row, type your slogan, and style it. Click a placed bar anytime to edit it." },
-  { n: 3, title: "Export the parts list", body: "When it looks right, hit Export Parts List for the production sheet — tiles, colors, and printable text bars." },
+  { n: 3, title: "Send to production", body: "When it looks right, hit Send to Production for the print sheet — the eufyMake tile sheet, plus a parts CSV and printable text bars." },
 ] as const;
 
 /**

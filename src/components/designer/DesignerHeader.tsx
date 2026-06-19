@@ -76,7 +76,7 @@ export function DesignerHeader({ onExport, onExportParts }: DesignerHeaderProps)
             hover:from-yellow-400 hover:to-yellow-500
             shadow-[0_0_12px_rgba(255,215,0,0.3)] hover:shadow-[0_0_20px_rgba(255,215,0,0.5)]"
         >
-          Export Parts List
+          Send to Production
         </button>
       </div>
     </header>
