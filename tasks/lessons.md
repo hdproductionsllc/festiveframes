@@ -32,4 +32,11 @@ parse a binary asset before designing around it.** A 5-min pdf-to-img render + p
 PDF placement matrices showed the real thing (3×9 grid of tile pockets) and turned a vague
 ask into exact coordinates. Verify-by-overlay: re-derive geometry in Node and composite it
 on the source render to prove registration before trusting it.
+
+## Don't add cosmetic styling to production/print output (2026-06-19)
+First cut of the eufy print sheet clipped each tile's art to a rounded square
+(`face * 0.04` radius) — purely decorative habit from on-screen tile rendering. On a
+UV print that leaves the tile's corners BARE/unprinted. **Print output should be exactly
+what the press needs (full square face), not what looks nice on screen.** Keep a square
+clip only to stop cover-fit overflow bleeding into neighbours; no radius.
 </content>

@@ -20,17 +20,6 @@ function loadImage(src: string): Promise<HTMLImageElement | null> {
   });
 }
 
-function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
-  const rr = Math.max(0, Math.min(r, w / 2, h / 2));
-  ctx.beginPath();
-  ctx.moveTo(x + rr, y);
-  ctx.arcTo(x + w, y, x + w, y + h, rr);
-  ctx.arcTo(x + w, y + h, x, y + h, rr);
-  ctx.arcTo(x, y + h, x, y, rr);
-  ctx.arcTo(x, y, x + w, y, rr);
-  ctx.closePath();
-}
-
 // Draw an image to cover a square dest rect (object-fit: cover, centered).
 function drawCover(ctx: CanvasRenderingContext2D, img: HTMLImageElement, x: number, y: number, w: number, h: number) {
   const iw = img.naturalWidth, ih = img.naturalHeight;
@@ -91,7 +80,6 @@ export async function composeEufyPrintSheets(jig: EufyJigConfig = EUFY_JIG): Pro
   const W = Math.round(jig.sheetWidthInches * jig.dpi);
   const H = Math.round(jig.sheetHeightInches * jig.dpi);
   const face = jig.tileFaceInches * jig.dpi;
-  const radius = face * 0.04; // tiny corner softening, matches the tile edge
 
   const sheets: string[] = [];
   for (let start = 0; start < queue.length; start += perSheet) {
@@ -108,8 +96,11 @@ export async function composeEufyPrintSheets(jig: EufyJigConfig = EUFY_JIG): Pro
       const { xIn, yIn } = centers[i];
       const x = xIn * jig.dpi - face / 2;
       const y = yIn * jig.dpi - face / 2;
+      // Clip to the pure square face so cover-fit overflow can't bleed into a
+      // neighbouring pocket. No corner radius — the full square gets printed.
       ctx.save();
-      roundRect(ctx, x, y, face, face, radius);
+      ctx.beginPath();
+      ctx.rect(x, y, face, face);
       ctx.clip();
       drawCover(ctx, img, x, y, face, face);
       ctx.restore();
