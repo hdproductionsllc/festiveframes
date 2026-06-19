@@ -20,16 +20,6 @@ function skuFor(pieceId: string): string {
   return `${code}-${slug.toUpperCase().replace(/[^A-Z0-9]+/g, "-")}`;
 }
 
-/** Decode a PNG data URL into a Blob (for object-URL downloads / file sharing). */
-function dataUrlToBlob(dataUrl: string): Blob {
-  const [head, b64] = dataUrl.split(",");
-  const mime = head.match(/:(.*?);/)?.[1] ?? "image/png";
-  const bin = atob(b64);
-  const u8 = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
-  return new Blob([u8], { type: mime });
-}
-
 interface Row {
   sku: string;
   name: string;
@@ -129,14 +119,14 @@ export function ExportPartsList({
   }
 
   // Generate eufyMake E1 print sheet(s): each placed tile's artwork laid onto
-  // the physical jig grid, transparent PNG. Hands off via the native share/save
-  // sheet on mobile (so the user can Save to Files/Photos) and a direct download
-  // on desktop. Never fails silently.
+  // the physical jig grid, transparent PNG at full 720 DPI. Desktop-only — the
+  // button is hidden on mobile, and the canvas is too large for phones/tablets
+  // (we refuse rather than print lower-res).
   async function downloadEufySheets() {
     setEufyBusy(true);
     setEufyStatus(null);
     try {
-      const { sheets, pocketsPerSheet, printedTiles, skippedBlankTiles, dpi } = await composeEufyPrintSheets();
+      const { sheets, pocketsPerSheet, printedTiles, skippedBlankTiles } = await composeEufyPrintSheets();
       if (sheets.length === 0) {
         setEufyStatus(
           skippedBlankTiles > 0
@@ -145,45 +135,18 @@ export function ExportPartsList({
         );
         return;
       }
-
-      const baseName = `${slug}${orderNumber ? `-${orderNumber}` : ""}`;
-      const files = sheets.map(
-        (dataUrl, i) =>
-          new File([dataUrlToBlob(dataUrl)], `${baseName}-eufy-sheet-${i + 1}-of-${sheets.length}.png`, {
-            type: "image/png",
-          })
-      );
-
-      // Mobile: native share sheet → "Save to Files / Photos". Desktop or any
-      // failure: fall back to a direct object-URL download.
-      let shared = false;
-      if (typeof navigator.canShare === "function" && navigator.canShare({ files }) && typeof navigator.share === "function") {
-        try {
-          await navigator.share({ files, title: "eufyMake print sheet" });
-          shared = true;
-        } catch (err) {
-          if (err instanceof DOMException && err.name === "AbortError") return; // user dismissed — don't also download
-          // otherwise fall through to download
-        }
-      }
-      if (!shared) {
-        files.forEach((file) => {
-          const url = URL.createObjectURL(file);
-          const a = document.createElement("a");
-          a.href = url;
-          a.download = file.name;
-          a.click();
-          URL.revokeObjectURL(url);
-        });
-      }
-
-      const dpiNote = dpi < 720 ? ` · ${dpi} DPI (scaled for this device — still prints at 9.9×3.3″)` : "";
+      sheets.forEach((dataUrl, i) => {
+        const a = document.createElement("a");
+        a.href = dataUrl;
+        a.download = `${slug}${orderNumber ? `-${orderNumber}` : ""}-eufy-sheet-${i + 1}-of-${sheets.length}.png`;
+        a.click();
+      });
       const blanks = skippedBlankTiles > 0 ? ` · ${skippedBlankTiles} blank tile(s) skipped (no artwork)` : "";
       setEufyStatus(
-        `${sheets.length} sheet${sheets.length > 1 ? "s" : ""} · ${printedTiles} tile face${printedTiles > 1 ? "s" : ""} · ${pocketsPerSheet} pockets/jig${dpiNote}${blanks}`
+        `${sheets.length} sheet${sheets.length > 1 ? "s" : ""} · ${printedTiles} tile face${printedTiles > 1 ? "s" : ""} · ${pocketsPerSheet} pockets/jig${blanks}`
       );
     } catch {
-      setEufyStatus("Couldn't build the print sheet on this device — try a desktop/laptop (also where you import it into eufyMake).");
+      setEufyStatus("This export needs a desktop — open festiveframes.co/build on the computer connected to your eufyMake.");
     } finally {
       setEufyBusy(false);
     }
@@ -377,18 +340,20 @@ export function ExportPartsList({
           >
             Print / Save PDF
           </button>
+          {/* Desktop only: the full-res print canvas is too large for phones,
+              and the file has to land on the computer running eufyMake anyway. */}
           <button
             type="button"
             onClick={downloadEufySheets}
             disabled={eufyBusy}
-            className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-60"
+            className="hidden rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-60 md:inline-block"
             title="Tile artwork laid out to the physical jig — import into eufyMake Studio and print"
           >
             {eufyBusy ? "Building…" : "eufyMake print sheet"}
           </button>
         </div>
         {eufyStatus && (
-          <p className="mt-2 text-xs text-gray-500 print:hidden">{eufyStatus}</p>
+          <p className="mt-2 hidden text-xs text-gray-500 md:block print:hidden">{eufyStatus}</p>
         )}
       </div>
     </div>

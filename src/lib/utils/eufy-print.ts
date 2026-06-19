@@ -39,15 +39,12 @@ export interface EufyPrintResult {
   printedTiles: number;
   /** Solid-color tiles with no artwork — physical blanks, not UV-printed. */
   skippedBlankTiles: number;
-  /** Resolution the sheet was actually rendered at (drops below jig.dpi on
-   *  phones whose canvas can't hold the full-size sheet). */
-  dpi: number;
 }
 
 // iOS Safari caps <canvas> at ~16.7M px and ~4096 px per side; the full 720-DPI
 // sheet (7128x2376) exceeds that and silently renders blank. Probe the real
 // target size: draw a test pixel and read it back — if it didn't draw, this
-// device can't handle a canvas this big.
+// device can't handle a canvas this big (so we refuse instead of degrading).
 function canvasSupportsSize(w: number, h: number): boolean {
   const c = document.createElement("canvas");
   c.width = w;
@@ -69,7 +66,7 @@ function canvasSupportsSize(w: number, h: number): boolean {
  * filling pockets in reading order and paginating onto extra sheets past one jig.
  */
 export async function composeEufyPrintSheets(jig: EufyJigConfig = EUFY_JIG): Promise<EufyPrintResult> {
-  const empty: EufyPrintResult = { sheets: [], pocketsPerSheet: jigPocketCount(jig), printedTiles: 0, skippedBlankTiles: 0, dpi: jig.dpi };
+  const empty: EufyPrintResult = { sheets: [], pocketsPerSheet: jigPocketCount(jig), printedTiles: 0, skippedBlankTiles: 0 };
   if (typeof document === "undefined") return empty;
 
   const { slots, textBars } = useDesignStore.getState();
@@ -100,20 +97,14 @@ export async function composeEufyPrintSheets(jig: EufyJigConfig = EUFY_JIG): Pro
   const centers = jigPocketCenters(jig);
   const perSheet = centers.length;
 
-  // Drop the resolution until this device's canvas can actually hold the sheet.
-  // The eufy resizes the import to a physical 9.9"x3.3" regardless of pixel
-  // count, so registration is unaffected — only fine detail. Stays >= 300 DPI.
-  let dpi = jig.dpi;
-  while (
-    dpi > 300 &&
-    !canvasSupportsSize(Math.round(jig.sheetWidthInches * dpi), Math.round(jig.sheetHeightInches * dpi))
-  ) {
-    dpi = Math.floor(dpi * 0.85);
-  }
-
-  const W = Math.round(jig.sheetWidthInches * dpi);
-  const H = Math.round(jig.sheetHeightInches * dpi);
-  const face = jig.tileFaceInches * dpi;
+  const W = Math.round(jig.sheetWidthInches * jig.dpi);
+  const H = Math.round(jig.sheetHeightInches * jig.dpi);
+  // Desktop/operator export at full print resolution. If this device's canvas
+  // can't hold a sheet this large (phones, iPad), refuse rather than silently
+  // print lower-res. The UI hides this button on mobile; the caller turns this
+  // into a "use a desktop" message for the tablet case that slips through.
+  if (!canvasSupportsSize(W, H)) throw new Error("DEVICE_TOO_SMALL");
+  const face = jig.tileFaceInches * jig.dpi;
 
   const sheets: string[] = [];
   for (let start = 0; start < queue.length; start += perSheet) {
@@ -128,8 +119,8 @@ export async function composeEufyPrintSheets(jig: EufyJigConfig = EUFY_JIG): Pro
       const img = loaded.get(url);
       if (!img) return;
       const { xIn, yIn } = centers[i];
-      const x = xIn * dpi - face / 2;
-      const y = yIn * dpi - face / 2;
+      const x = xIn * jig.dpi - face / 2;
+      const y = yIn * jig.dpi - face / 2;
       // Clip to the pure square face so cover-fit overflow can't bleed into a
       // neighbouring pocket. No corner radius — the full square gets printed.
       ctx.save();
@@ -139,10 +130,10 @@ export async function composeEufyPrintSheets(jig: EufyJigConfig = EUFY_JIG): Pro
       drawCover(ctx, img, x, y, face, face);
       ctx.restore();
     });
-    sheets.push(setPngDpi(canvas.toDataURL("image/png"), dpi));
+    sheets.push(setPngDpi(canvas.toDataURL("image/png"), jig.dpi));
   }
 
-  return { sheets, pocketsPerSheet: perSheet, printedTiles: queue.length, skippedBlankTiles, dpi };
+  return { sheets, pocketsPerSheet: perSheet, printedTiles: queue.length, skippedBlankTiles };
 }
 
 // ─── PNG physical-resolution (pHYs) tagging ─────────────────
