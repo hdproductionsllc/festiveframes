@@ -91,7 +91,7 @@ export function ExportPartsList({
       ["Design", designName],
       ["Tile size (in)", tileIn.toFixed(3)],
       ["Plate", plateState],
-      ["QR", qrCode.enabled ? qrCode.url : "off"],
+      ...(qrCode.enabled ? [["QR", qrCode.url]] : []),
       [],
       ["Part #", "Tile", "Color", "Qty"],
       ...rows.map((r) => [r.sku, r.name, r.color, String(r.qty)]),
@@ -217,7 +217,7 @@ export function ExportPartsList({
       .bar img{display:block;max-width:100%;border:1px solid #ddd}
     </style></head><body>
       <h1>Festive Frames — Parts List</h1>
-      <div class="meta">Order #${esc(orderNumber || "—")} · Customer ${esc(customerName || "—")} · ${esc(designName)} · Plate ${esc(plateState)} · QR ${qrCode.enabled ? esc(qrCode.url) : "off"}</div>
+      <div class="meta">Order #${esc(orderNumber || "—")} · Customer ${esc(customerName || "—")} · ${esc(designName)} · Plate ${esc(plateState)}${qrCode.enabled ? ` · QR ${esc(qrCode.url)}` : ""}</div>
       ${frameImage ? `<img class="mock" src="${frameImage}"/>` : ""}
       <table><thead><tr><th>Part #</th><th>Tile</th><th>Color</th><th class="qty">Qty</th></tr></thead>
       <tbody>${rowsHtml}<tr class="total"><td colspan="3">Total tiles</td><td class="qty">${totalTiles}</td></tr></tbody></table>
@@ -322,9 +322,10 @@ export function ExportPartsList({
         )}
 
         <dl className="mt-4 space-y-1 text-xs text-gray-600">
-          <div><span className="font-semibold">Tile size:</span> {tileIn.toFixed(3)} in square (each tile)</div>
           <div><span className="font-semibold">Plate:</span> {plateState}</div>
-          <div><span className="font-semibold">QR:</span> {qrCode.enabled ? qrCode.url : "off"}</div>
+          {qrCode.enabled && (
+            <div><span className="font-semibold">QR:</span> {qrCode.url}</div>
+          )}
         </dl>
 
         <div className="mt-5 flex gap-3 print:hidden">
