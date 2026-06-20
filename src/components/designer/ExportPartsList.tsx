@@ -6,6 +6,7 @@ import { getPiece } from "@/data/sets";
 import { coveredSlotIds } from "@/lib/utils/text-bar";
 import { composeBarImage } from "@/lib/utils/compose-frame";
 import { composeEufyPrintSheets } from "@/lib/utils/eufy-print";
+import { EUFY_JIG, EUFY_JIG_3X12, type EufyJigConfig } from "@/config/eufy-jig";
 
 // Short, stable part-number prefixes per set. Falls back to the first 3 letters.
 const SET_CODE: Record<string, string> = {
@@ -121,12 +122,13 @@ export function ExportPartsList({
   // Generate eufyMake E1 print sheet(s): each placed tile's artwork laid onto
   // the physical jig grid, transparent PNG at full 720 DPI. Desktop-only — the
   // button is hidden on mobile, and the canvas is too large for phones/tablets
-  // (we refuse rather than print lower-res).
-  async function downloadEufySheets() {
+  // (we refuse rather than print lower-res). `jig` selects which physical tray
+  // (3×9 today, 3×12 Bill's new one); `fileTag` namespaces the download.
+  async function downloadEufySheets(jig: EufyJigConfig, fileTag: string) {
     setEufyBusy(true);
     setEufyStatus(null);
     try {
-      const { sheets, pocketsPerSheet, printedTiles, skippedBlankTiles } = await composeEufyPrintSheets();
+      const { sheets, pocketsPerSheet, printedTiles, skippedBlankTiles } = await composeEufyPrintSheets(jig);
       if (sheets.length === 0) {
         setEufyStatus(
           skippedBlankTiles > 0
@@ -138,7 +140,7 @@ export function ExportPartsList({
       sheets.forEach((dataUrl, i) => {
         const a = document.createElement("a");
         a.href = dataUrl;
-        a.download = `${slug}${orderNumber ? `-${orderNumber}` : ""}-eufy-sheet-${i + 1}-of-${sheets.length}.png`;
+        a.download = `${slug}${orderNumber ? `-${orderNumber}` : ""}-eufy-${fileTag}sheet-${i + 1}-of-${sheets.length}.png`;
         a.click();
       });
       const blanks = skippedBlankTiles > 0 ? ` · ${skippedBlankTiles} blank tile(s) skipped (no artwork)` : "";
@@ -344,12 +346,24 @@ export function ExportPartsList({
               and the file has to land on the computer running eufyMake anyway. */}
           <button
             type="button"
-            onClick={downloadEufySheets}
+            onClick={() => downloadEufySheets(EUFY_JIG, "")}
             disabled={eufyBusy}
             className="hidden rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-60 md:inline-block"
-            title="Tile artwork laid out to the physical jig — import into eufyMake Studio and print"
+            title="Tile artwork laid out to the physical 3×9 jig — import into eufyMake Studio and print"
           >
             {eufyBusy ? "Building…" : "eufyMake print sheet"}
+          </button>
+          {/* Fork: Bill's new 3×12 Snappet tray (1.06″ pitch, 1.02″ overspray
+              face). Runs in parallel with the 3×9 above until the new tray is
+              proven on the printer, then we merge to one. */}
+          <button
+            type="button"
+            onClick={() => downloadEufySheets(EUFY_JIG_3X12, "3x12-")}
+            disabled={eufyBusy}
+            className="hidden rounded-md border border-indigo-600 px-4 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-50 disabled:opacity-60 md:inline-block"
+            title="Tile artwork laid out to Bill's new 3×12 Snappet tray (1.06″ pitch, 1.02″ overspray face)"
+          >
+            {eufyBusy ? "Building…" : "eufyMake 3×12 (new jig)"}
           </button>
         </div>
         {eufyStatus && (

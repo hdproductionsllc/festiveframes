@@ -43,6 +43,71 @@ export const EUFY_JIG: EufyJigConfig = {
   rowCentersInches: [0.5546, 1.6494, 2.7443],
 };
 
+// ─── 3×12 jig (Bill's Snappet UV Printer Organizer Tray, 2026-06-20) ─────────
+//
+// Bill rebuilt the tray as a 3 x 12 set to fill more of the printer bed per pass
+// and tightened the snappet pockets. His specs (email 2026-06-20):
+//   • pocket pitch  1.06" center-to-center (both axes)
+//   • pocket face   0.992" square (the physical tile top)
+//   • PRINT image   1.02" square — intentionally larger than the pocket so a little
+//     overspray hides the unprinted snappet edge. 1.02" < 1.06" pitch, so the
+//     renderer's per-pocket clip still keeps art out of the neighbouring pocket.
+//
+// The sheet equals the TRAY FOOTPRINT (pocket-face margins, like the 3x9), so it
+// imports corner-to-corner and every pocket registers. A consequence: the outer
+// edge of the edge tiles' 1.02" overspray runs ~0.014" past the sheet and is
+// clipped at the canvas boundary — intended (don't overspray off the tray onto
+// the bed; enlarging the sheet would mis-register all 36 pockets instead).
+//
+// The tray file (`LPF FF Snappet UV Printer Organizer Tray 062026.AI`) is a
+// page-fit bitmap, not a real-scale vector, so it can't be measured for true
+// inches like the 3x9 was — BUT analysing it confirmed the grid is a perfectly
+// even, square, centered 3 x 12 (fit residual 0.03 px). That settles Bill's
+// inconsistent arithmetic: it's a clean centered grid, so the geometry is fully
+// determined by the single 1.06" pitch he measured. When a real-scale vector/CAD
+// of the tray arrives, re-measure and replace the numbers below — one edit.
+
+/**
+ * Build a jig config for a clean, evenly-spaced, centered pocket grid. Pocket
+ * centers sit on `pitchInches`; the sheet extends half a `pocketFaceInches`
+ * beyond the outer centers (the frame-lip border the tray has).
+ */
+export function makeGridJig(opts: {
+  rows: number;
+  cols: number;
+  /** Center-to-center spacing, inches (both axes). */
+  pitchInches: number;
+  /** Printed image square per tile, inches (cover-fit + clipped). */
+  faceInches: number;
+  /** Physical pocket face, inches — sets the edge margin (half a pocket). */
+  pocketFaceInches: number;
+  dpi?: number;
+}): EufyJigConfig {
+  const { rows, cols, pitchInches, faceInches, pocketFaceInches, dpi = 720 } = opts;
+  const margin = pocketFaceInches / 2;
+  const round = (n: number) => Math.round(n * 1e4) / 1e4;
+  const colCentersInches = Array.from({ length: cols }, (_, i) => round(margin + i * pitchInches));
+  const rowCentersInches = Array.from({ length: rows }, (_, j) => round(margin + j * pitchInches));
+  return {
+    sheetWidthInches: round(2 * margin + (cols - 1) * pitchInches),
+    sheetHeightInches: round(2 * margin + (rows - 1) * pitchInches),
+    dpi,
+    tileFaceInches: faceInches,
+    colCentersInches,
+    rowCentersInches,
+  };
+}
+
+/** Bill's 3×12 tray: 36 pockets, 1.06" pitch, 1.02" print face → 12.652" × 3.112". */
+export const EUFY_JIG_3X12: EufyJigConfig = makeGridJig({
+  rows: 3,
+  cols: 12,
+  pitchInches: 1.06,
+  faceInches: 1.02,
+  pocketFaceInches: 0.992,
+  dpi: 720,
+});
+
 /** Total tile pockets on one jig sheet (reading order: row-major, top row first). */
 export function jigPocketCount(jig: EufyJigConfig = EUFY_JIG): number {
   return jig.colCentersInches.length * jig.rowCentersInches.length;

@@ -44,6 +44,30 @@ tiles laid on the jig grid instead of the on-screen frame.
 - [x] Verified: pocket overlay registers dead-center on the .ai proof; pHYs reads 720 DPI;
       tsc + eslint clean. (Decisions: set+quantities, hand-sort, 720 DPI, config-driven jig.)
 
+## Fork: 3×12 variant (Bill's new Snappet tray) — 2026-06-20
+Bill rebuilt the holding jig as a **3×12** set (fill more bed per pass) and tightened the
+snappet pockets. New specs: **1.06″ pitch**, **0.992″ pocket face**, print images scaled to
+**1.02″** (slight overspray hides the unprinted snappet edge). Decision (Henry): **keep the
+3×9 export exactly as-is and fork** — add a second button, run both, merge later.
+
+- The dropped file `LPF FF Snappet UV Printer Organizer Tray 062026.AI` turned out to be a
+  **page-fit bitmap** (1364×1052, ~124 DPI), not a real-scale vector. Image analysis
+  (`scripts/measure-jig.mjs` + raster pass) confirmed a **perfectly even, square, centered
+  3×12 grid** (fit residual 0.03 px) — which resolves the inconsistent arithmetic in Bill's
+  email — but it can't give true inches. So absolute scale = Bill's measured **1.06″**.
+- Because the grid is provably even, the whole config follows from that one pitch.
+  `src/config/eufy-jig.ts` now has `makeGridJig()` + `EUFY_JIG_3X12` (36 pockets,
+  12.652″ × 3.112″ sheet, 720 DPI, 1.02″ face). The renderer was already jig-parameterised
+  (`composeEufyPrintSheets(jig)`) — no change. `ExportPartsList.tsx` got a second desktop-only
+  button **"eufyMake 3×12 (new jig)"** (filenames namespaced `-eufy-3x12-sheet-…`).
+- **TODO when a real-scale tray file arrives:** re-measure exact centers (like the 3×9) and
+  replace the numbers in `EUFY_JIG_3X12` — one edit.
+- **Bed fit: CONFIRMED (Henry, 2026-06-20)** — eufyMake E1 **Mini Flatbed = 330 × 90 mm
+  (12.992″ × 3.543″)**. The 3×12 sheet (12.652″ × 3.112″) fits with ~0.34″ (8.6 mm) spare on
+  the long axis and ~0.43″ on the short. The 3×9 (9.9″ × 3.3″) fits comfortably too. The bed's
+  long axis (12.992″) is the hard ceiling — a 3×13 set (13.712″) would NOT fit, so 3×12 is the
+  max single-pass column count at 1.06″ pitch.
+
 ## Scope (v1 vs later)
 - v1: square tiles only -> jig sheets.
 - Later: text bars (1xN custom parts, longer than a pocket) get their own print layout;
