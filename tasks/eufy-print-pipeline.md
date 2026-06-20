@@ -72,6 +72,14 @@ snappet pockets. New specs: **1.06″ pitch**, **0.992″ pocket face**, print i
   long axis (12.992″) is the hard ceiling — a 3×13 set (13.712″) would NOT fit, so 3×12 is the
   max single-pass column count at 1.06″ pitch.
 
+## Solid-color tiles: print all but white (2026-06-20)
+We stock **only white blank snappets**. So in `composeEufyPrintSheets`, a no-artwork tile
+skips UV printing **only if its color is white** (near-white tolerance ≥240 per channel, e.g.
+"Snow White" #F5F5F5). Every other solid color (Holly Red, Gold, Silver, …) has no matching
+blank, so it's **printed as a solid opaque fill** onto a white snappet (the printer adds the
+white underbase). Earlier code skipped *all* no-artwork tiles — that silently dropped colored
+tiles from the sheet. `skippedBlankTiles` now means white-only.
+
 ## Scope (v1 vs later)
 - v1: square tiles only -> jig sheets.
 - Later: text bars (1xN custom parts, longer than a pocket) get their own print layout;

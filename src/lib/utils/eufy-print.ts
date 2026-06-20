@@ -20,6 +20,23 @@ function loadImage(src: string): Promise<HTMLImageElement | null> {
   });
 }
 
+// One tile to print: either artwork or a solid-color fill.
+type PrintItem = { kind: "art"; url: string } | { kind: "fill"; color: string };
+
+// We stock only WHITE blank snappets, so a solid tile may skip UV printing only
+// when it's white. Treat near-white as white (e.g. "Snow White" #F5F5F5) so it
+// uses a blank snappet; anything darker or saturated gets printed as a fill.
+// Unknown color formats return false → printed, never silently skipped.
+function isWhiteSnappet(color: string): boolean {
+  const hex = color.trim().replace(/^#/, "");
+  const full = hex.length === 3 ? hex.split("").map((c) => c + c).join("") : hex;
+  if (full.length !== 6 || /[^0-9a-fA-F]/.test(full)) return false;
+  const r = parseInt(full.slice(0, 2), 16);
+  const g = parseInt(full.slice(2, 4), 16);
+  const b = parseInt(full.slice(4, 6), 16);
+  return r >= 240 && g >= 240 && b >= 240;
+}
+
 // Draw an image to cover a square dest rect (object-fit: cover, centered).
 function drawCover(ctx: CanvasRenderingContext2D, img: HTMLImageElement, x: number, y: number, w: number, h: number) {
   const iw = img.naturalWidth, ih = img.naturalHeight;
@@ -79,20 +96,31 @@ export async function composeEufyPrintSheets(jig: EufyJigConfig = EUFY_JIG): Pro
     counts.set(placed.pieceId, (counts.get(placed.pieceId) ?? 0) + 1);
   }
 
-  // Expand into a flat list of artwork URLs × quantity. Pieces with no artwork
-  // are solid-color physical blanks — they don't get UV-printed, so skip them.
-  const queue: string[] = [];
-  let skippedBlankTiles = 0;
+  // Expand into a flat print queue × quantity. A tile is one of:
+  //   • art   — has artwork; print the image.
+  //   • fill  — a solid color with no artwork; print a solid square of that color.
+  // We stock only WHITE blank snappets, so a solid tile can skip UV printing
+  // ONLY when it's white (grab a blank snappet). Every other color (red, gold,
+  // silver, …) has no matching blank, so it MUST be printed as a solid fill.
+  const queue: PrintItem[] = [];
+  let skippedBlankTiles = 0; // white tiles only — use a blank snappet, no print
   for (const [pieceId, qty] of counts) {
-    const url = getPiece(pieceId)?.artworkUrl;
-    if (url) for (let i = 0; i < qty; i++) queue.push(url);
-    else skippedBlankTiles += qty;
+    const piece = getPiece(pieceId);
+    const url = piece?.artworkUrl;
+    if (url) {
+      for (let i = 0; i < qty; i++) queue.push({ kind: "art", url });
+    } else {
+      const color = piece?.backgroundColor ?? "#FFFFFF";
+      if (isWhiteSnappet(color)) skippedBlankTiles += qty;
+      else for (let i = 0; i < qty; i++) queue.push({ kind: "fill", color });
+    }
   }
   if (queue.length === 0) return { ...empty, skippedBlankTiles };
 
-  // Preload each distinct artwork once.
+  // Preload each distinct artwork once (fills need no image).
   const loaded = new Map<string, HTMLImageElement | null>();
-  await Promise.all([...new Set(queue)].map(async (u) => loaded.set(u, await loadImage(u))));
+  const artUrls = [...new Set(queue.flatMap((q) => (q.kind === "art" ? [q.url] : [])))];
+  await Promise.all(artUrls.map(async (u) => loaded.set(u, await loadImage(u))));
 
   const centers = jigPocketCenters(jig);
   const perSheet = centers.length;
@@ -115,19 +143,24 @@ export async function composeEufyPrintSheets(jig: EufyJigConfig = EUFY_JIG): Pro
     const ctx = canvas.getContext("2d");
     if (!ctx) continue;
     // No background fill — transparency drives the white underbase.
-    chunk.forEach((url, i) => {
-      const img = loaded.get(url);
-      if (!img) return;
+    chunk.forEach((item, i) => {
       const { xIn, yIn } = centers[i];
       const x = xIn * jig.dpi - face / 2;
       const y = yIn * jig.dpi - face / 2;
-      // Clip to the pure square face so cover-fit overflow can't bleed into a
-      // neighbouring pocket. No corner radius — the full square gets printed.
+      // Clip to the pure square face so overflow can't bleed into a neighbouring
+      // pocket. No corner radius — the full square gets printed.
       ctx.save();
       ctx.beginPath();
       ctx.rect(x, y, face, face);
       ctx.clip();
-      drawCover(ctx, img, x, y, face, face);
+      if (item.kind === "art") {
+        const img = loaded.get(item.url);
+        if (img) drawCover(ctx, img, x, y, face, face);
+      } else {
+        // Solid-color tile: opaque fill → printer lays a white underbase under it.
+        ctx.fillStyle = item.color;
+        ctx.fillRect(x, y, face, face);
+      }
       ctx.restore();
     });
     sheets.push(setPngDpi(canvas.toDataURL("image/png"), jig.dpi));

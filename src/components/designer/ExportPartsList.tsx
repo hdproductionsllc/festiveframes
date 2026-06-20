@@ -132,7 +132,7 @@ export function ExportPartsList({
       if (sheets.length === 0) {
         setEufyStatus(
           skippedBlankTiles > 0
-            ? `No printable artwork — ${skippedBlankTiles} solid-color blank tile(s) don't get UV-printed.`
+            ? `Nothing to print — ${skippedBlankTiles} white tile(s) use blank snappets (no UV print).`
             : "No tiles placed yet."
         );
         return;
@@ -143,7 +143,7 @@ export function ExportPartsList({
         a.download = `${slug}${orderNumber ? `-${orderNumber}` : ""}-eufy-${fileTag}sheet-${i + 1}-of-${sheets.length}.png`;
         a.click();
       });
-      const blanks = skippedBlankTiles > 0 ? ` · ${skippedBlankTiles} blank tile(s) skipped (no artwork)` : "";
+      const blanks = skippedBlankTiles > 0 ? ` · ${skippedBlankTiles} white tile(s) use blank snappets` : "";
       setEufyStatus(
         `${sheets.length} sheet${sheets.length > 1 ? "s" : ""} · ${printedTiles} tile face${printedTiles > 1 ? "s" : ""} · ${pocketsPerSheet} pockets/jig${blanks}`
       );
