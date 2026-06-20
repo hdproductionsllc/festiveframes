@@ -58,8 +58,12 @@ snappet pockets. New specs: **1.06″ pitch**, **0.992″ pocket face**, print i
 - Because the grid is provably even, the whole config follows from that one pitch.
   `src/config/eufy-jig.ts` now has `makeGridJig()` + `EUFY_JIG_3X12` (36 pockets,
   12.652″ × 3.112″ sheet, 720 DPI, 1.02″ face). The renderer was already jig-parameterised
-  (`composeEufyPrintSheets(jig)`) — no change. `ExportPartsList.tsx` got a second desktop-only
-  button **"eufyMake 3×12 (new jig)"** (filenames namespaced `-eufy-3x12-sheet-…`).
+  (`composeEufyPrintSheets(jig)`) — no change.
+- **MERGED (Henry, 2026-06-20):** production moved fully onto the 3×12 tray. The 3×9 button
+  was retired from `ExportPartsList.tsx` — only **"eufyMake 3×12 print sheet"** is shown now
+  (desktop-only, filenames `-eufy-3x12-sheet-…`). The 3×9 geometry is **kept** in
+  `eufy-jig.ts` as `EUFY_JIG` (still the default for `composeEufyPrintSheets`/`jigPocketCount`),
+  so re-adding its button later is a few lines.
 - **TODO when a real-scale tray file arrives:** re-measure exact centers (like the 3×9) and
   replace the numbers in `EUFY_JIG_3X12` — one edit.
 - **Bed fit: CONFIRMED (Henry, 2026-06-20)** — eufyMake E1 **Mini Flatbed = 330 × 90 mm

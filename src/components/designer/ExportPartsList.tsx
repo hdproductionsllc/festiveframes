@@ -6,7 +6,7 @@ import { getPiece } from "@/data/sets";
 import { coveredSlotIds } from "@/lib/utils/text-bar";
 import { composeBarImage } from "@/lib/utils/compose-frame";
 import { composeEufyPrintSheets } from "@/lib/utils/eufy-print";
-import { EUFY_JIG, EUFY_JIG_3X12, type EufyJigConfig } from "@/config/eufy-jig";
+import { EUFY_JIG_3X12, type EufyJigConfig } from "@/config/eufy-jig";
 
 // Short, stable part-number prefixes per set. Falls back to the first 3 letters.
 const SET_CODE: Record<string, string> = {
@@ -343,27 +343,18 @@ export function ExportPartsList({
             Print / Save PDF
           </button>
           {/* Desktop only: the full-res print canvas is too large for phones,
-              and the file has to land on the computer running eufyMake anyway. */}
-          <button
-            type="button"
-            onClick={() => downloadEufySheets(EUFY_JIG, "")}
-            disabled={eufyBusy}
-            className="hidden rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-60 md:inline-block"
-            title="Tile artwork laid out to the physical 3×9 jig — import into eufyMake Studio and print"
-          >
-            {eufyBusy ? "Building…" : "eufyMake print sheet"}
-          </button>
-          {/* Fork: Bill's new 3×12 Snappet tray (1.06″ pitch, 1.02″ overspray
-              face). Runs in parallel with the 3×9 above until the new tray is
-              proven on the printer, then we merge to one. */}
+              and the file has to land on the computer running eufyMake anyway.
+              We've moved production onto Bill's 3×12 Snappet tray (1.06″ pitch,
+              1.02″ overspray face). The 3×9 jig config is still in eufy-jig.ts
+              (EUFY_JIG) if we ever need to bring its button back. */}
           <button
             type="button"
             onClick={() => downloadEufySheets(EUFY_JIG_3X12, "3x12-")}
             disabled={eufyBusy}
-            className="hidden rounded-md border border-indigo-600 px-4 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-50 disabled:opacity-60 md:inline-block"
-            title="Tile artwork laid out to Bill's new 3×12 Snappet tray (1.06″ pitch, 1.02″ overspray face)"
+            className="hidden rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-60 md:inline-block"
+            title="Tile artwork laid out to the 3×12 Snappet tray (1.06″ pitch, 1.02″ overspray face) — import into eufyMake Studio and print"
           >
-            {eufyBusy ? "Building…" : "eufyMake 3×12 (new jig)"}
+            {eufyBusy ? "Building…" : "eufyMake 3×12 print sheet"}
           </button>
         </div>
         {eufyStatus && (
