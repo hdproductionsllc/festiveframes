@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { offer, formatUsd } from "@/config/offers";
+import { BuyButton } from "./BuyButton";
 
 const INK = "#1e1b17";
 
@@ -16,22 +17,22 @@ const INCLUDED = [
 const TIERS = [
   {
     name: "Freedom Frame Set",
+    which: "single" as const,
     price: formatUsd(offer.singlePrice),
     note: "/ kit",
     popular: false,
     accent: "#3fb0e6",
     cta: "Choose this set",
-    href: "/buy?kit=american-classic",
     bullets: ["One frame rail", "50+ tiles (more than pictured)", "Ready-made bottom-bar phrases", "Quick-start card"],
   },
   {
     name: "Two-Set Bundle",
+    which: "bundle" as const,
     price: formatUsd(offer.bundlePrice),
     note: "/ 2 sets",
     popular: true,
     accent: "#ed5aa0",
     cta: "Claim the bundle",
-    href: "/buy?kit=american-classic",
     bullets: ["Everything in the set, ×2", "One for you, one to gift", "Save $9 vs. two singles", "30-day guarantee"],
   },
 ];
@@ -112,22 +113,25 @@ export function TheKit({ remaining, cap }: { remaining: number; cap: number }) {
                   </div>
                 ))}
               </div>
-              <Link
-                href={t.href}
-                className="s-display s-press rounded-full border-[3px] border-[#1e1b17] p-3 text-center text-base font-semibold text-[#fff9ec] no-underline"
+              <BuyButton
+                selection={t.which}
+                label={t.cta}
+                className="s-display s-press w-full cursor-pointer rounded-full border-[3px] border-[#1e1b17] p-3 text-center text-base font-semibold text-[#fff9ec] disabled:opacity-70"
                 style={{
                   background: t.accent,
                   boxShadow: `4px 4px 0 ${INK}`,
                   ["--press-shadow-lift" as string]: `6px 6px 0 ${INK}`,
                   ["--press-shadow-press" as string]: `1px 1px 0 ${INK}`,
                 }}
-              >
-                {t.cta}
-              </Link>
+              />
             </div>
           ))}
           <div className="text-center text-sm font-bold text-[#6a6354] sm:col-span-2">
             $5 flat shipping · 30-day guarantee · order by June 28 to get it before the Fourth
+            <br />
+            <Link href="/buy?kit=american-classic" className="font-bold text-[#ed5aa0] underline underline-offset-2">
+              Need a different quantity or to mix sets? Open full checkout →
+            </Link>
           </div>
         </div>
       </div>

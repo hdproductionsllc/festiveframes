@@ -5,6 +5,7 @@ import { offer } from "@/config/offers";
 import { SITE_URL } from "@/config/season";
 import { getFoundingCounts } from "@/lib/founding-status";
 import { Header } from "./_components/Header";
+import { Countdown } from "./_components/Countdown";
 import { Hero } from "./_components/Hero";
 import { Marquee } from "./_components/Marquee";
 import { Looks } from "./_components/Looks";
@@ -12,7 +13,10 @@ import { HowItWorks } from "./_components/HowItWorks";
 import { WhyUs } from "./_components/WhyUs";
 import { TheKit } from "./_components/TheKit";
 import { CustomOrders } from "./_components/CustomOrders";
+import { OurStory } from "./_components/OurStory";
 import { Reviews } from "./_components/Reviews";
+import { SeoContent } from "./_components/SeoContent";
+import { Faq } from "./_components/Faq";
 import { Footer } from "./_components/Footer";
 
 // The live marketing homepage ("/") — the sticker redesign. Self-contained
@@ -168,6 +172,7 @@ export default async function HomePage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       <Header remaining={remaining} cap={cap} />
+      <Countdown />
       <main id="main" tabIndex={-1} className="flex-1">
         <Hero />
         <Marquee />
@@ -176,7 +181,10 @@ export default async function HomePage() {
         <WhyUs />
         <TheKit remaining={remaining} cap={cap} />
         <CustomOrders />
+        <OurStory />
         <Reviews />
+        <SeoContent />
+        <Faq />
       </main>
       <Footer year={year} />
     </>
