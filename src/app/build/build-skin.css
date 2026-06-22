@@ -1,0 +1,97 @@
+/* ---------------------------------------------------------------------------
+   Builder sticker skin — VISUAL ONLY, scoped to the /build chrome (.build-skin).
+   The designer's functionality and production output (frame canvas,
+   compose-frame, eufy print sheets, parts list) stay byte-for-byte identical.
+
+   WHY UTILITY OVERRIDES (not token overrides): globals.css declares the palette
+   with Tailwind v4 `@theme inline`, which bakes the LITERAL color into every
+   utility — so re-pointing the CSS variables does nothing. Instead we override
+   the specific `surface-*` / `brand-*` utility classes the chrome actually uses,
+   scoped under `.build-skin`, remapping the dark workbench to the cartoon-sticker
+   cream/ink palette. Only the exact base/opacity variants used by chrome are
+   listed; the frame/plate render uses different opacity variants (/40, /60, /30)
+   and inline styles, so the rendered product and print files are untouched.
+   --------------------------------------------------------------------------- */
+
+@import url("https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&display=swap");
+
+.build-skin {
+  font-family: "Nunito", var(--font-sans);
+}
+.build-skin h1,
+.build-skin h2,
+.build-skin h3,
+.build-skin input,
+.build-skin button,
+.build-skin .font-display {
+  font-family: "Fredoka", var(--font-sans);
+}
+
+/* The workbench stage: warm cream with a restrained confetti-dot texture so the
+   frame preview pops (decorative, low-contrast). */
+.build-skin .workbench-bg {
+  background-color: #faf0d6;
+  background-image:
+    radial-gradient(rgba(237, 90, 160, 0.10) 2px, transparent 2px),
+    radial-gradient(rgba(63, 176, 230, 0.10) 2px, transparent 2px);
+  background-position: 0 0, 22px 22px;
+  background-size: 44px 44px, 44px 44px;
+}
+
+/* ---- Surface backgrounds → cream cards ---- */
+.build-skin .bg-surface-900 { background-color: #faf0d6 !important; }
+.build-skin .bg-surface-800 { background-color: #fff9ec !important; }
+/* The two big side panels (palette + text-bar editor) are the only users of
+   bg-surface-800/50 — give them the signature ink outline + hard offset shadow. */
+.build-skin .bg-surface-800\/50 {
+  background-color: #fff9ec !important;
+  border: 3px solid #1e1b17 !important;
+  border-radius: 18px;
+  box-shadow: 6px 6px 0 #1e1b17;
+}
+.build-skin .bg-surface-700 { background-color: #f1e4c6 !important; }
+.build-skin .bg-surface-700\/50 { background-color: rgba(241, 228, 198, 0.6) !important; }
+.build-skin .bg-surface-700\/70 { background-color: rgba(241, 228, 198, 0.85) !important; }
+.build-skin .bg-surface-600 { background-color: #e7dab4 !important; }
+
+/* ---- Text → ink ramp (readable on cream) ---- */
+.build-skin .text-surface-50 { color: #1e1b17 !important; }
+.build-skin .text-surface-100 { color: #1e1b17 !important; }
+.build-skin .text-surface-200 { color: #2c2820 !important; }
+.build-skin .text-surface-300 { color: #4a4436 !important; }
+.build-skin .text-surface-400 { color: #6a6354 !important; }
+.build-skin .text-surface-500 { color: #847a60 !important; }
+.build-skin .text-surface-600 { color: #9a8f70 !important; }
+
+/* ---- Borders → ink outlines (the sticker signature) ---- */
+.build-skin .border-surface-800 { border-color: #1e1b17 !important; }
+.build-skin .border-surface-700 { border-color: #1e1b17 !important; }
+.build-skin .border-surface-700\/50 { border-color: rgba(30, 27, 23, 0.45) !important; }
+.build-skin .border-surface-600 { border-color: rgba(30, 27, 23, 0.3) !important; }
+
+/* ---- Accents → sticker palette ---- */
+.build-skin .bg-brand-navy { background-color: #3fb0e6 !important; }  /* active tool/buttons */
+.build-skin .bg-brand-gold { background-color: #f8c53b !important; }
+.build-skin .text-brand-gold { color: #c8961a !important; }
+.build-skin .from-brand-gold { --tw-gradient-from: #f8c53b var(--tw-gradient-from-position) !important; }
+.build-skin .ring-brand-gold { --tw-ring-color: #f8c53b !important; }
+.build-skin .border-brand-gold\/50 { border-color: rgba(248, 197, 59, 0.6) !important; }
+/* brand-red is kept as-is for destructive (clear/delete) semantics. */
+
+/* ---- Sticker polish helpers (opt-in via class in the chrome components) ---- */
+.build-skin .bsk-panel {
+  border: 3px solid #1e1b17 !important;
+  box-shadow: 5px 5px 0 #1e1b17;
+  background: #fff9ec !important;
+}
+.build-skin .bsk-shadow {
+  border: 3px solid #1e1b17 !important;
+  box-shadow: 3px 3px 0 #1e1b17;
+}
+.build-skin .bsk-press {
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+@media (hover: hover) {
+  .build-skin .bsk-press:hover { transform: translate(-2px, -2px); box-shadow: 5px 5px 0 #1e1b17; }
+}
+.build-skin .bsk-press:active { transform: translate(1px, 1px); box-shadow: 1px 1px 0 #1e1b17; }

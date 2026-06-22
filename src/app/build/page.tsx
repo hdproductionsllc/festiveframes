@@ -6,6 +6,10 @@ import { BuildChrome } from "@/components/build/BuildChrome";
 // Builder-only web fonts. Imported here so they load ONLY on /build and never
 // block rendering on the marketing pages (which use next/font instead).
 import "../builder-fonts.css";
+// Sticker visual skin for the builder chrome (scoped to .build-skin). Re-skins
+// the surrounding UI to match the marketing site; does NOT change designer
+// functionality or production output.
+import "./build-skin.css";
 
 // The interactive frame builder. Lives OUTSIDE the (site) marketing route
 // group so it keeps the dark workbench theme and is NOT wrapped in
@@ -41,9 +45,9 @@ export const metadata: Metadata = {
 
 export default function BuildPage() {
   return (
-    <>
+    <div className="build-skin">
       <Designer />
       <BuildChrome />
-    </>
+    </div>
   );
 }
