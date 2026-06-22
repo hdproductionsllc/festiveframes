@@ -1,0 +1,79 @@
+/* ---------------------------------------------------------------------------
+   Sticker design system — scoped to the redesigned homepage route group (home).
+   Cartoon-sticker visual language: warm cream canvas, thick ink outlines, hard
+   (no-blur) offset shadows, Fredoka display + Nunito body, 4 bright accents.
+   Tokens + keyframes + responsive rules live here; per-element skin (borders /
+   shadows / colors) is applied inline in the section components so the look maps
+   1:1 to the design handoff. Layout + responsive collapse use Tailwind utilities.
+   --------------------------------------------------------------------------- */
+
+.sticker-theme {
+  /* palette */
+  --s-cream: #faf0d6;
+  --s-card: #fff9ec;
+  --s-ink: #1e1b17;
+  --s-ink-2: #3a352c;
+  --s-ink-3: #6a6354;
+  --s-pink: #ed5aa0;
+  --s-blue: #3fb0e6;
+  --s-yellow: #f8c53b;
+  --s-purple: #9b5fd0;
+
+  background-color: var(--s-cream);
+  color: var(--s-ink);
+  font-family: var(--font-nunito), "Nunito", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+.sticker-theme h1,
+.sticker-theme h2,
+.sticker-theme h3,
+.sticker-theme .s-display {
+  font-family: var(--font-fredoka), "Fredoka", "Nunito", sans-serif;
+}
+
+.sticker-theme ::selection {
+  background: var(--s-yellow);
+  color: var(--s-ink);
+}
+
+/* Signature motion. All decorative; the global prefers-reduced-motion rule in
+   globals.css already neutralizes these for users who ask for less motion. */
+@keyframes ff-marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+@keyframes ff-float {
+  0%, 100% { transform: translateY(0) rotate(var(--r, 0deg)); }
+  50% { transform: translateY(-14px) rotate(var(--r, 0deg)); }
+}
+@keyframes ff-wiggle {
+  0%, 100% { transform: rotate(-3deg); }
+  50% { transform: rotate(3deg); }
+}
+
+.ff-float { animation: ff-float 6s ease-in-out infinite; }
+.ff-wiggle { animation: ff-wiggle 4s ease-in-out infinite; }
+.ff-float-slow { animation: ff-float 5s ease-in-out infinite; }
+.ff-marquee { animation: ff-marquee 24s linear infinite; }
+
+/* The "press" interaction shared by every sticker button/card that should feel
+   tactile. Hover lifts the element up-left and grows the hard shadow; active
+   presses it down into the shadow. Elements opt in with class "s-press" and set
+   their own --press-shadow (rest) / --press-shadow-lift (hover) via inline vars,
+   falling back to a sensible default scale. */
+.s-press {
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+@media (hover: hover) {
+  .s-press:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: var(--press-shadow-lift, 7px 7px 0 var(--s-ink));
+  }
+}
+.s-press:active {
+  transform: translate(2px, 2px);
+  box-shadow: var(--press-shadow-press, 2px 2px 0 var(--s-ink));
+}

@@ -3,26 +3,23 @@ import { copy } from "@/content/copy";
 import { getKit, getActiveKits } from "@/config/kits";
 import { offer } from "@/config/offers";
 import { SITE_URL } from "@/config/season";
-import { Countdown } from "@/components/site/buy/Countdown";
-import { Hero } from "@/components/site/home/Hero";
-import { WhatItIs } from "@/components/site/home/WhatItIs";
-import { KitShowcase } from "@/components/site/home/KitShowcase";
-import { OfferBlock } from "@/components/site/buy/OfferBlock";
-import { CustomerReviews } from "@/components/site/home/CustomerReviews";
-import { DesignShowcase } from "@/components/site/home/DesignShowcase";
-import { HowItWorks } from "@/components/site/home/HowItWorks";
-import { Gallery } from "@/components/site/home/Gallery";
-import { WhyWeMadeIt } from "@/components/site/home/WhyWeMadeIt";
-import { TrustSection } from "@/components/site/home/TrustSection";
-import { HomeFaq } from "@/components/site/home/HomeFaq";
-import { Testimonials } from "@/components/site/home/Testimonials";
-import { SeoContent } from "@/components/site/home/SeoContent";
-import { CtaEmail } from "@/components/site/home/CtaEmail";
+import { getFoundingCounts } from "@/lib/founding-status";
+import { Header } from "./_components/Header";
+import { Hero } from "./_components/Hero";
+import { Marquee } from "./_components/Marquee";
+import { Looks } from "./_components/Looks";
+import { HowItWorks } from "./_components/HowItWorks";
+import { WhyUs } from "./_components/WhyUs";
+import { TheKit } from "./_components/TheKit";
+import { CustomOrders } from "./_components/CustomOrders";
+import { Reviews } from "./_components/Reviews";
+import { Footer } from "./_components/Footer";
 
-// Marketing homepage at "/". Server Component (no "use client"); the only
-// client island is the email capture form deep inside <CtaEmail/>. The (site)
-// layout supplies SiteHeader, SiteFooter, <main>, and the .marketing-theme
-// background, so this file renders the page sections directly.
+// The live marketing homepage ("/") — the sticker redesign. Self-contained
+// chrome (Header/Footer live inside the page), so the (home) route group does
+// not use the navy (site) layout. The previous Americana homepage is preserved
+// at /classic. SEO metadata + JSON-LD are carried over from the old page so the
+// homepage keeps its canonical, Open Graph, and structured data unchanged.
 
 export const metadata: Metadata = {
   title: copy.home.metaTitle,
@@ -45,9 +42,9 @@ export const metadata: Metadata = {
 };
 
 // Builds the JSON-LD graph for the homepage from config/copy so structured data
-// never drifts from the rendered content. Includes Organization (St. Louis
-// locality), Product (American Classic), FAQPage (the six FAQ items), an
-// ItemList of the active kit catalog, and a BreadcrumbList.
+// never drifts from the rendered content: Organization (St. Louis locality),
+// Product (Freedom Frame Set), FAQPage, an ItemList of the active catalog, and a
+// BreadcrumbList.
 function buildJsonLd() {
   const americanClassic = getKit("american-classic");
   const productPrice = ((americanClassic?.price ?? offer.singlePrice) / 100).toFixed(2);
@@ -85,7 +82,7 @@ function buildJsonLd() {
     name: americanClassic?.name ?? "Freedom Frame Set",
     description:
       "A customizable, snap-on license plate frame kit with 50+ interchangeable patriotic tiles. Install once, swap tiles forever. Designed and made in St. Louis, USA.",
-    image: [`${SITE_URL}/kits/american-classic-thumb.jpg`, `${SITE_URL}/designs/design-250.png`],
+    image: [`${SITE_URL}/redesign/looks/years250.png`, `${SITE_URL}/redesign/looks/sampler.png`],
     brand: { "@type": "Brand", name: copy.site.brandName },
     category: "License Plate Frames",
     offers: {
@@ -133,8 +130,6 @@ function buildJsonLd() {
     })),
   };
 
-  // The live catalog as an ordered list, each item linking to its /buy?kit=<id>
-  // deep link. Sourced from the same getActiveKits() the storefront renders.
   const itemList = {
     "@type": "ItemList",
     name: `${copy.site.brandName} license plate frame kits`,
@@ -149,18 +144,8 @@ function buildJsonLd() {
   const breadcrumbList = {
     "@type": "BreadcrumbList",
     itemListElement: [
-      {
-        "@type": "ListItem",
-        position: 1,
-        name: "Home",
-        item: SITE_URL,
-      },
-      {
-        "@type": "ListItem",
-        position: 2,
-        name: "Shop the Freedom Frame Set",
-        item: `${SITE_URL}/buy`,
-      },
+      { "@type": "ListItem", position: 1, name: "Home", item: SITE_URL },
+      { "@type": "ListItem", position: 2, name: "Shop the Freedom Frame Set", item: `${SITE_URL}/buy` },
     ],
   };
 
@@ -170,8 +155,10 @@ function buildJsonLd() {
   };
 }
 
-export default function HomePage() {
+export default async function HomePage() {
   const jsonLd = buildJsonLd();
+  const { remaining, cap } = await getFoundingCounts();
+  const year = new Date().getFullYear();
 
   return (
     <>
@@ -180,24 +167,18 @@ export default function HomePage() {
         // JSON-LD is static, server-rendered, and built from trusted config.
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <Countdown />
-      <Hero />
-      <TrustSection />
-      <WhatItIs />
-      <KitShowcase />
-      {/* In-page buy block so the homepage converts without a second page hop. */}
-      <div id="get-yours" className="scroll-mt-24">
-        <OfferBlock />
-      </div>
-      <CustomerReviews />
-      <DesignShowcase />
-      <HowItWorks />
-      <Gallery />
-      <WhyWeMadeIt />
-      <Testimonials />
-      <SeoContent />
-      <HomeFaq />
-      <CtaEmail />
+      <Header remaining={remaining} cap={cap} />
+      <main id="main" tabIndex={-1} className="flex-1">
+        <Hero />
+        <Marquee />
+        <Looks />
+        <HowItWorks />
+        <WhyUs />
+        <TheKit remaining={remaining} cap={cap} />
+        <CustomOrders />
+        <Reviews />
+      </main>
+      <Footer year={year} />
     </>
   );
 }
