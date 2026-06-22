@@ -95,3 +95,36 @@
   .build-skin .bsk-press:hover { transform: translate(-2px, -2px); box-shadow: 5px 5px 0 #1e1b17; }
 }
 .build-skin .bsk-press:active { transform: translate(1px, 1px); box-shadow: 1px 1px 0 #1e1b17; }
+
+/* ---- Color-zoned panels (variety, not all-cream). Defined AFTER the generic
+   bg-surface-800/50 rule so they win on the two big side panels. ---- */
+.build-skin .bsk-panel-blue {
+  background-color: #e7f5fd !important;
+  border: 3px solid #1e1b17 !important;
+  border-radius: 18px;
+  box-shadow: 6px 6px 0 #1e1b17;
+}
+.build-skin .bsk-panel-pink {
+  background-color: #fdeef6 !important;
+  border: 3px solid #1e1b17 !important;
+  border-radius: 18px;
+  box-shadow: 6px 6px 0 #1e1b17;
+}
+
+/* ---- Accent buttons (bright, ink-outlined, hard shadow). Used to colorize the
+   quick-action controls so the toolbox is playful instead of monochrome. ---- */
+.build-skin .bsk-btn {
+  border: 2px solid #1e1b17 !important;
+  box-shadow: 2px 2px 0 #1e1b17;
+  transition: transform 0.1s ease, box-shadow 0.1s ease, filter 0.1s ease;
+}
+@media (hover: hover) {
+  .build-skin .bsk-btn:hover:not(:disabled) { filter: brightness(1.06); transform: translate(-1px, -1px); box-shadow: 3px 3px 0 #1e1b17; }
+}
+.build-skin .bsk-btn:active:not(:disabled) { transform: translate(1px, 1px); box-shadow: 1px 1px 0 #1e1b17; }
+.build-skin .bsk-blue { background-color: #3fb0e6 !important; color: #fff9ec !important; }
+.build-skin .bsk-pink { background-color: #ed5aa0 !important; color: #fff9ec !important; }
+.build-skin .bsk-purple { background-color: #9b5fd0 !important; color: #fff9ec !important; }
+.build-skin .bsk-yellow { background-color: #f8c53b !important; color: #1e1b17 !important; }
+.build-skin .bsk-red { background-color: #e0524d !important; color: #fff9ec !important; }
+.build-skin .bsk-cream { background-color: #fff9ec !important; color: #1e1b17 !important; }

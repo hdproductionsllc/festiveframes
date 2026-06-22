@@ -63,9 +63,9 @@ export function BottomBarEditor() {
     selected ? updateTextBarQr(selected.id, enabled) : updateQRCode({ enabled });
 
   return (
-    <div className="space-y-4 p-4 bg-surface-800/50 rounded-xl border border-surface-700/50">
+    <div className="bsk-panel-pink space-y-4 p-4 bg-surface-800/50 rounded-xl border border-surface-700/50">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-surface-200">Text Bar</h3>
+        <h3 className="text-sm font-extrabold uppercase tracking-wide text-[#ed5aa0]">Text Bar</h3>
         {selected && (
           <button
             onClick={() => selectBar(null)}

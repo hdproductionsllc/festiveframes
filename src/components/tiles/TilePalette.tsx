@@ -15,7 +15,7 @@ export function TilePalette() {
   return (
     <>
       {/* Desktop / Tablet — fixed left panel */}
-      <aside className="hidden md:flex flex-col w-[320px] flex-shrink-0 p-3 bg-surface-800/50 rounded-xl border border-surface-700/50 overflow-y-auto">
+      <aside className="bsk-panel-blue hidden md:flex flex-col w-[320px] flex-shrink-0 p-3 bg-surface-800/50 rounded-xl border border-surface-700/50 overflow-y-auto">
         <PaletteContent />
       </aside>
 

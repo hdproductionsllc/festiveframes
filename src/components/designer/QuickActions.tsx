@@ -35,6 +35,7 @@ export function QuickActions() {
     {
       label: "Fill All",
       icon: "🪣",
+      color: "bsk-blue",
       onClick: handleFillAll,
       disabled: !selectedPieceId,
       title: "Fill all slots with selected tile",
@@ -42,6 +43,7 @@ export function QuickActions() {
     {
       label: "Random",
       icon: "🎲",
+      color: "bsk-purple",
       onClick: handleRandomFill,
       disabled: pieces.length === 0,
       title: "Random fill from current set",
@@ -49,6 +51,7 @@ export function QuickActions() {
     {
       label: "Mirror",
       icon: "🪞",
+      color: "bsk-pink",
       onClick: () => { mirrorTopSlots(); sfx("shimmer"); },
       disabled: false,
       title: "Mirror left side to right (all rails + wings)",
@@ -56,6 +59,7 @@ export function QuickActions() {
     {
       label: "Clear",
       icon: "🗑️",
+      color: "bsk-red",
       onClick: () => { clearAll(); sfx("whoosh"); },
       disabled: false,
       title: "Remove all tiles",
@@ -71,9 +75,8 @@ export function QuickActions() {
             onClick={action.onClick}
             disabled={action.disabled}
             title={action.title}
-            className="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-xs font-medium
-              bg-surface-800 text-surface-300 hover:bg-surface-700 hover:text-surface-100
-              disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            className={`bsk-btn ${action.color} flex items-center gap-1.5 px-2 py-1.5 rounded-md text-xs font-bold
+              disabled:opacity-40 disabled:cursor-not-allowed`}
           >
             <span>{action.icon}</span>
             {action.label}
@@ -86,8 +89,7 @@ export function QuickActions() {
           disabled={!canUndo()}
           title="Undo (Ctrl+Z)"
           className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-md text-xs font-medium
-            bg-surface-800 text-surface-300 hover:bg-surface-700 hover:text-surface-100
-            disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            bsk-btn bsk-cream disabled:opacity-40 disabled:cursor-not-allowed"
         >
           ↩ Undo
         </button>
@@ -96,8 +98,7 @@ export function QuickActions() {
           disabled={!canRedo()}
           title="Redo (Ctrl+Shift+Z)"
           className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-md text-xs font-medium
-            bg-surface-800 text-surface-300 hover:bg-surface-700 hover:text-surface-100
-            disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            bsk-btn bsk-cream disabled:opacity-40 disabled:cursor-not-allowed"
         >
           ↪ Redo
         </button>

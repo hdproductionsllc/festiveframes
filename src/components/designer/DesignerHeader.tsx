@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import { useDesignStore } from "@/stores/design-store";
 import { useUIStore } from "@/stores/ui-store";
 
@@ -28,53 +29,58 @@ export function DesignerHeader({ onExport, onExportParts }: DesignerHeaderProps)
   const hasDesign = Object.keys(slots).length > 0;
 
   return (
-    <header className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-b border-surface-800">
+    <header className="flex flex-wrap items-center justify-between gap-3 border-b-[3px] border-[#1e1b17] bg-[#1e1b17] px-4 py-2">
       {/* Logo + name */}
       <div className="flex items-center gap-3">
-        <h1 className="text-lg font-bold text-brand-red tracking-tight">
-          Festive Frames
-        </h1>
-        <div className="hidden sm:block h-5 w-px bg-surface-700" />
+        <a href="/" aria-label="Festive Frames home" className="flex items-center">
+          <Image
+            src="/redesign/logo.png"
+            alt="Festive Frames"
+            width={1408}
+            height={1425}
+            priority
+            className="h-11 w-auto"
+          />
+        </a>
+        <div className="hidden sm:block h-6 w-px bg-[#faf0d6]/25" />
         <input
           type="text"
           value={designName}
           onChange={(e) => setDesignName(e.target.value)}
-          className="hidden sm:block bg-transparent text-sm text-surface-300 border-b border-transparent
-            hover:border-surface-600 focus:border-brand-gold/50 focus:outline-none
-            transition-colors px-1 py-0.5 max-w-[200px]"
+          placeholder="Name your design"
+          className="hidden sm:block max-w-[200px] border-b border-transparent bg-transparent px-1 py-0.5
+            text-sm font-semibold text-[#faf0d6] placeholder:text-[#faf0d6]/45
+            transition-colors hover:border-[#faf0d6]/40 focus:border-[#f8c53b] focus:outline-none"
         />
       </div>
 
       {/* Actions */}
       <div className="flex items-center gap-2">
         {lastSaved && (
-          <span className="text-[10px] text-surface-500 hidden sm:block">
+          <span className="hidden text-[10px] text-[#faf0d6]/60 sm:block">
             Saved {lastSaved}
           </span>
         )}
         <button
           onClick={toggleSound}
           title={soundEnabled ? "Mute sounds" : "Enable sounds"}
-          className="p-2 rounded-md text-surface-400 hover:text-surface-200 hover:bg-surface-800 transition-colors"
+          className="rounded-full p-2 text-base text-[#faf0d6]/80 transition-colors hover:bg-white/10"
         >
           {soundEnabled ? "🔊" : "🔇"}
         </button>
         <button
           onClick={onExport}
           disabled={exportState === "exporting"}
-          className="px-3 py-2 rounded-lg bg-surface-700 text-surface-300 text-sm font-medium
-            hover:bg-surface-600 active:scale-95 disabled:opacity-50 transition-all"
+          className="rounded-full border-2 border-[#1e1b17] bg-[#3fb0e6] px-4 py-1.5 text-sm font-semibold text-[#fff9ec]
+            transition-all hover:brightness-110 active:scale-95 disabled:opacity-50"
         >
-          {exportState === "exporting" ? "Saving..." : "Save Image"}
+          {exportState === "exporting" ? "Saving…" : "Save Image"}
         </button>
         <button
           onClick={onExportParts}
           disabled={!hasDesign}
-          className="px-5 py-2.5 rounded-lg text-sm font-bold transition-all active:scale-95
-            disabled:opacity-40 disabled:cursor-not-allowed
-            bg-gradient-to-r from-brand-gold to-yellow-500 text-black
-            hover:from-yellow-400 hover:to-yellow-500
-            shadow-[0_0_12px_rgba(255,215,0,0.3)] hover:shadow-[0_0_20px_rgba(255,215,0,0.5)]"
+          className="rounded-full border-2 border-[#1e1b17] bg-[#f8c53b] px-5 py-2 text-sm font-bold text-[#1e1b17]
+            transition-all hover:brightness-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
         >
           Send to Production
         </button>
