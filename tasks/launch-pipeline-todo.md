@@ -2,26 +2,24 @@
 
 Real order tomorrow → production. Public launch Friday. Plan: .claude/plans/enumerated-napping-frog.md
 
-## Workstream 1 — Order → Production pipeline (P0)
-- [ ] `src/lib/utils/parts-list.ts` — extract reusable buildPartsList()/csv/html from ExportPartsList
-- [ ] `src/lib/order/store.ts` — draft store + atomic idempotency (Postgres/Redis, in-memory fallback)
-- [ ] `src/lib/order/fulfill.ts` — single idempotent fulfillOrder() + failure alert
-- [ ] `src/app/api/order/draft/route.ts` — persist design JSON + artifacts
-- [ ] `src/lib/email-production.ts` — founders email (attachments) + customer (confirm+proof+thank-you)
-- [ ] checkout route — custom-frame $3900 line item, allow_promotion_codes, metadata.orderId
-- [ ] webhook — fulfillOrder backup trigger on metadata.orderId
-- [ ] thanks page — fulfillOrder primary trigger
-- [ ] DesignerHeader — ORDER · $39 CTA
-- [ ] Designer — handleOrder (render → POST draft → checkout → redirect)
-- [ ] End-to-end $0 coupon test (founders + customer emails arrive; no double-send)
+## Workstream 1 — Order → Production pipeline (P0)  ✅ CODE COMPLETE (builds clean)
+- [x] `src/lib/order/parts-list.ts` — reusable buildPartsList()/csv/html
+- [x] `src/lib/order/store.ts` — draft store + atomic idempotency (in-memory; Postgres = V2)
+- [x] `src/lib/order/fulfill.ts` — single idempotent fulfillOrder() + failure alert
+- [x] `src/app/api/order/draft/route.ts` + `/api/order/fulfill/route.ts`
+- [x] `src/lib/email-production.ts` — founders email (attachments) + customer (confirm+proof+thank-you)
+- [x] checkout route — custom-frame $3900 line item, allow_promotion_codes, metadata.orderId
+- [x] webhook — fulfillOrder backup trigger; thanks page — fulfillOrder primary relay
+- [x] DesignerHeader ORDER · $39 CTA + Designer handleOrder
+- [ ] End-to-end $0 coupon test (BLOCKED: needs Stripe test keys + PRODUCTION_EMAILS)
 
-## Workstream 2 — New artwork into app
-- [ ] Sync 5 final snappets → public/tiles/july4 (american-flag, bomb-pop, eagle, liberty-bell, uncle-sam-hat)
-- [ ] Confirm 250 ribbon design w/ owner; re-run optimize-images
+## Workstream 2 — New artwork into app  ✅ DONE
+- [x] Synced 5 final snappets → public/tiles/july4 + optimized (300–800KB)
+- [ ] Confirm 250 ribbon design w/ owner
 
-## Workstream 3 — Banner fonts + cursive
-- [ ] Add script/cursive + display fonts (@font-face / Google import)
-- [ ] Append to BOTTOM_BAR_FONTS; categorize picker (Script · Display · Classic)
+## Workstream 3 — Banner fonts + cursive  ✅ DONE
+- [x] 14 new fonts incl. cursive (Great Vibes, Allura, Dancing Script, Pacifico, Sacramento…)
+- [x] Categorized picker (Script · Display · Classic); typecheck + lint clean
 
 ## Workstream 4 — QR rules + square QR snappet
 - [ ] First banner QR required/locked; later banners optional

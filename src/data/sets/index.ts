@@ -38,6 +38,22 @@ export const tileSets: TileSet[] = [
   militaryRealisticSet,
 ];
 
+/**
+ * Sets that are SURFACED in the builder UI for launch.
+ *
+ * For the July 4th launch we show ONLY the 4th-of-July set so the palette has
+ * zero clutter — no "More tile sets" expander, no other holidays. The other set
+ * DATA above is intentionally kept (imported, indexed, getSet-able) for
+ * post-launch; it's simply not offered in the picker. To bring more sets back
+ * after launch, add their ids here.
+ */
+export const SURFACED_SET_IDS: readonly string[] = ["july4th"];
+
+/** The TileSet objects, in order, that the builder UI should offer. */
+export const surfacedSets: TileSet[] = SURFACED_SET_IDS.map(
+  (id) => tileSets.find((s) => s.id === id)
+).filter((s): s is TileSet => s !== undefined);
+
 const setMap = new Map<string, TileSet>(tileSets.map((s) => [s.id, s]));
 
 const pieceMap = new Map<string, TilePiece>();

@@ -221,9 +221,19 @@ export async function POST(request: Request): Promise<NextResponse> {
               product_data: { name: designName, description: "Made-to-order custom license plate frame" },
             },
           },
+          // Shipping as a LINE ITEM (not a shipping_option) so a 100%-off promo
+          // code zeroes the WHOLE order — frame + shipping — for true $0 testing.
+          // Real customers (no code) still pay frame + shipping.
+          {
+            quantity: 1,
+            price_data: {
+              currency: offer.currency,
+              unit_amount: season.flatShippingCents,
+              product_data: { name: season.shippingLabel },
+            },
+          },
         ],
         shipping_address_collection: { allowed_countries: ["US"] },
-        shipping_options: [flatShipping],
         success_url: `${baseUrl}/thanks?session_id={CHECKOUT_SESSION_ID}&order=${encodeURIComponent(orderId)}`,
         cancel_url: `${baseUrl}/build`,
         metadata: { kind: "custom-frame", orderId, designName },

@@ -242,9 +242,14 @@ export const copy: Copy = {
           "Yes. It is a made-in-USA, ready-to-go car gift for anyone who celebrates the Fourth out loud. Many people order two and keep one for a second car or to give away.",
       },
       {
+        question: "Are these made to order?",
+        answer:
+          "Yes. Every kit is made to order, by hand, in the USA. The Fourth of July collection is designed and then UV printed for you once you order, so nothing sits in a warehouse and your frame is made fresh for you. We pack and ship from St. Louis, MO, and aim to get it to you in time for the Fourth.",
+      },
+      {
         question: "Where is it made?",
         answer:
-          "Every frame and tile is designed and made in St. Louis, USA.",
+          "Every frame and tile is designed and made to order, by hand, in St. Louis, USA.",
       },
       {
         question: "How much does a Festive Frames kit cost?",

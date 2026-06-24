@@ -38,7 +38,7 @@ export function Hero() {
           style={{ boxShadow: `3px 3px 0 ${INK}` }}
         >
           <span className="inline-block h-[11px] w-[11px] rounded-full bg-[#ed5aa0]" />
-          Snap-on tiles · swap any time
+          Made to order, by hand, in the USA
         </div>
 
         <h1 className="m-0 mb-[18px] text-[clamp(44px,8vw,66px)] font-bold leading-[0.96] tracking-[-1.5px]">
@@ -50,6 +50,7 @@ export function Hero() {
         <p className="m-0 mb-[30px] max-w-[460px] text-[20px] font-medium leading-[1.5] text-[#3a352c]">
           One frame, a pile of snap-on tiles, and zero tools. Restyle your plate
           for the Fourth, game day, or just because — in about ten seconds flat.
+          Every kit is made to order, by hand, in the USA.
         </p>
 
         <div className="flex flex-wrap items-center gap-[14px]">

@@ -25,6 +25,16 @@ function makeTextBarId(existing: PlacedTextBar[]): string {
   return `tb-${Date.now().toString(36)}-${existing.length}`;
 }
 
+/**
+ * The FIRST banner in a design must always carry the QR code; subsequent bars
+ * are optional. Re-assert that invariant after any add/remove/reorder so it can
+ * never drift. Returns the same array reference when nothing changes.
+ */
+function enforceFirstBarQr(bars: PlacedTextBar[]): PlacedTextBar[] {
+  if (bars.length === 0 || bars[0].qr) return bars;
+  return bars.map((b, i) => (i === 0 ? { ...b, qr: true } : b));
+}
+
 interface HistorySnapshot {
   slots: Record<string, PlacedTile>;
   bottomBar: BottomBarConfig;
@@ -320,8 +330,10 @@ export const useDesignStore = create<DesignState>()(
           set((state) => {
             const maxUnits = rowLength(state.frameConfig, row);
             const config = { ...state.bottomBar };
-            // QR on for the first bar only; additional bars start without it.
-            const qr = state.textBars.length === 0 ? state.qrCode.enabled : false;
+            // The first bar ALWAYS carries the QR (required); additional bars
+            // start without it and can toggle it freely.
+            const isFirst = state.textBars.length === 0;
+            const qr = isFirst ? true : false;
             const widthUnits = measureTextBarUnits(config, qr, maxUnits);
             // New bars land centered on the row (odd width + odd row = exact center).
             // `startIndex` (the drop point) only decides top vs bottom; drag to move.
@@ -339,7 +351,7 @@ export const useDesignStore = create<DesignState>()(
             // bar never leaves a hole. The parts list excludes covered tiles.
             return {
               ...pushHistory(),
-              textBars: [...state.textBars, bar],
+              textBars: enforceFirstBarQr([...state.textBars, bar]),
               selectedBarId: bar.id,
               updatedAt: Date.now(),
             };
@@ -364,7 +376,8 @@ export const useDesignStore = create<DesignState>()(
         removeTextBar: (id) => {
           set((state) => ({
             ...pushHistory(),
-            textBars: state.textBars.filter((b) => b.id !== id),
+            // Removing the first bar promotes the next one — re-assert the QR rule.
+            textBars: enforceFirstBarQr(state.textBars.filter((b) => b.id !== id)),
             selectedBarId: state.selectedBarId === id ? null : state.selectedBarId,
             updatedAt: Date.now(),
           }));
@@ -395,6 +408,8 @@ export const useDesignStore = create<DesignState>()(
           set((state) => {
             const bar = state.textBars.find((b) => b.id === id);
             if (!bar) return state;
+            // The first bar's QR is required — refuse to turn it off.
+            if (!enabled && state.textBars[0]?.id === id) return state;
             const maxUnits = rowLength(state.frameConfig, bar.row);
             const widthUnits = measureTextBarUnits(bar.config, enabled, maxUnits);
             const startIndex = clampStartIndex(bar.startIndex, widthUnits, maxUnits);
@@ -433,7 +448,7 @@ export const useDesignStore = create<DesignState>()(
               : getWingFrameConfig(state.frameConfig);
 
             // When disabling wings, remove tiles in now-invalid wing slots
-            let newSlots = { ...state.slots };
+            const newSlots = { ...state.slots };
             if (!newConfig.wings) {
               for (const key of Object.keys(newSlots)) {
                 if (key.startsWith("frame:wing-left-") || key.startsWith("frame:wing-right-")) {
@@ -459,7 +474,7 @@ export const useDesignStore = create<DesignState>()(
             const newConfig = getWingFrameConfig(state.frameConfig, wingWidth);
 
             // Remove tiles in slots that no longer exist when shrinking
-            let newSlots = { ...state.slots };
+            const newSlots = { ...state.slots };
             if (clamped < state.frameConfig.wingColumns) {
               const wingRows = state.frameConfig.leftSlots + 1;
               const maxIndex = clamped * wingRows;
@@ -558,9 +573,11 @@ export const useDesignStore = create<DesignState>()(
         // Migrate single text bar → array of placed bars
         if (merged.textBars === undefined) {
           const legacy = (merged as unknown as { textBar?: TextBarPlacement | null }).textBar;
-          merged.textBars = legacy
-            ? [{ id: "tb-legacy", ...legacy, config: { ...merged.bottomBar }, qr: merged.qrCode?.enabled ?? false }]
-            : [];
+          merged.textBars = enforceFirstBarQr(
+            legacy
+              ? [{ id: "tb-legacy", ...legacy, config: { ...merged.bottomBar }, qr: merged.qrCode?.enabled ?? false }]
+              : []
+          );
         }
         delete (merged as unknown as { textBar?: unknown }).textBar;
         return merged;

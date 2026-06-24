@@ -31,6 +31,11 @@ export function HowItWorks() {
         <h2 className="m-0 text-[clamp(34px,6vw,46px)] font-bold leading-none tracking-[-1px]">
           How it works
         </h2>
+        <p className="mx-auto mt-4 max-w-[540px] text-base font-semibold leading-[1.5] text-[#6a6354]">
+          Once you order, we design and UV print your kit to order, by hand, in
+          St. Louis. Nothing sits in a warehouse — your frame is made fresh for
+          you, then it ships.
+        </p>
       </div>
       <div className="grid gap-6 md:grid-cols-3">
         {STEPS.map((s) => (

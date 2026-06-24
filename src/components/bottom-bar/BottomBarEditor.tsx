@@ -57,6 +57,9 @@ export function BottomBarEditor() {
   const selected = textBars.find((b) => b.id === selectedBarId) ?? null;
   const cfg = selected ? selected.config : bottomBar;
   const qrEnabled = selected ? selected.qr : qrCode.enabled;
+  // The first banner is required to carry the QR — its toggle is locked on.
+  const isFirstBar = selected != null && textBars[0]?.id === selected.id;
+  const qrLocked = isFirstBar;
   const setCfg = (u: Partial<typeof bottomBar>) =>
     selected ? updateTextBar(selected.id, u) : updateBottomBar(u);
   const setQr = (enabled: boolean) =>
@@ -203,16 +206,21 @@ export function BottomBarEditor() {
 
       {/* QR Code toggle */}
       <div className="pt-2 border-t border-surface-700/50 space-y-2">
-        <label className="flex items-center gap-2 cursor-pointer">
+        <label className={`flex items-center gap-2 ${qrLocked ? "cursor-not-allowed" : "cursor-pointer"}`}>
           <input
             type="checkbox"
-            checked={qrEnabled}
+            checked={qrLocked ? true : qrEnabled}
+            disabled={qrLocked}
             onChange={(e) => setQr(e.target.checked)}
-            className="w-4 h-4 rounded bg-surface-700 border-surface-600 text-brand-gold
-              focus:ring-brand-gold/30 cursor-pointer accent-[#FFD700]"
+            className={`w-4 h-4 rounded bg-surface-700 border-surface-600 text-brand-gold
+              focus:ring-brand-gold/30 accent-[#FFD700]
+              ${qrLocked ? "cursor-not-allowed opacity-70" : "cursor-pointer"}`}
           />
           <span className="text-xs text-surface-300">Show QR Code (festiveframes.co)</span>
         </label>
+        {qrLocked && (
+          <p className="text-[10px] text-surface-500">Required on your first banner.</p>
+        )}
         {qrEnabled && (
           <input
             type="url"

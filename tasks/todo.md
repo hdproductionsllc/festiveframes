@@ -56,3 +56,27 @@
 ## Notes
 - Old design recoverable: `/classic` route + `pre-redesign-classic` git tag.
 - Scarcity + pricing from `config/founding.ts` + `config/offers.ts` — never hardcoded.
+
+---
+
+# Builder UX overhaul — July 4th launch (mobile tiles + tutorial + streamline)
+
+## 1. July-4th-only streamline
+- [x] Add `SURFACED_SET_IDS` + `surfacedSets` to `src/data/sets/index.ts` (only july4th)
+- [x] SetTabs: render only surfaced sets, drop the "More tile sets" expander + style filter
+
+## 2. Mobile tile discovery (always-visible tray)
+- [x] TileGrid: add `variant` ("grid" | "row") + surfaced-set fallback
+- [x] PaletteTile: `size` prop for bigger thumb-friendly tiles; tap-to-place into next empty slot on mobile
+- [x] TilePalette: desktop left column kept; mobile = persistent bottom tray (safe-area inset), no floating button / bottom-sheet; body padding reserves tray height
+- [x] data-tour="tiles" on tray + desktop palette (canvas/text resolved by anchor, not editable)
+
+## 3. Foolproof tutorial (spotlight + arrows)
+- [x] New CoachmarkTour component under src/components/build/
+- [x] Steps: tiles -> canvas -> text -> order; SVG-mask dim + ring + arrow + caption, Next/Back/Skip, arrow keys
+- [x] First-visit gated (localStorage), Escape to close, focus mgmt
+- [x] DesignerHeader: added data-tour="order" to Order button (attr only)
+- [x] OnboardingPopup rewritten into the tour; mounted via existing BuildChrome
+
+## 4. Verify
+- [x] npx tsc --noEmit passes (exit 0)

@@ -3,7 +3,7 @@ const INK = "#1e1b17";
 const FEATURES = [
   { glyph: "⚑", title: "Install once", body: "Bolt on with your existing plate screws a single time. Never touch tools again.", accent: "#ed5aa0" },
   { glyph: "◈", title: "Snap-on tiles", body: "Tiles click in by hand and pop off in seconds. Endless combinations from one kit.", accent: "#3fb0e6" },
-  { glyph: "★", title: "Made in St. Louis", body: "Every frame and tile designed and made in the USA. UV printed so colors stay bright.", accent: "#f8c53b" },
+  { glyph: "★", title: "Made to order in the USA", body: "Every kit is designed and UV printed to order, by hand, in St. Louis. No warehouse, no mass inventory.", accent: "#f8c53b" },
   { glyph: "☂", title: "Built for the road", body: "Vetted for highway speeds, automatic car washes, and the full swing of weather.", accent: "#9b5fd0" },
 ];
 

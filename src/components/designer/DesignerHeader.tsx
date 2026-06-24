@@ -89,6 +89,7 @@ export function DesignerHeader({ onExport, onExportParts, onOrder, ordering }: D
         </button>
         {/* Primary call to action: place the made-to-order frame order. */}
         <button
+          data-tour="order"
           onClick={onOrder}
           disabled={!hasDesign || ordering}
           className="rounded-full border-2 border-[#1e1b17] bg-[#f8c53b] px-6 py-2 text-sm font-extrabold uppercase tracking-wide text-[#1e1b17]

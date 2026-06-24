@@ -1,0 +1,48 @@
+name: CI
+
+# Build gate for Festive Frames. Railway handles deploys from `master`;
+# this workflow only proves the app lints and builds before code lands.
+on:
+  push:
+    branches:
+      - master
+      - "launch/**"
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    # Harmless placeholder env so `next build` never fails if it touches
+    # env at build time. The app degrades gracefully when these are empty
+    # or absent, so empty strings are safe here. SITE_URL needs a valid
+    # https URL for metadataBase / canonical URL construction.
+    env:
+      SITE_URL: https://example.com
+      STRIPE_SECRET_KEY: ""
+      STRIPE_WEBHOOK_SECRET: ""
+      RESEND_API_KEY: ""
+      EMAIL_FROM: ""
+      ADMIN_ORDER_EMAIL: ""
+      PRODUCTION_EMAILS: ""
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build

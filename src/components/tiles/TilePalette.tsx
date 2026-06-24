@@ -1,66 +1,119 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { SetTabs } from "./SetTabs";
 import { TileGrid } from "./TileGrid";
 import { ToolBar } from "@/components/designer/ToolBar";
 import { QuickActions } from "@/components/designer/QuickActions";
 import { PresetGallery } from "@/components/designer/PresetGallery";
-import { useUIStore } from "@/stores/ui-store";
 import { useDesignStore } from "@/stores/design-store";
 
-export function TilePalette() {
-  const mobilePaletteOpen = useUIStore((s) => s.mobilePaletteOpen);
-  const toggleMobilePalette = useUIStore((s) => s.toggleMobilePalette);
+/** Approx. height the persistent mobile tray occupies, reserved as body padding
+ *  so the page's last content (the text editor) can always scroll clear of it. */
+const MOBILE_TRAY_HEIGHT = 184;
 
+export function TilePalette() {
   return (
     <>
       {/* Desktop / Tablet — fixed left panel */}
-      <aside className="bsk-panel-blue hidden md:flex flex-col w-[320px] flex-shrink-0 p-3 bg-surface-800/50 rounded-xl border border-surface-700/50 overflow-y-auto">
-        <PaletteContent />
+      <aside
+        data-tour="tiles"
+        className="bsk-panel-blue hidden md:flex flex-col w-[320px] flex-shrink-0 p-3 bg-surface-800/50 rounded-xl border border-surface-700/50 overflow-y-auto"
+      >
+        <DesktopPaletteContent />
       </aside>
 
-      {/* Mobile — floating button + bottom sheet */}
-      <div className="md:hidden">
-        <button
-          onClick={toggleMobilePalette}
-          className="fixed bottom-4 left-4 z-40 inline-flex items-center gap-2 rounded-full
-            bg-brand-red px-4 py-3 text-sm font-bold text-white shadow-lg
-            active:scale-95 transition-transform"
-          style={{
-            left: "max(1rem, env(safe-area-inset-left))",
-            bottom: "max(1rem, env(safe-area-inset-bottom))",
-          }}
-          aria-label="Open tile palette"
-        >
-          <span className="text-xl leading-none">🎨</span> Tiles
-        </button>
-
-        {mobilePaletteOpen && (
-          <>
-            {/* Backdrop */}
-            <div
-              className="fixed inset-0 bg-black/50 z-40"
-              onClick={toggleMobilePalette}
-            />
-            {/* Bottom sheet */}
-            <div className="fixed bottom-0 left-0 right-0 z-50 bg-surface-900 rounded-t-2xl border-t border-surface-700 max-h-[70vh] overflow-y-auto p-4 animate-slide-up">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-semibold text-surface-200">Tile Palette</h3>
-                <button
-                  onClick={toggleMobilePalette}
-                  className="text-surface-400 hover:text-surface-200 p-1"
-                >
-                  ✕
-                </button>
-              </div>
-              <PaletteContent />
-            </div>
-          </>
-        )}
-      </div>
+      {/* Mobile — persistent bottom tray (tiles always visible, no hunting) */}
+      <MobileTileTray />
     </>
   );
 }
+
+/* ────────────────────────────── Desktop ────────────────────────────── */
+
+function DesktopPaletteContent() {
+  return (
+    <div className="flex flex-col gap-2">
+      <SetTabs />
+      <ToolBar />
+      <DieCutToggle />
+      <WingsToggle />
+      <p className="text-surface-400 text-xs text-center px-2">
+        Drag a tile onto the frame, or tap to select then tap a slot
+      </p>
+      <TileGrid />
+      <QuickActions />
+      <PresetGallery />
+    </div>
+  );
+}
+
+/* ─────────────────────────────── Mobile ────────────────────────────── */
+
+function MobileTileTray() {
+  const [optionsOpen, setOptionsOpen] = useState(false);
+
+  // Reserve space at the bottom of the page so the fixed tray never covers the
+  // text editor / last bit of content. Cleaned up on unmount.
+  useEffect(() => {
+    const isMobile = window.matchMedia("(max-width: 767px)");
+    const apply = () => {
+      document.body.style.paddingBottom = isMobile.matches
+        ? `calc(${MOBILE_TRAY_HEIGHT}px + env(safe-area-inset-bottom))`
+        : "";
+    };
+    apply();
+    isMobile.addEventListener("change", apply);
+    return () => {
+      isMobile.removeEventListener("change", apply);
+      document.body.style.paddingBottom = "";
+    };
+  }, []);
+
+  return (
+    <div
+      data-tour="tiles"
+      className="md:hidden fixed inset-x-0 bottom-0 z-40 border-t border-surface-700
+        bg-surface-900/95 backdrop-blur-sm shadow-[0_-8px_24px_rgba(0,0,0,0.45)]"
+      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+    >
+      {/* Optional design tools — tucked away so the tray stays focused on tiles */}
+      {optionsOpen && (
+        <div className="max-h-[42vh] space-y-2 overflow-y-auto border-b border-surface-700/60 p-3">
+          <ToolBar />
+          <DieCutToggle />
+          <WingsToggle />
+          <QuickActions />
+          <PresetGallery />
+        </div>
+      )}
+
+      <div className="px-3 pt-2">
+        <div className="mb-1.5 flex items-center gap-2">
+          <SetTabs />
+          <button
+            onClick={() => setOptionsOpen((v) => !v)}
+            aria-expanded={optionsOpen}
+            className="ml-auto shrink-0 rounded-full bg-surface-800 px-3 py-1.5 text-xs font-semibold
+              text-surface-200 active:scale-95 transition-transform"
+          >
+            {optionsOpen ? "Done" : "⚙ Tools"}
+          </button>
+        </div>
+        <p className="mb-1.5 text-center text-[11px] font-medium text-surface-300">
+          Tap a tile to add it — or drag it up onto your frame
+        </p>
+      </div>
+
+      {/* The always-visible, thumb-friendly tile row */}
+      <div className="px-3 pb-3">
+        <TileGrid variant="row" />
+      </div>
+    </div>
+  );
+}
+
+/* ──────────────────────── Shared option controls ───────────────────── */
 
 function DieCutToggle() {
   const dieCut = useDesignStore((s) => s.dieCut);
@@ -161,26 +214,9 @@ function WingsToggle() {
 
       <p className="text-[10px] text-surface-500 text-center">
         {wings
-          ? "Wings extend the frame to fill your car\u2019s plate basin"
+          ? "Wings extend the frame to fill your car’s plate basin"
           : "Add side extensions to fill wider plate basins"}
       </p>
-    </div>
-  );
-}
-
-function PaletteContent() {
-  return (
-    <div className="flex flex-col gap-2">
-      <SetTabs />
-      <ToolBar />
-      <DieCutToggle />
-      <WingsToggle />
-      <p className="text-surface-400 text-xs text-center px-2">
-        Drag a tile onto the frame, or tap to select then tap a slot
-      </p>
-      <TileGrid />
-      <QuickActions />
-      <PresetGallery />
     </div>
   );
 }
