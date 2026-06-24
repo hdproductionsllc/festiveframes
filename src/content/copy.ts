@@ -167,9 +167,9 @@ export const copy: Copy = {
 
   home: {
     metaTitle:
-      "Custom License Plate Frames with Snap-On Tiles",
+      "Custom Patriotic License Plate Frames | America 250",
     metaDescription:
-      "The Freedom Frame Set: a snap-on license plate frame kit made in St. Louis for July 4. Design your own frame and get a goodie bag of surprise extra tiles. Install once, swap tiles forever.",
+      "Design your own patriotic license plate frame for America's 250th. Snap-on stars, eagles & a custom phrase. $39, handmade in USA, ships fast. 30-day guarantee.",
     heroH1: "Customizable License Plate Frames with Snap-On Tiles",
     heroSubhead: "Install once. Swap tiles forever.",
     primaryCta: { label: "Design your Freedom Frame", href: "/build" },
@@ -193,7 +193,39 @@ export const copy: Copy = {
     trust:
       "Designed and made right here in St. Louis, USA. The frame and tiles are built tough and vetted for the real world: highway speeds, car washes, and the full swing of weather, from icy winters to summer heat, sun, and rain. The tiles are UV printed, so the colors stay bright. Built to last.",
 
+    // The first six entries lead the homepage FAQ and feed the FAQPage JSON-LD
+    // in (home)/page.tsx. Visible text MUST match the structured data exactly.
     faq: [
+      {
+        question: "What is an America 250 license plate frame?",
+        answer:
+          "It's a patriotic license plate frame celebrating the United States' 250th anniversary (the semiquincentennial, 1776-2026). At Festive Frames you design your own with snap-on tiles like \"250,\" \"1776-2026,\" the flag, and a landing eagle, plus a custom phrase along the bottom.",
+      },
+      {
+        question: "Can I personalize the license plate frame with my own text?",
+        answer:
+          "Yes. Every frame has a custom bottom bar where you type your own phrase - a name, a saying, a unit or branch, or a 4th of July message. You design the whole frame in our online builder before you order.",
+      },
+      {
+        question: "How fast does it ship?",
+        answer:
+          "Each frame is made to order by hand, then ships fast - so it works even for last-minute 4th of July gifts. Order in time for your parade, party, or gift occasion.",
+      },
+      {
+        question: "Where are Festive Frames made?",
+        answer:
+          "Every frame is handmade in the USA, in St. Louis, Missouri. Made-in-USA patriotic buyers can order with confidence.",
+      },
+      {
+        question: "How much does a custom patriotic license plate frame cost?",
+        answer:
+          "$39 for a fully customized, made-to-order frame - a giftable price point under $40 that includes your choice of snap-on tiles and a custom bottom-bar phrase.",
+      },
+      {
+        question: "Is this a good gift for a car guy, veteran, or dad?",
+        answer:
+          "Yes - it's a popular patriotic gift for car guys, car lovers, veterans, military families, and dads. It's customizable, made in the USA, ships fast, and backed by a 30-day guarantee.",
+      },
       {
         question: "Will it fit my car?",
         answer:
@@ -205,56 +237,12 @@ export const copy: Copy = {
           "The frame and tiles sit on the border only and never cover your plate numbers, registration stickers, or the state name. Drivers are responsible for following their own state's plate display rules.",
       },
       {
-        question: "Do tiles stay on at highway speed?",
-        answer:
-          "The tiles lock into the frame and stay put at highway speeds.",
-      },
-      {
         question: "What about weather and car washes?",
         // Material in plain language (same hard automotive plastics, not named).
         // Tiles are UV printed (fade-resistant). Keep the heavy-brush car-wash
         // note: that is mechanical abrasion, a separate real caution.
         answer:
           "Yes. The frame and tiles are vetted for everyday driving: highway speeds, automatic car washes, and the full range of weather, from freezing winters to summer heat, sun, and rain. The tiles are UV printed, so the colors stay bright. And whenever you want a new look, they still pop off in seconds.",
-      },
-      {
-        question: "Can I get more than one?",
-        answer: "Yes. Every tile fits every frame, and two sets are $69.",
-      },
-      {
-        question: "When do new tiles drop?",
-        answer:
-          "New tile drops and seasonal sets arrive throughout the year. The email list gets first access.",
-      },
-      {
-        question: "What is a snap-on license plate frame?",
-        answer:
-          "It is a license plate frame that installs once over your plate, then holds interchangeable decorative tiles that snap into the border by hand. You swap the tiles to change the look without ever removing the frame.",
-      },
-      {
-        question: "What comes in the Freedom Frame Set?",
-        answer:
-          "One frame rail that fits all standard US plates, which you design yourself, plus a goodie bag of surprise extra tiles - American flags, stars, stripes, chevrons, and firework bursts. Ready-made bottom-bar phrases like LAND OF THE FREE and HOME OF THE BRAVE are there to start from, or you can write your own. It arrives complete and ready to snap on.",
-      },
-      {
-        question: "Is this a good Fourth of July gift?",
-        answer:
-          "Yes. It is a made-in-USA, ready-to-go car gift for anyone who celebrates the Fourth out loud. Many people order two and keep one for a second car or to give away.",
-      },
-      {
-        question: "Are these made to order?",
-        answer:
-          "Yes. Every kit is made to order, by hand, in the USA. The Fourth of July collection is designed and then UV printed for you once you order, so nothing sits in a warehouse and your frame is made fresh for you. We pack and ship from St. Louis, MO, and aim to get it to you in time for the Fourth.",
-      },
-      {
-        question: "Where is it made?",
-        answer:
-          "Every frame and tile is designed and made to order, by hand, in St. Louis, USA.",
-      },
-      {
-        question: "How much does a Festive Frames kit cost?",
-        answer:
-          "One Freedom Frame Set is $39, and two sets are $69. It ships anywhere in the US for a $5 flat rate. Order by June 28 to get it before the Fourth.",
       },
       {
         question: "Will it damage my car or plate?",
@@ -485,9 +473,9 @@ export const copy: Copy = {
   },
 
   build: {
-    metaTitle: "Design Your Own License Plate Frame",
+    metaTitle: "Build Your Own License Plate Frame Online | $39",
     metaDescription:
-      "Design a custom snap-on license plate frame online. Arrange tiles, words, and icons into a personalized frame, then order your kit. Made in St. Louis.",
+      "Design your own license plate frame online: snap on patriotic tiles and add a custom phrase. Made to order by hand in the USA, $39, ships fast. Start building.",
   },
 
   thanks: {

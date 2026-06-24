@@ -26,7 +26,9 @@ import { Footer } from "./_components/Footer";
 // homepage keeps its canonical, Open Graph, and structured data unchanged.
 
 export const metadata: Metadata = {
-  title: copy.home.metaTitle,
+  // `absolute` so the exact SEO title renders without the root "| Festive Frames"
+  // template suffix; the title already reads as a complete, brand-relevant phrase.
+  title: { absolute: copy.home.metaTitle },
   description: copy.home.metaDescription,
   alternates: { canonical: SITE_URL },
   openGraph: {
@@ -52,8 +54,6 @@ export const metadata: Metadata = {
 function buildJsonLd() {
   const americanClassic = getKit("american-classic");
   const productPrice = ((americanClassic?.price ?? offer.singlePrice) / 100).toFixed(2);
-  const reviews = copy.home.reviews;
-  const ratingValue = (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1);
 
   const organization = {
     "@type": ["Organization", "OnlineStore"],
@@ -110,19 +110,8 @@ function buildJsonLd() {
         merchantReturnDays: 30,
       },
     },
-    aggregateRating: {
-      "@type": "AggregateRating",
-      ratingValue,
-      reviewCount: reviews.length,
-      bestRating: 5,
-      worstRating: 1,
-    },
-    review: reviews.map((r) => ({
-      "@type": "Review",
-      reviewRating: { "@type": "Rating", ratingValue: r.rating, bestRating: 5, worstRating: 1 },
-      author: { "@type": "Person", name: r.name },
-      reviewBody: r.quote,
-    })),
+    // No aggregateRating/review in structured data: Google requires these to
+    // reflect genuine, collected reviews, which we don't yet surface as such.
   };
 
   const faqPage = {

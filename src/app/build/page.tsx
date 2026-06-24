@@ -25,7 +25,9 @@ import "./build-skin.css";
 // title/description and Open Graph/Twitter tags. The OG image comes from the
 // file-convention image, resolved absolutely via metadataBase.
 export const metadata: Metadata = {
-  title: copy.build.metaTitle,
+  // `absolute` so the exact SEO title renders without the root "| Festive Frames"
+  // template suffix (the title already ends in a complete, branded phrase).
+  title: { absolute: copy.build.metaTitle },
   description: copy.build.metaDescription,
   robots: { index: false, follow: true },
   alternates: { canonical: `${SITE_URL}/build` },
