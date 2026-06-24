@@ -72,27 +72,47 @@ export function Designer() {
     const preset = look ? LOOK_PRESETS[look] : undefined;
 
     if (preset) {
-      // Bias the fill pool toward the look's featured tiles (each repeated a few
-      // times), with a handful of generic july4th tiles mixed in for variety.
+      // Faithfully recreate the look's marketing preview: place its exact tiles
+      // into their exact slots, fill any still-empty perimeter slot with the
+      // look's themed filler, then drop the top and/or bottom banner(s) the
+      // preview shows. (See src/data/look-presets.ts for the per-look layout.)
       const valid = new Set(pieces.map((p) => p.pieceId));
-      const weight = preset.fillerWeight ?? 4;
-      const pool: Array<{ pieceId: string; setId: string }> = [];
-      for (const id of preset.featured) {
-        if (!valid.has(id)) continue;
-        for (let i = 0; i < weight; i++) pool.push({ pieceId: id, setId: set.id });
-      }
-      // A little variety so the look has texture without diluting the theme.
-      pool.push(...pieces.slice(0, Math.min(6, pieces.length)));
-      randomFill(pool.length ? pool : pieces);
-      useDesignStore.getState().mirrorTopSlots();
+      const store = useDesignStore.getState();
+      store.clearAll();
 
-      // Drop the look's slogan bar. The store forces QR onto the first bar, so
-      // placing it via the normal action gives us the QR automatically.
-      if (preset.phrase) {
-        const s = useDesignStore.getState();
-        s.updateBottomBar({ text: preset.phrase });
-        useDesignStore.getState().placeTextBar("bottom", 0);
+      // 1. Explicit tile placements (only real, in-set pieces).
+      for (const [slotId, pieceId] of Object.entries(preset.slots)) {
+        if (valid.has(pieceId)) {
+          useDesignStore.getState().placeTile(slotId, pieceId, set.id);
+        }
       }
+
+      // 2. Fill any remaining empty perimeter slot with the themed filler.
+      const filler = preset.filler.filter((id) => valid.has(id));
+      if (filler.length) {
+        useDesignStore.getState().fillEmpty(
+          filler.map((pieceId) => ({ pieceId, setId: set.id }))
+        );
+      }
+
+      // 3. Place the banner(s). Each placed bar freezes the current draft
+      //    `bottomBar`, so set its text + colors right before placing it. The
+      //    store forces the QR onto the FIRST bar placed; placing the bottom bar
+      //    first keeps the QR on the bottom banner for two-banner looks.
+      const placeBanner = (
+        row: "top" | "bottom",
+        banner: NonNullable<typeof preset.bottomBar>
+      ) => {
+        const s = useDesignStore.getState();
+        s.updateBottomBar({
+          text: banner.text,
+          ...(banner.backgroundColor ? { backgroundColor: banner.backgroundColor } : {}),
+          ...(banner.textColor ? { textColor: banner.textColor } : {}),
+        });
+        useDesignStore.getState().placeTextBar(row, 0);
+      };
+      if (preset.bottomBar) placeBanner("bottom", preset.bottomBar);
+      if (preset.topBar) placeBanner("top", preset.topBar);
       return;
     }
 

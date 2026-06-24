@@ -96,7 +96,7 @@ function buildJsonLd() {
       availability: "https://schema.org/InStock",
       itemCondition: "https://schema.org/NewCondition",
       priceValidUntil: "2026-12-31",
-      url: `${SITE_URL}/buy?kit=american-classic`,
+      url: `${SITE_URL}/build`,
       seller: { "@id": `${SITE_URL}/#organization` },
       shippingDetails: {
         "@type": "OfferShippingDetails",
@@ -141,7 +141,7 @@ function buildJsonLd() {
       "@type": "ListItem",
       position: index + 1,
       name: kit.name,
-      url: `${SITE_URL}/buy?kit=${kit.id}`,
+      url: `${SITE_URL}/build`,
     })),
   };
 
@@ -149,7 +149,7 @@ function buildJsonLd() {
     "@type": "BreadcrumbList",
     itemListElement: [
       { "@type": "ListItem", position: 1, name: "Home", item: SITE_URL },
-      { "@type": "ListItem", position: 2, name: "Shop the Freedom Frame Set", item: `${SITE_URL}/buy` },
+      { "@type": "ListItem", position: 2, name: "Design your Freedom Frame", item: `${SITE_URL}/build` },
     ],
   };
 

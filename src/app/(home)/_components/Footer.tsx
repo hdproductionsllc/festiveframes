@@ -9,8 +9,8 @@ const SOCIALS = [
 ];
 
 const SHOP = [
-  { label: "Freedom Frame Set", href: "/buy?kit=american-classic" },
-  { label: "Two-Set Bundle", href: "/buy?kit=american-classic" },
+  { label: "Freedom Frame Set", href: "/build" },
+  { label: "Two-Set Bundle", href: "/build" },
   { label: "Browse looks", href: "#looks" },
   { label: "Custom orders", href: "#custom" },
 ];

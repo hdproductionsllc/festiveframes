@@ -1,95 +1,28 @@
-# Sticker Redesign — Live Homepage + Builder Reskin
+# Navigation audit — custom-first (/build), retire /buy
 
-**Goal:** Bring the "cartoon-sticker" design language (cream canvas, thick ink outlines, hard offset shadows, Fredoka + Nunito, pink/blue/yellow/purple) to the site.
-1. **Phase 1 — Homepage:** replace the live homepage (`/`) with the sticker redesign from the handoff. Preserve the old Americana homepage (recoverable + viewable at `/classic` + git tag). Wire CTAs to the real `/buy` → Stripe flow.
-2. **Phase 2 — Builder reskin:** restyle `/build` to match the fun vibe — **skin only. Functionality and production output (composed frame, print files, parts list) stay byte-for-byte identical.**
+Live homepage = `(home)/page.tsx` + `(home)/_components/*`. Anchors all exist
+(#looks,#how,#kit,#custom,#top,#main) — no dead anchors. `(site)` chrme
+(SiteHeader/SiteFooter/AnnouncementBar) wraps /buy,/classic,/privacy,/returns,/terms,/thanks.
+/classic = frozen old homepage. /checkout & /confirmation = order-store flow (no /buy links).
+StartWithKitPill = intentionally unused.
 
----
+## Fixes (repoint /buy -> /build) — ALL DONE
+- [x] next.config.ts — redirects(): /buy -> /build (permanent 308)
+- [x] (home)/_components/Hero.tsx — "Claim your kit" -> /build
+- [x] (home)/_components/Header.tsx — announce bar + "Shop the kit" -> /build
+- [x] (home)/_components/Footer.tsx — Freedom Frame Set + Two-Set Bundle -> /build
+- [x] (home)/_components/TheKit.tsx — secondary link -> /build (relabelled)
+- [x] (home)/page.tsx — JSON-LD product/itemList/breadcrumb urls -> /build
+- [x] components/site/SiteHeader.tsx — Shop -> /build
+- [x] components/site/SiteFooter.tsx — Shop kits -> /build
+- [x] components/site/AnnouncementBar.tsx — -> /build
+- [x] components/site/home/KitShowcase.tsx — "See everything inside" -> /build
+- [x] components/build/StartWithKitPill.tsx — -> /build (unused, align)
+- [x] not-found.tsx — "Shop Kits" -> /build
+- [x] content/copy.ts — home.primaryCta, home.secondaryCta, thanks.builderCta -> /build
+- [x] llms.txt route — Shop link -> /build
+- left: api/checkout cancel_url /buy (off-limits dir; redirect catches it)
 
-## PHASE 1 — Homepage  ✅ BUILT + VERIFIED (commit local, push pending)
-
-### Preserve the old design
-- [x] Git tag current `master` as `pre-redesign-classic`
-- [x] Move old `(site)/page.tsx` → `(site)/classic/page.tsx` (renders at `/classic`, navy chrome intact)
-- [x] `/classic` → `robots: noindex` so it doesn't compete with the new home
-
-### Scaffold
-- [x] Copy handoff assets → `public/redesign/` (logo, 6 look photos, 11 tiles)
-- [x] `(home)/layout.tsx` — Fredoka + Nunito via `next/font/google`, sticker theme wrapper
-- [x] `(home)/sticker.css` — palette tokens, hard-shadow primitives, keyframes (marquee/float/wiggle)
-- [x] `(home)/page.tsx` — new `/`; ported SEO metadata + JSON-LD from old page
-
-### Sections (pixel-faithful)
-- [x] Header (sticky announce + nav, scarcity live from `FOUNDING`)
-- [x] Hero ("Park with personality.", CTAs, stats, tilted photo + popsicle)
-- [x] Marquee (infinite pink strip)
-- [x] Looks (filter pills client island + 6 look cards + Tile Library)
-- [x] How It Works (3 numbered cards)
-- [x] Why Us (purple band, 4 features)
-- [x] The Kit (live scarcity, "what's inside" + 2 pricing cards → `/buy`)
-- [x] Custom Orders (blue panel, mailto)
-- [x] Reviews (3 real testimonials)
-- [x] Footer (ink, 4 cols, working email capture → `/api/subscribe`)
-
-### Polish + verify
-- [x] Hover "press" states; responsive collapse; reduced-motion (global)
-- [x] `npm run build` clean (`/` static, `/classic` preserved, all other routes intact)
-- [x] Smoke test: `/` + `/classic` → 200; hero/marquee/scarcity/CTAs/prices all present; screenshot looks great
-- [ ] Check in before `git push` (auto-deploys to production)  ← HOLDING for go-ahead
-
----
-
-## PHASE 2 — Builder reskin (skin only, output frozen)  ✅ DONE + PUSHED (27c8a48)
-- [x] Audit `/build` chrome vs. the frame/canvas (output) — mapped via Explore agent
-- [x] Old builder preserved at git tag `pre-build-reskin`
-- [x] Apply sticker language to chrome ONLY via scoped `.build-skin` stylesheet
-      (utility overrides, since globals.css uses `@theme inline`): cream stage +
-      confetti, ink-outline panels w/ hard shadows, Fredoka+Nunito, sticker accents
-- [x] DO NOT TOUCH verified: git shows only `build/page.tsx` + new `build-skin.css`
-      changed; ZERO output-pipeline files (compose-frame, eufy-print, FrameCanvas,
-      RailSlot, PlacedTileView, LicensePlateArea, BottomTextBar, TileArtwork,
-      ExportPartsList, design-store, data/) touched
-- [x] Output identity guaranteed by construction (no render/compose/print code changed;
-      plate uses inline styles + /40,/60,/30 variants not in the override set)
-- [x] `npm run build` clean; screenshot verified frame preview renders identically
-
-## Notes
-- Old design recoverable: `/classic` route + `pre-redesign-classic` git tag.
-- Scarcity + pricing from `config/founding.ts` + `config/offers.ts` — never hardcoded.
-
----
-
-# Builder UX overhaul — July 4th launch (mobile tiles + tutorial + streamline)
-
-## 1. July-4th-only streamline
-- [x] Add `SURFACED_SET_IDS` + `surfacedSets` to `src/data/sets/index.ts` (only july4th)
-- [x] SetTabs: render only surfaced sets, drop the "More tile sets" expander + style filter
-
-## 2. Mobile tile discovery (always-visible tray)
-- [x] TileGrid: add `variant` ("grid" | "row") + surfaced-set fallback
-- [x] PaletteTile: `size` prop for bigger thumb-friendly tiles; tap-to-place into next empty slot on mobile
-- [x] TilePalette: desktop left column kept; mobile = persistent bottom tray (safe-area inset), no floating button / bottom-sheet; body padding reserves tray height
-- [x] data-tour="tiles" on tray + desktop palette (canvas/text resolved by anchor, not editable)
-
-## 3. Foolproof tutorial (spotlight + arrows)
-- [x] New CoachmarkTour component under src/components/build/
-- [x] Steps: tiles -> canvas -> text -> order; SVG-mask dim + ring + arrow + caption, Next/Back/Skip, arrow keys
-- [x] First-visit gated (localStorage), Escape to close, focus mgmt
-- [x] DesignerHeader: added data-tour="order" to Order button (attr only)
-- [x] OnboardingPopup rewritten into the tour; mounted via existing BuildChrome
-
-## 4. Verify
-- [x] npx tsc --noEmit passes (exit 0)
-
----
-
-# Streamline builder for launch — UI-only removals (keep store logic intact)
-
-- [x] 1. Remove die-cut toggle UI (DieCutToggle in TilePalette.tsx — desktop + mobile). Keep store dieCut (default false).
-- [x] 2. Remove wings toggle UI (WingsToggle in TilePalette.tsx — desktop + mobile). Keep store actions/fields.
-- [x] 3. Remove text-alignment selector in BottomBarEditor.tsx. Keep textAlign in cfg (default center).
-- [x] 4. Remove "show QR code" toggle UI in BottomBarEditor.tsx. Store enforces QR-on-first-banner. Subtle static note added.
-- [x] 5. Enlarge "Setting up a new bar..." helper text (text-[10px] -> text-sm, contrast).
-- [x] 6a. Remove StartWithKitPill from BuildChrome.tsx (file left unused, no longer mounted).
-- [x] 6b. Remove "Already have a frame? Design your next look..." intro line.
-- [x] Verify: tsc --noEmit (OK) + npm run lint (0 errors, only pre-existing warnings).
+## Verify
+- [x] npx next build exits 0
+- [x] npm run lint — 0 errors, 20 pre-existing warnings (none in touched files)

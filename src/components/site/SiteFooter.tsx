@@ -36,7 +36,7 @@ export function SiteFooter() {
           <ul className="space-y-2">
             <li>
               <Link
-                href="/buy"
+                href="/build"
                 className="text-brand-cream/90 transition-colors hover:text-brand-gold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-gold"
               >
                 Shop kits

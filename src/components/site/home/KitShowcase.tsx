@@ -78,7 +78,7 @@ export function KitShowcase() {
               {copy.home.founding.cta}
             </Link>
             <Link
-              href="/buy"
+              href="/build"
               className="inline-flex items-center justify-center rounded-md border border-brand-gold/70 px-6 py-3 text-base font-semibold uppercase tracking-wide text-brand-gold transition-colors hover:bg-brand-gold hover:text-brand-navy-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-gold"
             >
               See everything inside

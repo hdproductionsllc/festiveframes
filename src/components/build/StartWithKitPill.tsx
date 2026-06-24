@@ -16,7 +16,7 @@ import { formatUsd, offer } from "@/config/offers";
 export function StartWithKitPill() {
   return (
     <Link
-      href="/buy"
+      href="/build"
       className="fixed z-40 right-4 bottom-4 inline-flex items-center gap-2
         rounded-full px-5 py-3 text-sm font-bold text-black
         bg-gradient-to-r from-brand-gold to-yellow-500

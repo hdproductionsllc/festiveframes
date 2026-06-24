@@ -5,13 +5,13 @@ const INK = "#1e1b17";
 
 // Sticky header: ink announcement bar (live Founding scarcity) over a cream nav
 // with the badge logo, in-page anchor links, and a yellow "Shop" pill that
-// routes to the real /buy → Stripe flow. Server component (no interactivity).
+// routes to the custom-first builder (/build). Server component (no interactivity).
 export function Header({ remaining, cap }: { remaining: number; cap: number }) {
   return (
     <header className="sticky top-0 z-50">
       {/* announcement bar */}
       <Link
-        href="/buy"
+        href="/build"
         className="block border-b-[3px] border-[#1e1b17] bg-[#1e1b17] px-4 py-[9px] text-center text-[13px] font-bold leading-snug text-[#faf0d6] no-underline sm:text-sm"
       >
         <span className="text-[#f8c53b]">★</span> America&apos;s 250th · Founding
@@ -53,7 +53,7 @@ export function Header({ remaining, cap }: { remaining: number; cap: number }) {
               Custom Orders
             </Link>
             <Link
-              href="/buy"
+              href="/build"
               className="s-display s-press inline-flex items-center gap-2 rounded-full border-[3px] border-[#1e1b17] bg-[#f8c53b] px-5 py-[9px] text-base font-semibold text-[#1e1b17] no-underline"
               style={{
                 boxShadow: `3px 3px 0 ${INK}`,

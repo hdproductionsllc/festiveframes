@@ -21,7 +21,7 @@ export default function NotFound() {
       </p>
       <div className="mt-8 flex flex-col gap-3 sm:flex-row">
         <Link
-          href="/buy"
+          href="/build"
           className="rounded-md bg-brand-gold px-6 py-3 font-semibold uppercase tracking-wide text-brand-navy-deep transition-colors hover:bg-brand-cream focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-cream"
         >
           Shop Kits

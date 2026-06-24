@@ -56,7 +56,7 @@ export function Hero() {
 
         <div className="flex flex-wrap items-center gap-[14px]">
           <Link
-            href="/buy?kit=american-classic"
+            href="/build"
             className="s-display s-press rounded-full border-[3px] border-[#1e1b17] bg-[#ed5aa0] px-7 py-[14px] text-lg font-semibold text-[#fff9ec] no-underline"
             style={{
               boxShadow: `5px 5px 0 ${INK}`,

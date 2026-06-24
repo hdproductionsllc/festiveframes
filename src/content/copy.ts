@@ -172,8 +172,8 @@ export const copy: Copy = {
       "The Freedom Frame Set: a snap-on license plate frame kit made in St. Louis for July 4. Design your own frame and get a goodie bag of surprise extra tiles. Install once, swap tiles forever.",
     heroH1: "Customizable License Plate Frames with Snap-On Tiles",
     heroSubhead: "Install once. Swap tiles forever.",
-    primaryCta: { label: "Shop the Freedom Frame Set", href: "/buy" },
-    secondaryCta: { label: "See what's inside", href: "/buy" },
+    primaryCta: { label: "Design your Freedom Frame", href: "/build" },
+    secondaryCta: { label: "See what's inside", href: "/build" },
 
     whatItIs: [
       "One frame installs on your plate a single time.",
@@ -512,7 +512,7 @@ export const copy: Copy = {
       body: "Know someone whose ride needs this? Send them the link.",
       shareText: "I just grabbed a Festive Frames kit. Snap-on plate frames you swap whenever you want.",
     },
-    builderCta: { label: "Back to the shop", href: "/buy" },
+    builderCta: { label: "Design another frame", href: "/build" },
   },
 
   anchorPhrases: [

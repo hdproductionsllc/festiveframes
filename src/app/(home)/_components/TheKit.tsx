@@ -13,7 +13,8 @@ const INCLUDED = [
 ];
 
 // Pricing comes from the single source of truth (config/offers); the server
-// re-derives the authoritative amount at checkout. CTAs route to /buy → Stripe.
+// re-derives the authoritative amount at checkout. The pricing-card CTAs run the
+// on-page Stripe checkout (BuyButton); the secondary link opens the builder.
 const TIERS = [
   {
     name: "Freedom Frame Set",
@@ -129,8 +130,8 @@ export function TheKit({ remaining, cap }: { remaining: number; cap: number }) {
           <div className="text-center text-sm font-bold text-[#6a6354] sm:col-span-2">
             $5 flat shipping · 30-day guarantee · order by June 28 to get it before the Fourth
             <br />
-            <Link href="/buy?kit=american-classic" className="font-bold text-[#ed5aa0] underline underline-offset-2">
-              Need a different quantity or to mix sets? Open full checkout →
+            <Link href="/build" className="font-bold text-[#ed5aa0] underline underline-offset-2">
+              Want to design your own? Open the builder →
             </Link>
           </div>
         </div>

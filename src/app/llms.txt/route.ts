@@ -36,7 +36,7 @@ export function GET() {
 
 ## Links
 - Home: ${SITE_URL}/
-- Shop: ${SITE_URL}/buy
+- Design & buy: ${SITE_URL}/build
 
 ## Brand
 - Tagline: ${copy.site.tagline}

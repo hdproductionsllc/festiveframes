@@ -10,7 +10,7 @@ export async function AnnouncementBar() {
 
   return (
     <Link
-      href="/buy"
+      href="/build"
       className="block bg-brand-red px-4 py-2 text-center text-xs font-semibold text-brand-white transition-colors hover:bg-brand-red/90 sm:text-sm"
     >
       <span className="font-mkt-display uppercase tracking-wide">
