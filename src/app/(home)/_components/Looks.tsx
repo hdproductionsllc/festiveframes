@@ -39,6 +39,12 @@ export function Looks() {
         </p>
       </div>
 
+      <p className="mb-6 max-w-[680px] text-[16px] font-bold text-[#6a6354]">
+        Every look is a starting point — tap{" "}
+        <span className="text-[#ed5aa0]">Build this look</span> and make it yours
+        in the builder.
+      </p>
+
       {/* filter pills */}
       <div className="mb-[30px] flex flex-wrap gap-2.5">
         {CATEGORIES.map((cat) => {

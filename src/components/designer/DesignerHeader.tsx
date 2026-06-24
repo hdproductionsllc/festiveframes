@@ -24,6 +24,19 @@ export function DesignerHeader({ onExport, onExportParts, onOrder, ordering }: D
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
+  // Production tools (parts sheet / CSV / eufy print) are for the team only.
+  // Hidden from customers; reveal on a device by visiting /build?prod=1 (sticks
+  // via localStorage), hide again with /build?prod=0.
+  const [prodMode, setProdMode] = useState(false);
+  useEffect(() => {
+    try {
+      const p = new URLSearchParams(window.location.search).get("prod");
+      if (p === "1") localStorage.setItem("ff:prod", "1");
+      else if (p === "0") localStorage.removeItem("ff:prod");
+      setProdMode(localStorage.getItem("ff:prod") === "1");
+    } catch {}
+  }, []);
+
   const lastSaved = mounted && updatedAt
     ? new Date(updatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
     : null;
@@ -78,15 +91,18 @@ export function DesignerHeader({ onExport, onExportParts, onOrder, ordering }: D
         >
           {exportState === "exporting" ? "Saving…" : "Save Image"}
         </button>
-        {/* Admin-only parts sheet (kept for the team; not the customer path). */}
-        <button
-          onClick={onExportParts}
-          disabled={!hasDesign}
-          title="Production parts sheet (team)"
-          className="hidden rounded-full px-2 py-1 text-xs font-medium text-[#faf0d6]/55 transition-colors hover:bg-white/10 hover:text-[#faf0d6] disabled:opacity-30 sm:block"
-        >
-          Parts
-        </button>
+        {/* Production-only parts sheet — hidden from customers, shown when the
+            team enables prod mode (/build?prod=1). */}
+        {prodMode && (
+          <button
+            onClick={onExportParts}
+            disabled={!hasDesign}
+            title="Production parts sheet (team)"
+            className="rounded-full border border-[#f8c53b]/40 px-2 py-1 text-xs font-medium text-[#f8c53b] transition-colors hover:bg-white/10 disabled:opacity-30"
+          >
+            Parts ⚙
+          </button>
+        )}
         {/* Primary call to action: place the made-to-order frame order. */}
         <button
           data-tour="order"

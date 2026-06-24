@@ -18,6 +18,7 @@ import { buildPartsList } from "@/lib/order/parts-list";
 import type { NamedImage } from "@/lib/email-production";
 import { playSound } from "@/lib/utils/sound";
 import { getSet } from "@/data/sets/index";
+import { LOOK_PRESETS } from "@/data/look-presets";
 
 // NOTE: the "On Your Car" preview (CarPreview / preview-store / stock-cars) is
 // intentionally unmounted for launch but kept in the codebase for later.
@@ -42,8 +43,11 @@ export function Designer() {
 
   useKeyboardShortcuts();
 
-  // First load on a blank canvas → random + mirrored July 4th design. On a
-  // returning design, just patch any empty cells so there are never blanks.
+  // First load on a blank canvas → a July 4th design. If the visitor arrived
+  // from a homepage "Build this look" button (/build?look=<id>), seed that
+  // look's themed starting point (featured tiles + slogan bar); otherwise fall
+  // back to a random + mirrored fill. On a returning design, just patch any
+  // empty cells so there are never blanks.
   useEffect(() => {
     if (seededRef.current) return;
     seededRef.current = true;
@@ -52,12 +56,49 @@ export function Designer() {
     const pieces = set.pieces.map((p) => ({ pieceId: p.id, setId: set.id }));
     if (!pieces.length) return;
     const store = useDesignStore.getState();
-    if (Object.keys(store.slots).length === 0) {
-      randomFill(pieces);
-      useDesignStore.getState().mirrorTopSlots();
-    } else {
+    const blank = Object.keys(store.slots).length === 0;
+
+    if (!blank) {
       store.fillEmpty(pieces);
+      return;
     }
+
+    // Read the requested look from the URL (read-once, client-only — avoids the
+    // useSearchParams Suspense requirement on this otherwise-static page).
+    const look =
+      typeof window !== "undefined"
+        ? new URLSearchParams(window.location.search).get("look")
+        : null;
+    const preset = look ? LOOK_PRESETS[look] : undefined;
+
+    if (preset) {
+      // Bias the fill pool toward the look's featured tiles (each repeated a few
+      // times), with a handful of generic july4th tiles mixed in for variety.
+      const valid = new Set(pieces.map((p) => p.pieceId));
+      const weight = preset.fillerWeight ?? 4;
+      const pool: Array<{ pieceId: string; setId: string }> = [];
+      for (const id of preset.featured) {
+        if (!valid.has(id)) continue;
+        for (let i = 0; i < weight; i++) pool.push({ pieceId: id, setId: set.id });
+      }
+      // A little variety so the look has texture without diluting the theme.
+      pool.push(...pieces.slice(0, Math.min(6, pieces.length)));
+      randomFill(pool.length ? pool : pieces);
+      useDesignStore.getState().mirrorTopSlots();
+
+      // Drop the look's slogan bar. The store forces QR onto the first bar, so
+      // placing it via the normal action gives us the QR automatically.
+      if (preset.phrase) {
+        const s = useDesignStore.getState();
+        s.updateBottomBar({ text: preset.phrase });
+        useDesignStore.getState().placeTextBar("bottom", 0);
+      }
+      return;
+    }
+
+    // No / unknown look → keep the original random behavior.
+    randomFill(pieces);
+    useDesignStore.getState().mirrorTopSlots();
   }, [randomFill]);
 
   const handleExport = useCallback(async () => {
