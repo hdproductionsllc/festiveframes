@@ -7,6 +7,12 @@
 /* Script / cursive faces plus extra display faces for the bottom-bar text. */
 @import url('https://fonts.googleapis.com/css2?family=Allura&family=Dancing+Script:wght@400..700&family=Great+Vibes&family=Kaushan+Script&family=Pacifico&family=Sacramento&family=Satisfy&family=Tangerine:wght@400;700&family=Yellowtail&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Black+Ops+One&family=Bungee&family=Fredoka:wght@400;500;600;700&family=Permanent+Marker&family=Special+Elite&display=swap');
+/* Cartoon / sticker faces — the bold, fun brand style. */
+@import url('https://fonts.googleapis.com/css2?family=Bangers&family=Bubblegum+Sans&family=Cherry+Bomb+One&family=Chewy&family=Lilita+One&family=Luckiest+Guy&family=Paytone+One&family=Shrikhand&family=Sniglet:wght@400;800&family=Titan+One&family=Baloo+2:wght@500;700;800&display=swap');
+/* Popular display / design staples for the bottom-bar text. */
+@import url('https://fonts.googleapis.com/css2?family=Abril+Fatface&family=Archivo+Black&family=Bowlby+One&family=Concert+One&family=Lobster&family=Montserrat:wght@700;800;900&family=Passion+One:wght@700;900&family=Playfair+Display:wght@700;800;900&family=Poppins:wght@600;700;800&family=Staatliches&family=Ultra&display=swap');
+/* Additional script / festive faces. */
+@import url('https://fonts.googleapis.com/css2?family=Cookie&family=Courgette&family=Damion&family=Lobster+Two:ital,wght@0,700;1,700&family=Marck+Script&display=swap');
 @import url('https://fonts.cdnfonts.com/css/license-plate-usa');
 
 /* Stars & Stripes — a free font that isn't on a CDN. Drop the file at

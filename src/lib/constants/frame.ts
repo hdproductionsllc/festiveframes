@@ -74,7 +74,7 @@ export function getTotalWidthInches(config: FrameConfig): number {
 // Bottom bar fonts — system fonts first (instant), then web fonts. Each font is
 // tagged with a `category` so the picker can group them ("Classic", "Script",
 // "Display"). Script faces are loaded from Google Fonts in builder-fonts.css.
-export type BottomBarFontCategory = "Classic" | "Script" | "Display";
+export type BottomBarFontCategory = "Cartoon" | "Classic" | "Script" | "Display";
 
 export const BOTTOM_BAR_FONTS: ReadonlyArray<{
   id: string;
@@ -113,6 +113,42 @@ export const BOTTOM_BAR_FONTS: ReadonlyArray<{
   { id: "permanent-marker", name: "Permanent Marker", family: "'Permanent Marker', cursive", category: "Display" },
   { id: "bungee", name: "Bungee", family: "'Bungee', display, sans-serif", category: "Display" },
   { id: "fredoka", name: "Fredoka", family: "'Fredoka', sans-serif", category: "Display" },
+
+  // ─── Cartoon / Sticker (the brand style) ───────────────────
+  // Luckiest Guy is the signature cartoon-sticker face — bold, fun, brand-defining.
+  { id: "luckiest-guy", name: "Luckiest Guy (Sticker)", family: "'Luckiest Guy', cursive", category: "Cartoon" },
+  { id: "cherry-bomb-one", name: "Cherry Bomb", family: "'Cherry Bomb One', cursive", category: "Cartoon" },
+  { id: "lilita-one", name: "Lilita One", family: "'Lilita One', cursive", category: "Cartoon" },
+  { id: "bangers", name: "Bangers", family: "'Bangers', cursive", category: "Cartoon" },
+  { id: "titan-one", name: "Titan One", family: "'Titan One', cursive", category: "Cartoon" },
+  { id: "baloo-2", name: "Baloo 2", family: "'Baloo 2', cursive", category: "Cartoon" },
+  { id: "chewy", name: "Chewy", family: "'Chewy', cursive", category: "Cartoon" },
+  { id: "bubblegum-sans", name: "Bubblegum Sans", family: "'Bubblegum Sans', cursive", category: "Cartoon" },
+  { id: "sniglet", name: "Sniglet", family: "'Sniglet', cursive", category: "Cartoon" },
+  { id: "paytone-one", name: "Paytone One", family: "'Paytone One', sans-serif", category: "Cartoon" },
+  { id: "shrikhand", name: "Shrikhand", family: "'Shrikhand', cursive", category: "Cartoon" },
+
+  // ─── More Classic (clean design workhorses) ────────────────
+  { id: "montserrat", name: "Montserrat", family: "'Montserrat', sans-serif", category: "Classic" },
+  { id: "poppins", name: "Poppins", family: "'Poppins', sans-serif", category: "Classic" },
+  { id: "archivo-black", name: "Archivo Black", family: "'Archivo Black', sans-serif", category: "Classic" },
+  { id: "playfair-display", name: "Playfair Display", family: "'Playfair Display', serif", category: "Classic" },
+
+  // ─── More Display ──────────────────────────────────────────
+  { id: "abril-fatface", name: "Abril Fatface", family: "'Abril Fatface', display, serif", category: "Display" },
+  { id: "lobster", name: "Lobster", family: "'Lobster', display, cursive", category: "Display" },
+  { id: "staatliches", name: "Staatliches", family: "'Staatliches', display, sans-serif", category: "Display" },
+  { id: "passion-one", name: "Passion One", family: "'Passion One', display, sans-serif", category: "Display" },
+  { id: "ultra", name: "Ultra", family: "'Ultra', display, serif", category: "Display" },
+  { id: "bowlby-one", name: "Bowlby One", family: "'Bowlby One', display, sans-serif", category: "Display" },
+  { id: "concert-one", name: "Concert One", family: "'Concert One', display, sans-serif", category: "Display" },
+
+  // ─── More Script / Festive ─────────────────────────────────
+  { id: "lobster-two", name: "Lobster Two", family: "'Lobster Two', cursive", category: "Script" },
+  { id: "cookie", name: "Cookie", family: "'Cookie', cursive", category: "Script" },
+  { id: "courgette", name: "Courgette", family: "'Courgette', cursive", category: "Script" },
+  { id: "marck-script", name: "Marck Script", family: "'Marck Script', cursive", category: "Script" },
+  { id: "damion", name: "Damion", family: "'Damion', cursive", category: "Script" },
 ];
 
 // Pricing

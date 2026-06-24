@@ -8,8 +8,9 @@ interface FontSelectorProps {
   onChange: (fontFamily: string) => void;
 }
 
-// Order the category headers so scripts are front-and-center.
-const FONT_CATEGORY_ORDER = ["Script", "Display", "Classic"] as const;
+// Order the category headers — lead with the cartoon/sticker brand faces, then
+// scripts, display, and classic workhorses.
+const FONT_CATEGORY_ORDER = ["Cartoon", "Script", "Display", "Classic"] as const;
 
 export function FontSelector({ value, onChange }: FontSelectorProps) {
   const [open, setOpen] = useState(false);

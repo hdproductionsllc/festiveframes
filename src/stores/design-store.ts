@@ -18,6 +18,8 @@ import {
   coveredSlotIds,
   clampStartIndex,
   rowLength,
+  findFreeStart,
+  maxWidthAt,
 } from "@/lib/utils/text-bar";
 import { MAX_HISTORY_DEPTH } from "@/lib/constants/frame";
 
@@ -33,6 +35,36 @@ function makeTextBarId(existing: PlacedTextBar[]): string {
 function enforceFirstBarQr(bars: PlacedTextBar[]): PlacedTextBar[] {
   if (bars.length === 0 || bars[0].qr) return bars;
   return bars.map((b, i) => (i === 0 ? { ...b, qr: true } : b));
+}
+
+/**
+ * Resolve a bar's new auto-fit width so it can NEVER grow into a neighbor.
+ * Growth is allowed into free space on either side of the bar's current
+ * position; if that's not enough the width is capped (the render shrink-fits the
+ * text). Returns the safe `{ widthUnits, startIndex }` to apply.
+ */
+function fitWidth(
+  bars: PlacedTextBar[],
+  bar: PlacedTextBar,
+  desiredWidth: number,
+  rowLen: number
+): { widthUnits: number; startIndex: number } {
+  // Free room to the right of the current start (up to the next bar / row edge),
+  // and free room to the left (down to the previous bar / row start).
+  const roomRight = maxWidthAt(bars, bar.row, bar.startIndex, rowLen, bar.id);
+  let leftEdge = 0;
+  for (const b of bars) {
+    if (b.row !== bar.row || b.id === bar.id) continue;
+    const end = b.startIndex + b.widthUnits;
+    if (end <= bar.startIndex && end > leftEdge) leftEdge = end;
+  }
+  const roomLeft = bar.startIndex - leftEdge; // free columns immediately left
+  const maxAvailable = roomLeft + roomRight; // total contiguous free span
+  const widthUnits = Math.max(1, Math.min(desiredWidth, maxAvailable));
+  // Prefer to grow rightward; only shift left when the right room runs out.
+  const overflowLeft = Math.max(0, widthUnits - roomRight);
+  const startIndex = clampStartIndex(bar.startIndex - overflowLeft, widthUnits, rowLen);
+  return { widthUnits, startIndex };
 }
 
 interface HistorySnapshot {
@@ -335,10 +367,14 @@ export const useDesignStore = create<DesignState>()(
             const isFirst = state.textBars.length === 0;
             const qr = isFirst ? true : false;
             const widthUnits = measureTextBarUnits(config, qr, maxUnits);
-            // New bars land centered on the row (odd width + odd row = exact center).
-            // `startIndex` (the drop point) only decides top vs bottom; drag to move.
+            // New bars prefer the row center, but must land on a FREE run — never
+            // on top of an existing bar. `startIndex` (the drop point) only chose
+            // top vs bottom; the exact column is resolved against current bars.
             void startIndex;
-            const start = clampStartIndex(Math.round((maxUnits - widthUnits) / 2), widthUnits, maxUnits);
+            const preferred = Math.round((maxUnits - widthUnits) / 2);
+            const start = findFreeStart(state.textBars, row, widthUnits, maxUnits, preferred);
+            // Row is full — reject the placement rather than overlap a neighbor.
+            if (start === null) return state;
             const bar: PlacedTextBar = {
               id: makeTextBarId(state.textBars),
               row,
@@ -363,7 +399,20 @@ export const useDesignStore = create<DesignState>()(
             const bar = state.textBars.find((b) => b.id === id);
             if (!bar) return state;
             const maxUnits = rowLength(state.frameConfig, row);
-            const start = clampStartIndex(startIndex, bar.widthUnits, maxUnits);
+            // Snap the drop to the nearest FREE column on the target row (the bar
+            // itself is excluded so it never blocks its own move). If the bar can
+            // fit nowhere on that row, snap it back to its current spot.
+            const start = findFreeStart(
+              state.textBars,
+              row,
+              bar.widthUnits,
+              maxUnits,
+              startIndex,
+              bar.id
+            );
+            if (start === null) return state; // no room → leave the bar untouched
+            // No-op move (same row + column) — skip the history push.
+            if (row === bar.row && start === bar.startIndex) return state;
             const moved: PlacedTextBar = { ...bar, row, startIndex: start };
             return {
               ...pushHistory(),
@@ -393,8 +442,12 @@ export const useDesignStore = create<DesignState>()(
             if (!bar) return state;
             const config = { ...bar.config, ...updates };
             const maxUnits = rowLength(state.frameConfig, bar.row);
-            const widthUnits = measureTextBarUnits(config, bar.qr, maxUnits);
-            const startIndex = clampStartIndex(bar.startIndex, widthUnits, maxUnits);
+            const { widthUnits, startIndex } = fitWidth(
+              state.textBars,
+              bar,
+              measureTextBarUnits(config, bar.qr, maxUnits),
+              maxUnits
+            );
             const updated: PlacedTextBar = { ...bar, config, widthUnits, startIndex };
             return {
               ...pushHistory(),
@@ -411,8 +464,12 @@ export const useDesignStore = create<DesignState>()(
             // The first bar's QR is required — refuse to turn it off.
             if (!enabled && state.textBars[0]?.id === id) return state;
             const maxUnits = rowLength(state.frameConfig, bar.row);
-            const widthUnits = measureTextBarUnits(bar.config, enabled, maxUnits);
-            const startIndex = clampStartIndex(bar.startIndex, widthUnits, maxUnits);
+            const { widthUnits, startIndex } = fitWidth(
+              state.textBars,
+              bar,
+              measureTextBarUnits(bar.config, enabled, maxUnits),
+              maxUnits
+            );
             const updated: PlacedTextBar = { ...bar, qr: enabled, widthUnits, startIndex };
             return {
               ...pushHistory(),
