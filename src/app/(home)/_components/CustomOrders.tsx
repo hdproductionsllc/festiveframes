@@ -1,9 +1,10 @@
-import Image from "next/image";
+import { ContactForm } from "./ContactForm";
 
 const INK = "#1e1b17";
 
 // Blue panel. Custom orders / bulk (teams, events, fleets) — NOT a bespoke
-// "we'll illustrate your idea" service. CTA opens an email to hello@.
+// "we'll illustrate your idea" service. Copy on the left, a working contact
+// form on the right that emails the team via /api/contact.
 export function CustomOrders() {
   return (
     <section id="custom" className="mx-auto max-w-[1240px] px-5 pb-[72px] pt-2 sm:px-7">
@@ -28,29 +29,17 @@ export function CustomOrders() {
             fleet? Tell us what you&apos;re celebrating and we&apos;ll put together a
             custom tile run with bulk pricing.
           </p>
-          <a
-            href="mailto:hello@festiveframes.co?subject=Custom%20order%20%E2%80%94%20Festive%20Frames"
-            className="s-display s-press inline-block rounded-full border-[3px] border-[#1e1b17] bg-[#f8c53b] px-[30px] py-[14px] text-lg font-semibold text-[#1e1b17] no-underline"
-            style={{
-              boxShadow: `5px 5px 0 ${INK}`,
-              ["--press-shadow-lift" as string]: `7px 7px 0 ${INK}`,
-              ["--press-shadow-press" as string]: `2px 2px 0 ${INK}`,
-            }}
-          >
-            Talk custom orders
-          </a>
+          <p className="m-0 text-base font-bold leading-[1.5] text-[#0d3a52]">
+            Tell us what you need and we&apos;ll reply within a day. Prefer email?{" "}
+            <a
+              href="mailto:hello@festiveframes.co?subject=Custom%20order%20%E2%80%94%20Festive%20Frames"
+              className="underline decoration-2 underline-offset-2"
+            >
+              hello@festiveframes.co
+            </a>
+          </p>
         </div>
-        <div className="relative z-[1] flex justify-center">
-          <Image
-            src="/redesign/tiles/popsicle.png"
-            alt=""
-            aria-hidden
-            width={268}
-            height={268}
-            className="ff-float-slow h-auto w-[190px]"
-            style={{ ["--r" as string]: "-8deg", filter: "drop-shadow(6px 8px 0 rgba(30,27,23,0.18))" }}
-          />
-        </div>
+        <ContactForm />
       </div>
     </section>
   );

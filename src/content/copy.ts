@@ -169,7 +169,7 @@ export const copy: Copy = {
     metaTitle:
       "Custom License Plate Frames with Snap-On Tiles",
     metaDescription:
-      "The Freedom Frame Set: a snap-on license plate frame kit made in St. Louis for July 4. Comes loaded with 50+ patriotic tiles. Install once, swap tiles forever.",
+      "The Freedom Frame Set: a snap-on license plate frame kit made in St. Louis for July 4. Design your own frame and get a goodie bag of surprise extra tiles. Install once, swap tiles forever.",
     heroH1: "Customizable License Plate Frames with Snap-On Tiles",
     heroSubhead: "Install once. Swap tiles forever.",
     primaryCta: { label: "Shop the Freedom Frame Set", href: "/buy" },
@@ -234,7 +234,7 @@ export const copy: Copy = {
       {
         question: "What comes in the Freedom Frame Set?",
         answer:
-          "One frame rail that fits all standard US plates, plus 50+ patriotic tiles - American flags, stars, stripes, chevrons, and firework bursts - and ready-made bottom-bar phrases like LAND OF THE FREE and HOME OF THE BRAVE. It arrives complete and ready to snap on.",
+          "One frame rail that fits all standard US plates, which you design yourself, plus a goodie bag of surprise extra tiles - American flags, stars, stripes, chevrons, and firework bursts. Ready-made bottom-bar phrases like LAND OF THE FREE and HOME OF THE BRAVE are there to start from, or you can write your own. It arrives complete and ready to snap on.",
       },
       {
         question: "Is this a good Fourth of July gift?",
@@ -394,7 +394,7 @@ export const copy: Copy = {
   buy: {
     metaTitle: "Shop the Freedom Frame Set",
     metaDescription:
-      "Shop the Freedom Frame Set: a snap-on license plate frame kit loaded with 50+ patriotic tiles. Install once, swap tiles forever. Ships nationwide, $5 flat rate.",
+      "Shop the Freedom Frame Set: a snap-on license plate frame kit you design yourself, with a goodie bag of surprise extra tiles. Install once, swap tiles forever. Ships nationwide, $5 flat rate.",
     h1: "Make your license plate the most fun part of your car.",
     subhead: "Snap it on. Swap it forever.",
     ctaSubline: "$5 flat US shipping. Order by June 28 to get it before the Fourth.",
@@ -403,13 +403,13 @@ export const copy: Copy = {
     whatsInKit: {
       heading: "What's in the kit",
       items: [
-        "Frame rail that fits all standard US plates, installs once with your existing screws",
-        "50+ tiles, more than you see in the photo",
-        "Ready-made bottom-bar slogans: USA, LAND OF THE FREE, HOME OF THE BRAVE, and LET FREEDOM RING",
+        "Frame rail that fits all standard US plates, designed by you, installs once with your existing screws",
+        "A goodie bag of surprise extra tiles in every order",
+        "Ready-made bottom-bar slogans to start from, or write your own: USA, LAND OF THE FREE, HOME OF THE BRAVE, and LET FREEDOM RING",
         "Quick-start card",
       ],
       caption:
-        "Comes loaded with 50+ tiles, more than you see here, so you can mix, match, and restyle any time. Buy once, change endlessly.",
+        "You design the frame, then every order ships with a goodie bag of surprise extra tiles, so you can mix, match, and restyle any time. Buy once, change endlessly.",
     },
 
     howItWorks: {
@@ -434,9 +434,9 @@ export const copy: Copy = {
       single: {
         title: "Freedom Frame Set",
         items: [
-          "Frame rail",
-          "50+ tiles, more than pictured",
-          "Ready-made bottom-bar phrases",
+          "Design-your-own frame rail",
+          "A goodie bag of surprise extra tiles",
+          "Bottom-bar phrases to start from, or make your own",
         ],
         cta: "Buy Now",
       },

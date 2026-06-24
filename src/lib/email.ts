@@ -229,3 +229,45 @@ export async function sendReviewEmail(r: ReviewSubmission): Promise<void> {
     console.error("[email] review email failed:", err);
   }
 }
+
+export interface ContactSubmission {
+  name: string;
+  email: string;
+  message: string;
+}
+
+/**
+ * Emails a custom-order inquiry from the homepage contact form to the team.
+ * Sets replyTo to the customer so the team can reply straight from their inbox.
+ * No-ops gracefully when Resend isn't configured. Never throws.
+ */
+export async function sendContactEmail(c: ContactSubmission): Promise<void> {
+  const apiKey = process.env.RESEND_API_KEY;
+  const adminTo = process.env.ADMIN_ORDER_EMAIL;
+  if (!apiKey || !adminTo) {
+    console.warn("[email] contact inquiry (not sent, missing config):", c);
+    return;
+  }
+  const from = process.env.EMAIL_FROM || "Festive Frames <onboarding@resend.dev>";
+  const resend = new Resend(apiKey);
+  try {
+    await resend.emails.send({
+      from,
+      to: adminTo,
+      replyTo: c.email,
+      subject: `Custom order inquiry from ${c.name}`,
+      html: shell(
+        "New custom order inquiry",
+        `<p style="margin:0 0 8px;color:${INK};font-size:13px;">
+           <strong>From:</strong> ${escapeHtml(c.name)} &lt;${escapeHtml(c.email)}&gt;
+         </p>
+         <div style="margin:14px 0 0;padding:14px 16px;background:${CREAM};border-radius:8px;">
+           <p style="margin:0 0 6px;color:${RED};font-size:13px;font-weight:bold;text-transform:uppercase;">What they're celebrating</p>
+           <p style="margin:0;color:${INK};font-size:14px;line-height:1.6;white-space:pre-wrap;">${escapeHtml(c.message)}</p>
+         </div>`,
+      ),
+    });
+  } catch (err) {
+    console.error("[email] contact email failed:", err);
+  }
+}

@@ -18,20 +18,6 @@ const LOOKS = [
   { img: "sampler", name: "The Sampler", phrase: "a little of everything", category: "Mixed", accent: "#f8c53b", accentSoft: "#fbe7a6" },
 ] as const;
 
-const TILES = [
-  { img: "eagle", label: "Eagle" },
-  { img: "flag", label: "Old Glory" },
-  { img: "waving-flag", label: "Waving Flag" },
-  { img: "usa", label: "USA" },
-  { img: "uncle-sam", label: "Top Hat" },
-  { img: "liberty-bell", label: "Liberty Bell" },
-  { img: "250", label: "250" },
-  { img: "firecracker", label: "Firecracker" },
-  { img: "star-red", label: "Red Star" },
-  { img: "star-blue", label: "Blue Star" },
-  { img: "popsicle", label: "Bomb Pop" },
-];
-
 export function Looks() {
   const [active, setActive] = useState<Category>("All");
   const shown = active === "All" ? LOOKS : LOOKS.filter((l) => l.category === active);
@@ -126,46 +112,6 @@ export function Looks() {
         Same frame, same plate — just snap on a different set of tiles. No tools,
         no extra purchase.
       </p>
-
-      {/* tile library */}
-      <div
-        className="mt-12 rounded-[24px] border-[3px] border-[#1e1b17] bg-[#fff9ec] p-8"
-        style={{ boxShadow: `6px 6px 0 ${INK}` }}
-      >
-        <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <div className="mb-1.5 text-[15px] font-extrabold tracking-[1.5px] text-[#3fb0e6]">
-              50+ TILES, MIX &amp; MATCH
-            </div>
-            <h3 className="s-display m-0 text-[32px] font-bold leading-none tracking-[-0.5px]">
-              The tile library
-            </h3>
-          </div>
-          <p className="m-0 max-w-[380px] text-base font-semibold text-[#6a6354]">
-            Every kit comes loaded with snap-on tiles. Here&apos;s a peek — pop any
-            of them onto the frame in seconds.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-3.5">
-          {TILES.map((t) => (
-            <div key={t.img} className="w-[92px]">
-              <div
-                className="flex h-[92px] items-center justify-center overflow-hidden rounded-[14px] border-[3px] border-[#1e1b17] bg-[#fffdf6] p-[7px]"
-                style={{ boxShadow: `3px 3px 0 ${INK}` }}
-              >
-                <Image
-                  src={`/redesign/tiles/${t.img}.png`}
-                  alt={`${t.label} tile`}
-                  width={268}
-                  height={268}
-                  className="max-h-full max-w-full object-contain"
-                />
-              </div>
-              <div className="mt-[7px] text-center text-[11px] font-bold text-[#6a6354]">{t.label}</div>
-            </div>
-          ))}
-        </div>
-      </div>
     </section>
   );
 }

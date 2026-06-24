@@ -1,23 +1,22 @@
 import { NextResponse } from "next/server";
+import { Resend } from "resend";
 
 // Email capture endpoint for the homepage / thanks-page capture form.
 //
-// Persistence is delegated to an external provider via a single env var:
-//
-//   SUBSCRIBE_ENDPOINT
-//     A server-side webhook URL that accepts a JSON body of { email } and
-//     stores/forwards the subscriber. Use a form/audience webhook from a
-//     provider such as Formspree, Beehiiv, ConvertKit, Mailchimp, or a
-//     Resend-backed handler. Example:
-//       SUBSCRIBE_ENDPOINT=https://formspree.io/f/xxxxxxx
+// Capture order of preference:
+//   1. SUBSCRIBE_ENDPOINT (external provider webhook: Formspree, Beehiiv,
+//      ConvertKit, Mailchimp, etc.) — forwarded to if set.
+//   2. Otherwise, if Resend is configured, email the new signup to the team
+//      (ADMIN_ORDER_EMAIL) so EVERY signup is captured and nothing is lost.
+//   3. Only if neither is configured do we accept-but-warn (no capture).
 //
 // Behavior:
 //   - Invalid email shape            -> 400 { ok: false }
 //   - SUBSCRIBE_ENDPOINT set, 2xx    -> 200 { ok: true }
 //   - SUBSCRIBE_ENDPOINT set, non-2xx-> 502 { ok: false }
-//   - SUBSCRIBE_ENDPOINT NOT set     -> 200 { ok: true } and a console.warn
-//     (the form still confirms to the visitor, but nothing is captured;
-//     configure the env var to enable real capture).
+//   - No endpoint, Resend configured -> emails the team, 200 { ok: true }
+
+export const runtime = "nodejs";
 
 interface SubscribeBody {
   email?: unknown;
@@ -25,6 +24,27 @@ interface SubscribeBody {
 
 function isValidEmail(value: unknown): value is string {
   return typeof value === "string" && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+/** Email a new signup to the team so it is always captured (no list provider needed). */
+async function notifyTeam(email: string): Promise<boolean> {
+  const apiKey = process.env.RESEND_API_KEY;
+  const to = process.env.ADMIN_ORDER_EMAIL;
+  if (!apiKey || !to) return false;
+  const from = process.env.EMAIL_FROM || "Festive Frames <onboarding@resend.dev>";
+  try {
+    await new Resend(apiKey).emails.send({
+      from,
+      to,
+      replyTo: email,
+      subject: `🎆 New tile-drop signup: ${email}`,
+      text: `New "Get the tile drops" signup from the site:\n\n${email}\n\nAdd them to your list / send them first access to new tiles + seasonal sets.`,
+    });
+    return true;
+  } catch (err) {
+    console.error("[subscribe] team notification failed:", err);
+    return false;
+  }
 }
 
 export async function POST(request: Request) {
@@ -42,13 +62,14 @@ export async function POST(request: Request) {
   const email = body.email;
   const endpoint = process.env.SUBSCRIBE_ENDPOINT;
 
-  // No provider configured: confirm to the visitor but warn loudly that the
-  // submission was not actually captured anywhere.
+  // No external provider: capture by emailing the team via Resend.
   if (!endpoint) {
-    console.warn(
-      "[subscribe] SUBSCRIBE_ENDPOINT is not set; email capture is not configured. " +
-        "Submission was accepted but NOT stored.",
-    );
+    const captured = await notifyTeam(email);
+    if (!captured) {
+      console.warn(
+        "[subscribe] No SUBSCRIBE_ENDPOINT and Resend not configured; signup was NOT captured.",
+      );
+    }
     return NextResponse.json({ ok: true });
   }
 

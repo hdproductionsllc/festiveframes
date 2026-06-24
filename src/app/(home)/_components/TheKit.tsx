@@ -6,9 +6,9 @@ import { BuyButton } from "./BuyButton";
 const INK = "#1e1b17";
 
 const INCLUDED = [
-  "One frame rail that fits all standard US plates",
-  "50+ snap-on tiles — more than you see in the photo",
-  "Ready-made bottom-bar phrases: USA, LAND OF THE FREE, HOME OF THE BRAVE, LET FREEDOM RING",
+  "A design-your-own frame rail that fits all standard US plates",
+  "A goodie bag of surprise extra tiles in every order",
+  "Ready-made bottom-bar phrases to start from, or write your own: USA, LAND OF THE FREE, HOME OF THE BRAVE, LET FREEDOM RING",
   "Quick-start card — installs in seconds with your existing screws",
 ];
 
@@ -23,7 +23,7 @@ const TIERS = [
     popular: false,
     accent: "#3fb0e6",
     cta: "Choose this set",
-    bullets: ["One frame rail", "50+ tiles (more than pictured)", "Ready-made bottom-bar phrases", "Quick-start card"],
+    bullets: ["Design-your-own frame rail", "A goodie bag of surprise extra tiles", "Bottom-bar phrases to start from, or make your own", "Quick-start card"],
   },
   {
     name: "Two-Set Bundle",
@@ -49,9 +49,9 @@ export function TheKit({ remaining, cap }: { remaining: number; cap: number }) {
         Meet the Freedom Frame Set
       </h2>
       <p className="mx-auto mb-11 max-w-[560px] text-center text-lg font-semibold text-[#6a6354]">
-        Our launch kit for America&apos;s 250th. One frame, 50+ snap-on tiles, and
-        ready-made bottom-bar phrases. Restyle it for the Fourth, a parade, or
-        game day — as often as you like.
+        Our launch kit for America&apos;s 250th. Design your own frame, then make
+        it yours — every order ships with a goodie bag of surprise extra tiles.
+        Restyle it for the Fourth, a parade, or game day — as often as you like.
       </p>
 
       <div className="grid items-stretch gap-7 lg:grid-cols-[1fr_1.15fr]">

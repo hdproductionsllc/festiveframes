@@ -48,9 +48,10 @@ export function Hero() {
         </h1>
 
         <p className="m-0 mb-[30px] max-w-[460px] text-[20px] font-medium leading-[1.5] text-[#3a352c]">
-          One frame, a pile of snap-on tiles, and zero tools. Restyle your plate
-          for the Fourth, game day, or just because — in about ten seconds flat.
-          Every kit is made to order, by hand, in the USA.
+          Design your own frame, then make it yours — plus a goodie bag of
+          surprise extra tiles and zero tools. Restyle your plate for the Fourth,
+          game day, or just because, in about ten seconds flat. Every kit is made
+          to order, by hand, in the USA.
         </p>
 
         <div className="flex flex-wrap items-center gap-[14px]">
@@ -79,7 +80,7 @@ export function Hero() {
         </div>
 
         <div className="mt-[34px] flex flex-wrap gap-[26px]">
-          <Stat value="50+" label="tiles per kit" />
+          <Stat value="You" label="design every frame" />
           <Divider />
           <Stat value="5.0★" label="from real drivers" />
           <Divider />
