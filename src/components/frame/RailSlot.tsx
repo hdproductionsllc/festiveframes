@@ -34,10 +34,14 @@ export function RailSlot({ slot, placedTile, isOver }: RailSlotProps) {
     }
   };
 
-  const cursorClass =
-    activeTool === "eraser" || selectedPieceId
-      ? "cursor-pointer"
-      : "cursor-default";
+  // The slot is actionable when a click would do something: erasing a placed
+  // tile, or painting the selected piece into an empty/occupied slot. Only then
+  // do we surface a pointer cursor + hover highlight so empty slots clearly
+  // invite a click instead of looking inert.
+  const isActionable =
+    (activeTool === "eraser" && placedTile != null) ||
+    (activeTool === "paint" && selectedPieceId != null);
+  const cursorClass = isActionable ? "cursor-pointer group" : "cursor-default";
 
   // Gapless: placed tiles fill the whole cell so neighbors butt edge-to-edge
   // (0.985" grid). Empty slots keep a hair of inset to show the recessed groove.
@@ -76,9 +80,12 @@ export function RailSlot({ slot, placedTile, isOver }: RailSlotProps) {
         <div
           className={`w-full h-full flex items-center justify-center ${isOver ? "drop-target-glow" : ""}`}
         >
-          {/* Empty slot groove */}
+          {/* Empty slot groove — gets a gold hover ring when a click would place
+              the selected tile here, so empty slots read as clickable targets. */}
           <div
-            className="rounded-[2px]"
+            className={`rounded-[2px] transition-shadow ${
+              isActionable ? "group-hover:ring-2 group-hover:ring-brand-gold/70" : ""
+            }`}
             style={{
               width: slot.width - inset * 2,
               height: slot.height - inset * 2,

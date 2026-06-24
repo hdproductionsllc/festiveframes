@@ -8,28 +8,47 @@ import { FontSelector } from "./FontSelector";
 import { ColorPicker } from "@/components/ui/ColorPicker";
 import { Slider } from "@/components/ui/Slider";
 
-/** The draggable text-bar object — drops a NEW bar onto the top/bottom row. */
+/**
+ * The "Add a text bar" affordance. It works two ways:
+ *  • CLICK — places a bar instantly (bottom row, centered; falls back to top).
+ *  • DRAG  — drop it onto a specific top/bottom run on the frame.
+ *
+ * Both can coexist because the DndProvider's PointerSensor only starts a drag
+ * after the pointer moves ≥5px (`activationConstraint.distance`); a plain click
+ * never crosses that threshold, so the native click fires and the drag
+ * listeners don't swallow it.
+ */
 function TextBarChip() {
   const bottomBar = useDesignStore((s) => s.bottomBar);
+  const addTextBar = useDesignStore((s) => s.addTextBar);
   const { setNodeRef, attributes, listeners, isDragging } = useDraggable({
     id: "textbar",
     data: { type: "textbar" },
   });
 
   return (
-    <div
+    <button
+      type="button"
       ref={setNodeRef}
       {...attributes}
       {...listeners}
-      title="Drag onto the top or bottom of the frame"
+      onClick={() => {
+        // A drag also ends in a click on some browsers; guard against
+        // double-placing while a drag is settling.
+        if (isDragging) return;
+        addTextBar();
+      }}
+      title="Click to add a bar, or drag it onto the top or bottom of the frame"
       className={`flex w-full items-center gap-3 rounded-xl border-[3px] border-dashed
-        border-[#f8c53b] bg-[#f8c53b]/10 px-4 py-3.5 cursor-grab active:cursor-grabbing
-        transition-all hover:bg-[#f8c53b]/20 hover:scale-[1.01] ${isDragging ? "opacity-50" : ""}`}
+        border-[#f8c53b] bg-[#f8c53b]/10 px-4 py-3.5 text-left cursor-pointer active:cursor-grabbing
+        transition-all hover:bg-[#f8c53b]/20 hover:scale-[1.01] active:scale-[0.99]
+        focus:outline-none focus-visible:ring-2 focus-visible:ring-[#f8c53b] focus-visible:ring-offset-2 focus-visible:ring-offset-surface-900
+        ${isDragging ? "opacity-50" : ""}`}
     >
       <span className="select-none text-3xl leading-none text-[#f8c53b]">＋</span>
       <div className="flex min-w-0 flex-col">
         <span className="text-base font-extrabold uppercase tracking-wide text-[#f8c53b]">Add a text bar</span>
-        <span className="text-[12px] font-semibold text-[#faf0d6]/80">Drag it onto the frame →</span>
+        <span className="text-[12px] font-semibold text-[#faf0d6]/80">Click to add · or drag onto the frame</span>
       </div>
       <div className="ml-auto overflow-hidden rounded-[4px] px-2 py-1" style={{ background: bottomBar.backgroundColor }}>
         <span
@@ -39,7 +58,7 @@ function TextBarChip() {
           {bottomBar.text || "YOUR TEXT"}
         </span>
       </div>
-    </div>
+    </button>
   );
 }
 
@@ -150,8 +169,9 @@ export function BottomBarEditor() {
         )}
         <TextBarChip />
         <p className="rounded-lg border border-[#f8c53b]/30 bg-[#f8c53b]/10 px-3 py-2 text-[13px] font-semibold leading-snug text-[#faf0d6]">
-          Drag the bar onto the top or bottom row to add it — it auto-sizes to your text and snaps to
-          whole tiles. Add as many as you like; drag one off the frame to trash it.
+          Click to drop a bar on the frame, or drag it onto the top or bottom row to place it exactly.
+          It auto-sizes to your text and snaps to whole tiles. Add as many as you like; drag one off the
+          frame to trash it.
         </p>
       </div>
 

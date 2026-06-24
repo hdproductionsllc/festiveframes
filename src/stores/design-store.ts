@@ -109,6 +109,12 @@ interface DesignState {
 
   // Actions — text bars (draggable slogan bars)
   placeTextBar: (row: TextBarRow, startIndex: number) => void;
+  /**
+   * Click-to-add: place a new bar in a sensible default spot without a drag.
+   * Prefers the BOTTOM row (centered); falls back to TOP if bottom is full;
+   * does nothing if both rows are full. Returns true when a bar was added.
+   */
+  addTextBar: () => boolean;
   moveTextBar: (id: string, row: TextBarRow, startIndex: number) => void;
   removeTextBar: (id: string) => void;
   selectBar: (id: string | null) => void;
@@ -392,6 +398,17 @@ export const useDesignStore = create<DesignState>()(
               updatedAt: Date.now(),
             };
           });
+        },
+
+        addTextBar: () => {
+          // Try the bottom row first, then the top — placeTextBar centers the
+          // bar and only adds it when a free, non-overlapping run exists (it
+          // no-ops otherwise). Compare the bar count to learn which row took.
+          const before = get().textBars.length;
+          get().placeTextBar("bottom", 0);
+          if (get().textBars.length > before) return true;
+          get().placeTextBar("top", 0);
+          return get().textBars.length > before;
         },
 
         moveTextBar: (id, row, startIndex) => {

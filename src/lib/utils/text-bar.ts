@@ -21,7 +21,7 @@ export function measureTextBarUnits(
   maxUnits: number
 ): number {
   const U = 100; // reference px per tile unit
-  const fontPx = U * (cfg.fontSize ?? 0.52);
+  const fontPx = U * (cfg.fontSize ?? 0.85);
   const text = (cfg.text || "YOUR TEXT HERE").toUpperCase();
 
   let textPx = text.length * fontPx * 0.62; // fallback estimate
@@ -35,9 +35,9 @@ export function measureTextBarUnits(
   // letter-spacing sits between glyphs, scaled to the reference font size.
   textPx += cfg.letterSpacing * (fontPx / 28) * Math.max(0, text.length - 1);
 
-  const padX = U * 0.6; // ~0.3 unit breathing room each side
-  const qrPx = qrEnabled ? 1.6 * U : 0; // reserve QR width on both sides → text stays centered
-  const totalPx = (textPx + padX + qrPx) * 1.03; // 3% safety
+  const padX = U * 0.25; // small side margins — borderless, text fills the bar
+  const qrPx = qrEnabled ? 1.3 * U : 0; // reserve QR width on both sides → text stays centered
+  const totalPx = (textPx + padX + qrPx) * 1.0; // hug the text; render shrink-fits as the guard
 
   let units = Math.ceil(totalPx / U);
   // Force ODD width so the bar can sit perfectly centered on an odd-width row

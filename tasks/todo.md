@@ -26,3 +26,14 @@ StartWithKitPill = intentionally unused.
 ## Verify
 - [x] npx next build exits 0
 - [x] npm run lint — 0 errors, 20 pre-existing warnings (none in touched files)
+
+---
+
+# SEO Landing Pages (5) — model on america-250 page
+
+- [x] 1. /patriotic-license-plate-frame — H1 "Custom Patriotic License Plate Frames"
+- [x] 2. /veteran-license-plate-frame — H1 "Personalized Veteran License Plate Frames"
+- [x] 3. /made-in-usa-license-plate-frame — H1 "License Plate Frames Made in the USA"
+- [x] 4. /4th-of-july-license-plate-frame — H1 "4th of July License Plate Frames"
+- [x] 5. /red-white-and-blue-license-plate-frame — H1 "Red, White & Blue License Plate Frames"
+- [x] Build exit 0 (all 5 static) + lint 0 errors (20 pre-existing warnings). No edits to sitemap/existing files. No commit.

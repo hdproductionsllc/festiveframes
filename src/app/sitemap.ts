@@ -1,31 +1,32 @@
 import type { MetadataRoute } from "next";
 import { SITE_URL } from "@/config/season";
 
-// XML sitemap served at /sitemap.xml. Only the indexable marketing pages
-// belong here: the home page and the privacy policy. The conversion page
-// (/buy), the order page (/thanks), the builder (/build, unlinked for launch),
-// and API routes are intentionally excluded.
+// XML sitemap served at /sitemap.xml. Indexable marketing + SEO landing pages.
+// The order page (/thanks), the redirected /buy, and API routes are excluded.
+const LANDING_PAGES: { path: string; priority: number }[] = [
+  { path: "/america-250-license-plate-frame", priority: 0.9 },
+  { path: "/patriotic-license-plate-frame", priority: 0.8 },
+  { path: "/veteran-license-plate-frame", priority: 0.8 },
+  { path: "/made-in-usa-license-plate-frame", priority: 0.8 },
+  { path: "/4th-of-july-license-plate-frame", priority: 0.8 },
+  { path: "/red-white-and-blue-license-plate-frame", priority: 0.8 },
+  { path: "/gifts/patriotic-gift-for-car-guy", priority: 0.7 },
+  { path: "/gifts/car-guy-gifts-under-50", priority: 0.7 },
+  { path: "/gifts/personalized-gift-for-dad", priority: 0.7 },
+  { path: "/blog/license-plate-frame-sayings", priority: 0.6 },
+];
+
 export default function sitemap(): MetadataRoute.Sitemap {
   const lastModified = new Date();
 
   return [
-    {
-      url: SITE_URL,
+    { url: SITE_URL, lastModified, changeFrequency: "weekly", priority: 1 },
+    ...LANDING_PAGES.map((p) => ({
+      url: `${SITE_URL}${p.path}`,
       lastModified,
-      changeFrequency: "weekly",
-      priority: 1,
-    },
-    {
-      url: `${SITE_URL}/america-250-license-plate-frame`,
-      lastModified,
-      changeFrequency: "weekly",
-      priority: 0.9,
-    },
-    {
-      url: `${SITE_URL}/privacy`,
-      lastModified,
-      changeFrequency: "yearly",
-      priority: 0.3,
-    },
+      changeFrequency: "weekly" as const,
+      priority: p.priority,
+    })),
+    { url: `${SITE_URL}/privacy`, lastModified, changeFrequency: "yearly", priority: 0.3 },
   ];
 }
