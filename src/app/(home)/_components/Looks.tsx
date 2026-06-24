@@ -108,7 +108,7 @@ export function Looks() {
               </span>
             </div>
             <Link
-              href="#kit"
+              href={`/build?look=${d.img}`}
               className="s-display s-press mt-3 rounded-full border-[3px] border-[#1e1b17] p-2.5 text-center text-[15px] font-semibold text-[#1e1b17] no-underline"
               style={{
                 background: d.accent,

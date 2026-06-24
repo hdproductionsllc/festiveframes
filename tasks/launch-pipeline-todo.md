@@ -21,23 +21,27 @@ Real order tomorrow → production. Public launch Friday. Plan: .claude/plans/en
 - [x] 14 new fonts incl. cursive (Great Vibes, Allura, Dancing Script, Pacifico, Sacramento…)
 - [x] Categorized picker (Script · Display · Classic); typecheck + lint clean
 
-## Workstream 4 — QR rules + square QR snappet
-- [ ] First banner QR required/locked; later banners optional
-- [ ] Square QR tile → public/tiles/july4/qr.png + register in fourth-of-july.ts
+## Workstream 4 — QR rules + square QR snappet  ✅ DONE
+- [x] First banner QR required/locked; later banners optional
+- [x] Square QR tile → public/tiles/july4/qr.png + registered in fourth-of-july.ts
 
-## Workstream 5 — July-4th-only streamline
-- [ ] Surface only July-4th set; hide "More tile sets" UI
+## Workstream 5 — July-4th-only streamline  ✅ DONE
+- [x] Surface only July-4th set (SURFACED_SET_IDS); "More tile sets" UI hidden
 
-## Workstream 6 — Mobile + tutorial
-- [ ] Always-visible categorized bottom tile tray (bigger tiles)
-- [ ] Spotlight coachmark walkthrough (arrows/highlights)
+## Workstream 6 — Mobile + tutorial  ✅ DONE
+- [x] Always-visible bottom tile tray (bigger tiles, tap-to-place)
+- [x] Spotlight coachmark walkthrough (arrows/highlights) → tiles→canvas→text→Order
 
-## Workstream 7 — Home → builder presets + made-to-order copy
-- [ ] Real presets in fourth-of-july.ts; homepage CTAs → /build?preset=
-- [ ] "Every frame is made to order" messaging
+## Workstream 7 — Home → builder + made-to-order copy  ✅ DONE (presets = fast-follow)
+- [x] Homepage "Build this look" → /build?look=<id> (builder opens pre-filled, customizable)
+- [x] "Made to order, by hand, USA" messaging across home + FAQ/JSON-LD
+- [ ] FAST-FOLLOW: author per-look preset slot maps so each look loads its exact design
 
-## Workstream 8 — Deploy
-- [ ] .github/workflows/ci.yml (lint + build gate) + DEPLOY.md
+## Workstream 8 — Deploy  ✅ DONE
+- [x] .github/workflows/ci.yml (lint + build gate) + DEPLOY.md
+
+## STATUS: all code built; full `next build` + `npm run lint` GREEN. Branch 2+ commits ahead of master.
+## GO-LIVE BLOCKERS (owner): Resend domain verify · Railway vars · then deploy + $0 live test.
 
 ## Owner tasks (blockers)
 - [ ] Becky + Bill emails → PRODUCTION_EMAILS
