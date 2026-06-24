@@ -22,17 +22,21 @@ function TextBarChip() {
       {...attributes}
       {...listeners}
       title="Drag onto the top or bottom of the frame"
-      className={`inline-flex w-fit max-w-full items-center gap-2 rounded-md border border-dashed
-        border-surface-600 bg-surface-900 p-2 cursor-grab active:cursor-grabbing transition-opacity
-        ${isDragging ? "opacity-50" : ""}`}
+      className={`flex w-full items-center gap-3 rounded-xl border-[3px] border-dashed
+        border-[#f8c53b] bg-[#f8c53b]/10 px-4 py-3.5 cursor-grab active:cursor-grabbing
+        transition-all hover:bg-[#f8c53b]/20 hover:scale-[1.01] ${isDragging ? "opacity-50" : ""}`}
     >
-      <span className="select-none text-surface-500">⠿</span>
-      <div className="overflow-hidden rounded-[3px] px-2 py-1" style={{ background: bottomBar.backgroundColor }}>
+      <span className="select-none text-3xl leading-none text-[#f8c53b]">＋</span>
+      <div className="flex min-w-0 flex-col">
+        <span className="text-base font-extrabold uppercase tracking-wide text-[#f8c53b]">Add a text bar</span>
+        <span className="text-[12px] font-semibold text-[#faf0d6]/80">Drag it onto the frame →</span>
+      </div>
+      <div className="ml-auto overflow-hidden rounded-[4px] px-2 py-1" style={{ background: bottomBar.backgroundColor }}>
         <span
-          className="block truncate text-sm font-bold"
+          className="block max-w-[120px] truncate text-sm font-bold"
           style={{ fontFamily: bottomBar.fontFamily, color: bottomBar.textColor, letterSpacing: bottomBar.letterSpacing }}
         >
-          {bottomBar.text || "YOUR TEXT HERE"}
+          {bottomBar.text || "YOUR TEXT"}
         </span>
       </div>
     </div>
@@ -145,8 +149,8 @@ export function BottomBarEditor() {
           </ul>
         )}
         <TextBarChip />
-        <p className="text-[10px] text-surface-500">
-          Drag the bar onto the top or bottom row to add it — auto-sizes to your text and snaps to
+        <p className="rounded-lg border border-[#f8c53b]/30 bg-[#f8c53b]/10 px-3 py-2 text-[13px] font-semibold leading-snug text-[#faf0d6]">
+          Drag the bar onto the top or bottom row to add it — it auto-sizes to your text and snaps to
           whole tiles. Add as many as you like; drag one off the frame to trash it.
         </p>
       </div>
