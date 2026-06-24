@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useEffect, useRef } from "react";
 import { track } from "@/lib/analytics";
-import { StartWithKitPill } from "./StartWithKitPill";
 import { OnboardingPopup } from "./OnboardingPopup";
 
 /**
@@ -31,8 +30,7 @@ export function BuildChrome() {
 
   return (
     <>
-      {/* Home link + subtle intro line, bottom-left. The intro line is hidden on
-          small screens so it never crowds the designer or the kit pill. */}
+      {/* Home link, bottom-left. */}
       <div
         className="fixed left-4 bottom-4 z-40 hidden md:flex max-w-xs flex-col gap-1"
         style={{
@@ -49,12 +47,8 @@ export function BuildChrome() {
         >
           ← Festive Frames home
         </Link>
-        <p className="text-[11px] leading-relaxed text-surface-500">
-          Already have a frame? Design your next look. Tiles fit every Festive Frames rail.
-        </p>
       </div>
 
-      <StartWithKitPill />
       <OnboardingPopup />
     </>
   );

@@ -6,7 +6,6 @@ import { TileGrid } from "./TileGrid";
 import { ToolBar } from "@/components/designer/ToolBar";
 import { QuickActions } from "@/components/designer/QuickActions";
 import { PresetGallery } from "@/components/designer/PresetGallery";
-import { useDesignStore } from "@/stores/design-store";
 
 /** Approx. height the persistent mobile tray occupies, reserved as body padding
  *  so the page's last content (the text editor) can always scroll clear of it. */
@@ -36,8 +35,6 @@ function DesktopPaletteContent() {
     <div className="flex flex-col gap-2">
       <SetTabs />
       <ToolBar />
-      <DieCutToggle />
-      <WingsToggle />
       <p className="text-surface-400 text-xs text-center px-2">
         Drag a tile onto the frame, or tap to select then tap a slot
       </p>
@@ -81,8 +78,6 @@ function MobileTileTray() {
       {optionsOpen && (
         <div className="max-h-[42vh] space-y-2 overflow-y-auto border-b border-surface-700/60 p-3">
           <ToolBar />
-          <DieCutToggle />
-          <WingsToggle />
           <QuickActions />
           <PresetGallery />
         </div>
@@ -109,114 +104,6 @@ function MobileTileTray() {
       <div className="px-3 pb-3">
         <TileGrid variant="row" />
       </div>
-    </div>
-  );
-}
-
-/* ──────────────────────── Shared option controls ───────────────────── */
-
-function DieCutToggle() {
-  const dieCut = useDesignStore((s) => s.dieCut);
-  const toggleDieCut = useDesignStore((s) => s.toggleDieCut);
-
-  return (
-    <div className="flex gap-1 p-1 bg-surface-800 rounded-lg">
-      <button
-        onClick={() => { if (dieCut) toggleDieCut(); }}
-        className={`
-          flex-1 px-2 py-1.5 rounded-md text-sm transition-colors
-          ${!dieCut
-            ? "bg-brand-navy text-white"
-            : "text-surface-400 hover:text-surface-200 hover:bg-surface-700/50"
-          }
-        `}
-      >
-        Standard
-      </button>
-      <button
-        onClick={() => { if (!dieCut) toggleDieCut(); }}
-        className={`
-          flex-1 px-2 py-1.5 rounded-md text-sm transition-colors
-          ${dieCut
-            ? "bg-brand-navy text-white"
-            : "text-surface-400 hover:text-surface-200 hover:bg-surface-700/50"
-          }
-        `}
-      >
-        Die Cut
-      </button>
-    </div>
-  );
-}
-
-function WingsToggle() {
-  const wings = useDesignStore((s) => s.frameConfig.wings);
-  const wingColumns = useDesignStore((s) => s.frameConfig.wingColumns);
-  const toggleWings = useDesignStore((s) => s.toggleWings);
-  const setWingColumns = useDesignStore((s) => s.setWingColumns);
-
-  return (
-    <div className="space-y-1.5">
-      <div className="flex gap-1 p-1 bg-surface-800 rounded-lg">
-        <button
-          onClick={() => { if (wings) toggleWings(); }}
-          className={`
-            flex-1 px-2 py-1.5 rounded-md text-sm transition-colors
-            ${!wings
-              ? "bg-brand-navy text-white"
-              : "text-surface-400 hover:text-surface-200 hover:bg-surface-700/50"
-            }
-          `}
-        >
-          Standard
-        </button>
-        <button
-          onClick={() => { if (!wings) toggleWings(); }}
-          className={`
-            flex-1 px-2 py-1.5 rounded-md text-sm transition-colors
-            ${wings
-              ? "bg-brand-navy text-white"
-              : "text-surface-400 hover:text-surface-200 hover:bg-surface-700/50"
-            }
-          `}
-        >
-          + Wings
-        </button>
-      </div>
-
-      {/* Wing width stepper — only visible when wings are on */}
-      {wings && (
-        <div className="flex items-center justify-between px-1">
-          <span className="text-[11px] text-surface-400">Wing width</span>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setWingColumns(wingColumns - 1)}
-              disabled={wingColumns <= 1}
-              className="w-6 h-6 rounded bg-surface-700 text-surface-200 text-sm flex items-center justify-center
-                hover:bg-surface-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-            >
-              -
-            </button>
-            <span className="text-xs text-surface-200 w-14 text-center font-medium">
-              {wingColumns} col{wingColumns !== 1 ? "s" : ""}
-            </span>
-            <button
-              onClick={() => setWingColumns(wingColumns + 1)}
-              disabled={wingColumns >= 5}
-              className="w-6 h-6 rounded bg-surface-700 text-surface-200 text-sm flex items-center justify-center
-                hover:bg-surface-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-            >
-              +
-            </button>
-          </div>
-        </div>
-      )}
-
-      <p className="text-[10px] text-surface-500 text-center">
-        {wings
-          ? "Wings extend the frame to fill your car’s plate basin"
-          : "Add side extensions to fill wider plate basins"}
-      </p>
     </div>
   );
 }

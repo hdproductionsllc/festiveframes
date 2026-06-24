@@ -7,7 +7,6 @@ import { JULY4_SLOGANS } from "@/data/slogans";
 import { FontSelector } from "./FontSelector";
 import { ColorPicker } from "@/components/ui/ColorPicker";
 import { Slider } from "@/components/ui/Slider";
-import { AlignmentSelector } from "@/components/ui/AlignmentSelector";
 
 /** The draggable text-bar object — drops a NEW bar onto the top/bottom row. */
 function TextBarChip() {
@@ -42,28 +41,22 @@ function TextBarChip() {
 
 export function BottomBarEditor() {
   const bottomBar = useDesignStore((s) => s.bottomBar);
-  const qrCode = useDesignStore((s) => s.qrCode);
   const textBars = useDesignStore((s) => s.textBars);
   const selectedBarId = useDesignStore((s) => s.selectedBarId);
   const updateBottomBar = useDesignStore((s) => s.updateBottomBar);
-  const updateQRCode = useDesignStore((s) => s.updateQRCode);
   const removeTextBar = useDesignStore((s) => s.removeTextBar);
   const selectBar = useDesignStore((s) => s.selectBar);
   const updateTextBar = useDesignStore((s) => s.updateTextBar);
-  const updateTextBarQr = useDesignStore((s) => s.updateTextBarQr);
 
   // When a placed bar is selected, every control edits THAT bar live;
   // otherwise the controls configure the draft for the next bar to be dragged.
   const selected = textBars.find((b) => b.id === selectedBarId) ?? null;
   const cfg = selected ? selected.config : bottomBar;
-  const qrEnabled = selected ? selected.qr : qrCode.enabled;
-  // The first banner is required to carry the QR — its toggle is locked on.
-  const isFirstBar = selected != null && textBars[0]?.id === selected.id;
-  const qrLocked = isFirstBar;
+  // The first banner always carries the QR (enforced by the store); we surface a
+  // subtle static note on it rather than a toggle.
+  const qrLocked = selected != null && textBars[0]?.id === selected.id;
   const setCfg = (u: Partial<typeof bottomBar>) =>
     selected ? updateTextBar(selected.id, u) : updateBottomBar(u);
-  const setQr = (enabled: boolean) =>
-    selected ? updateTextBarQr(selected.id, enabled) : updateQRCode({ enabled });
 
   return (
     <div className="bsk-panel-pink space-y-4 p-4 bg-surface-800/50 rounded-xl border border-surface-700/50">
@@ -78,7 +71,7 @@ export function BottomBarEditor() {
           </button>
         )}
       </div>
-      <p className="text-[10px] text-surface-500">
+      <p className="text-sm text-surface-300">
         {selected
           ? `Editing the “${selected.config.text || "—"}” bar — changes apply live.`
           : "Setting up a new bar. Drag it onto the frame, or click a placed bar to edit it."}
@@ -167,12 +160,6 @@ export function BottomBarEditor() {
         <ColorPicker label="Background" value={cfg.backgroundColor} onChange={(backgroundColor) => setCfg({ backgroundColor })} />
       </div>
 
-      {/* Alignment */}
-      <div className="space-y-1">
-        <span className="text-xs text-surface-400">Alignment</span>
-        <AlignmentSelector value={cfg.textAlign} onChange={(textAlign) => setCfg({ textAlign })} />
-      </div>
-
       {/* Font size */}
       <div className="space-y-1">
         <div className="flex items-center justify-between">
@@ -204,35 +191,12 @@ export function BottomBarEditor() {
         onChange={(letterSpacing) => setCfg({ letterSpacing })}
       />
 
-      {/* QR Code toggle */}
-      <div className="pt-2 border-t border-surface-700/50 space-y-2">
-        <label className={`flex items-center gap-2 ${qrLocked ? "cursor-not-allowed" : "cursor-pointer"}`}>
-          <input
-            type="checkbox"
-            checked={qrLocked ? true : qrEnabled}
-            disabled={qrLocked}
-            onChange={(e) => setQr(e.target.checked)}
-            className={`w-4 h-4 rounded bg-surface-700 border-surface-600 text-brand-gold
-              focus:ring-brand-gold/30 accent-[#FFD700]
-              ${qrLocked ? "cursor-not-allowed opacity-70" : "cursor-pointer"}`}
-          />
-          <span className="text-xs text-surface-300">Show QR Code (festiveframes.co)</span>
-        </label>
-        {qrLocked && (
-          <p className="text-[10px] text-surface-500">Required on your first banner.</p>
-        )}
-        {qrEnabled && (
-          <input
-            type="url"
-            value={qrCode.url}
-            onChange={(e) => updateQRCode({ url: e.target.value })}
-            placeholder="https://..."
-            className="w-full px-3 py-1.5 rounded-md bg-surface-900 border border-surface-700
-              text-surface-100 text-xs placeholder:text-surface-600
-              focus:outline-none focus:border-brand-gold/50 transition-colors"
-          />
-        )}
-      </div>
+      {/* QR Code — always on the first banner only (enforced by the store). */}
+      {qrLocked && (
+        <div className="pt-2 border-t border-surface-700/50">
+          <p className="text-xs text-surface-400">Your QR code is on this banner.</p>
+        </div>
+      )}
     </div>
   );
 }

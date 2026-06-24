@@ -80,3 +80,16 @@
 
 ## 4. Verify
 - [x] npx tsc --noEmit passes (exit 0)
+
+---
+
+# Streamline builder for launch — UI-only removals (keep store logic intact)
+
+- [x] 1. Remove die-cut toggle UI (DieCutToggle in TilePalette.tsx — desktop + mobile). Keep store dieCut (default false).
+- [x] 2. Remove wings toggle UI (WingsToggle in TilePalette.tsx — desktop + mobile). Keep store actions/fields.
+- [x] 3. Remove text-alignment selector in BottomBarEditor.tsx. Keep textAlign in cfg (default center).
+- [x] 4. Remove "show QR code" toggle UI in BottomBarEditor.tsx. Store enforces QR-on-first-banner. Subtle static note added.
+- [x] 5. Enlarge "Setting up a new bar..." helper text (text-[10px] -> text-sm, contrast).
+- [x] 6a. Remove StartWithKitPill from BuildChrome.tsx (file left unused, no longer mounted).
+- [x] 6b. Remove "Already have a frame? Design your next look..." intro line.
+- [x] Verify: tsc --noEmit (OK) + npm run lint (0 errors, only pre-existing warnings).
