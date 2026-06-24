@@ -54,7 +54,7 @@ export function DesignerHeader({ onExport, onExportParts, onOrder, ordering }: D
             width={1408}
             height={1425}
             priority
-            className="h-11 w-auto"
+            className="h-16 w-auto"
           />
         </a>
         <div className="hidden sm:block h-6 w-px bg-[#faf0d6]/25" />

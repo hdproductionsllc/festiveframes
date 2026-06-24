@@ -35,7 +35,7 @@ export function Header({ remaining, cap }: { remaining: number; cap: number }) {
               width={1408}
               height={1425}
               priority
-              className="h-[60px] w-auto sm:h-[84px]"
+              className="h-[84px] w-auto sm:h-[116px]"
             />
           </Link>
           <div className="flex-1" />

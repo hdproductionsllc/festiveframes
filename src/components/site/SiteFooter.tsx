@@ -18,7 +18,7 @@ export function SiteFooter() {
               alt="Festive Frames"
               width={176}
               height={60}
-              className="h-9 w-auto"
+              className="h-14 w-auto"
             />
           </span>
           <p className="max-w-prose text-sm leading-relaxed text-brand-cream/80">

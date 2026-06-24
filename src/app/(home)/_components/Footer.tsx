@@ -32,7 +32,7 @@ export function Footer({ year }: { year: number }) {
             alt="Festive Frames"
             width={1408}
             height={1425}
-            className="mb-3.5 h-[84px] w-auto"
+            className="mb-3.5 h-[132px] w-auto"
           />
           <p className="m-0 mb-[18px] max-w-[300px] text-[15px] font-semibold leading-[1.5] text-[#c8c1ad]">
             Customizable snap-on license plate frame kits. Install the frame once,
