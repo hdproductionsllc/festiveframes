@@ -39,12 +39,19 @@
 
 ---
 
-## PHASE 2 — Builder reskin (skin only, output frozen)
-- [ ] Audit `/build` chrome vs. the frame/canvas (output) — list what's safe to restyle
-- [ ] Apply sticker language to chrome ONLY: header, toolbar, panels, palette, buttons, modals, backgrounds
-- [ ] DO NOT TOUCH: FrameCanvas/compose-frame/tile artwork/eufy-print/parts list (the output + production pipeline)
-- [ ] Verify a design produces identical output (compose + parts list + eufy sheets unchanged)
-- [ ] `npm run build` clean
+## PHASE 2 — Builder reskin (skin only, output frozen)  ✅ DONE + PUSHED (27c8a48)
+- [x] Audit `/build` chrome vs. the frame/canvas (output) — mapped via Explore agent
+- [x] Old builder preserved at git tag `pre-build-reskin`
+- [x] Apply sticker language to chrome ONLY via scoped `.build-skin` stylesheet
+      (utility overrides, since globals.css uses `@theme inline`): cream stage +
+      confetti, ink-outline panels w/ hard shadows, Fredoka+Nunito, sticker accents
+- [x] DO NOT TOUCH verified: git shows only `build/page.tsx` + new `build-skin.css`
+      changed; ZERO output-pipeline files (compose-frame, eufy-print, FrameCanvas,
+      RailSlot, PlacedTileView, LicensePlateArea, BottomTextBar, TileArtwork,
+      ExportPartsList, design-store, data/) touched
+- [x] Output identity guaranteed by construction (no render/compose/print code changed;
+      plate uses inline styles + /40,/60,/30 variants not in the override set)
+- [x] `npm run build` clean; screenshot verified frame preview renders identically
 
 ## Notes
 - Old design recoverable: `/classic` route + `pre-redesign-classic` git tag.

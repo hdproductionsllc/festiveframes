@@ -11,7 +11,11 @@ import { FrameCanvas, type FrameCanvasHandle } from "@/components/frame/FrameCan
 import { TilePalette } from "@/components/tiles/TilePalette";
 import { BottomBarEditor } from "@/components/bottom-bar/BottomBarEditor";
 import { StateSelector } from "@/components/frame/StateSelector";
-import { composeFrameImage } from "@/lib/utils/compose-frame";
+import { composeFrameImage, composeBarImage } from "@/lib/utils/compose-frame";
+import { composeEufyPrintSheets } from "@/lib/utils/eufy-print";
+import { EUFY_JIG_3X12 } from "@/config/eufy-jig";
+import { buildPartsList } from "@/lib/order/parts-list";
+import type { NamedImage } from "@/lib/email-production";
 import { playSound } from "@/lib/utils/sound";
 import { getSet } from "@/data/sets/index";
 
@@ -32,6 +36,7 @@ export function Designer() {
   const [overSlotId, setOverSlotId] = useState<string | null>(null);
   const [frameImage, setFrameImage] = useState<string | null>(null);
   const [showParts, setShowParts] = useState(false);
+  const [ordering, setOrdering] = useState(false);
   const canvasRef = useRef<FrameCanvasHandle>(null);
   const seededRef = useRef(false);
 
@@ -87,9 +92,96 @@ export function Designer() {
     setShowParts(true);
   }, []);
 
+  // Place the made-to-order frame order: render every production artifact
+  // client-side (we have the fonts + artwork loaded), stash them for the
+  // post-payment relay, create the $39 Stripe session, and redirect.
+  const handleOrder = useCallback(async () => {
+    if (ordering) return;
+    setOrdering(true);
+    if (soundEnabled) playSound("chime");
+    try {
+      const s = useDesignStore.getState();
+      if (Object.keys(s.slots).length === 0) {
+        setOrdering(false);
+        return;
+      }
+      const orderId = (crypto.randomUUID?.() ?? `ord-${Date.now()}-${Math.floor(Math.random() * 1e6)}`);
+
+      // Proof / composite (the customer's proof AND the founders' composite).
+      const proofUrl = await composeFrameImage(2000);
+      const proof: NamedImage | null = proofUrl ? { name: "frame-proof", dataUrl: proofUrl } : null;
+
+      // Banner files (one per text bar).
+      const banners: NamedImage[] = [];
+      for (const bar of s.textBars) {
+        const url = await composeBarImage(bar.id);
+        if (url) banners.push({ name: `banner-${bar.row}-${bar.startIndex}`, dataUrl: url });
+      }
+
+      // eufyMake print sheet(s). Desktop-only — throws on phones (canvas too
+      // large). On mobile we ship without it; Bill regenerates on desktop.
+      let printSheets: NamedImage[] = [];
+      try {
+        const { sheets } = await composeEufyPrintSheets(EUFY_JIG_3X12);
+        printSheets = sheets.map((dataUrl, i) => ({ name: `eufy-print-sheet-${i + 1}`, dataUrl }));
+      } catch {
+        printSheets = [];
+      }
+
+      const parts = buildPartsList({
+        slots: s.slots,
+        textBars: s.textBars,
+        qrCode: s.qrCode,
+        plateState: s.plateState,
+        designName: s.designName,
+        tileSizeInches: s.frameConfig.tileSizeInches,
+      });
+
+      const artifacts = { proof, printSheets, banners };
+
+      // Stash for fulfillment: server draft (webhook backup) + localStorage
+      // (the /thanks relay, resilient across the Stripe redirect / restart).
+      try {
+        await fetch("/api/order/draft", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ orderId, parts, artifacts, design: { slots: s.slots, textBars: s.textBars, qrCode: s.qrCode, plateState: s.plateState, frameConfig: s.frameConfig, designName: s.designName } }),
+        });
+      } catch {
+        /* non-fatal: localStorage relay below is the backup */
+      }
+      try {
+        localStorage.setItem("ff:pending-order", JSON.stringify({ orderId, parts, artifacts }));
+      } catch {
+        // Quota: drop the heavy print sheets from the local copy (the server
+        // draft still has them); founders still get parts + proof + banners.
+        try {
+          localStorage.setItem("ff:pending-order", JSON.stringify({ orderId, parts, artifacts: { ...artifacts, printSheets: [] } }));
+        } catch { /* give up on the local relay; server draft remains */ }
+      }
+
+      // Create the Stripe checkout session and go.
+      const res = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kind: "custom-frame", orderId, designName: s.designName }),
+      });
+      const data = await res.json();
+      if (data?.url) {
+        window.location.href = data.url;
+      } else {
+        setOrdering(false);
+        if (soundEnabled) playSound("sad");
+      }
+    } catch {
+      setOrdering(false);
+      if (soundEnabled) playSound("sad");
+    }
+  }, [ordering, soundEnabled]);
+
   return (
     <div className="workbench-bg min-h-screen flex flex-col">
-      <DesignerHeader onExport={handleExport} onExportParts={handleExportParts} />
+      <DesignerHeader onExport={handleExport} onExportParts={handleExportParts} onOrder={handleOrder} ordering={ordering} />
       <ExportPartsList open={showParts} onClose={() => setShowParts(false)} frameImage={frameImage} />
 
       <DndProvider onOverSlotChange={setOverSlotId}>

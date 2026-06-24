@@ -175,12 +175,6 @@ export async function POST(request: Request): Promise<NextResponse> {
     return badRequest("Invalid request body.");
   }
 
-  const parsed = parseBody(rawBody);
-  if (!parsed.ok) {
-    return badRequest(parsed.error);
-  }
-  const data = parsed.data;
-
   // Initialize Stripe lazily; missing key degrades gracefully.
   let stripe: Stripe;
   try {
@@ -194,23 +188,68 @@ export async function POST(request: Request): Promise<NextResponse> {
 
   const baseUrl = getBaseUrl(request);
 
+  const flatShipping = {
+    shipping_rate_data: {
+      type: "fixed_amount" as const,
+      display_name: season.shippingLabel,
+      fixed_amount: { amount: season.flatShippingCents, currency: offer.currency },
+    },
+  };
+
+  // ── Custom builder order: one made-to-order frame at the flat single price.
+  // Pricing is still server-authoritative (offer.singlePrice). allow_promotion_codes
+  // exposes the "Add promotion code" field so a 100%-off code can test at $0,
+  // while a real customer simply pays. The small orderId rides in metadata; the
+  // full design + artifacts are stashed via /api/order/draft + localStorage relay.
+  if ((rawBody as Record<string, unknown>)?.kind === "custom-frame") {
+    const orderId = (rawBody as Record<string, unknown>).orderId;
+    if (typeof orderId !== "string" || !orderId) {
+      return badRequest("Missing orderId for custom order.");
+    }
+    const rawName = (rawBody as Record<string, unknown>).designName;
+    const designName = typeof rawName === "string" && rawName.trim() ? rawName.trim().slice(0, 80) : "Custom License Plate Frame";
+    try {
+      const session = await stripe.checkout.sessions.create({
+        mode: "payment",
+        allow_promotion_codes: true,
+        line_items: [
+          {
+            quantity: 1,
+            price_data: {
+              currency: offer.currency,
+              unit_amount: offer.singlePrice,
+              product_data: { name: designName, description: "Made-to-order custom license plate frame" },
+            },
+          },
+        ],
+        shipping_address_collection: { allowed_countries: ["US"] },
+        shipping_options: [flatShipping],
+        success_url: `${baseUrl}/thanks?session_id={CHECKOUT_SESSION_ID}&order=${encodeURIComponent(orderId)}`,
+        cancel_url: `${baseUrl}/build`,
+        metadata: { kind: "custom-frame", orderId, designName },
+      });
+      if (!session.url) {
+        return NextResponse.json({ error: "Could not start checkout. Please try again." }, { status: 502 });
+      }
+      return NextResponse.json({ url: session.url }, { status: 200 });
+    } catch (err) {
+      console.error("[checkout] custom-frame session creation failed:", err);
+      return NextResponse.json({ error: "Could not start checkout. Please try again." }, { status: 502 });
+    }
+  }
+
+  const parsed = parseBody(rawBody);
+  if (!parsed.ok) {
+    return badRequest(parsed.error);
+  }
+  const data = parsed.data;
+
   try {
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       line_items: buildLineItems(data),
       shipping_address_collection: { allowed_countries: ["US"] },
-      shipping_options: [
-        {
-          shipping_rate_data: {
-            type: "fixed_amount",
-            display_name: season.shippingLabel,
-            fixed_amount: {
-              amount: season.flatShippingCents,
-              currency: offer.currency,
-            },
-          },
-        },
-      ],
+      shipping_options: [flatShipping],
       success_url: `${baseUrl}/thanks?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${baseUrl}/buy`,
       metadata: {

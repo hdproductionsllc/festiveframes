@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Legacy Wall — Grace Community Church (Demo)</title>
+<style>
+  :root{
+    --ink:#1c2430; --cream:#f7f4ee; --paper:#fffdf9;
+    --brass:#a8833c; --brass-bright:#c9a45b;
+    --green:#22382e; --line:#ddd5c6;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:Georgia,'Palatino Linotype',serif; background:var(--cream); color:var(--ink); line-height:1.5;}
+  .wrap{max-width:1100px; margin:0 auto; padding:0 20px;}
+
+  /* ── Top bar ─────────────────────────── */
+  header{background:var(--green); color:#f1ead9; padding:14px 0;}
+  header .wrap{display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:8px;}
+  .brand{font-size:1.15rem; letter-spacing:.14em; text-transform:uppercase;}
+  .brand b{color:var(--brass-bright);}
+  nav{display:flex; gap:6px;}
+  nav button{
+    font-family:inherit; font-size:.85rem; letter-spacing:.06em; cursor:pointer;
+    background:transparent; color:#cfc6ae; border:1px solid #ffffff2e; border-radius:4px; padding:7px 14px;
+  }
+  nav button.active{background:var(--brass); border-color:var(--brass); color:#fff;}
+
+  .view{display:none; padding:34px 0 70px;}
+  .view.active{display:block;}
+  .demo-note{font-size:.75rem; color:#8a8270; text-align:center; padding:8px 0; background:#efe9dc; border-bottom:1px solid var(--line);}
+
+  h1{font-size:1.9rem; font-weight:normal; letter-spacing:.02em;}
+  .sub{color:#6c6452; margin:6px 0 26px; font-style:italic;}
+
+  /* ── The wall itself ─────────────────── */
+  .wall-room{
+    background:linear-gradient(180deg,#e9e2d2 0%, #ded5c0 100%);
+    border:1px solid var(--line); border-radius:8px; padding:46px 30px 64px;
+    box-shadow:inset 0 0 60px #00000010;
+  }
+  .wall-header{
+    margin:0 auto 26px; max-width:520px; text-align:center;
+    background:linear-gradient(160deg,#2c2118,#4a3826 55%,#2c2118);
+    color:#e9d9ae; padding:20px 16px; border-radius:4px;
+    box-shadow:0 4px 14px #00000040;
+    letter-spacing:.22em; text-transform:uppercase;
+  }
+  .wall-header small{display:block; letter-spacing:.14em; font-size:.65rem; color:#bba76f; margin-top:6px;}
+  .tilegrid{display:grid; grid-template-columns:repeat(6,1fr); gap:10px; max-width:860px; margin:0 auto;}
+  .tile{
+    border-radius:3px; aspect-ratio:4/3; padding:10px 8px;
+    display:flex; flex-direction:column; justify-content:center; text-align:center;
+    box-shadow:0 3px 9px #00000038, inset 0 1px 0 #ffffff40;
+    position:relative; transition:transform .15s;
+  }
+  .tile:hover{transform:translateY(-3px);}
+  .tile .nm{font-size:.78rem; letter-spacing:.04em;}
+  .tile .yr{font-size:.6rem; opacity:.75; margin-top:3px; letter-spacing:.08em;}
+  .tile.walnut{background:linear-gradient(115deg,#5d4126 0%,#7a5733 28%,#5a3f24 52%,#74532f 76%,#553b21 100%); color:#f3e3bd; text-shadow:0 1px 2px #00000080;}
+  .tile.acrylic{background:linear-gradient(150deg,#ffffffd8,#e7ecebc9 60%,#f5f8f7d8); color:#3c4640; border:1px solid #ffffff;}
+  .tile.bronze{background:linear-gradient(120deg,#6f5a33,#a8833c 40%,#8a6c34 60%,#bf9c54); color:#fff7e2; text-shadow:0 1px 2px #00000070;}
+  .tile.big{grid-column:span 2;}
+  .tile .qr{
+    position:absolute; right:5px; bottom:5px; width:13px; height:13px; opacity:.55;
+    background:
+      linear-gradient(currentColor,currentColor) 0 0/5px 5px no-repeat,
+      linear-gradient(currentColor,currentColor) 100% 0/5px 5px no-repeat,
+      linear-gradient(currentColor,currentColor) 0 100%/5px 5px no-repeat,
+      linear-gradient(currentColor,currentColor) 70% 70%/3px 3px no-repeat;
+  }
+  .wall-caption{text-align:center; color:#6c6452; font-size:.8rem; margin-top:22px; font-style:italic;}
+
+  /* ── Order flow ──────────────────────── */
+  .order-grid{display:grid; grid-template-columns:1fr 1fr; gap:34px; align-items:start;}
+  @media(max-width:840px){.order-grid{grid-template-columns:1fr;}}
+  .card{background:var(--paper); border:1px solid var(--line); border-radius:8px; padding:26px;}
+  label{display:block; font-size:.72rem; letter-spacing:.12em; text-transform:uppercase; color:#7a7158; margin:18px 0 6px;}
+  input[type=text]{
+    width:100%; font-family:inherit; font-size:1rem; padding:10px 12px;
+    border:1px solid var(--line); border-radius:5px; background:#fff;
+  }
+  .tiers{display:grid; gap:10px;}
+  .tier{
+    display:flex; justify-content:space-between; align-items:center; gap:10px;
+    border:2px solid var(--line); border-radius:7px; padding:12px 14px; cursor:pointer; background:#fff;
+  }
+  .tier.sel{border-color:var(--brass); background:#fdf8ec;}
+  .tier .t-name{font-size:.95rem;}
+  .tier .t-spec{font-size:.72rem; color:#8a8270;}
+  .tier .t-price{font-size:1.05rem; color:var(--brass); white-space:nowrap;}
+  .qr-row{display:flex; gap:10px; align-items:flex-start; margin-top:18px; background:#f3efe5; border-radius:7px; padding:12px 14px; cursor:pointer; border:2px solid transparent;}
+  .qr-row.sel{border-color:var(--brass);}
+  .qr-row input{margin-top:4px;}
+  .qr-row .q-t{font-size:.9rem;}
+  .qr-row .q-d{font-size:.74rem; color:#7a7158; margin-top:2px;}
+
+  .preview-zone{position:sticky; top:20px;}
+  .ptile{
+    margin:14px auto 6px; width:min(330px,100%); aspect-ratio:4/3; border-radius:4px;
+    display:flex; flex-direction:column; justify-content:center; text-align:center; padding:18px;
+    box-shadow:0 8px 22px #00000038, inset 0 1px 0 #ffffff40; position:relative;
+  }
+  .ptile .nm{font-size:1.25rem; letter-spacing:.05em;}
+  .ptile .yr{font-size:.85rem; opacity:.8; margin-top:8px; letter-spacing:.1em;}
+  .ptile .qr{position:absolute; right:10px; bottom:10px; width:22px; height:22px; opacity:.6;
+      background:
+      linear-gradient(currentColor,currentColor) 0 0/8px 8px no-repeat,
+      linear-gradient(currentColor,currentColor) 100% 0/8px 8px no-repeat,
+      linear-gradient(currentColor,currentColor) 0 100%/8px 8px no-repeat,
+      linear-gradient(currentColor,currentColor) 72% 72%/5px 5px no-repeat;}
+  .spec-line{text-align:center; font-size:.75rem; color:#8a8270;}
+  .total{display:flex; justify-content:space-between; border-top:1px solid var(--line); margin-top:20px; padding-top:14px; font-size:1.1rem;}
+  .total b{color:var(--brass);}
+  .cta{
+    display:block; width:100%; margin-top:16px; padding:14px; font-family:inherit; font-size:1rem;
+    letter-spacing:.1em; text-transform:uppercase; cursor:pointer;
+    background:var(--green); color:#f1ead9; border:none; border-radius:6px;
+  }
+  .cta:hover{background:#2d4a3d;}
+  .fineprint{font-size:.72rem; color:#8a8270; text-align:center; margin-top:10px;}
+  .confirm{
+    display:none; margin-top:16px; background:#eef3ea; border:1px solid #b9ccae; color:#33502f;
+    border-radius:7px; padding:14px; font-size:.9rem; text-align:center;
+  }
+
+  /* ── Admin ───────────────────────────── */
+  .stats{display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:14px; margin-bottom:26px;}
+  .stat{background:var(--paper); border:1px solid var(--line); border-radius:8px; padding:18px; text-align:center;}
+  .stat .v{font-size:1.7rem; color:var(--brass);}
+  .stat .l{font-size:.7rem; letter-spacing:.12em; text-transform:uppercase; color:#7a7158; margin-top:4px;}
+  table{width:100%; border-collapse:collapse; background:var(--paper); border:1px solid var(--line); border-radius:8px; overflow:hidden; font-size:.88rem;}
+  th{background:var(--green); color:#e8e0cb; font-weight:normal; letter-spacing:.08em; font-size:.72rem; text-transform:uppercase; text-align:left; padding:10px 14px;}
+  td{padding:10px 14px; border-top:1px solid var(--line);}
+  .pill{font-size:.68rem; letter-spacing:.06em; padding:3px 9px; border-radius:99px;}
+  .pill.ok{background:#e3ecdd; color:#3c5a36;}
+  .pill.wait{background:#f4ead2; color:#8a6a22;}
+  .pill.ship{background:#e2e8f0; color:#33486b;}
+  .admin-note{margin-top:18px; font-size:.8rem; color:#7a7158; font-style:italic;}
+</style>
+</head>
+<body>
+
+<div class="demo-note">INTERACTIVE CONCEPT DEMO — The Legacy Wall · all names fictional · prepared for HD Productions LLC</div>
+
+<header>
+  <div class="wrap">
+    <div class="brand">THE <b>LEGACY</b> WALL <span style="font-size:.7rem; letter-spacing:.05em; opacity:.7">· Grace Community Church</span></div>
+    <nav>
+      <button class="active" data-v="wall">The Wall</button>
+      <button data-v="order">Honor a Name</button>
+      <button data-v="admin">Church Admin</button>
+    </nav>
+  </div>
+</header>
+
+<!-- ════════ VIEW 1 : THE WALL ════════ -->
+<section class="view active" id="v-wall">
+  <div class="wrap">
+    <h1>The Wall of Honor</h1>
+    <p class="sub">As it hangs in the narthex — every tile placed by hand, every name added in days, not months.</p>
+    <div class="wall-room">
+      <div class="wall-header">Wall of Honor<small>Grace Community Church · Est. 1957</small></div>
+      <div class="tilegrid" id="wallgrid"></div>
+      <p class="wall-caption">Walnut, frosted acrylic, and cast-bronze finish tiles on a concealed rail system — no visible hardware. Tiles with the mark in the corner link to a Living Tribute page when scanned.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ════════ VIEW 2 : ORDER ════════ -->
+<section class="view" id="v-order">
+  <div class="wrap">
+    <h1>Honor a Name on the Wall</h1>
+    <p class="sub">Your gift supports the Grace Community building fund. Tiles are crafted in St. Louis and installed on the wall within two weeks.</p>
+    <div class="order-grid">
+      <div class="card">
+        <label for="f-name">Name to honor</label>
+        <input type="text" id="f-name" maxlength="26" placeholder="e.g.  THE HENDERSON FAMILY" value="">
+        <label for="f-line2">Second line <span style="text-transform:none">(years, scripture, dedication — optional)</span></label>
+        <input type="text" id="f-line2" maxlength="32" placeholder="e.g.  In Loving Memory · 1941 – 2025">
+        <label>Choose a tier</label>
+        <div class="tiers">
+          <div class="tier sel" data-tier="0">
+            <div><div class="t-name">Bronze</div><div class="t-spec">Brushed bronze-finish · 4&times;3 in</div></div>
+            <div class="t-price">$149</div>
+          </div>
+          <div class="tier" data-tier="1">
+            <div><div class="t-name">Silver</div><div class="t-spec">Frosted acrylic · 5&frac14;&times;4 in</div></div>
+            <div class="t-price">$249</div>
+          </div>
+          <div class="tier" data-tier="2">
+            <div><div class="t-name">Legacy</div><div class="t-spec">Solid walnut · 8&times;6 in &mdash; double tile</div></div>
+            <div class="t-price">$449</div>
+          </div>
+        </div>
+        <div class="qr-row" id="qrrow">
+          <input type="checkbox" id="f-qr">
+          <div>
+            <div class="q-t">Add a Living Tribute &mdash; +$29</div>
+            <div class="q-d">A discreet mark on the tile links to a private tribute page: photos, their story, words from family. Visitors scan it with any phone.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="preview-zone">
+        <div class="card">
+          <div style="text-align:center; font-size:.72rem; letter-spacing:.14em; text-transform:uppercase; color:#7a7158;">Live preview</div>
+          <div class="ptile walnut" id="ptile">
+            <div class="nm" id="p-name">THE HENDERSON FAMILY</div>
+            <div class="yr" id="p-line2">&nbsp;</div>
+          </div>
+          <div class="spec-line" id="p-spec">Bronze · brushed bronze-finish · 4&times;3 in</div>
+          <div class="total"><span>Your gift</span><b id="p-total">$149</b></div>
+          <button class="cta" id="orderbtn">Place this on the Wall</button>
+          <p class="fineprint">Crafted &amp; UV-printed in St. Louis · installed at the next monthly placement · Grace Community receives 40% of every tile</p>
+          <div class="confirm" id="confirm">✓ &nbsp;In a live store this proceeds to checkout. The church office approves the inscription, the tile ships in 3 business days, and it's placed at the next installation.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════ VIEW 3 : ADMIN ════════ -->
+<section class="view" id="v-admin">
+  <div class="wrap">
+    <h1>Wall Manager <span style="font-size:.9rem; color:#8a8270">· Grace Community Church</span></h1>
+    <p class="sub">The church office's view — approve inscriptions, track placements, watch the fund grow. No sign shop, no phone calls.</p>
+    <div class="stats">
+      <div class="stat"><div class="v">87</div><div class="l">Tiles on the wall</div></div>
+      <div class="stat"><div class="v">6</div><div class="l">Awaiting approval</div></div>
+      <div class="stat"><div class="v">$14,310</div><div class="l">Raised for building fund</div></div>
+      <div class="stat"><div class="v">213</div><div class="l">Tribute scans this month</div></div>
+    </div>
+    <table>
+      <tr><th>Requested by</th><th>Inscription</th><th>Tier</th><th>Status</th></tr>
+      <tr><td>M. Okafor</td><td>DEACON SAMUEL OKAFOR · 40 Years of Service</td><td>Legacy · walnut</td><td><span class="pill wait">Approve inscription</span></td></tr>
+      <tr><td>The Tran family</td><td>LINH &amp; BAO TRAN · Married Here 1984</td><td>Silver · acrylic</td><td><span class="pill wait">Approve inscription</span></td></tr>
+      <tr><td>J. Whitfield</td><td>IN MEMORY OF CPL. DANIEL WHITFIELD, USMC</td><td>Legacy · walnut + Tribute</td><td><span class="pill ship">Ships Thursday</span></td></tr>
+      <tr><td>Grace Youth Group</td><td>CLASS OF 2026 MISSION TRIP</td><td>Bronze</td><td><span class="pill ship">Ships Thursday</span></td></tr>
+      <tr><td>R. &amp; P. Castillo</td><td>THE CASTILLO FAMILY · Psalm 100</td><td>Silver · acrylic + Tribute</td><td><span class="pill ok">Placed June 2</span></td></tr>
+      <tr><td>Anonymous</td><td>FOR EVERY VOLUNTEER WHO BUILT THIS PLACE</td><td>Bronze</td><td><span class="pill ok">Placed June 2</span></td></tr>
+    </table>
+    <p class="admin-note">One placement visit per month keeps the wall current. Every approved tile is printed on walnut, acrylic, or bronze-finish blanks and snapped onto the concealed rail — installation takes seconds per tile.</p>
+  </div>
+</section>
+
+<script>
+/* ── nav ── */
+const views = {wall:document.getElementById('v-wall'), order:document.getElementById('v-order'), admin:document.getElementById('v-admin')};
+document.querySelectorAll('nav button').forEach(b=>{
+  b.onclick = ()=>{
+    document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    Object.values(views).forEach(v=>v.classList.remove('active'));
+    views[b.dataset.v].classList.add('active');
+    window.scrollTo(0,0);
+  };
+});
+
+/* ── wall population ── */
+const names = [
+  ["THE ABERNATHY FAMILY","Founding Members · 1957","walnut",0],
+  ["REV. THOMAS &amp; EDITH GRAY","Served 1962 – 1989","bronze",1],
+  ["IN MEMORY OF RUTH ELLISON","1928 – 2019","acrylic",1],
+  ["THE NGUYEN FAMILY","Faith · Hope · Love","walnut",0],
+  ["DEACON HAROLD PIKE","50 Years of Service","bronze",0],
+  ["MARGARET &amp; LOU COSTA","Married Here · 1971","acrylic",0],
+  ["THE WASHINGTON FAMILY","Psalm 23","walnut",1],
+  ["SGT. ELI MARSH, US ARMY","1990 – 2021 · Never Forgotten","acrylic",1],
+  ["THE ORTEGA FAMILY","Three Generations","bronze",0],
+  ["MISS DOROTHY FIELDS","Sunday School · 1965 – 2001","walnut",0],
+  ["THE KIM FAMILY","Soli Deo Gloria","acrylic",0],
+  ["BUILDERS OF THE NEW WING","Dedicated 2024","bronze",1],
+  ["THE O'CONNELL FAMILY","Est. in Faith 1988","walnut",0],
+  ["IN MEMORY OF JAMES HOLT","Choir Director · 30 Years","acrylic",0],
+  ["THE PATEL FAMILY","With Grateful Hearts","bronze",0],
+  ["ANNA &amp; GEORGE STAVROS","Married Here · 1969","walnut",1],
+];
+const grid = document.getElementById('wallgrid');
+let big = 0;
+names.forEach((n,i)=>{
+  const d = document.createElement('div');
+  const isBig = (i===0 || i===7) && big<2;
+  if(isBig) big++;
+  d.className = 'tile '+n[2]+(isBig?' big':'');
+  d.innerHTML = '<div class="nm">'+n[0]+'</div><div class="yr">'+n[1]+'</div>'+(n[3]?'<div class="qr"></div>':'');
+  grid.appendChild(d);
+});
+
+/* ── order flow ── */
+const tiers = [
+  {name:"Bronze",  cls:"bronze", spec:"Bronze · brushed bronze-finish · 4×3 in", price:149},
+  {name:"Silver",  cls:"acrylic", spec:"Silver · frosted acrylic · 5¼×4 in", price:249},
+  {name:"Legacy",  cls:"walnut", spec:"Legacy · solid walnut · 8×6 in (double tile)", price:449},
+];
+let tierIdx = 0, qrOn = false;
+const ptile = document.getElementById('ptile');
+const pName = document.getElementById('p-name');
+const pLine2 = document.getElementById('p-line2');
+const pSpec = document.getElementById('p-spec');
+const pTotal = document.getElementById('p-total');
+
+function render(){
+  const t = tiers[tierIdx];
+  ptile.className = 'ptile '+t.cls;
+  const nm = document.getElementById('f-name').value.trim();
+  const l2 = document.getElementById('f-line2').value.trim();
+  pName.textContent = nm ? nm.toUpperCase() : 'YOUR NAME HERE';
+  pLine2.innerHTML = l2 ? l2 : '&nbsp;';
+  pSpec.textContent = t.spec + (qrOn ? '  ·  Living Tribute' : '');
+  pTotal.textContent = '$' + (t.price + (qrOn?29:0));
+  ptile.querySelectorAll('.qr').forEach(q=>q.remove());
+  if(qrOn){ const q=document.createElement('div'); q.className='qr'; ptile.appendChild(q); }
+}
+document.getElementById('f-name').addEventListener('input',render);
+document.getElementById('f-line2').addEventListener('input',render);
+document.querySelectorAll('.tier').forEach(el=>{
+  el.onclick = ()=>{
+    document.querySelectorAll('.tier').forEach(x=>x.classList.remove('sel'));
+    el.classList.add('sel');
+    tierIdx = +el.dataset.tier;
+    render();
+  };
+});
+const qrrow = document.getElementById('qrrow');
+qrrow.onclick = (e)=>{
+  const cb = document.getElementById('f-qr');
+  if(e.target!==cb) cb.checked = !cb.checked;
+  qrOn = cb.checked;
+  qrrow.classList.toggle('sel', qrOn);
+  render();
+};
+document.getElementById('orderbtn').onclick = ()=>{
+  document.getElementById('confirm').style.display='block';
+};
+document.getElementById('f-name').value = 'THE HENDERSON FAMILY';
+render();
+</script>
+</body>
+</html>

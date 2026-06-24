@@ -71,20 +71,49 @@ export function getTotalWidthInches(config: FrameConfig): number {
   return config.widthInches + (config.wings ? config.wingWidthInches * 2 : 0);
 }
 
-// Bottom bar fonts — system fonts first (instant), then lightweight Google Fonts
-export const BOTTOM_BAR_FONTS = [
-  { id: "stars-stripes", name: "Stars & Stripes", family: "'Stars and Stripes', 'Bebas Neue', sans-serif" },
-  { id: "impact", name: "Impact", family: "Impact, 'Arial Black', sans-serif" },
-  { id: "arial-black", name: "Arial Black", family: "'Arial Black', 'Arial Bold', sans-serif" },
-  { id: "georgia", name: "Georgia", family: "Georgia, 'Times New Roman', serif" },
-  { id: "oswald", name: "Oswald", family: "'Oswald', sans-serif" },
-  { id: "bebas", name: "Bebas Neue", family: "'Bebas Neue', sans-serif" },
-  { id: "anton", name: "Anton", family: "'Anton', sans-serif" },
-  { id: "russo", name: "Russo One", family: "'Russo One', sans-serif" },
-  { id: "raleway", name: "Raleway", family: "'Raleway', sans-serif" },
-  { id: "righteous", name: "Righteous", family: "'Righteous', sans-serif" },
-  { id: "teko", name: "Teko", family: "'Teko', sans-serif" },
-] as const;
+// Bottom bar fonts — system fonts first (instant), then web fonts. Each font is
+// tagged with a `category` so the picker can group them ("Classic", "Script",
+// "Display"). Script faces are loaded from Google Fonts in builder-fonts.css.
+export type BottomBarFontCategory = "Classic" | "Script" | "Display";
+
+export const BOTTOM_BAR_FONTS: ReadonlyArray<{
+  id: string;
+  name: string;
+  family: string;
+  category: BottomBarFontCategory;
+}> = [
+  // ─── Classic ───────────────────────────────────────────────
+  { id: "stars-stripes", name: "Stars & Stripes", family: "'Stars and Stripes', 'Bebas Neue', sans-serif", category: "Classic" },
+  { id: "impact", name: "Impact", family: "Impact, 'Arial Black', sans-serif", category: "Classic" },
+  { id: "arial-black", name: "Arial Black", family: "'Arial Black', 'Arial Bold', sans-serif", category: "Classic" },
+  { id: "georgia", name: "Georgia", family: "Georgia, 'Times New Roman', serif", category: "Classic" },
+  { id: "oswald", name: "Oswald", family: "'Oswald', sans-serif", category: "Classic" },
+  { id: "bebas", name: "Bebas Neue", family: "'Bebas Neue', sans-serif", category: "Classic" },
+  { id: "raleway", name: "Raleway", family: "'Raleway', sans-serif", category: "Classic" },
+  { id: "teko", name: "Teko", family: "'Teko', sans-serif", category: "Classic" },
+
+  // ─── Script / Cursive ──────────────────────────────────────
+  { id: "great-vibes", name: "Great Vibes", family: "'Great Vibes', cursive", category: "Script" },
+  { id: "allura", name: "Allura", family: "'Allura', cursive", category: "Script" },
+  { id: "dancing-script", name: "Dancing Script", family: "'Dancing Script', cursive", category: "Script" },
+  { id: "pacifico", name: "Pacifico", family: "'Pacifico', cursive", category: "Script" },
+  { id: "satisfy", name: "Satisfy", family: "'Satisfy', cursive", category: "Script" },
+  { id: "sacramento", name: "Sacramento", family: "'Sacramento', cursive", category: "Script" },
+  { id: "yellowtail", name: "Yellowtail", family: "'Yellowtail', cursive", category: "Script" },
+  { id: "kaushan-script", name: "Kaushan Script", family: "'Kaushan Script', cursive", category: "Script" },
+  { id: "tangerine", name: "Tangerine", family: "'Tangerine', cursive", category: "Script" },
+
+  // ─── Display ───────────────────────────────────────────────
+  { id: "anton", name: "Anton", family: "'Anton', sans-serif", category: "Display" },
+  { id: "russo", name: "Russo One", family: "'Russo One', sans-serif", category: "Display" },
+  { id: "righteous", name: "Righteous", family: "'Righteous', sans-serif", category: "Display" },
+  { id: "alfa-slab-one", name: "Alfa Slab One", family: "'Alfa Slab One', display, sans-serif", category: "Display" },
+  { id: "black-ops-one", name: "Black Ops One", family: "'Black Ops One', display, sans-serif", category: "Display" },
+  { id: "special-elite", name: "Special Elite", family: "'Special Elite', monospace", category: "Display" },
+  { id: "permanent-marker", name: "Permanent Marker", family: "'Permanent Marker', cursive", category: "Display" },
+  { id: "bungee", name: "Bungee", family: "'Bungee', display, sans-serif", category: "Display" },
+  { id: "fredoka", name: "Fredoka", family: "'Fredoka', sans-serif", category: "Display" },
+];
 
 // Pricing
 export const FRAME_BASE_PRICE = 24.99;

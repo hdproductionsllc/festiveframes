@@ -5,6 +5,7 @@ import { copy } from "@/content/copy";
 import { getKit } from "@/config/kits";
 import { getStripe } from "@/lib/stripe";
 import { EmailCaptureForm } from "@/components/site/home/EmailCaptureForm";
+import { OrderFulfiller } from "@/components/site/thanks/OrderFulfiller";
 import { SharePrompt } from "@/components/site/thanks/SharePrompt";
 import { LeaveReview } from "@/components/site/thanks/LeaveReview";
 import { PurchaseTracker } from "@/components/site/thanks/PurchaseTracker";
@@ -31,7 +32,7 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 interface ThanksPageProps {
-  searchParams: Promise<{ session_id?: string | string[] }>;
+  searchParams: Promise<{ session_id?: string | string[]; order?: string | string[] }>;
 }
 
 interface OrderView {
@@ -117,6 +118,8 @@ export default async function ThanksPage({ searchParams }: ThanksPageProps) {
   const params = await searchParams;
   const rawSessionId = params.session_id;
   const sessionId = Array.isArray(rawSessionId) ? rawSessionId[0] : rawSessionId;
+  const rawOrderId = params.order;
+  const orderId = Array.isArray(rawOrderId) ? rawOrderId[0] : rawOrderId;
 
   const order = sessionId ? await getOrderView(sessionId) : null;
   const shareUrl = process.env.SITE_URL || SITE_URL;
@@ -128,6 +131,10 @@ export default async function ThanksPage({ searchParams }: ThanksPageProps) {
         <h1 className="font-mkt-display text-4xl font-bold uppercase tracking-tight text-brand-navy sm:text-5xl">
           {order ? copy.thanks.headline : copy.thanks.genericHeadline}
         </h1>
+
+        {/* Custom builder order: relay the design + artifacts to fulfillment
+            (verifies payment server-side, then emails the proof + production files). */}
+        {orderId && sessionId && <OrderFulfiller orderId={orderId} sessionId={sessionId} />}
 
         {/* Fire the funnel `purchase` event once when a real order rendered. */}
         {order && (

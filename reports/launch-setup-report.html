@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Festive Frames — Launch Setup Report</title>
+<style>
+  :root{
+    --navy:#0d2748; --red:#b3122b; --ink:#1a1f29; --muted:#5b6472;
+    --line:#e3e7ee; --bg-soft:#f6f8fb; --green:#1a7f4b; --amber:#b3711a; --yellow:#9a8410;
+  }
+  @page{ size:Letter; margin:18mm 16mm; }
+  *{ box-sizing:border-box; }
+  body{
+    font-family:"Segoe UI",Helvetica,Arial,sans-serif;
+    color:var(--ink); margin:0; font-size:11px; line-height:1.55;
+    -webkit-print-color-adjust:exact; print-color-adjust:exact;
+  }
+  h1,h2,h3{ color:var(--navy); margin:0; line-height:1.2; }
+  /* Cover */
+  .cover{ padding:26px 0 18px; border-bottom:4px solid var(--red); margin-bottom:22px; }
+  .flag{ display:inline-block; font-size:10px; letter-spacing:2px; font-weight:700;
+    color:var(--red); text-transform:uppercase; margin-bottom:10px; }
+  .cover h1{ font-size:30px; letter-spacing:-.5px; }
+  .cover .sub{ font-size:14px; color:var(--muted); margin-top:6px; }
+  .meta{ margin-top:16px; font-size:10.5px; color:var(--muted); display:flex; gap:26px; flex-wrap:wrap; }
+  .meta b{ color:var(--ink); }
+  /* Verdict banner */
+  .verdict{ background:var(--bg-soft); border:1px solid var(--line); border-left:5px solid var(--navy);
+    border-radius:8px; padding:16px 18px; margin:0 0 22px; }
+  .verdict h2{ font-size:14px; margin-bottom:6px; }
+  .verdict p{ margin:6px 0 0; }
+  .verdict .punch{ color:var(--red); font-weight:600; }
+  /* Section */
+  section{ margin-bottom:22px; }
+  h2.sec{ font-size:15px; padding-bottom:6px; border-bottom:2px solid var(--line); margin-bottom:12px; }
+  /* Status cards */
+  .cards{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; }
+  .card{ border:1px solid var(--line); border-radius:8px; padding:13px 14px; background:#fff; }
+  .card .t{ font-size:11px; font-weight:700; color:var(--navy); }
+  .card .pill{ display:inline-block; font-size:9px; font-weight:700; padding:2px 8px; border-radius:20px;
+    text-transform:uppercase; letter-spacing:.5px; margin:7px 0; }
+  .pill.done{ background:#e3f4ea; color:var(--green); }
+  .pill.park{ background:#eef1f6; color:var(--muted); }
+  .card p{ margin:4px 0 0; font-size:10px; color:var(--muted); }
+  /* Table */
+  table{ border-collapse:collapse; width:100%; font-size:10px; }
+  th{ background:var(--navy); color:#fff; text-align:left; padding:8px 10px; font-size:9.5px;
+    text-transform:uppercase; letter-spacing:.5px; }
+  td{ padding:8px 10px; border-bottom:1px solid var(--line); vertical-align:top; }
+  tr:nth-child(even) td{ background:var(--bg-soft); }
+  .sev{ font-weight:700; white-space:nowrap; }
+  .sev.red{ color:var(--red); } .sev.amber{ color:var(--amber); } .sev.yellow{ color:var(--yellow); }
+  .num{ font-weight:700; color:var(--navy); text-align:center; width:26px; }
+  /* Steps */
+  ol.steps{ margin:0; padding:0; counter-reset:step; list-style:none; }
+  ol.steps li{ counter-increment:step; position:relative; padding:9px 0 9px 36px; border-bottom:1px solid var(--line); }
+  ol.steps li:before{ content:counter(step); position:absolute; left:0; top:8px; width:24px; height:24px;
+    background:var(--red); color:#fff; border-radius:50%; text-align:center; line-height:24px;
+    font-weight:700; font-size:11px; }
+  ol.steps li b{ color:var(--navy); }
+  ol.steps .key:before{ background:var(--navy); }
+  ol.steps small{ color:var(--muted); display:block; }
+  code{ background:#eef1f6; padding:1px 5px; border-radius:4px; font-family:Consolas,monospace; font-size:9.5px; }
+  /* Callout */
+  .callout{ border:1px solid #f3d6c2; background:#fdf3ec; border-left:5px solid var(--red);
+    border-radius:8px; padding:12px 15px; }
+  .callout b{ color:var(--red); }
+  .footer{ margin-top:14px; padding-top:10px; border-top:1px solid var(--line);
+    font-size:9px; color:var(--muted); text-align:center; }
+  .legend{ font-size:9px; color:var(--muted); margin-top:8px; }
+  .legend span{ margin-right:14px; }
+  .nobreak{ break-inside:avoid; }
+</style>
+</head>
+<body>
+
+  <div class="cover">
+    <span class="flag">★ Festive Frames ★ Launch Readiness</span>
+    <h1>Launch Setup Report</h1>
+    <div class="sub">Storefront, design tool &amp; go-live configuration status</div>
+    <div class="meta">
+      <div><b>Prepared:</b> June 9, 2026</div>
+      <div><b>Product:</b> Freedom Frame Set (July 4th)</div>
+      <div><b>Stack:</b> Next.js 16 · Stripe · Resend · Railway</div>
+      <div><b>Live URL:</b> festiveframes-production.up.railway.app</div>
+    </div>
+  </div>
+
+  <div class="verdict">
+    <h2>Bottom Line</h2>
+    <p><b>The code is launch-ready. The launch is gated on ~6 business/config steps — none of them are coding work.</b>
+    You can take a live order right now (checkout is wired to live Stripe keys), but you are not yet ready to drive traffic.</p>
+    <p class="punch">Most urgent: if a customer orders today, no confirmation email fires and you receive no order notification — you'd only see the sale in Stripe. Do not promote the site until order emails are switched on.</p>
+  </div>
+
+  <section class="nobreak">
+    <h2 class="sec">1 · What You Asked About</h2>
+    <div class="cards">
+      <div class="card">
+        <div class="t">Marketing / Storefront Site</div>
+        <span class="pill done">✓ Done</span>
+        <p>Converting homepage (in-page buy block, scarcity + order-by countdown), real reviews with schema, maker-quote carousel, legal pages, SEO assets (sitemap/robots/OG), and /thanks confirmation. Checkout is LIVE.</p>
+      </div>
+      <div class="card">
+        <div class="t">Design Tool (/build)</div>
+        <span class="pill park">▪ Built · Parked</span>
+        <p>Full drag-and-drop designer (presets, tiles, QR, frame preview) is complete but intentionally unlinked and hidden from crawlers for launch. Off the buying path — a V2 asset, not a blocker.</p>
+      </div>
+      <div class="card">
+        <div class="t">Marketing Assessment</div>
+        <span class="pill done">✓ Written</span>
+        <p>Complete go-to-market plan: pricing, 6 customer segments, channel timeline, objection matrix, content calendar, unit economics. Strategy is done; execution is the open part.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="sec">2 · What's Blocking "Fully Launched" (all config, no code)</h2>
+    <table>
+      <thead>
+        <tr><th class="num">#</th><th>Gap</th><th>Impact</th><th>Severity</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="num">1</td>
+          <td><b>festiveframes.co DNS not pointed at Railway</b></td>
+          <td>Site lives on the raw railway.app URL. This is the keystone — most items below unlock once it's done.</td>
+          <td class="sev red">● Keystone</td>
+        </tr>
+        <tr>
+          <td class="num">2</td>
+          <td><b>Order emails OFF</b> — needs <code>STRIPE_WEBHOOK_SECRET</code>, <code>RESEND_API_KEY</code>, <code>EMAIL_FROM</code>, <code>ADMIN_ORDER_EMAIL</code> + Resend domain verify + webhook registered</td>
+          <td>Buyer gets no confirmation email; you get no order notification. Trust failure on day one.</td>
+          <td class="sev red">● Critical</td>
+        </tr>
+        <tr>
+          <td class="num">3</td>
+          <td><code>SITE_URL</code> still set to the Railway stopgap (in <code>src/config/season.ts</code>)</td>
+          <td>Canonicals / OG / sitemap point at the wrong domain. One-line fix after step 1.</td>
+          <td class="sev amber">● Medium</td>
+        </tr>
+        <tr>
+          <td class="num">4</td>
+          <td>Email receiving (MX) for <code>hello@festiveframes.co</code> not set up</td>
+          <td>Support / returns / privacy mail bounces.</td>
+          <td class="sev amber">● Medium</td>
+        </tr>
+        <tr>
+          <td class="num">5</td>
+          <td><code>SUBSCRIBE_ENDPOINT</code> env not set</td>
+          <td>Email-list signups are silently dropped — you lose your pre-launch list.</td>
+          <td class="sev amber">● Medium</td>
+        </tr>
+        <tr>
+          <td class="num">6</td>
+          <td>Apple Pay / Google Pay domain not verified in Stripe</td>
+          <td>Fewer one-tap checkouts; minor conversion drag.</td>
+          <td class="sev yellow">● Low</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="legend">
+      <span><b style="color:var(--red)">●</b> Blocks promotion</span>
+      <span><b style="color:var(--amber)">●</b> Fast follow-up</span>
+      <span><b style="color:var(--yellow)">●</b> Nice-to-have</span>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="sec">3 · Go-Live Activation Sequence</h2>
+    <ol class="steps">
+      <li class="key"><b>Point festiveframes.co DNS at Railway</b> &amp; add the custom domain to the Railway service. <small>The keystone — start here. DNS currently at GoDaddy, serving a parked /lander.</small></li>
+      <li><b>Revert <code>SITE_URL</code></b> in <code>src/config/season.ts</code> back to <code>https://festiveframes.co</code>, commit &amp; push → Railway auto-redeploys. <small>Fixes canonical / OG / sitemap.</small></li>
+      <li><b>Set Railway env vars:</b> <code>STRIPE_WEBHOOK_SECRET</code>, <code>RESEND_API_KEY</code>, <code>EMAIL_FROM</code>, <code>ADMIN_ORDER_EMAIL</code>, <code>SUBSCRIBE_ENDPOINT</code>. <small>STRIPE_SECRET_KEY is already set; checkout is live.</small></li>
+      <li><b>Register the Stripe webhook</b> → endpoint <code>/api/stripe/webhook</code>, event <code>checkout.session.completed</code>; paste its <code>whsec_…</code> into STRIPE_WEBHOOK_SECRET. <small>This is what actually turns order emails ON.</small></li>
+      <li><b>Verify the sending domain in Resend</b> (add DKIM/SPF DNS records) so customer emails reach real buyers. <small>Until verified, Resend only sends to your own address.</small></li>
+      <li><b>Set up email receiving (MX)</b> for hello@festiveframes.co via Google Workspace / Zoho / Fastmail; add MX + SPF (+ DKIM/DMARC).</li>
+      <li><b>Add festiveframes.co to Stripe</b> → Settings → Payment method domains, to enable Apple/Google Pay.</li>
+      <li><b>Live test:</b> place one real order → confirm /thanks renders AND both the customer confirmation and your admin order email arrive.</li>
+    </ol>
+  </section>
+
+  <section class="nobreak">
+    <h2 class="sec">4 · Recommendation</h2>
+    <div class="callout">
+      <p style="margin:0 0 6px"><b>Do steps 1 and 2 before any promotion.</b> The line between "can take an order" and "ready to drive traffic" is almost entirely the domain pointing and order emails. Everything else is safe to finish in the days after.</p>
+      <p style="margin:0">The full sequence above is captured in the go-live runbook. When the domain is pointed at Railway, the remaining work is dashboard config + Railway env vars — each Railway change auto-redeploys, so no further code is required to launch.</p>
+    </div>
+  </section>
+
+  <div class="footer">
+    Festive Frames · Launch Setup Report · Generated June 9, 2026 · Confidential — internal planning document
+  </div>
+
+</body>
+</html>

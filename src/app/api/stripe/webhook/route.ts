@@ -14,6 +14,7 @@ import type Stripe from "stripe";
 
 import { getStripe } from "@/lib/stripe";
 import { sendOrderEmails } from "@/lib/email";
+import { fulfillOrder } from "@/lib/order/fulfill";
 
 export const runtime = "nodejs";
 
@@ -56,6 +57,20 @@ export async function POST(request: Request): Promise<NextResponse> {
   if (event.type === "checkout.session.completed") {
     const session = event.data.object as Stripe.Checkout.Session;
     const metadata = session.metadata ?? {};
+
+    // ── Custom builder order: fulfill from the in-memory draft (backup to the
+    // /thanks relay). fulfillOrder is idempotent, so whichever trigger fires
+    // second is a no-op. Production/customer emails are handled there.
+    if (metadata.kind === "custom-frame" && metadata.orderId) {
+      try {
+        const full = await stripe.checkout.sessions.retrieve(session.id);
+        const result = await fulfillOrder(metadata.orderId, full);
+        console.log(`[stripe-webhook] custom order ${metadata.orderId} fulfill via webhook: ${result}`);
+      } catch (err) {
+        console.error("[stripe-webhook] custom order fulfillment failed:", err);
+      }
+      return NextResponse.json({ received: true }, { status: 200 });
+    }
 
     // Structured order record (also visible in Railway logs).
     console.log(

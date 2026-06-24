@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Festive Frames — Expansion Investment &amp; Go-To-Market Report</title>
+<style>
+  @page { size: Letter; margin: 0.75in; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: Georgia, 'Times New Roman', serif;
+    color: #1a2238; line-height: 1.55; font-size: 11.5pt;
+    max-width: 7.5in; margin: 0 auto;
+  }
+  .cover { text-align: center; padding: 1.2in 0 0.4in; }
+  .brand {
+    font-family: Arial, Helvetica, sans-serif; font-weight: 800;
+    letter-spacing: 0.18em; text-transform: uppercase; font-size: 13pt;
+    color: #B22234;
+  }
+  h1 {
+    font-family: Arial, Helvetica, sans-serif; font-size: 24pt;
+    margin: 0.2em 0 0.1em; color: #1a2238; line-height: 1.15;
+  }
+  .subtitle { color: #555; font-style: italic; margin-bottom: 0.3in; }
+  .rule { border: none; border-top: 3px solid #B22234; width: 1.6in; margin: 0.25in auto; }
+  h2 {
+    font-family: Arial, Helvetica, sans-serif; font-size: 15pt;
+    color: #B22234; border-bottom: 2px solid #1a2238;
+    padding-bottom: 4px; margin-top: 1.4em;
+    page-break-after: avoid;
+  }
+  h3 {
+    font-family: Arial, Helvetica, sans-serif; font-size: 12pt;
+    color: #1a2238; margin-top: 1.1em; page-break-after: avoid;
+  }
+  table { border-collapse: collapse; width: 100%; margin: 0.8em 0; font-size: 10.5pt; page-break-inside: avoid; }
+  th { background: #1a2238; color: #fff; font-family: Arial, sans-serif; text-align: left; padding: 7px 10px; font-size: 10pt; }
+  td { border: 1px solid #c9cdd6; padding: 7px 10px; vertical-align: top; }
+  tr:nth-child(even) td { background: #f4f5f8; }
+  .pct { font-family: Arial, sans-serif; font-weight: 800; color: #B22234; white-space: nowrap; }
+  ul { margin: 0.4em 0 0.9em; padding-left: 1.3em; }
+  li { margin-bottom: 0.35em; }
+  .callout {
+    background: #f4f5f8; border-left: 4px solid #B22234;
+    padding: 10px 14px; margin: 0.9em 0; page-break-inside: avoid;
+  }
+  .callout strong { font-family: Arial, sans-serif; }
+  .meta { font-size: 9.5pt; color: #777; }
+  .role { font-weight: 700; }
+  .pagebreak { page-break-before: always; }
+  .footer-note { margin-top: 0.5in; font-size: 9pt; color: #888; border-top: 1px solid #ddd; padding-top: 8px; }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <div class="brand">Festive Frames</div>
+  <h1>Expansion Investment &amp;<br>Go-To-Market Report</h1>
+  <hr class="rule">
+  <div class="subtitle">Where to put the money &middot; Who to talk to &middot; How to get out in the world</div>
+  <div class="meta">Prepared June 11, 2026 &middot; HD Productions LLC &middot; Companion to the Expansion Idea Bank and Portfolio Audit</div>
+</div>
+
+<div class="callout">
+<strong>The one-sentence strategy:</strong> Borrow trusted audiences (churches, schools, dealerships, creators), convert every bit of attention into the email list, and let TikTok and Etsy carry the discovery layer. The three B2B ideas are all the same move &mdash; somebody else's trust, our product &mdash; and that is the cheapest customer acquisition available.
+</div>
+
+<h2>1. Where to Put the Money</h2>
+
+<h3>Rule zero: free fixes before funded bets</h3>
+<ul>
+  <li>Wire the email-capture endpoint (signups are currently dropped)</li>
+  <li>Attach analytics (framework already built into the site)</li>
+  <li>Verify live Stripe mode and order-email configuration in production</li>
+</ul>
+
+<h3>The allocation &mdash; first ~$5,000 of expansion capital</h3>
+<table>
+  <tr><th style="width:14%">Share</th><th style="width:34%">Investment</th><th>Why this order</th></tr>
+  <tr><td class="pct">40% (~$2,000)</td><td><strong>Production capacity</strong> &mdash; printer #2, filament stock, assembly jigs, packaging; two outsource quotes as the scale plan</td><td>Manual fulfillment caps ~10&ndash;20 units/week. Every channel dies at that ceiling. Capacity is the only investment that multiplies all the others.</td></tr>
+  <tr><td class="pct">25% (~$1,250)</td><td><strong>Content</strong> &mdash; one pro photo day (every kit on real cars) + 20&ndash;30 short vertical videos</td><td>The tile snap is inherently satisfying &mdash; made for Reels/TikTok. One spend feeds the site, ads, Etsy, wholesale pitches, and influencer briefs.</td></tr>
+  <tr><td class="pct">20% (~$1,000)</td><td><strong>Seeding &amp; samples</strong> &mdash; ~50 free frames: 25 to micro-influencers, 25 as B2B samples</td><td>One free unit to the right creator can outperform months of ads. A $12-cost sample that lands a 50-unit church order is the best ROI in this plan.</td></tr>
+  <tr><td class="pct">15% (~$750)</td><td><strong>Paid ads, seasonal windows only</strong> &mdash; $25/day bursts: pre&ndash;July 4, September, early October, Black Friday</td><td>Ads amplify proven buying windows; they do not create demand. Never run them outside a deadline season.</td></tr>
+</table>
+
+<h3>Development (code) investment: almost none needed</h3>
+<ul>
+  <li><strong>Group-order / bulk flow</strong> &mdash; one feature unlocks all three B2B channels: a shareable per-organization order page with a group code (school fundraisers, church youth groups, dealer bulk pricing).</li>
+  <li><strong>Kit activation</strong> &mdash; Game Day, Halloween, and Christmas kits are config flips plus photography; the designs already exist.</li>
+  <li><strong>Not yet:</strong> subscriptions, the public designer, custom-logo tooling &mdash; all real, all premature until 2&ndash;3 drops prove repeat purchase.</li>
+</ul>
+
+<h3>What NOT to fund yet</h3>
+<ul>
+  <li>Licensing (NASCAR, colleges, pro sports) &mdash; capital-heavy and slow; earn the volume first</li>
+  <li>Inventory for more than two unproven kits at once &mdash; activate sequentially, read sell-through</li>
+  <li>Retail storefronts or trade-show booths &mdash; wholesale via Faire reaches shops cheaper</li>
+</ul>
+
+<div class="pagebreak"></div>
+<h2>2. Who to Talk To &mdash; Exact Roles</h2>
+
+<h3>Churches <span class="meta">(identity + channel in one)</span></h3>
+<ul>
+  <li><span class="role">Youth pastor / youth director</span> &mdash; the single highest-leverage contact in this report. Owns fundraisers <em>and</em> trunk-or-treat: one yes = a faith-kit fundraiser + an October event for the Halloween kit + the congregation newsletter.</li>
+  <li><span class="role">Church administrator / bookstore manager</span> &mdash; consignment or wholesale at larger churches.</li>
+  <li><strong>Where to start:</strong> the 10 largest STL-metro congregations plus the warm network.</li>
+  <li><strong>Pitch:</strong> &ldquo;A made-in-St-Louis fundraiser your families keep on their cars &mdash; schools sell candy bars; you sell something people see every day.&rdquo;</li>
+</ul>
+
+<h3>Schools</h3>
+<ul>
+  <li><span class="role">PTO/PTA president</span> and <span class="role">booster club treasurer</span> &mdash; they choose fall fundraisers in <strong>July&ndash;August</strong>; this outreach cannot wait.</li>
+  <li><span class="role">Athletic director</span> &mdash; spirit-wear angle for fall sports.</li>
+  <li><strong>Pitch:</strong> school keeps $10&ndash;15/unit; durable, not consumable; every sold frame is a rolling ad in the pickup line.</li>
+</ul>
+
+<h3>Car dealerships</h3>
+<ul>
+  <li><span class="role">Used-car independents first</span> (the owner decides, one meeting), then franchise stores via the <span class="role">parts &amp; accessories manager</span> or <span class="role">F&amp;I manager</span>.</li>
+  <li><strong>Pitch:</strong> &ldquo;You already bolt a branded frame on every car you sell. This one the customer keeps, plays with, and shows off &mdash; with your name on the rail.&rdquo;</li>
+  <li><strong>Pilot:</strong> 5 STL dealerships, free 10-frame sample program, $10&ndash;14/frame at volume.</li>
+</ul>
+
+<h3>Local distribution &amp; press <span class="meta">(the made-in-STL story)</span></h3>
+<ul>
+  <li><span class="role">STL boutique gift-shop buyers</span>, plus <strong>Faire</strong> (wholesale marketplace) for nationwide indie-shop discovery.</li>
+  <li><span class="role">Post-Dispatch business desk; KSDK / Fox2 lifestyle; STL Magazine gift guides</span> &mdash; &ldquo;St. Louis crew launches snap-on frame for America&rsquo;s 250th, capped at 250&rdquo; is a pitchable story. Gift-guide pitches go out in <strong>September</strong>.</li>
+  <li><span class="role">Cars &amp; Coffee organizers, Cardinals tailgate lots</span> &mdash; hand out frames, film it.</li>
+</ul>
+
+<h3>Creators <span class="meta">(seed, don&rsquo;t sponsor)</span></h3>
+<ul>
+  <li><span class="role">Car TikTok/IG micro-creators (10&ndash;100K)</span> &mdash; the snap/swap demo IS the content. Free kits, no strings.</li>
+  <li><span class="role">Dog-mom / pet lifestyle creators</span> &mdash; primes the Pet kit before it exists.</li>
+  <li><span class="role">Trunk-or-treat / mom-content creators</span> &mdash; September seeding for October buzz.</li>
+  <li><span class="role">Uncommon Goods &amp; The Grommet</span> submission portals &mdash; apply NOW; holiday lead times run 3&ndash;6 months.</li>
+</ul>
+
+<div class="pagebreak"></div>
+<h2>3. How to Get Out in the World</h2>
+
+<h3>Owned &mdash; the asset that compounds</h3>
+<ul>
+  <li><strong>The email list is the business.</strong> Every kit drop goes to the list first (&ldquo;Founding members get 48 hours early&rdquo;). Target: 1,000 emails by Labor Day via the QR loop and giveaways.</li>
+  <li><strong>QR viral loop</strong> &mdash; every frame on the road links back to the designer; add a referral hook later (&ldquo;10 scans = $5 off your next set&rdquo;).</li>
+  <li><strong>The site</strong> &mdash; one landing page per kit drop, plus /fundraisers and /dealers as the B2B front doors.</li>
+</ul>
+
+<h3>Rented &mdash; where attention lives</h3>
+<ul>
+  <li><strong>TikTok + IG Reels</strong> &mdash; the one rented channel to take seriously: visual, tactile, transforming product = algorithm food. 3&ndash;5 posts/week from the content-day footage; every post funnels to email.</li>
+  <li><strong>Etsy</strong> &mdash; list immediately; standing search demand for custom plate frames and made-in-USA gifts.</li>
+  <li><strong>Amazon FBA</strong> &mdash; later (Q4 at earliest); ~45% margin hit needs organic proof and capacity headroom first.</li>
+</ul>
+
+<h3>Borrowed &mdash; the cheap growth</h3>
+<ul>
+  <li>The B2B channels ARE borrowed audiences: a congregation, a parent list, a dealership&rsquo;s customer flow &mdash; trust no ad can buy. The group-order build converts them.</li>
+  <li>Creator seeding and local press per Section 2.</li>
+  <li>Convert all borrowed attention to owned: every fundraiser page, video, and article ends at the email capture.</li>
+</ul>
+
+<h2>The 90-Day Sequence</h2>
+<table>
+  <tr><th style="width:22%">Window</th><th>Moves</th></tr>
+  <tr><td><strong>Now &ndash; July 4</strong></td><td>$0 fixes; launch push; collect every email and review; film everything for the content library.</td></tr>
+  <tr><td><strong>July</strong></td><td>Read repeat-purchase + geography data. Contact PTO/booster/youth-pastor lists (fall fundraisers decided now). Activate Game Day kit. Submit Uncommon Goods/Grommet. Set up Etsy + Faire.</td></tr>
+  <tr><td><strong>August</strong></td><td>Printer #2 + outsource quotes. Group-order flow built. Dealer pilot: 5 sample drops. Content day #2 (Halloween/Christmas on cars). Seed trunk-or-treat creators.</td></tr>
+  <tr><td><strong>September</strong></td><td>School/church fundraiser pilots live (target: 2 orgs). Halloween drop to the list + $25/day ads. Gift-guide pitches out. Game Day weekly content begins.</td></tr>
+</table>
+
+<div class="callout">
+<strong>Success gates:</strong> If July repeat-purchase is under 15%, pause kit expansion and fix the core offer before scaling channels. If a fundraiser pilot moves 30+ units, the 2027 plan is fundraiser-led. If the dealer pilot converts 2 of 5, hire the first part-time assembler.
+</div>
+
+<div class="footer-note">
+Festive Frames &middot; HD Productions LLC &middot; Prepared June 11, 2026. Sources: portfolio audit (reports/portfolio-audit-2026-06-09.md), expansion idea bank (tasks/expansion-ideas.md), site configuration and marketing assessment in the Festive Frames repository.
+</div>
+
+</body>
+</html>

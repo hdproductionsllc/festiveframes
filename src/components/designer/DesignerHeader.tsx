@@ -8,9 +8,11 @@ import { useUIStore } from "@/stores/ui-store";
 interface DesignerHeaderProps {
   onExport: () => void;
   onExportParts: () => void;
+  onOrder: () => void;
+  ordering?: boolean;
 }
 
-export function DesignerHeader({ onExport, onExportParts }: DesignerHeaderProps) {
+export function DesignerHeader({ onExport, onExportParts, onOrder, ordering }: DesignerHeaderProps) {
   const designName = useDesignStore((s) => s.designName);
   const setDesignName = useDesignStore((s) => s.setDesignName);
   const updatedAt = useDesignStore((s) => s.updatedAt);
@@ -76,13 +78,23 @@ export function DesignerHeader({ onExport, onExportParts }: DesignerHeaderProps)
         >
           {exportState === "exporting" ? "Saving…" : "Save Image"}
         </button>
+        {/* Admin-only parts sheet (kept for the team; not the customer path). */}
         <button
           onClick={onExportParts}
           disabled={!hasDesign}
-          className="rounded-full border-2 border-[#1e1b17] bg-[#f8c53b] px-5 py-2 text-sm font-bold text-[#1e1b17]
-            transition-all hover:brightness-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
+          title="Production parts sheet (team)"
+          className="hidden rounded-full px-2 py-1 text-xs font-medium text-[#faf0d6]/55 transition-colors hover:bg-white/10 hover:text-[#faf0d6] disabled:opacity-30 sm:block"
         >
-          Send to Production
+          Parts
+        </button>
+        {/* Primary call to action: place the made-to-order frame order. */}
+        <button
+          onClick={onOrder}
+          disabled={!hasDesign || ordering}
+          className="rounded-full border-2 border-[#1e1b17] bg-[#f8c53b] px-6 py-2 text-sm font-extrabold uppercase tracking-wide text-[#1e1b17]
+            shadow-[0_2px_0_#1e1b17] transition-all hover:brightness-105 active:translate-y-0.5 active:shadow-none disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          {ordering ? "Starting…" : "Order · $39"}
         </button>
       </div>
     </header>
