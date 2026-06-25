@@ -46,7 +46,13 @@ export async function POST(request: Request): Promise<NextResponse> {
 
   let session: Stripe.Checkout.Session;
   try {
-    session = await stripe.checkout.sessions.retrieve(body.sessionId);
+    // Expand the shipping address so production/customer emails get a real
+    // "Ship to" block. On the pinned API version the address lives at
+    // collected_information.shipping_details (the old top-level
+    // shipping_details was removed) and must be expanded to populate.
+    session = await stripe.checkout.sessions.retrieve(body.sessionId, {
+      expand: ["collected_information.shipping_details"],
+    });
   } catch {
     return NextResponse.json({ error: "Unknown session" }, { status: 400 });
   }

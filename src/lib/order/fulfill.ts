@@ -14,11 +14,13 @@ import type { PartsList } from "@/lib/order/parts-list";
 export type FulfillResult = "sent" | "already" | "no-payload" | "failed";
 
 /** Pull a flat list of shipping address lines off a retrieved session. */
-function shippingLines(session: Stripe.Checkout.Session): string[] {
-  // Shipping shape varies by Stripe API version; read defensively.
+export function shippingLines(session: Stripe.Checkout.Session): string[] {
+  // On the pinned API version (2026-05-27.dahlia) the top-level
+  // `shipping_details` field was removed; the shipping address lives at
+  // `collected_information.shipping_details`. Read that first, but keep the
+  // legacy fallbacks so older sessions / API versions still resolve.
   const collected =
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (session as any).collected_information?.shipping_details ??
+    session.collected_information?.shipping_details ??
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (session as any).shipping_details ??
     null;

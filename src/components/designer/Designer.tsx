@@ -288,6 +288,7 @@ export function Designer() {
         plateState: s.plateState,
         designName: s.designName,
         tileSizeInches: s.frameConfig.tileSizeInches,
+        dieCut: s.dieCut,
       });
 
       const artifacts = { proof, printSheets, banners };

@@ -197,18 +197,45 @@ function createSnapshot(state: {
   };
 }
 
+/**
+ * Reconcile a persisted `selectedBarId` against a set of bars after undo/redo:
+ * keep the selection if that bar still exists, otherwise drop it to null so the
+ * editor never points at a bar that's no longer on the frame.
+ */
+function reconcileSelectedBar(
+  selectedBarId: string | null,
+  bars: PlacedTextBar[]
+): string | null {
+  if (selectedBarId && bars.some((b) => b.id === selectedBarId)) return selectedBarId;
+  return null;
+}
+
 export const useDesignStore = create<DesignState>()(
   persist(
     (set, get) => {
-      function pushHistory() {
-        const state = get();
-        const snapshot = createSnapshot(state);
+      /**
+       * Standard undo/redo model: `history[historyIndex]` ALWAYS equals the
+       * current/live design. Call this from a mutation with the partial it's
+       * about to apply; it snapshots the RESULTING state (current ⊕ partial),
+       * truncates any redo tail, appends the snapshot, and returns the partial
+       * merged with the new `{ history, historyIndex }` to hand straight to
+       * `set`. Capped at MAX_HISTORY_DEPTH (oldest dropped).
+       */
+      function withHistory<T extends Partial<DesignState>>(
+        state: DesignState,
+        partial: T
+      ): T & { history: HistorySnapshot[]; historyIndex: number } {
         const newHistory = state.history.slice(0, state.historyIndex + 1);
-        newHistory.push(snapshot);
-        if (newHistory.length > MAX_HISTORY_DEPTH) {
+        // Seed the baseline (pre-mutation) state as history[0] the very first
+        // time, so undo can return to the design as it was before any edit.
+        if (newHistory.length === 0) {
+          newHistory.push(createSnapshot(state));
+        }
+        newHistory.push(createSnapshot({ ...state, ...partial }));
+        while (newHistory.length > MAX_HISTORY_DEPTH) {
           newHistory.shift();
         }
-        return { history: newHistory, historyIndex: newHistory.length - 1 };
+        return { ...partial, history: newHistory, historyIndex: newHistory.length - 1 };
       }
 
       return {
@@ -230,11 +257,10 @@ export const useDesignStore = create<DesignState>()(
           set((state) => {
             // Slots under a text bar are blocked.
             if (coveredSlotIds(state.textBars).includes(slotId)) return state;
-            return {
-              ...pushHistory(),
+            return withHistory(state, {
               slots: { ...state.slots, [slotId]: { pieceId, setId } },
               updatedAt: Date.now(),
-            };
+            });
           });
         },
 
@@ -243,11 +269,10 @@ export const useDesignStore = create<DesignState>()(
             if (!state.slots[slotId]) return state;
             const newSlots = { ...state.slots };
             delete newSlots[slotId];
-            return {
-              ...pushHistory(),
+            return withHistory(state, {
               slots: newSlots,
               updatedAt: Date.now(),
-            };
+            });
           });
         },
 
@@ -261,11 +286,10 @@ export const useDesignStore = create<DesignState>()(
             const newSlots = { ...state.slots };
             delete newSlots[fromSlotId];
             newSlots[toSlotId] = { ...tile }; // replaces whatever was there
-            return {
-              ...pushHistory(),
+            return withHistory(state, {
               slots: newSlots,
               updatedAt: Date.now(),
-            };
+            });
           });
         },
 
@@ -276,11 +300,12 @@ export const useDesignStore = create<DesignState>()(
             for (const id of allIds) {
               newSlots[id] = { pieceId, setId };
             }
-            return {
-              ...pushHistory(),
-              slots: newSlots,
+            // A bar REPLACES the tiles under it — never populate covered cells,
+            // or the next banner edit would silently delete these hidden tiles.
+            return withHistory(state, {
+              slots: clearCoveredTiles(newSlots, state.textBars),
               updatedAt: Date.now(),
-            };
+            });
           });
         },
 
@@ -292,27 +317,29 @@ export const useDesignStore = create<DesignState>()(
               const piece = pieces[Math.floor(Math.random() * pieces.length)];
               newSlots[id] = { pieceId: piece.pieceId, setId: piece.setId };
             }
-            return {
-              ...pushHistory(),
-              slots: newSlots,
+            return withHistory(state, {
+              slots: clearCoveredTiles(newSlots, state.textBars),
               updatedAt: Date.now(),
-            };
+            });
           });
         },
 
         fillEmpty: (pieces) => {
           set((state) => {
             if (pieces.length === 0) return state;
+            // Never fill cells hidden under a bar — they'd be silently deleted
+            // by the next banner edit (same hazard as fillAll/random/alternate).
+            const covered = new Set(coveredSlotIds(state.textBars));
             const newSlots = { ...state.slots };
             let changed = false;
             for (const id of getAllSlotIds(state.frameConfig)) {
-              if (newSlots[id]) continue;
+              if (newSlots[id] || covered.has(id)) continue;
               const piece = pieces[Math.floor(Math.random() * pieces.length)];
               newSlots[id] = { pieceId: piece.pieceId, setId: piece.setId };
               changed = true;
             }
             if (!changed) return state;
-            return { ...pushHistory(), slots: newSlots, updatedAt: Date.now() };
+            return withHistory(state, { slots: newSlots, updatedAt: Date.now() });
           });
         },
 
@@ -372,11 +399,10 @@ export const useDesignStore = create<DesignState>()(
               }
             }
 
-            return {
-              ...pushHistory(),
-              slots: newSlots,
+            return withHistory(state, {
+              slots: clearCoveredTiles(newSlots, state.textBars),
               updatedAt: Date.now(),
-            };
+            });
           });
         },
 
@@ -388,41 +414,48 @@ export const useDesignStore = create<DesignState>()(
               const piece = i % 2 === 0 ? pieceA : pieceB;
               newSlots[allIds[i]] = { pieceId: piece.pieceId, setId: piece.setId };
             }
-            return {
-              ...pushHistory(),
-              slots: newSlots,
+            return withHistory(state, {
+              slots: clearCoveredTiles(newSlots, state.textBars),
               updatedAt: Date.now(),
-            };
+            });
           });
         },
 
         clearAll: () => {
-          set(() => ({
-            ...pushHistory(),
-            slots: {},
-            textBars: [],
-            selectedBarId: null,
-            updatedAt: Date.now(),
-          }));
+          set((state) =>
+            withHistory(state, {
+              slots: {},
+              textBars: [],
+              selectedBarId: null,
+              updatedAt: Date.now(),
+            })
+          );
         },
 
         applyPreset: (preset) => {
-          set((state) => ({
-            ...pushHistory(),
-            slots: { ...preset.slots },
-            bottomBar: preset.bottomBar
-              ? { ...state.bottomBar, ...preset.bottomBar }
-              : state.bottomBar,
-            updatedAt: Date.now(),
-          }));
+          set((state) =>
+            // A preset is a FULL-CANVAS replace ("Build this look"): swap in its
+            // tiles AND drop any existing banners so an old bar can't float over
+            // the new design hiding (and later silently deleting) preset tiles.
+            withHistory(state, {
+              slots: { ...preset.slots },
+              textBars: [],
+              selectedBarId: null,
+              bottomBar: preset.bottomBar
+                ? { ...state.bottomBar, ...preset.bottomBar }
+                : state.bottomBar,
+              updatedAt: Date.now(),
+            })
+          );
         },
 
         updateBottomBar: (updates) => {
-          set((state) => ({
-            ...pushHistory(),
-            bottomBar: { ...state.bottomBar, ...updates },
-            updatedAt: Date.now(),
-          }));
+          set((state) =>
+            withHistory(state, {
+              bottomBar: { ...state.bottomBar, ...updates },
+              updatedAt: Date.now(),
+            })
+          );
         },
 
         placeTextBar: (row, startIndex) => {
@@ -454,13 +487,12 @@ export const useDesignStore = create<DesignState>()(
             // tiles are deleted, so what you see is what prints and removing the
             // bar leaves the area blank.
             const newBars = syncFirstBarQr([...state.textBars, bar], state.qrCode.enabled);
-            return {
-              ...pushHistory(),
+            return withHistory(state, {
               textBars: newBars,
               slots: clearCoveredTiles(state.slots, newBars),
               selectedBarId: bar.id,
               updatedAt: Date.now(),
-            };
+            });
           });
         },
 
@@ -496,12 +528,11 @@ export const useDesignStore = create<DesignState>()(
             if (row === bar.row && start === bar.startIndex) return state;
             const moved: PlacedTextBar = { ...bar, row, startIndex: start };
             const newBars = state.textBars.map((b) => (b.id === id ? moved : b));
-            return {
-              ...pushHistory(),
+            return withHistory(state, {
               textBars: newBars,
               slots: clearCoveredTiles(state.slots, newBars),
               updatedAt: Date.now(),
-            };
+            });
           });
         },
 
@@ -524,13 +555,12 @@ export const useDesignStore = create<DesignState>()(
               );
               synced = synced.map((b, i) => (i === 0 ? { ...b, widthUnits, startIndex } : b));
             }
-            return {
-              ...pushHistory(),
+            return withHistory(state, {
               textBars: synced,
               slots: clearCoveredTiles(state.slots, synced),
               selectedBarId: state.selectedBarId === id ? null : state.selectedBarId,
               updatedAt: Date.now(),
-            };
+            });
           });
         },
 
@@ -552,12 +582,11 @@ export const useDesignStore = create<DesignState>()(
             );
             const updated: PlacedTextBar = { ...bar, config, widthUnits, startIndex };
             const newBars = state.textBars.map((b) => (b.id === id ? updated : b));
-            return {
-              ...pushHistory(),
+            return withHistory(state, {
               textBars: newBars,
               slots: clearCoveredTiles(state.slots, newBars),
               updatedAt: Date.now(),
-            };
+            });
           });
         },
 
@@ -580,13 +609,12 @@ export const useDesignStore = create<DesignState>()(
               );
               textBars = textBars.map((b, i) => (i === 0 ? { ...b, widthUnits, startIndex } : b));
             }
-            return {
-              ...pushHistory(),
+            return withHistory(state, {
               qrCode,
               textBars,
               slots: clearCoveredTiles(state.slots, textBars),
               updatedAt: Date.now(),
-            };
+            });
           });
         },
 
@@ -626,12 +654,11 @@ export const useDesignStore = create<DesignState>()(
               }
             }
 
-            return {
-              ...pushHistory(),
+            return withHistory(state, {
               frameConfig: newConfig,
               slots: newSlots,
               updatedAt: Date.now(),
-            };
+            });
           });
         },
 
@@ -655,25 +682,29 @@ export const useDesignStore = create<DesignState>()(
               }
             }
 
-            return {
-              ...pushHistory(),
+            return withHistory(state, {
               frameConfig: newConfig,
               slots: newSlots,
               updatedAt: Date.now(),
-            };
+            });
           });
         },
 
+        // Standard model: `history[historyIndex]` is the live design, so undo
+        // steps to the snapshot at `index - 1` and redo to `index + 1`.
         undo: () => {
           set((state) => {
-            if (state.historyIndex < 0) return state;
-            const snapshot = state.history[state.historyIndex];
+            if (state.historyIndex <= 0) return state;
+            const newIndex = state.historyIndex - 1;
+            const snapshot = state.history[newIndex];
+            const textBars = snapshot.textBars.map((b) => ({ ...b, config: { ...b.config } }));
             return {
               slots: { ...snapshot.slots },
               bottomBar: { ...snapshot.bottomBar },
               frameConfig: { ...snapshot.frameConfig },
-              textBars: snapshot.textBars.map((b) => ({ ...b, config: { ...b.config } })),
-              historyIndex: state.historyIndex - 1,
+              textBars,
+              selectedBarId: reconcileSelectedBar(get().selectedBarId, textBars),
+              historyIndex: newIndex,
               updatedAt: Date.now(),
             };
           });
@@ -682,21 +713,23 @@ export const useDesignStore = create<DesignState>()(
         redo: () => {
           set((state) => {
             if (state.historyIndex >= state.history.length - 1) return state;
-            const snapshot = state.history[state.historyIndex + 2];
-            if (!snapshot) return state;
+            const newIndex = state.historyIndex + 1;
+            const snapshot = state.history[newIndex];
+            const textBars = snapshot.textBars.map((b) => ({ ...b, config: { ...b.config } }));
             return {
               slots: { ...snapshot.slots },
               bottomBar: { ...snapshot.bottomBar },
               frameConfig: { ...snapshot.frameConfig },
-              textBars: snapshot.textBars.map((b) => ({ ...b, config: { ...b.config } })),
-              historyIndex: state.historyIndex + 1,
+              textBars,
+              selectedBarId: reconcileSelectedBar(get().selectedBarId, textBars),
+              historyIndex: newIndex,
               updatedAt: Date.now(),
             };
           });
         },
 
-        canUndo: () => get().historyIndex >= 0,
-        canRedo: () => get().historyIndex < get().history.length - 2,
+        canUndo: () => get().historyIndex > 0,
+        canRedo: () => get().historyIndex < get().history.length - 1,
       };
     },
     {

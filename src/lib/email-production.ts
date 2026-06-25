@@ -80,12 +80,31 @@ function shell(headline: string, inner: string): string {
   </div>`;
 }
 
+interface Attachment {
+  filename: string;
+  content: string;
+  contentType: string;
+  contentId?: string;
+}
+
 /** data: URL -> { base64 content, contentType } for a Resend attachment. */
-function toAttachment(img: NamedImage): { filename: string; content: string; contentType: string } | null {
+function toAttachment(img: NamedImage): Attachment | null {
   const m = /^data:(image\/[a-zA-Z+]+);base64,(.+)$/.exec(img.dataUrl);
   if (!m) return null;
   return { filename: `${img.name}.png`, content: m[2], contentType: m[1] };
 }
+
+/** Decoded byte size of a base64 attachment payload. */
+function attachmentBytes(a: Attachment): number {
+  // 4 base64 chars -> 3 bytes, minus padding. Close enough for a size guard.
+  const len = a.content.length;
+  const padding = a.content.endsWith("==") ? 2 : a.content.endsWith("=") ? 1 : 0;
+  return Math.floor((len * 3) / 4) - padding;
+}
+
+// Resend caps a single send at ~40MB of attachments. Stay well under so the
+// request body (with base64 inflation already accounted for above) is safe.
+const MAX_ATTACHMENT_BYTES = 30 * 1024 * 1024;
 
 function shippingBlock(lines: string[]): string {
   const body = lines.filter(Boolean).map((l) => esc(l)).join("<br/>");
@@ -104,13 +123,17 @@ const FOUNDERS_THANK_YOU = `
     <p style="margin:10px 0 0;color:${INK};font-size:14px;font-style:italic;">— Henry, Becky &amp; Bill</p>
   </div>`;
 
-function productionHtml(o: ProductionOrderInput): string {
+function productionHtml(o: ProductionOrderInput, droppedNote?: string | null): string {
   const fileList = [
     o.proof ? "the full composite proof" : null,
     o.printSheets.length ? `${o.printSheets.length} eufyMake print sheet(s)` : "⚠ NO print sheet (ordered on mobile — regenerate on desktop from /build)",
     o.banners.length ? `${o.banners.length} banner file(s)` : null,
     "the parts-list CSV",
   ].filter(Boolean).join(", ");
+
+  const droppedBlock = droppedNote
+    ? `<p style="margin:0 0 12px;padding:10px 14px;background:${RED};color:${PAGE};font-size:13px;font-weight:bold;border:3px solid ${INK};border-radius:10px;">${esc(droppedNote)}</p>`
+    : "";
 
   return shell(
     `Production order — ${esc(o.parts.designName || "Custom frame")}`,
@@ -123,13 +146,14 @@ function productionHtml(o: ProductionOrderInput): string {
       <strong>Plate:</strong> ${esc(o.parts.plateState)}${o.parts.qr.enabled ? ` · <strong>QR:</strong> ${esc(o.parts.qr.url)}` : ""}
     </p>
     <p style="margin:0 0 12px;color:${INK};font-size:13px;"><strong>Bill — attached for the eufy:</strong> ${esc(fileList)}.</p>
+    ${droppedBlock}
     ${partsListHtml(o.parts)}
     <div style="margin:18px 0 0;padding:14px 16px;background:${PAGE};border:3px solid ${INK};border-radius:14px;box-shadow:${SHADOW};">${shippingBlock(o.shippingLines)}</div>`,
   );
 }
 
 /** Concise plain-text alternative for the founders/production email. */
-function productionText(o: ProductionOrderInput): string {
+function productionText(o: ProductionOrderInput, droppedNote?: string | null): string {
   const fileList = [
     o.proof ? "the full composite proof" : null,
     o.printSheets.length ? `${o.printSheets.length} eufyMake print sheet(s)` : "NO print sheet (ordered on mobile — regenerate on desktop from /build)",
@@ -147,7 +171,7 @@ function productionText(o: ProductionOrderInput): string {
     `Plate: ${o.parts.plateState}${o.parts.qr.enabled ? ` · QR: ${o.parts.qr.url}` : ""}`,
     ``,
     `Bill — attached for the eufy: ${fileList}.`,
-    `Files attached to this email.`,
+    droppedNote ? `\n** ${droppedNote} **\n` : `Files attached to this email.`,
     ``,
     `Ship to:`,
     ship,
@@ -201,68 +225,123 @@ function customerHtml(o: ProductionOrderInput): string {
 
 /**
  * Sends the production (founders) email and the customer confirmation/proof
- * email. No-ops gracefully when Resend isn't configured. Never throws — the
- * caller decides what to do with the boolean result.
+ * email.
+ *
+ * THROWS on a hard "the production email could not be sent" failure so the
+ * caller (fulfillOrder) releases the idempotency claim and fires the failure
+ * alert. Hard failures are: RESEND_API_KEY missing, no founder recipients
+ * configured, or the founders send failing even after dropping print sheets.
+ *
+ * A customer-email failure does NOT throw (production already went out) but it
+ * is never silent — it fires sendFulfillmentFailureAlert so a human is notified.
  */
-export async function sendProductionEmails(o: ProductionOrderInput): Promise<boolean> {
+export async function sendProductionEmails(o: ProductionOrderInput): Promise<void> {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
-    console.warn("[email-production] RESEND_API_KEY not set; skipping production emails.");
-    return false;
+    // Hard failure: a paid order cannot be silently dropped. In local dev with
+    // no key this throws, fulfillOrder releases the claim and logs loudly, and
+    // the alert path no-ops without a key — acceptable, never "sent".
+    console.error("[email-production] RESEND_API_KEY not set; cannot send production email for paid order.");
+    throw new Error("RESEND_API_KEY not set — production email could not be sent.");
   }
   const from = process.env.EMAIL_FROM || "Festive Frames <onboarding@resend.dev>";
   const adminTo = process.env.ADMIN_ORDER_EMAIL;
   const founderList = (process.env.PRODUCTION_EMAILS || adminTo || "")
     .split(",").map((s) => s.trim()).filter(Boolean);
+  if (!founderList.length) {
+    // Hard failure: with no founder recipients, Bill never sees the order.
+    console.error("[email-production] no PRODUCTION_EMAILS/ADMIN_ORDER_EMAIL set; cannot send production email for paid order.");
+    throw new Error("No founder recipients configured — production email could not be sent.");
+  }
   const resend = new Resend(apiKey);
 
   // ── Production email (founders) — all artifacts attached. ──
-  if (founderList.length) {
-    const attachments = [
-      { filename: `${o.parts.designName || "order"}-parts-list.csv`, content: Buffer.from(partsListCsv(o.parts, o.orderId, o.customerName ?? "")).toString("base64"), contentType: "text/csv" },
-      ...o.printSheets.map(toAttachment),
-      ...o.banners.map(toAttachment),
-      o.proof ? toAttachment(o.proof) : null,
-    ].filter(Boolean) as { filename: string; content: string; contentType: string }[];
+  const csv: Attachment = {
+    filename: `${o.parts.designName || "order"}-parts-list.csv`,
+    content: Buffer.from(partsListCsv(o.parts, o.orderId, o.customerName ?? "")).toString("base64"),
+    contentType: "text/csv",
+  };
+  const sheetAttachments = o.printSheets.map(toAttachment).filter(Boolean) as Attachment[];
+  const bannerAttachments = o.banners.map(toAttachment).filter(Boolean) as Attachment[];
+  const proofAttachment = o.proof ? toAttachment(o.proof) : null;
 
-    try {
-      await resend.emails.send({
-        from,
-        to: founderList,
-        replyTo: o.customerEmail ?? undefined,
-        subject: `PRODUCTION — ${o.parts.designName || "Custom frame"} — ${o.customerName ?? o.customerEmail ?? o.orderId}`,
-        html: productionHtml(o),
-        text: productionText(o),
-        attachments,
-      });
-    } catch (err) {
+  // Keep CSV + proof + banners first; print sheets are the heavy, droppable ones.
+  const keep: Attachment[] = [csv, ...bannerAttachments, ...(proofAttachment ? [proofAttachment] : [])];
+  const total = (atts: Attachment[]) => atts.reduce((sum, a) => sum + attachmentBytes(a), 0);
+
+  const droppedMessage =
+    "Print sheet(s) too large to attach — regenerate on desktop from the order's design (it's saved).";
+
+  // Proactive size guard: if everything would blow the cap, drop the sheets up front.
+  let includeSheets = total([...keep, ...sheetAttachments]) <= MAX_ATTACHMENT_BYTES;
+  let attachments = includeSheets ? [...keep, ...sheetAttachments] : keep;
+  let droppedNote: string | null = includeSheets ? null : (sheetAttachments.length ? droppedMessage : null);
+  if (!includeSheets && sheetAttachments.length) {
+    console.warn(`[email-production] print sheets (${total(sheetAttachments)} bytes) exceed cap; dropping from founders email for order ${o.orderId}.`);
+  }
+
+  const sendFounders = () =>
+    resend.emails.send({
+      from,
+      to: founderList,
+      replyTo: o.customerEmail ?? undefined,
+      subject: `PRODUCTION — ${o.parts.designName || "Custom frame"} — ${o.customerName ?? o.customerEmail ?? o.orderId}`,
+      html: productionHtml(o, droppedNote),
+      text: productionText(o, droppedNote),
+      attachments,
+    });
+
+  try {
+    await sendFounders();
+  } catch (err) {
+    // Retry once with print sheets dropped — a size-related failure must never
+    // silently kill a paid order. If sheets were already excluded, rethrow.
+    if (includeSheets && sheetAttachments.length) {
+      console.error("[email-production] founders email failed; retrying without print sheets:", err);
+      includeSheets = false;
+      attachments = keep;
+      droppedNote = droppedMessage;
+      try {
+        await sendFounders();
+      } catch (retryErr) {
+        console.error("[email-production] founders email failed even without print sheets:", retryErr);
+        throw retryErr; // hard failure → fulfillOrder releases claim + alerts
+      }
+    } else {
       console.error("[email-production] founders email failed:", err);
-      throw err; // let fulfillOrder trigger the failure alert
+      throw err; // hard failure → fulfillOrder releases claim + alerts
     }
-  } else {
-    console.warn("[email-production] no PRODUCTION_EMAILS/ADMIN_ORDER_EMAIL; founders email skipped.");
   }
 
   // ── Customer email (confirmation + proof + thank-you). ──
+  // Production already went out; a customer-email failure does NOT throw (we
+  // don't want to release the claim and re-send the production email), but it
+  // must never be silent — alert the team so they can manually confirm.
   if (o.customerEmail) {
-    const customerAttachments = o.proof
-      ? [{ ...toAttachment(o.proof)!, contentId: "proof" }]
+    const customerAttachments = proofAttachment
+      ? [{ ...proofAttachment, contentId: "proof" }]
       : [];
     try {
       await resend.emails.send({
         from,
         to: o.customerEmail,
-        ...(founderList.length ? { bcc: founderList } : {}),
+        bcc: founderList,
         subject: "Your Festive Frames order is confirmed",
         html: customerHtml(o),
         text: customerText(o),
         attachments: customerAttachments,
       });
     } catch (err) {
+      const reason = err instanceof Error ? err.message : "unknown error";
       console.error("[email-production] customer email failed:", err);
+      await sendFulfillmentFailureAlert(
+        o.orderId,
+        o.sessionId,
+        o.customerEmail,
+        `Production email SENT, but the CUSTOMER CONFIRMATION email FAILED (${reason}). Reach out to the customer manually — their order IS in production.`,
+      );
     }
   }
-  return true;
 }
 
 /** Plain-text alert when fulfillment fails — guarantees a human is notified. */

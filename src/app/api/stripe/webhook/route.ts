@@ -63,7 +63,12 @@ export async function POST(request: Request): Promise<NextResponse> {
     // second is a no-op. Production/customer emails are handled there.
     if (metadata.kind === "custom-frame" && metadata.orderId) {
       try {
-        const full = await stripe.checkout.sessions.retrieve(session.id);
+        // Expand the shipping address so fulfillOrder's emails get a real
+        // "Ship to" block — it lives at collected_information.shipping_details
+        // on the pinned API version and must be expanded to populate.
+        const full = await stripe.checkout.sessions.retrieve(session.id, {
+          expand: ["collected_information.shipping_details"],
+        });
         const result = await fulfillOrder(metadata.orderId, full);
         console.log(`[stripe-webhook] custom order ${metadata.orderId} fulfill via webhook: ${result}`);
       } catch (err) {
@@ -92,17 +97,18 @@ export async function POST(request: Request): Promise<NextResponse> {
     // failure here must never fail the webhook (Stripe would otherwise retry).
     try {
       const full = await stripe.checkout.sessions.retrieve(session.id, {
-        expand: ["line_items"],
+        expand: ["line_items", "collected_information.shipping_details"],
       });
       const items = (full.line_items?.data ?? []).map((li) => ({
         name: li.description ?? "Festive Frames",
         quantity: li.quantity ?? 1,
         amountCents: li.amount_total ?? 0,
       }));
-      // Shipping address shape varies by Stripe API version; read defensively.
+      // On the pinned API version the shipping address lives at
+      // collected_information.shipping_details (top-level shipping_details was
+      // removed). Read that first, with a legacy fallback for older sessions.
       const collected =
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (full as any).collected_information?.shipping_details ??
+        full.collected_information?.shipping_details ??
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (full as any).shipping_details ??
         null;

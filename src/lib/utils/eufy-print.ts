@@ -14,6 +14,10 @@ import { EUFY_JIG, jigPocketCenters, jigPocketCount, type EufyJigConfig } from "
 function loadImage(src: string): Promise<HTMLImageElement | null> {
   return new Promise((resolve) => {
     const img = new Image();
+    // Request CORS so remote-CDN artwork (non-July4 sets) doesn't taint the
+    // canvas — a tainted canvas makes toDataURL() throw, killing the print sheet.
+    // The CDN serves permissive CORS headers; same-origin tiles ignore this.
+    img.crossOrigin = "anonymous";
     img.onload = () => resolve(img);
     img.onerror = () => resolve(null);
     img.src = src;

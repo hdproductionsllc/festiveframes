@@ -5,6 +5,8 @@ import { useDraggable } from "@dnd-kit/core";
 import { useDesignStore } from "@/stores/design-store";
 import { BOTTOM_BAR_MAX_CHARS } from "@/lib/constants/frame";
 import { JULY4_SLOGANS } from "@/data/slogans";
+import { measureTextBarUnits, findFreeStart, rowLength } from "@/lib/utils/text-bar";
+import type { TextBarRow } from "@/lib/types";
 import { FontSelector } from "./FontSelector";
 import { ColorPicker } from "@/components/ui/ColorPicker";
 import type { BottomBarConfig, PlacedTextBar } from "@/lib/types";
@@ -148,6 +150,8 @@ export function BottomBarEditor() {
   const qrCode = useDesignStore((s) => s.qrCode);
   const setQrEnabled = useDesignStore((s) => s.setQrEnabled);
   const updateQRCode = useDesignStore((s) => s.updateQRCode);
+  const slots = useDesignStore((s) => s.slots);
+  const frameConfig = useDesignStore((s) => s.frameConfig);
 
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -157,6 +161,30 @@ export function BottomBarEditor() {
     textBars.find((b) => b.id === selectedBarId) ?? textBars[textBars.length - 1] ?? null;
   const cfg = selected ? selected.config : bottomBar;
   const hasBars = textBars.length > 0;
+
+  // How many of YOUR placed tiles the first auto-created bar would replace. We
+  // mirror `addTextBar` (bottom row first, then top; centered on a free run) and
+  // count the placed tiles under that footprint, so the entry state can WARN
+  // before a keystroke silently buries a row of hand-placed tiles. Only relevant
+  // before the first bar exists. Undo cleanly restores them either way.
+  const tilesCoveredByFirstBar = (() => {
+    if (hasBars) return 0;
+    const isFirst = true;
+    const qr = isFirst ? qrCode.enabled : false;
+    for (const row of ["bottom", "top"] as TextBarRow[]) {
+      const maxUnits = rowLength(frameConfig, row);
+      const widthUnits = measureTextBarUnits(bottomBar, qr, maxUnits);
+      const preferred = Math.round((maxUnits - widthUnits) / 2);
+      const start = findFreeStart([], row, widthUnits, maxUnits, preferred);
+      if (start === null) continue; // row full → addTextBar would try the next
+      let count = 0;
+      for (let i = 0; i < widthUnits; i++) {
+        if (slots[`frame:${row}-${start + i}`]) count++;
+      }
+      return count;
+    }
+    return 0;
+  })();
 
   /**
    * Any text/style change applies to the selected bar live. With no bar yet, the
@@ -229,6 +257,22 @@ export function BottomBarEditor() {
         <p className="text-[12px] font-bold uppercase tracking-wide text-[#ed5aa0]">
           {hasBars ? `Editing the ${selected?.row === "top" ? "top" : "bottom"} bar` : "Add a phrase to your frame"}
         </p>
+
+        {/* Heads-up before the first keystroke creates the bar: a bar REPLACES the
+            tiles it covers, so warn how many placed tiles will be replaced (undo
+            brings them back). Only shown when adding the first bar would bury tiles. */}
+        {!hasBars && tilesCoveredByFirstBar > 0 && (
+          <p
+            role="status"
+            className="flex items-start gap-1.5 rounded-lg bg-[#fdecec] px-2.5 py-2 text-[11px] font-semibold leading-snug text-[#b3261e]"
+          >
+            <span aria-hidden>⚠️</span>
+            <span>
+              Adding a bar here will replace {tilesCoveredByFirstBar} tile{tilesCoveredByFirstBar === 1 ? "" : "s"} under
+              it. You can undo to bring {tilesCoveredByFirstBar === 1 ? "it" : "them"} back.
+            </span>
+          </p>
+        )}
 
         {/* 1 · Type your phrase */}
         <div className="space-y-2">

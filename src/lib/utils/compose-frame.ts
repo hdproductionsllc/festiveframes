@@ -11,6 +11,7 @@ import {
 } from "@/lib/utils/text-bar";
 import { getScale, getContainerHeight, getPlateArea } from "@/lib/utils/layout";
 import { getPiece } from "@/data/sets";
+import { canDieCut } from "@/components/tiles/TileArtwork";
 import { getPlateImageUrl, getPlateImageDisplay } from "@/data/plate-images";
 
 // Canvas-based frame renderer. We composite tiles, plate, and text bars onto a
@@ -22,6 +23,10 @@ import { getPlateImageUrl, getPlateImageDisplay } from "@/data/plate-images";
 function loadImage(src: string): Promise<HTMLImageElement | null> {
   return new Promise((resolve) => {
     const img = new Image();
+    // Request CORS so remote-CDN artwork (non-July4 sets) doesn't taint the
+    // canvas — a tainted canvas makes toDataURL() throw, blanking the proof.
+    // The CDN serves permissive CORS headers; same-origin tiles ignore this.
+    img.crossOrigin = "anonymous";
     img.onload = () => resolve(img);
     img.onerror = () => resolve(null);
     img.src = src;
@@ -107,7 +112,7 @@ function drawTextBar(
 export async function composeFrameImage(width = 1600): Promise<string> {
   if (typeof document === "undefined") return "";
   const s = useDesignStore.getState();
-  const { frameConfig, slots, textBars, qrCode, plateState } = s;
+  const { frameConfig, slots, textBars, qrCode, plateState, dieCut } = s;
 
   const fonts = (document as unknown as { fonts?: { ready?: Promise<unknown> } }).fonts;
   if (fonts?.ready) { try { await fonts.ready; } catch { /* ignore */ } }
@@ -162,18 +167,24 @@ export async function composeFrameImage(width = 1600): Promise<string> {
     ctx.restore();
   }
 
-  // Tiles — every cell sits on WHITE (tiles print on white tiles). Transparent
-  // artwork shows white behind it, and blank/empty cells render white too, so the
-  // proof matches both the builder and what actually prints — no see-through cuts.
+  // Tiles — a normal cell sits on WHITE (tiles print on white snappets), so
+  // transparent artwork shows white behind it and blank/empty cells render white
+  // too. A DIE-CUT-eligible tile (when the design's die-cut mode is on) is a
+  // floating sticker: skip the white fill so the frame behind shows through the
+  // cut-away alpha, matching what PlacedTileView renders on-screen. This keeps
+  // the proof WYSIWYG with the builder for both modes.
   for (const slot of frameSlots) {
     if (covered.has(slot.id)) continue;
+    const placed = slots[slot.id];
+    const piece = placed ? getPiece(placed.pieceId) : null;
+    const isDieCut = dieCut && placed != null && canDieCut(placed.pieceId);
     ctx.save();
     roundRect(ctx, slot.x, slot.y, slot.width, slot.height, 2);
     ctx.clip();
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(slot.x, slot.y, slot.width, slot.height);
-    const placed = slots[slot.id];
-    const piece = placed ? getPiece(placed.pieceId) : null;
+    if (!isDieCut) {
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(slot.x, slot.y, slot.width, slot.height);
+    }
     if (piece) {
       const img = piece.artworkUrl ? loaded.get(piece.artworkUrl) : null;
       if (img) {
