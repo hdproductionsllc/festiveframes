@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { track } from "@/lib/analytics";
 import { OnboardingPopup } from "./OnboardingPopup";
+import { StartGate } from "./StartGate";
 
 /**
  * Client-side cross-sell chrome + onboarding for /build.
@@ -21,6 +22,12 @@ import { OnboardingPopup } from "./OnboardingPopup";
  */
 export function BuildChrome() {
   const fired = useRef(false);
+
+  // The start gate is the FIRST thing a brand-new visitor sees (name + state).
+  // The onboarding tour is held back until the gate resolves — finished OR never
+  // needed — so the two overlays are never stacked and we never double-prompt.
+  const [gateDone, setGateDone] = useState(false);
+  const onGateComplete = useCallback(() => setGateDone(true), []);
 
   useEffect(() => {
     if (fired.current) return;
@@ -49,7 +56,9 @@ export function BuildChrome() {
         </Link>
       </div>
 
-      <OnboardingPopup />
+      {/* Start gate first; the onboarding tour only mounts once it's resolved. */}
+      <StartGate onComplete={onGateComplete} />
+      {gateDone && <OnboardingPopup />}
     </>
   );
 }

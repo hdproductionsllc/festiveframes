@@ -25,6 +25,9 @@ export interface LookBanner {
 }
 
 export interface LookPreset {
+  /** Friendly display name, used to pre-fill the start gate's "Name your design"
+   *  field for a /build?look=<id> arrival. Mirrors the homepage look label. */
+  name?: string;
   /** Exact tile placements: slotId -> july4th piece id. */
   slots: Record<string, string>;
   /** Piece ids used to fill any perimeter slot left empty by `slots`. */
@@ -55,6 +58,7 @@ export const LOOK_PRESETS: Record<string, LookPreset> = {
   // carry liberty-bell + 250. Both rows mostly sit under their banners, so we
   // feature the side rails and the four corners.
   years250: {
+    name: "250 Years",
     slots: {
       // top corners + the few top tiles flanking the "250 YEARS" banner
       [TOP(0)]: "july4th:star-blue",
@@ -95,6 +99,7 @@ export const LOOK_PRESETS: Record<string, LookPreset> = {
   // it; BOTTOM navy banner "USA" with eagles + stars flanking. Side rails are
   // eagles + flags + bomb-pops + firecrackers + liberty-bell.
   spirit76: {
+    name: "Spirit of '76",
     slots: {
       // top row flanks: star, eagle, USA, flag, 250 each side of the "1776" banner
       [TOP(0)]: "july4th:star-blue",
@@ -136,6 +141,7 @@ export const LOOK_PRESETS: Record<string, LookPreset> = {
   // Preview: every perimeter tile is a red/white/blue starburst; ONE bottom
   // navy banner "LET FREEDOM RING". No top banner.
   burst: {
+    name: "Freedom Burst",
     slots: {},
     filler: ["july4th:sunburst", "july4th:firework-rwb"],
     bottomBar: { text: "LET FREEDOM RING", backgroundColor: NAVY, textColor: WHITE },
@@ -145,6 +151,7 @@ export const LOOK_PRESETS: Record<string, LookPreset> = {
   // Preview: every perimeter tile is a bold red star on white; ONE bottom red
   // banner "HOME OF THE BRAVE". No top banner.
   brave: {
+    name: "Home of the Brave",
     slots: {},
     filler: ["july4th:star-red"],
     bottomBar: { text: "HOME OF THE BRAVE", backgroundColor: RED, textColor: WHITE },
@@ -154,6 +161,7 @@ export const LOOK_PRESETS: Record<string, LookPreset> = {
   // Preview: every perimeter tile is a red/white/blue pinwheel; ONE bottom navy
   // banner "LET FREEDOM RING". No top banner.
   pinwheel: {
+    name: "Pinwheel Parade",
     slots: {},
     filler: ["july4th:pinwheel"],
     bottomBar: { text: "LET FREEDOM RING", backgroundColor: NAVY, textColor: WHITE },
@@ -164,6 +172,7 @@ export const LOOK_PRESETS: Record<string, LookPreset> = {
   // perimeter — 250 in the corners, sunbursts, flags, chevrons, bomb-pop,
   // stars, and diagonal stripes. NO banner (the whole border is tiles).
   sampler: {
+    name: "The Sampler",
     slots: {
       // top row: 250 corners, sunbursts, flags, chevrons across
       [TOP(0)]: "july4th:flag-block",
