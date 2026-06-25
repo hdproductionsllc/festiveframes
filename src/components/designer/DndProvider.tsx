@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
-import { createPortal } from "react-dom";
+import { useState, useCallback } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -41,11 +40,6 @@ export function DndProvider({ children, onOverSlotChange }: DndProviderProps) {
   const textBars = useDesignStore((s) => s.textBars);
   const bottomBar = useDesignStore((s) => s.bottomBar);
   const soundEnabled = useUIStore((s) => s.soundEnabled);
-
-  // The DragOverlay is portaled to <body>; mount-gate it so SSR doesn't touch
-  // document.body and so the portal target exists.
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
 
   const pointerSensor = useSensor(PointerSensor, {
     activationConstraint: { distance: 5 },
@@ -172,11 +166,10 @@ export function DndProvider({ children, onOverSlotChange }: DndProviderProps) {
       autoScroll={false}
     >
       {children}
-      {mounted && createPortal(
-        <DragOverlay dropAnimation={null}>
+      <DragOverlay dropAnimation={null}>
         {overlayBar ? (
           <div
-            className="pointer-events-none flex items-center rounded-[3px] px-3 opacity-90"
+            className="pointer-events-none inline-flex max-w-[280px] items-center rounded-[3px] px-3 opacity-90"
             style={{ height: 34, background: overlayBar.backgroundColor }}
           >
             <span
@@ -190,7 +183,7 @@ export function DndProvider({ children, onOverSlotChange }: DndProviderProps) {
               {overlayBar.text || "YOUR TEXT HERE"}
             </span>
           </div>
-        ) : piece && dragKind === "placed-tile" ? (
+        ) : piece ? (
           // Plain, statically-positioned, tile-sized ghost. dnd-kit's overlay
           // wrapper is the thing that follows the pointer (position:fixed); its
           // child MUST NOT carry any absolute offset of its own (a placed tile's
@@ -205,9 +198,7 @@ export function DndProvider({ children, onOverSlotChange }: DndProviderProps) {
             <PlacedTileView pieceId={piece.id} width={48} height={48} />
           </div>
         ) : null}
-        </DragOverlay>,
-        document.body
-      )}
+      </DragOverlay>
     </DndContext>
   );
 }
