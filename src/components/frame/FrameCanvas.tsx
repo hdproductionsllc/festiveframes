@@ -126,9 +126,9 @@ export const FrameCanvas = forwardRef<FrameCanvasHandle, FrameCanvasProps>(
             height: containerHeight || "auto",
             aspectRatio: containerHeight ? undefined : `${totalWidthInches} / ${frameConfig.heightInches}`,
             background: "#111111",
-            // Signature sticker drop shadow (matches the editor panels) so the
-            // whole design clearly lifts off the cream workbench background.
-            boxShadow: "8px 8px 0 #1e1b17",
+            // Signature sticker drop shadow at 50% opacity so the whole design
+            // lifts off the workbench without being as heavy as a solid offset.
+            boxShadow: "8px 8px 0 rgba(30,27,23,0.5)",
           }}
         >
           {/* Matte black frame texture */}

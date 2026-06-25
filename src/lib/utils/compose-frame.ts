@@ -156,25 +156,28 @@ export async function composeFrameImage(width = 1600): Promise<string> {
     ctx.restore();
   }
 
-  // Tiles
+  // Tiles — every cell sits on WHITE (tiles print on white tiles). Transparent
+  // artwork shows white behind it, and blank/empty cells render white too, so the
+  // proof matches both the builder and what actually prints — no see-through cuts.
   for (const slot of frameSlots) {
     if (covered.has(slot.id)) continue;
+    ctx.save();
+    roundRect(ctx, slot.x, slot.y, slot.width, slot.height, 2);
+    ctx.clip();
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(slot.x, slot.y, slot.width, slot.height);
     const placed = slots[slot.id];
-    if (!placed) continue;
-    const piece = getPiece(placed.pieceId);
-    if (!piece) continue;
-    const img = piece.artworkUrl ? loaded.get(piece.artworkUrl) : null;
-    if (img) {
-      ctx.save();
-      roundRect(ctx, slot.x, slot.y, slot.width, slot.height, 2);
-      ctx.clip();
-      drawFit(ctx, img, slot.x, slot.y, slot.width, slot.height, "cover", 1);
-      ctx.restore();
-    } else {
-      ctx.fillStyle = piece.backgroundColor;
-      roundRect(ctx, slot.x, slot.y, slot.width, slot.height, slot.width * 0.05);
-      ctx.fill();
+    const piece = placed ? getPiece(placed.pieceId) : null;
+    if (piece) {
+      const img = piece.artworkUrl ? loaded.get(piece.artworkUrl) : null;
+      if (img) {
+        drawFit(ctx, img, slot.x, slot.y, slot.width, slot.height, "cover", 1);
+      } else {
+        ctx.fillStyle = piece.backgroundColor;
+        ctx.fillRect(slot.x, slot.y, slot.width, slot.height);
+      }
     }
+    ctx.restore();
   }
 
   // Text bars

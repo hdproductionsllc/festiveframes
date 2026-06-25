@@ -94,7 +94,7 @@ export function RailSlot({ slot, placedTile, isOver }: RailSlotProps) {
             style={{
               width: slot.width,
               height: slot.height,
-              background: "#faf0d6",
+              background: "#ffffff",
               border: "1px solid transparent",
             }}
           />
@@ -192,7 +192,7 @@ function PlacedTileCell({
       <div
         aria-hidden
         className="absolute inset-0 rounded-[2px]"
-        style={{ background: "#faf0d6" }}
+        style={{ background: "#ffffff" }}
       />
 
       <div
