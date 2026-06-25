@@ -45,6 +45,20 @@ export function Designer() {
 
   useKeyboardShortcuts();
 
+  // Un-freeze on Back from Stripe. When we redirect to checkout, `ordering` is
+  // true (button disabled, the review modal shows "Sending you to checkout…").
+  // Hitting the browser Back button can restore this page from the bfcache with
+  // that frozen state intact. `pageshow` fires on every show — including a
+  // bfcache restore (`persisted`) — so we reset the order UI to a clean state.
+  useEffect(() => {
+    const onPageShow = (e: PageTransitionEvent) => {
+      setOrdering(false);
+      if (e.persisted) setReviewOpen(false);
+    };
+    window.addEventListener("pageshow", onPageShow);
+    return () => window.removeEventListener("pageshow", onPageShow);
+  }, []);
+
   // First load → seed a July 4th design ONLY for a brand-new visitor with a
   // blank canvas. If the visitor arrived from a homepage "Build this look"
   // button (/build?look=<id>), seed that look's themed starting point (featured
