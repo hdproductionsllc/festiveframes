@@ -128,9 +128,9 @@ export function partsListCsv(parts: PartsList, orderNumber: string, customerName
     ["Plate", parts.plateState],
     ...(parts.qr.enabled ? [["QR", parts.qr.url]] : []),
     [],
-    ["Part #", "Tile", "Color", "Die-cut", "Qty"],
-    ...parts.rows.map((r) => [r.sku, r.name, r.color, r.dieCut ? "yes" : "no", String(r.qty)]),
-    ["", "", "", "Total tiles", String(parts.totalTiles)],
+    ["Part #", "Tile", "Color", "Qty"],
+    ...parts.rows.map((r) => [r.sku, r.name, r.color, String(r.qty)]),
+    ["", "", "Total tiles", String(parts.totalTiles)],
     [],
     ["Custom parts (text bars)"],
     ["Text", "Font", "Row", "Size (tiles)", "Size (in)"],
@@ -154,7 +154,7 @@ export function partsListHtml(parts: PartsList): string {
   const rowsHtml = parts.rows
     .map(
       (r) =>
-        `<tr><td style="font-family:monospace;font-size:11px;padding:3px 6px;border-bottom:1px solid #eee;">${esc(r.sku)}</td><td style="padding:3px 6px;border-bottom:1px solid #eee;font-size:12px;">${esc(r.name)}</td><td style="font-family:monospace;font-size:11px;padding:3px 6px;border-bottom:1px solid #eee;">${esc(r.color)}</td><td style="padding:3px 6px;border-bottom:1px solid #eee;font-size:12px;${r.dieCut ? "font-weight:bold;color:#b8860b;" : "color:#999;"}">${r.dieCut ? "Die-cut" : "—"}</td><td style="padding:3px 6px;border-bottom:1px solid #eee;text-align:right;font-size:12px;">${r.qty}</td></tr>`,
+        `<tr><td style="font-family:monospace;font-size:11px;padding:3px 6px;border-bottom:1px solid #eee;">${esc(r.sku)}</td><td style="padding:3px 6px;border-bottom:1px solid #eee;font-size:12px;">${esc(r.name)}</td><td style="font-family:monospace;font-size:11px;padding:3px 6px;border-bottom:1px solid #eee;">${esc(r.color)}</td><td style="padding:3px 6px;border-bottom:1px solid #eee;text-align:right;font-size:12px;">${r.qty}</td></tr>`,
     )
     .join("");
   const barsHtml = parts.bars.length
@@ -172,9 +172,8 @@ export function partsListHtml(parts: PartsList): string {
         <th style="text-align:left;padding:3px 6px;color:#666;font-size:11px;">Part #</th>
         <th style="text-align:left;padding:3px 6px;color:#666;font-size:11px;">Tile</th>
         <th style="text-align:left;padding:3px 6px;color:#666;font-size:11px;">Color</th>
-        <th style="text-align:left;padding:3px 6px;color:#666;font-size:11px;">Die-cut</th>
         <th style="text-align:right;padding:3px 6px;color:#666;font-size:11px;">Qty</th>
       </tr></thead>
-      <tbody>${rowsHtml}<tr><td colspan="4" style="padding:6px;font-weight:bold;border-top:2px solid #ccc;font-size:12px;">Total tiles</td><td style="padding:6px;font-weight:bold;border-top:2px solid #ccc;text-align:right;font-size:12px;">${parts.totalTiles}</td></tr></tbody>
+      <tbody>${rowsHtml}<tr><td colspan="3" style="padding:6px;font-weight:bold;border-top:2px solid #ccc;font-size:12px;">Total tiles</td><td style="padding:6px;font-weight:bold;border-top:2px solid #ccc;text-align:right;font-size:12px;">${parts.totalTiles}</td></tr></tbody>
     </table>${barsHtml}`;
 }
