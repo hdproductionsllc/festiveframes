@@ -2,86 +2,77 @@ import Link from "next/link";
 import Image from "next/image";
 
 // Server Component. Marketing site footer used by the (site) route group.
-// No props. One natural, SEO-friendly product paragraph plus navigation and
-// a contact email placeholder.
+// No props. Sticker design language to match the redesigned homepage footer:
+// dark ink surface, cream text, gold column headings, the badge logo, and one
+// natural, SEO-friendly product paragraph. Same links as before
+// (Shop / Privacy / Returns / Terms / contact email).
+
+const SHOP = [
+  { label: "Design your frame", href: "/build" },
+  { label: "Privacy", href: "/privacy" },
+  { label: "Returns & Refunds", href: "/returns" },
+  { label: "Terms", href: "/terms" },
+  { label: "hello@festiveframes.co", href: "mailto:hello@festiveframes.co" },
+];
+
 export function SiteFooter() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="star-field border-t border-brand-navy-soft/60 text-brand-cream">
-      <div className="candy-stripe" aria-hidden="true" />
-      <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 sm:px-6 md:grid-cols-3">
-        <div className="md:col-span-2">
-          <span className="mb-4 inline-flex rounded-md bg-brand-cream-soft px-3 py-2 shadow-sm ring-1 ring-brand-navy/10">
-            <Image
-              src="/brand/wordmark.png"
-              alt="Festive Frames"
-              width={176}
-              height={60}
-              className="h-14 w-auto"
-            />
-          </span>
-          <p className="max-w-prose text-sm leading-relaxed text-brand-cream/80">
+    <footer className="bg-[#1e1b17] text-[#faf0d6]">
+      <div className="mx-auto grid max-w-[1240px] gap-8 px-5 pb-9 pt-[54px] sm:px-7 md:grid-cols-[1.6fr_1fr]">
+        <div>
+          <Image
+            src="/redesign/logo.png"
+            alt="Festive Frames"
+            width={1408}
+            height={1425}
+            className="mb-3.5 h-[132px] w-auto"
+          />
+          <p className="m-0 max-w-[340px] text-[15px] font-semibold leading-[1.5] text-[#c8c1ad]">
             Festive Frames makes customizable snap-on license plate frame kits.
             Each kit comes with decorative snap-on tiles you press into the frame
             to dress up your plate for the season, the road trip, or the everyday
-            drive.
+            drive. Made in St. Louis, USA.
           </p>
         </div>
 
-        <nav aria-label="Footer" className="text-sm">
-          <p className="mb-3 font-mkt-display text-xs font-semibold uppercase tracking-widest text-brand-cream/60">
+        <nav aria-label="Footer">
+          <div className="s-display mb-3.5 text-base font-semibold text-[#f8c53b]">
             Explore
-          </p>
-          <ul className="space-y-2">
-            <li>
-              <Link
-                href="/build"
-                className="text-brand-cream/90 transition-colors hover:text-brand-gold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-gold"
-              >
-                Shop kits
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/privacy"
-                className="text-brand-cream/90 transition-colors hover:text-brand-gold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-gold"
-              >
-                Privacy
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/returns"
-                className="text-brand-cream/90 transition-colors hover:text-brand-gold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-gold"
-              >
-                Returns &amp; Refunds
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/terms"
-                className="text-brand-cream/90 transition-colors hover:text-brand-gold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-gold"
-              >
-                Terms
-              </Link>
-            </li>
-            <li>
-              <a
-                href="mailto:hello@festiveframes.co"
-                className="text-brand-cream/90 transition-colors hover:text-brand-gold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-gold"
-              >
-                hello@festiveframes.co
-              </a>
-            </li>
+          </div>
+          <ul className="flex flex-col gap-2.5 text-[15px] font-semibold text-[#c8c1ad]">
+            {SHOP.map((l) => {
+              const isMail = l.href.startsWith("mailto:");
+              return (
+                <li key={l.label}>
+                  {isMail ? (
+                    <a
+                      href={l.href}
+                      className="text-[#c8c1ad] no-underline transition-colors hover:text-[#faf0d6]"
+                    >
+                      {l.label}
+                    </a>
+                  ) : (
+                    <Link
+                      href={l.href}
+                      className="text-[#c8c1ad] no-underline transition-colors hover:text-[#faf0d6]"
+                    >
+                      {l.label}
+                    </Link>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         </nav>
       </div>
 
-      <div className="border-t border-brand-navy-soft/40">
-        <p className="mx-auto max-w-6xl px-4 py-4 text-xs text-brand-cream/60 sm:px-6">
-          &copy; {year} Festive Frames. Proudly made in the USA in St. Louis, Missouri. All rights reserved.
-        </p>
+      <div className="mx-auto flex max-w-[1240px] flex-wrap justify-between gap-2.5 border-t-2 border-[#3a352c] px-5 py-[18px] text-[13px] font-semibold text-[#8f8975] sm:px-7">
+        <span>
+          &copy; {year} Festive Frames &middot; Proudly made in St. Louis,
+          Missouri. All rights reserved.
+        </span>
       </div>
     </footer>
   );

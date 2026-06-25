@@ -1,41 +1,45 @@
 import Link from "next/link";
 import Image from "next/image";
 
-// Server Component. Marketing site header used by the (site) route group.
-// No props, no client interactivity (nav is plain links). Restrained
-// Americana style: navy bar, cream wordmark, gold star accent.
+const INK = "#1e1b17";
+
+// Server Component. Marketing site header used by the (site) route group
+// (the post-order /thanks page and the legal pages). Sticker design language to
+// match the redesigned homepage: cream bar, thick ink outline, the badge logo,
+// and a single yellow "Design your frame" pill that routes to the custom-first
+// builder (/build). No in-page anchors — those only exist on the homepage.
 export function SiteHeader() {
   return (
-    <header className="star-field border-b border-brand-navy-soft/60 text-brand-cream">
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
+    <header className="border-b-[3px] border-[#1e1b17] bg-[#faf0d6]">
+      <nav className="mx-auto flex max-w-[1240px] items-center gap-4 px-5 py-1.5 sm:px-7">
         <Link
           href="/"
-          className="inline-flex items-center rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-gold"
           aria-label="Festive Frames home"
+          className="flex flex-none items-center"
         >
-          <span className="inline-flex rounded-lg bg-brand-cream-soft p-1.5 shadow-sm ring-1 ring-brand-navy/10">
-            <span className="inline-flex rounded-md border-2 border-brand-navy/30 px-3 py-1.5">
-              <Image
-                src="/brand/wordmark.png"
-                alt="Festive Frames"
-                width={300}
-                height={100}
-                priority
-                className="h-20 w-auto sm:h-24"
-              />
-            </span>
-          </span>
+          <Image
+            src="/redesign/logo.png"
+            alt="Festive Frames"
+            width={1408}
+            height={1425}
+            priority
+            className="h-[84px] w-auto sm:h-[116px]"
+          />
         </Link>
-
-        <nav aria-label="Primary" className="flex items-center gap-1 sm:gap-2">
-          <Link
-            href="/build"
-            className="rounded-md border border-brand-gold/70 px-3 py-2 text-sm font-semibold uppercase tracking-wide text-brand-gold transition-colors hover:bg-brand-gold hover:text-brand-navy-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-gold"
-          >
-            Shop
-          </Link>
-        </nav>
-      </div>
+        <div className="flex-1" />
+        <Link
+          href="/build"
+          className="s-display s-press inline-flex items-center gap-2 rounded-full border-[3px] border-[#1e1b17] bg-[#f8c53b] px-5 py-[9px] text-base font-semibold text-[#1e1b17] no-underline"
+          style={{
+            boxShadow: `3px 3px 0 ${INK}`,
+            ["--press-shadow-lift" as string]: `5px 5px 0 ${INK}`,
+            ["--press-shadow-press" as string]: `1px 1px 0 ${INK}`,
+          }}
+        >
+          Design your frame
+          <span aria-hidden className="text-lg leading-none">→</span>
+        </Link>
+      </nav>
     </header>
   );
 }

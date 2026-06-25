@@ -7,12 +7,11 @@ import { getStripe } from "@/lib/stripe";
 import { EmailCaptureForm } from "@/components/site/home/EmailCaptureForm";
 import { OrderFulfiller } from "@/components/site/thanks/OrderFulfiller";
 import { SharePrompt } from "@/components/site/thanks/SharePrompt";
-import { LeaveReview } from "@/components/site/thanks/LeaveReview";
 import { PurchaseTracker } from "@/components/site/thanks/PurchaseTracker";
 import { SITE_URL, season } from "@/config/season";
 
 // Post-purchase confirmation at "/thanks". Server Component. Inherits
-// SiteHeader + SiteFooter + .marketing-theme from the (site) layout, so we
+// SiteHeader + SiteFooter + the sticker-theme from the (site) layout, so we
 // render sections directly. The only client islands are the reused email
 // capture form and the share prompt.
 //
@@ -125,10 +124,17 @@ export default async function ThanksPage({ searchParams }: ThanksPageProps) {
   const shareUrl = process.env.SITE_URL || SITE_URL;
 
   return (
-    <section className="paper-grain">
+    <section className="bg-[#faf0d6]">
       <div className="mx-auto max-w-2xl px-4 py-20 sm:px-6 sm:py-24">
         {/* Headline */}
-        <h1 className="font-mkt-display text-4xl font-bold uppercase tracking-tight text-brand-navy sm:text-5xl">
+        <div
+          className="mb-[22px] inline-flex items-center gap-2 rounded-full border-[3px] border-[#1e1b17] bg-[#fff9ec] px-4 py-[7px] text-sm font-extrabold tracking-[0.3px] text-[#1e1b17]"
+          style={{ boxShadow: "3px 3px 0 #1e1b17" }}
+        >
+          <span className="inline-block h-[11px] w-[11px] rounded-full bg-[#ed5aa0]" />
+          Order confirmed
+        </div>
+        <h1 className="m-0 text-[clamp(36px,7vw,56px)] font-bold leading-[0.98] tracking-[-1.5px] text-[#1e1b17]">
           {order ? copy.thanks.headline : copy.thanks.genericHeadline}
         </h1>
 
@@ -147,15 +153,18 @@ export default async function ThanksPage({ searchParams }: ThanksPageProps) {
 
         {/* Order summary or generic confirmation */}
         {order ? (
-          <div className="mt-8 rounded-lg border border-brand-navy-soft/40 bg-brand-cream-soft px-6 py-6">
+          <div
+            className="mt-8 rounded-[24px] border-[4px] border-[#1e1b17] bg-[#f8c53b] px-6 py-6"
+            style={{ boxShadow: "8px 8px 0 #1e1b17" }}
+          >
             {order.kitNames.length > 0 && (
               <>
-                <h2 className="text-sm font-semibold uppercase tracking-wide text-brand-ink/70">
+                <h2 className="s-display text-sm font-bold uppercase tracking-[0.12em] text-[#3a2f0c]">
                   Your order
                 </h2>
                 <ul className="mt-3 space-y-1">
                   {order.kitNames.map((name, i) => (
-                    <li key={`${name}-${i}`} className="text-lg font-medium text-brand-navy">
+                    <li key={`${name}-${i}`} className="s-display text-xl font-semibold text-[#1e1b17]">
                       {name}
                     </li>
                   ))}
@@ -163,54 +172,46 @@ export default async function ThanksPage({ searchParams }: ThanksPageProps) {
               </>
             )}
             {order.quantityLabel && (
-              <p className="mt-3 text-base text-brand-ink/80">{order.quantityLabel}</p>
+              <p className="mt-3 text-base font-bold text-[#3a2f0c]">{order.quantityLabel}</p>
             )}
             {order.alphabetQty > 0 && (
-              <p className="mt-3 text-base text-brand-ink/80">
+              <p className="mt-3 text-base font-bold text-[#3a2f0c]">
                 {order.alphabetQty} x A-Z &amp; 0-9 letter set
                 {order.alphabetQty > 1 ? "s" : ""}
               </p>
             )}
           </div>
         ) : (
-          <p className="mt-6 max-w-prose text-lg text-brand-ink/80">
+          <p className="mt-6 max-w-prose text-lg font-medium text-[#3a352c]">
             {copy.thanks.genericBody}
           </p>
         )}
 
         {/* All orders ship from St. Louis. */}
         {order && (
-          <div className="mt-6 rounded-lg border border-brand-navy-soft/40 bg-brand-cream-soft px-6 py-6">
-            <h2 className="font-mkt-display text-xl font-bold uppercase tracking-tight text-brand-navy">
+          <div
+            className="mt-6 rounded-[24px] border-[3px] border-[#1e1b17] bg-[#fff9ec] px-6 py-6"
+            style={{ boxShadow: "5px 5px 0 #1e1b17" }}
+          >
+            <h2 className="s-display text-xl font-bold tracking-[-0.5px] text-[#1e1b17]">
               {copy.thanks.shipping.heading}
             </h2>
-            <p className="mt-2 text-base text-brand-ink/85">{copy.thanks.shipping.body}</p>
+            <p className="mt-2 text-base font-medium text-[#3a352c]">{copy.thanks.shipping.body}</p>
           </div>
         )}
 
-        {/* Review prompt — collected reviews are emailed to the team to vet,
-            then the genuine ones are published to the homepage carousel. */}
-        <div className="mt-12 border-t border-brand-navy-soft/30 pt-10">
-          <h2 className="font-mkt-display text-2xl font-bold uppercase tracking-tight text-brand-navy">
-            Loved it? Leave a review
-          </h2>
-          <p className="mt-2 max-w-prose text-base text-brand-ink/85">
-            Tell us what you did with it and how it went. We feature real reviews on the site.
-          </p>
-          <div className="mt-4 max-w-md">
-            <LeaveReview />
-          </div>
-        </div>
-
         {/* Future tile drops tease (the ONLY place this lives) + email capture */}
-        <div className="mt-12 border-t border-brand-navy-soft/30 pt-10">
-          <h2 className="font-mkt-display text-2xl font-bold uppercase tracking-tight text-brand-navy">
+        <div
+          className="mt-12 overflow-hidden rounded-[24px] border-[4px] border-[#1e1b17] bg-[#3fb0e6] px-6 py-7"
+          style={{ boxShadow: "8px 8px 0 #1e1b17" }}
+        >
+          <h2 className="s-display text-3xl font-bold tracking-[-1px] text-[#fff9ec]">
             {copy.thanks.tease.heading}
           </h2>
-          <p className="mt-2 max-w-prose text-base text-brand-ink/85">
+          <p className="mt-2 max-w-prose text-base font-semibold text-[#fff9ec]">
             {copy.thanks.tease.body}
           </p>
-          <p className="mt-4 text-sm font-medium text-brand-ink/70">
+          <p className="mt-4 text-sm font-bold text-[#fff9ec]">
             {copy.thanks.emailCapturePrompt}
           </p>
           <div className="mt-3 max-w-md">
@@ -220,10 +221,10 @@ export default async function ThanksPage({ searchParams }: ThanksPageProps) {
 
         {/* Share prompt */}
         <div className="mt-10">
-          <h2 className="font-mkt-display text-xl font-bold uppercase tracking-tight text-brand-navy">
+          <h2 className="s-display text-2xl font-bold tracking-[-0.5px] text-[#1e1b17]">
             {copy.thanks.share.heading}
           </h2>
-          <p className="mt-2 max-w-prose text-base text-brand-ink/85">
+          <p className="mt-2 max-w-prose text-base font-medium text-[#3a352c]">
             {copy.thanks.share.body}
           </p>
           <div className="mt-3">

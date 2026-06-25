@@ -1,16 +1,14 @@
-# Builder mobile usability + clarity pass
+# Restyle (site) chrome + /thanks to sticker theme
 
-## Goal
-Make tile placement SUPER OBVIOUS. Tap-to-arm + tap-frame-to-place, drag still works.
+## Plan
+- [x] (site)/layout.tsx — swap marketing-theme for sticker-theme, import sticker.css, add Fredoka/Nunito font vars
+- [x] SiteHeader.tsx — rebuild in sticker style (cream bar, ink outline, badge logo, "Design your frame" pill -> /build)
+- [x] SiteFooter.tsx — restyle to match home dark-ink Footer, keep existing links + email + logo
+- [x] thanks/page.tsx — reskin all sections to sticker cards (cream, ink outline, hard shadow, accents)
+- [x] OrderFulfiller.tsx — reskin its container div only (logic untouched)
+- [x] Legacy /buy + /classic pages re-wrapped in marketing-theme so they keep Americana look (they share the group layout)
+- [x] Verify: next build exit 0 + lint 0 errors (19 pre-existing warnings, none in changed files)
 
-## Tasks
-- [x] palette-store: add a one-time "armed hint seen" flag (for finger hint)
-- [x] PaletteTile: tile-tap ARMS (selects) only. Removed placeInNextEmpty/tapToPlace. Loud armed state + "PLACING" badge. Tap-again disarms.
-- [x] TileGrid: dropped tapToPlace prop (keep size lg for mobile); pt-3 so badge isn't clipped.
-- [x] RailSlot: persistent armed cue on EVERY cell (ff-armed-cue gold dashed + slow pulse) without hover, removed when nothing armed.
-- [x] New ArmedBanner component: bold banner shown when a tile is armed. Near frame + palette.
-- [x] One-time finger hint pointing at frame first time armed.
-- [x] TilePalette: moved mobile callout + Tools button BELOW TileGrid. Armed banner shown.
-- [x] DndProvider: tuned TouchSensor to {delay:180, tolerance:8}.
-- [x] globals.css: armed-cell cue + armed-pulse + finger hint keyframes, reduced-motion safe.
-- [x] Build green (exit 0) + lint 0 errors (warnings all pre-existing).
+## Preserve — confirmed intact
+- All /thanks components/props/data flow unchanged (OrderFulfiller logic, PurchaseTracker, LeaveReview, EmailCaptureForm, SharePrompt, getOrderView, robots noindex)
+- Order pipeline, builder, homepage, routing untouched

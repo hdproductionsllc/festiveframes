@@ -33,8 +33,11 @@ export const metadata: Metadata = {
 };
 
 export default function ClassicHomePage() {
+  // Preserve the original Americana look: the (site) layout now defaults to the
+  // sticker theme, so this legacy page re-establishes the navy/cream
+  // marketing-theme for its own subtree.
   return (
-    <>
+    <div className="marketing-theme">
       <Countdown />
       <Hero />
       <TrustSection />
@@ -52,6 +55,6 @@ export default function ClassicHomePage() {
       <SeoContent />
       <HomeFaq />
       <CtaEmail />
-    </>
+    </div>
   );
 }

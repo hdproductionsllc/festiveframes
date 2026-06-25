@@ -52,8 +52,11 @@ export default async function BuyPage({
   const kit = raw ? getKit(raw) : undefined;
   const initialKit = kit?.active ? kit.id : null;
 
+  // Preserve the original Americana look: the (site) layout now defaults to the
+  // sticker theme, so this legacy conversion page re-establishes the navy/cream
+  // marketing-theme for its own subtree.
   return (
-    <>
+    <div className="marketing-theme">
       <Countdown />
       <div className="mx-auto max-w-6xl px-4 pt-8 sm:px-6">
         <FoundingScarcity center />
@@ -68,6 +71,6 @@ export default async function BuyPage({
       {/* Spacer so the fixed mobile buy bar never overlaps the footer/FAQ. */}
       <div aria-hidden="true" className="h-20 lg:hidden" />
       <StickyBuyBar />
-    </>
+    </div>
   );
 }
