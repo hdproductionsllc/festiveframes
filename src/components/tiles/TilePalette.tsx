@@ -32,7 +32,7 @@ function DesktopPaletteContent() {
   return (
     <div className="flex flex-col gap-2">
       <p className="rounded-full border-2 border-brand-gold/60 bg-brand-gold/15 px-3 py-2
-        text-center text-sm font-extrabold leading-snug text-brand-gold">
+        text-center text-sm font-extrabold leading-snug text-[#1e1b17]">
         Drag a tile onto your frame. Drag one off to remove it.
       </p>
       <TileGrid />
@@ -82,7 +82,7 @@ function MobileTileTray() {
       <div className="px-3 pt-2">
         <div className="mb-1.5 flex items-center gap-2">
           <p className="flex-1 rounded-full border-2 border-brand-gold/60 bg-brand-gold/15 px-3 py-1.5
-            text-center text-[13px] font-extrabold leading-snug text-brand-gold">
+            text-center text-[13px] font-extrabold leading-snug text-[#1e1b17]">
             Tap a tile to add it. Tap a placed tile to remove it.
           </p>
           <button
