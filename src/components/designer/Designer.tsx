@@ -37,6 +37,9 @@ export function Designer() {
   const [frameImage, setFrameImage] = useState<string | null>(null);
   const [showParts, setShowParts] = useState(false);
   const [ordering, setOrdering] = useState(false);
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [reviewProof, setReviewProof] = useState<string | null>(null);
+  const pendingProofRef = useRef<NamedImage | null>(null);
   const canvasRef = useRef<FrameCanvasHandle>(null);
   const seededRef = useRef(false);
 
@@ -156,10 +159,31 @@ export function Designer() {
     setShowParts(true);
   }, []);
 
-  // Place the made-to-order frame order: render every production artifact
-  // client-side (we have the fonts + artwork loaded), stash them for the
-  // post-payment relay, create the $39 Stripe session, and redirect.
-  const handleOrder = useCallback(async () => {
+  // Step 1 of ordering: render a high-res PROOF and show it for confirmation
+  // BEFORE taking payment, so the customer sees exactly what we'll make and has
+  // confidence their design is captured with the order. The proof is reused for
+  // production (no double render).
+  const handleReview = useCallback(async () => {
+    if (ordering) return;
+    const s = useDesignStore.getState();
+    if (Object.keys(s.slots).length === 0) return;
+    setReviewProof(null);
+    pendingProofRef.current = null;
+    setReviewOpen(true);
+    try {
+      const proofUrl = await composeFrameImage(2000);
+      pendingProofRef.current = proofUrl ? { name: "frame-proof", dataUrl: proofUrl } : null;
+      setReviewProof(proofUrl ?? null);
+    } catch {
+      pendingProofRef.current = null;
+      setReviewProof(null);
+    }
+  }, [ordering]);
+
+  // Step 2: the customer confirmed the proof — render every production artifact
+  // client-side (reusing the proof), stash them for the post-payment relay,
+  // create the $39 Stripe session, and redirect.
+  const confirmOrder = useCallback(async () => {
     if (ordering) return;
     setOrdering(true);
     if (soundEnabled) playSound("chime");
@@ -171,9 +195,12 @@ export function Designer() {
       }
       const orderId = (crypto.randomUUID?.() ?? `ord-${Date.now()}-${Math.floor(Math.random() * 1e6)}`);
 
-      // Proof / composite (the customer's proof AND the founders' composite).
-      const proofUrl = await composeFrameImage(2000);
-      const proof: NamedImage | null = proofUrl ? { name: "frame-proof", dataUrl: proofUrl } : null;
+      // Reuse the proof rendered for the review step (fall back to rendering it).
+      let proof: NamedImage | null = pendingProofRef.current;
+      if (!proof) {
+        const proofUrl = await composeFrameImage(2000);
+        proof = proofUrl ? { name: "frame-proof", dataUrl: proofUrl } : null;
+      }
 
       // Banner files (one per text bar).
       const banners: NamedImage[] = [];
@@ -245,8 +272,17 @@ export function Designer() {
 
   return (
     <div className="workbench-bg min-h-screen flex flex-col">
-      <DesignerHeader onExport={handleExport} onExportParts={handleExportParts} onOrder={handleOrder} ordering={ordering} />
+      <DesignerHeader onExport={handleExport} onExportParts={handleExportParts} onOrder={handleReview} ordering={ordering} />
       <ExportPartsList open={showParts} onClose={() => setShowParts(false)} frameImage={frameImage} />
+      {reviewOpen && (
+        <ReviewOrderModal
+          proof={reviewProof}
+          designName={designName}
+          ordering={ordering}
+          onConfirm={confirmOrder}
+          onClose={() => { if (!ordering) setReviewOpen(false); }}
+        />
+      )}
 
       <DndProvider onOverSlotChange={setOverSlotId}>
         <main className={`flex-1 flex flex-col md:flex-row md:items-start gap-4 p-4 mx-auto w-full ${
@@ -290,6 +326,124 @@ export function Designer() {
           </div>
         </main>
       </DndProvider>
+    </div>
+  );
+}
+
+/**
+ * Pre-payment proof confirmation. Shows the customer EXACTLY what we'll make,
+ * lets them download the proof, and requires a quick "this looks right"
+ * acknowledgement before paying — so nobody pays unsure whether their design
+ * was captured. Confirming runs the real order pipeline (Stripe), unchanged.
+ */
+function ReviewOrderModal({
+  proof,
+  designName,
+  ordering,
+  onConfirm,
+  onClose,
+}: {
+  proof: string | null;
+  designName: string;
+  ordering: boolean;
+  onConfirm: () => void;
+  onClose: () => void;
+}) {
+  const [confirmed, setConfirmed] = useState(false);
+
+  const download = () => {
+    if (!proof) return;
+    const safe = (designName || "festive-frame").replace(/[^a-zA-Z0-9 -]/g, "").trim().replace(/ /g, "-").toLowerCase() || "festive-frame";
+    const a = document.createElement("a");
+    a.href = proof;
+    a.download = `${safe}-proof.png`;
+    a.click();
+  };
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Review your order"
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-lg overflow-hidden rounded-2xl border-[3px] border-[#1e1b17] bg-[#fff9ec] shadow-[6px_6px_0_#1e1b17]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between border-b-[3px] border-[#1e1b17] bg-[#1e1b17] px-5 py-3">
+          <h2 className="text-base font-extrabold uppercase tracking-wide text-[#faf0d6]">Last look before you order</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={ordering}
+            aria-label="Close"
+            className="rounded-full px-2 text-lg text-[#faf0d6]/70 hover:text-[#faf0d6] disabled:opacity-40"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div className="p-5">
+          <p className="mb-3 text-sm font-semibold text-[#1e1b17]/80">
+            This is <strong>exactly what we&apos;ll hand-make</strong> and ship to you. Your design is saved with your order — no need to save it separately.
+          </p>
+
+          <div className="flex items-center justify-center rounded-xl border-2 border-[#1e1b17]/15 bg-white p-3">
+            {proof ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={proof} alt="Proof of your custom license plate frame" className="max-h-56 w-full object-contain" />
+            ) : (
+              <div className="flex h-40 w-full items-center justify-center text-sm font-semibold text-[#1e1b17]/50">
+                Rendering your proof…
+              </div>
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={download}
+            disabled={!proof}
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border-2 border-[#1e1b17] bg-[#3fb0e6] px-4 py-2
+              text-sm font-bold text-white transition-all hover:brightness-110 active:scale-95 disabled:opacity-40"
+          >
+            ⬇ Download my proof
+          </button>
+
+          <label className="mt-4 flex cursor-pointer items-start gap-2.5 rounded-lg bg-[#1e1b17]/[0.05] p-3">
+            <input
+              type="checkbox"
+              checked={confirmed}
+              onChange={(e) => setConfirmed(e.target.checked)}
+              className="mt-0.5 h-5 w-5 shrink-0 accent-[#ed5aa0]"
+            />
+            <span className="text-sm font-semibold text-[#1e1b17]">
+              I&apos;ve reviewed my design above and it&apos;s correct — make and ship this exact frame.
+            </span>
+          </label>
+
+          <div className="mt-4 flex flex-col gap-2 sm:flex-row-reverse">
+            <button
+              type="button"
+              onClick={onConfirm}
+              disabled={!confirmed || !proof || ordering}
+              className="flex-1 rounded-full border-2 border-[#1e1b17] bg-[#f8c53b] px-5 py-3 text-sm font-extrabold uppercase tracking-wide text-[#1e1b17]
+                shadow-[0_3px_0_#1e1b17] transition-all hover:brightness-105 active:translate-y-0.5 active:shadow-none disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {ordering ? "Sending you to checkout…" : "Place order & pay · $39"}
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={ordering}
+              className="rounded-full border-2 border-[#1e1b17] bg-white px-5 py-3 text-sm font-bold text-[#1e1b17] transition-all hover:bg-[#f1e4c6] disabled:opacity-40"
+            >
+              Keep editing
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
