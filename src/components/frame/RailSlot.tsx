@@ -222,7 +222,7 @@ function PlacedTileCell({
           aria-label="Remove tile"
           onPointerDown={(e) => e.stopPropagation()}
           onClick={handleRemove}
-          className="absolute -right-1.5 -top-1.5 z-[4] grid h-5 w-5 place-items-center rounded-full
+          className="absolute right-0.5 top-0.5 z-[4] grid h-5 w-5 place-items-center rounded-full
             border-2 border-[#1e1b17] bg-brand-red text-[11px] font-black leading-none text-white
             shadow-[1px_1px_0_#1e1b17] active:scale-90"
           style={{ touchAction: "manipulation" }}

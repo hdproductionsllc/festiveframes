@@ -38,6 +38,28 @@ function enforceFirstBarQr(bars: PlacedTextBar[]): PlacedTextBar[] {
 }
 
 /**
+ * A text bar REPLACES the tiles it covers — there are no hidden layers. Whenever
+ * a bar is placed/moved/resized, delete any tile under it so the design is
+ * exactly what you see (and what prints), and removing the bar leaves the area
+ * blank. Returns the same `slots` reference when nothing changes.
+ */
+function clearCoveredTiles(
+  slots: Record<string, PlacedTile>,
+  bars: PlacedTextBar[]
+): Record<string, PlacedTile> {
+  const covered = coveredSlotIds(bars);
+  let changed = false;
+  const next = { ...slots };
+  for (const id of covered) {
+    if (next[id]) {
+      delete next[id];
+      changed = true;
+    }
+  }
+  return changed ? next : slots;
+}
+
+/**
  * Resolve a bar's new auto-fit width so it can NEVER grow into a neighbor.
  * Growth is allowed into free space on either side of the bar's current
  * position; if that's not enough the width is capped (the render shrink-fits the
@@ -415,11 +437,14 @@ export const useDesignStore = create<DesignState>()(
               config,
               qr,
             };
-            // Tiles under the bar are kept (just hidden) so moving/removing the
-            // bar never leaves a hole. The parts list excludes covered tiles.
+            // A bar REPLACES the tiles it covers (no hidden layers): the covered
+            // tiles are deleted, so what you see is what prints and removing the
+            // bar leaves the area blank.
+            const newBars = enforceFirstBarQr([...state.textBars, bar]);
             return {
               ...pushHistory(),
-              textBars: enforceFirstBarQr([...state.textBars, bar]),
+              textBars: newBars,
+              slots: clearCoveredTiles(state.slots, newBars),
               selectedBarId: bar.id,
               updatedAt: Date.now(),
             };
@@ -457,9 +482,11 @@ export const useDesignStore = create<DesignState>()(
             // No-op move (same row + column) — skip the history push.
             if (row === bar.row && start === bar.startIndex) return state;
             const moved: PlacedTextBar = { ...bar, row, startIndex: start };
+            const newBars = state.textBars.map((b) => (b.id === id ? moved : b));
             return {
               ...pushHistory(),
-              textBars: state.textBars.map((b) => (b.id === id ? moved : b)),
+              textBars: newBars,
+              slots: clearCoveredTiles(state.slots, newBars),
               updatedAt: Date.now(),
             };
           });
@@ -492,9 +519,11 @@ export const useDesignStore = create<DesignState>()(
               maxUnits
             );
             const updated: PlacedTextBar = { ...bar, config, widthUnits, startIndex };
+            const newBars = state.textBars.map((b) => (b.id === id ? updated : b));
             return {
               ...pushHistory(),
-              textBars: state.textBars.map((b) => (b.id === id ? updated : b)),
+              textBars: newBars,
+              slots: clearCoveredTiles(state.slots, newBars),
               updatedAt: Date.now(),
             };
           });
@@ -514,9 +543,11 @@ export const useDesignStore = create<DesignState>()(
               maxUnits
             );
             const updated: PlacedTextBar = { ...bar, qr: enabled, widthUnits, startIndex };
+            const newBars = state.textBars.map((b) => (b.id === id ? updated : b));
             return {
               ...pushHistory(),
-              textBars: state.textBars.map((b) => (b.id === id ? updated : b)),
+              textBars: newBars,
+              slots: clearCoveredTiles(state.slots, newBars),
               updatedAt: Date.now(),
             };
           });
