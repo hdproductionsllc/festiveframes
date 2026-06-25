@@ -224,7 +224,7 @@ export async function sendProductionEmails(o: ProductionOrderInput): Promise<boo
         from,
         to: founderList,
         replyTo: o.customerEmail ?? undefined,
-        subject: `🇺🇸 PRODUCTION — ${o.parts.designName || "Custom frame"} — ${o.customerName ?? o.customerEmail ?? o.orderId}`,
+        subject: `PRODUCTION — ${o.parts.designName || "Custom frame"} — ${o.customerName ?? o.customerEmail ?? o.orderId}`,
         html: productionHtml(o),
         text: productionText(o),
         attachments,
@@ -247,7 +247,7 @@ export async function sendProductionEmails(o: ProductionOrderInput): Promise<boo
         from,
         to: o.customerEmail,
         ...(founderList.length ? { bcc: founderList } : {}),
-        subject: "Your Festive Frames order is confirmed 🎆",
+        subject: "Your Festive Frames order is confirmed",
         html: customerHtml(o),
         text: customerText(o),
         attachments: customerAttachments,
@@ -271,7 +271,7 @@ export async function sendFulfillmentFailureAlert(orderId: string, sessionId: st
     await new Resend(apiKey).emails.send({
       from,
       to,
-      subject: `⚠️ ORDER PAID but fulfillment FAILED — ${orderId}`,
+      subject: `ORDER PAID but fulfillment FAILED — ${orderId}`,
       text: `An order was PAID but the production/customer emails could not be generated.\n\nOrder: ${orderId}\nStripe session: ${sessionId}\nCustomer: ${customerEmail ?? "unknown"}\nReason: ${reason}\n\nACTION: pull the design for this order and contact the customer. Do not assume it shipped.`,
     });
   } catch (err) {

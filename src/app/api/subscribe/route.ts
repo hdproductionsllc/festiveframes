@@ -37,7 +37,7 @@ async function notifyTeam(email: string): Promise<boolean> {
       from,
       to,
       replyTo: email,
-      subject: `🎆 New tile-drop signup: ${email}`,
+      subject: `New tile-drop signup: ${email}`,
       text: `New "Get the tile drops" signup from the site:\n\n${email}\n\nAdd them to your list / send them first access to new tiles + seasonal sets.`,
     });
     return true;
