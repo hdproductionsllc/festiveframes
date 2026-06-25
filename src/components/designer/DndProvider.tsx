@@ -190,7 +190,7 @@ export function DndProvider({ children, onOverSlotChange }: DndProviderProps) {
               {overlayBar.text || "YOUR TEXT HERE"}
             </span>
           </div>
-        ) : piece ? (
+        ) : piece && dragKind === "placed-tile" ? (
           // Plain, statically-positioned, tile-sized ghost. dnd-kit's overlay
           // wrapper is the thing that follows the pointer (position:fixed); its
           // child MUST NOT carry any absolute offset of its own (a placed tile's
