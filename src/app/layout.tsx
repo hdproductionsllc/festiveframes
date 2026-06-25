@@ -31,7 +31,7 @@ export const metadata: Metadata = {
     template: "%s | Festive Frames",
   },
   description:
-    "Customizable snap-on license plate frame kits. Design your own with decorative tiles, or shop curated kits.",
+    "Design your own custom license plate frame: pick a theme, snap on the tiles you want, and add your phrase. Made to order by hand in the USA, $39.",
 };
 
 export default function RootLayout({

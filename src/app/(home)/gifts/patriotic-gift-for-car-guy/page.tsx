@@ -16,7 +16,7 @@ const PAGE_URL = `${SITE_URL}${PAGE_PATH}`;
 // Header/Footer for full home chrome.
 const META_TITLE = "Patriotic Gift for the Car Guy Who Has Everything";
 const META_DESCRIPTION =
-  "The patriotic gift for the car guy who has everything: a custom America 250 license plate frame he designs himself. $39, handmade in St. Louis, ships fast.";
+  "The patriotic gift for the car guy who has everything: a custom America's 250th license plate frame he designs himself. $39, handmade in St. Louis, ships fast.";
 
 export const metadata: Metadata = {
   title: { absolute: META_TITLE },

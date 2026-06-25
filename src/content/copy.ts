@@ -167,7 +167,7 @@ export const copy: Copy = {
 
   home: {
     metaTitle:
-      "Custom Patriotic License Plate Frames | America 250",
+      "Custom Patriotic License Plate Frames | America's 250th",
     metaDescription:
       "Design your own patriotic license plate frame for America's 250th. Snap-on stars, eagles & a custom phrase. $39, handmade in USA, ships fast. 30-day guarantee.",
     heroH1: "Design Your Own Custom Patriotic License Plate Frame",
@@ -197,7 +197,7 @@ export const copy: Copy = {
     // in (home)/page.tsx. Visible text MUST match the structured data exactly.
     faq: [
       {
-        question: "What is an America 250 license plate frame?",
+        question: "What is an America's 250th license plate frame?",
         answer:
           "It's a patriotic license plate frame celebrating the United States' 250th anniversary (the semiquincentennial, 1776-2026). At Festive Frames you design your own with snap-on tiles like \"250,\" \"1776-2026,\" the flag, and a landing eagle, plus a custom phrase along the bottom.",
       },

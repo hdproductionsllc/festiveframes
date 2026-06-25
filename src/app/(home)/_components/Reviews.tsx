@@ -11,11 +11,14 @@ export function Reviews() {
     <section className="mx-auto max-w-[1240px] px-5 pb-[72px] sm:px-7">
       <div className="mb-9 text-center">
         <div className="mb-1.5 text-[15px] font-extrabold tracking-[1.5px] text-[#ed5aa0]">
-          5.0 ★ · HAPPY DRIVERS
+          EARLY FEEDBACK
         </div>
         <h2 className="m-0 text-[clamp(30px,5vw,40px)] font-bold leading-none tracking-[-1px]">
-          Loved at every stoplight
+          What our early testers say
         </h2>
+        <p className="mx-auto mt-3 max-w-[520px] text-sm font-bold text-[#6a6354]">
+          Early feedback from our first testers. Verified buyer reviews coming soon.
+        </p>
       </div>
       <div className="grid gap-6 md:grid-cols-3">
         {REVIEWS.map((r) => (
@@ -24,13 +27,6 @@ export function Reviews() {
             className="rounded-[18px] border-[3px] border-[#1e1b17] bg-[#fff9ec] p-[26px]"
             style={{ boxShadow: `5px 5px 0 ${INK}` }}
           >
-            <div
-              className="mb-3 text-lg tracking-[2px] text-[#f8c53b]"
-              style={{ WebkitTextStroke: `1px ${INK}` }}
-              aria-label="5 out of 5 stars"
-            >
-              ★★★★★
-            </div>
             <p className="m-0 mb-[18px] text-[17px] font-semibold leading-[1.5]">
               &ldquo;{r.quote}&rdquo;
             </p>

@@ -18,7 +18,7 @@ const SHOP = [
 const HELP = [
   { label: "How it works", href: "#how" },
   { label: "Shipping & returns", href: "/returns" },
-  { label: "FAQ", href: "#kit" },
+  { label: "FAQ", href: "#faq" },
   { label: "hello@festiveframes.co", href: "mailto:hello@festiveframes.co" },
 ];
 

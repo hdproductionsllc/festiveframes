@@ -30,10 +30,9 @@ export function SiteFooter() {
             className="mb-3.5 h-[132px] w-auto"
           />
           <p className="m-0 max-w-[340px] text-[15px] font-semibold leading-[1.5] text-[#c8c1ad]">
-            Festive Frames makes customizable snap-on license plate frame kits.
-            Each kit comes with decorative snap-on tiles you press into the frame
-            to dress up your plate for the season, the road trip, or the everyday
-            drive. Made in St. Louis, USA.
+            Design your own custom license plate frame. Pick a theme, snap on the
+            tiles you want, add your phrase, and we hand-make it to order. Made in
+            St. Louis, USA.
           </p>
         </div>
 

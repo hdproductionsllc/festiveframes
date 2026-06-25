@@ -204,7 +204,7 @@ export default async function PersonalizedGiftForDadPage() {
               <p>
                 It is a standout gift for the car dad, the veteran dad, the granddad, or
                 the new dad with his first family hauler. Because it marks a once-in-a-
-                lifetime anniversary, a personalized America 250 frame stays meaningful long
+                lifetime anniversary, a personalized America&apos;s 250th frame stays meaningful long
                 after the holiday weekend. And with a 30-day guarantee behind every order,
                 you can give it with confidence. Start his design today and give dad
                 something he will actually keep.

@@ -81,7 +81,7 @@ export function Hero() {
         <div className="mt-[34px] flex flex-wrap gap-[26px]">
           <Stat value="You" label="design every frame" />
           <Divider />
-          <Stat value="5.0★" label="from real drivers" />
+          <Stat value="$39" label="made to order" />
           <Divider />
           <Stat value="USA" label="made in St. Louis" />
         </div>
