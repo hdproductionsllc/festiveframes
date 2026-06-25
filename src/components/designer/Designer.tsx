@@ -300,19 +300,17 @@ export function Designer() {
       )}
 
       <DndProvider onOverSlotChange={setOverSlotId}>
-        <main className={`flex-1 flex flex-col md:flex-row md:items-start gap-4 p-4 mx-auto w-full ${
-          frameConfig.wings ? "" : "max-w-7xl"
-        }`}>
-          {/* Palette — left side on desktop */}
-          <TilePalette />
-
-          {/* Main content area — sticky on desktop so it follows scroll */}
-          <div className="flex-1 flex flex-col gap-3 min-w-0 md:sticky md:top-4 md:self-start">
+        {/* A license-plate frame is a WIDE, SHORT landscape shape. So the canvas
+            is the hero across the FULL WIDTH up top, and the two working panels
+            (tile palette + text-bar editor) sit in a row beneath it. */}
+        <main className="flex-1 flex flex-col gap-4 p-4 mx-auto w-full max-w-7xl">
+          {/* Frame canvas — full-width hero, centered and capped so it never
+              gets absurd on ultrawide displays. */}
+          <div className="w-full max-w-5xl mx-auto flex flex-col gap-3">
             {/* Armed-tile callout — appears right above the frame the moment a
                 tile is armed, telling you in plain words to tap the frame. */}
             <ArmedBanner placement="frame" />
 
-            {/* Frame canvas */}
             <div className="relative">
               {/* Ambient festivity: two faint, slow twinkles drifting near the
                   frame's corners — decorative UI chrome only (aria-hidden,
@@ -339,9 +337,18 @@ export function Designer() {
                 overSlotId={overSlotId}
               />
             </div>
+          </div>
 
-            {/* Text bar editor */}
-            <BottomBarEditor />
+          {/* Tools row — the tile palette (left) and the text-bar editor (right)
+              sit side by side on desktop, stacked on mobile. */}
+          <div className="flex flex-col lg:flex-row gap-4 items-start">
+            {/* Tile palette panel — ~55–60% on desktop. */}
+            <TilePalette />
+
+            {/* Text-bar editor panel — ~40–45% on desktop. */}
+            <div className="w-full lg:basis-0 lg:grow-[45] min-w-0">
+              <BottomBarEditor />
+            </div>
           </div>
         </main>
       </DndProvider>

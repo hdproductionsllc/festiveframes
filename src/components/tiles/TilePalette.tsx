@@ -1,27 +1,30 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { TileGrid } from "./TileGrid";
 import { ArmedBanner } from "./ArmedBanner";
 import { QuickActions } from "@/components/designer/QuickActions";
 import { PresetGallery } from "@/components/designer/PresetGallery";
 
-/** Approx. height the persistent mobile tray occupies, reserved as body padding
- *  so the page's last content (the text editor) can always scroll clear of it. */
-const MOBILE_TRAY_HEIGHT = 184;
-
+/**
+ * The tile palette is now an in-flow PANEL in the tools row beneath the canvas
+ * (not a tall fixed sidebar / not a fixed mobile tray). On desktop it takes the
+ * larger share of the row (~55%); on mobile it stacks full-width below the
+ * canvas, keeping the big-tile tray ergonomics (armed banner, "tap a spot" cue,
+ * instruction callout + ⚙ Tools below the picker).
+ */
 export function TilePalette() {
   return (
     <>
-      {/* Desktop / Tablet — fixed left panel */}
+      {/* Desktop / Tablet — palette panel (left side of the tools row) */}
       <aside
         data-tour="tiles"
-        className="bsk-panel-blue hidden md:flex flex-col w-[320px] flex-shrink-0 p-3 bg-surface-800/50 rounded-xl border border-surface-700/50 overflow-y-auto"
+        className="bsk-panel-blue hidden md:flex flex-col w-full lg:basis-0 lg:grow-[55] min-w-0 p-3 bg-surface-800/50 rounded-xl border border-surface-700/50"
       >
         <DesktopPaletteContent />
       </aside>
 
-      {/* Mobile — persistent bottom tray (tiles always visible, no hunting) */}
+      {/* Mobile — stacked tile tray (tiles always visible, no hunting) */}
       <MobileTileTray />
     </>
   );
@@ -51,29 +54,11 @@ function DesktopPaletteContent() {
 function MobileTileTray() {
   const [optionsOpen, setOptionsOpen] = useState(false);
 
-  // Reserve space at the bottom of the page so the fixed tray never covers the
-  // text editor / last bit of content. Cleaned up on unmount.
-  useEffect(() => {
-    const isMobile = window.matchMedia("(max-width: 767px)");
-    const apply = () => {
-      document.body.style.paddingBottom = isMobile.matches
-        ? `calc(${MOBILE_TRAY_HEIGHT}px + env(safe-area-inset-bottom))`
-        : "";
-    };
-    apply();
-    isMobile.addEventListener("change", apply);
-    return () => {
-      isMobile.removeEventListener("change", apply);
-      document.body.style.paddingBottom = "";
-    };
-  }, []);
-
   return (
     <div
       data-tour="tiles"
-      className="md:hidden fixed inset-x-0 bottom-0 z-40 border-t border-surface-700
-        bg-surface-900/95 backdrop-blur-sm shadow-[0_-8px_24px_rgba(0,0,0,0.45)]"
-      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+      className="md:hidden w-full rounded-xl border border-surface-700
+        bg-surface-900/95 shadow-[0_8px_24px_rgba(0,0,0,0.35)]"
     >
       {/* Optional design tools — tucked away so the tray stays focused on tiles */}
       {optionsOpen && (
