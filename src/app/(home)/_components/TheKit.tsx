@@ -41,11 +41,6 @@ const TIERS = [
 export function TheKit() {
   return (
     <section id="kit" className="mx-auto max-w-[1240px] px-5 py-[72px] sm:px-7">
-      <div className="mb-3.5 text-center">
-        <span className="inline-flex items-center gap-2 rounded-full bg-[#1e1b17] px-4 py-[7px] text-[13px] font-extrabold tracking-[1px] text-[#faf0d6]">
-          FOUNDING EDITION · AMERICA&apos;S 250TH · 1776-2026
-        </span>
-      </div>
       <h2 className="m-0 mb-3 text-center text-[clamp(34px,6vw,48px)] font-bold leading-none tracking-[-1px]">
         Design your frame
       </h2>

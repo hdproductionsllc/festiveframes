@@ -9,19 +9,6 @@ const INK = "#1e1b17";
 export function Header() {
   return (
     <header className="sticky top-0 z-50">
-      {/* announcement bar */}
-      <Link
-        href="/build"
-        className="block border-b-[3px] border-[#1e1b17] bg-[#1e1b17] px-4 py-[9px] text-center text-[13px] font-bold leading-snug text-[#faf0d6] no-underline sm:text-sm"
-      >
-        <span className="text-[#f8c53b]">★</span> Founding Edition · America&apos;s
-        250th ·{" "}
-        <span className="text-[#3fb0e6]">1776-2026</span> ·{" "}
-        <span className="text-[#ed5aa0] underline underline-offset-[3px]">
-          Design your frame →
-        </span>
-      </Link>
-
       {/* nav */}
       <div className="border-b-[3px] border-[#1e1b17] bg-[#faf0d6]">
         <nav className="mx-auto flex max-w-[1240px] items-center gap-6 px-5 py-1.5 sm:px-7">
