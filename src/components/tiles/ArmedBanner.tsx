@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { usePaletteStore } from "@/stores/palette-store";
 
 /**
@@ -21,6 +21,7 @@ export function ArmedBanner({ placement = "frame" }: { placement?: "frame" | "tr
   const clearSelection = usePaletteStore((s) => s.clearSelection);
   const armHintSeen = usePaletteStore((s) => s.armHintSeen);
   const markArmHintSeen = usePaletteStore((s) => s.markArmHintSeen);
+  const bannerRef = useRef<HTMLDivElement>(null);
 
   // First-arm finger hint: only on the frame-side banner, only once per session.
   const showFinger = placement === "frame" && !armHintSeen && selectedPieceId != null;
@@ -31,10 +32,27 @@ export function ArmedBanner({ placement = "frame" }: { placement?: "frame" | "tr
     }
   }, [selectedPieceId, armHintSeen, markArmHintSeen]);
 
+  // The frame-side banner lives ABOVE the canvas. The user usually arms a tile
+  // from the palette/tools BELOW the canvas, so on desktop the "now tap the
+  // frame" cue (and the frame itself) can be scrolled off the top of the
+  // viewport — the user would never see it. When this banner appears, pull the
+  // frame back into view so the just-armed cue is always on screen. Only acts if
+  // the banner is actually off-screen, so it never yanks the page when the frame
+  // is already visible.
+  useEffect(() => {
+    if (placement !== "frame" || selectedPieceId == null) return;
+    const el = bannerRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const offscreen = r.top < 0 || r.bottom > window.innerHeight;
+    if (offscreen) el.scrollIntoView({ block: "center", behavior: "smooth" });
+  }, [placement, selectedPieceId]);
+
   if (!selectedPieceId) return null;
 
   return (
     <div
+      ref={bannerRef}
       role="status"
       aria-live="polite"
       className="relative flex items-center gap-2 rounded-xl border-2 border-[#1e1b17] bg-brand-gold

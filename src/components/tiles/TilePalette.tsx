@@ -35,6 +35,10 @@ export function TilePalette() {
 function DesktopPaletteContent() {
   return (
     <div className="flex flex-col gap-2">
+      {/* Tools + instruction sit ABOVE the tiles so the actions are the first
+          thing reached, then the picker, then the armed-tile cue beside it. */}
+      <QuickActions />
+      <PresetGallery />
       <p className="rounded-full border-2 border-brand-gold/60 bg-brand-gold/15 px-3 py-2
         text-center text-sm font-extrabold leading-snug text-[#1e1b17]">
         Tap a tile, then tap your frame to drop it. Or drag a tile on (drag one off to remove).
@@ -43,8 +47,6 @@ function DesktopPaletteContent() {
       {/* Armed-tile callout — also surfaces here, next to the picker, so the
           "now tap the frame" instruction is visible no matter where you look. */}
       <ArmedBanner placement="tray" />
-      <QuickActions />
-      <PresetGallery />
     </div>
   );
 }
@@ -52,7 +54,10 @@ function DesktopPaletteContent() {
 /* ─────────────────────────────── Mobile ────────────────────────────── */
 
 function MobileTileTray() {
-  const [optionsOpen, setOptionsOpen] = useState(false);
+  // Tools start EXPANDED so the quick actions are visible on first render without
+  // tapping the gear. The toggle still collapses them when the user wants the
+  // tray focused purely on tiles.
+  const [optionsOpen, setOptionsOpen] = useState(true);
 
   return (
     <div
@@ -60,27 +65,9 @@ function MobileTileTray() {
       className="md:hidden w-full rounded-xl border border-surface-700
         bg-surface-900/95 shadow-[0_8px_24px_rgba(0,0,0,0.35)]"
     >
-      {/* Optional design tools — tucked away so the tray stays focused on tiles */}
-      {optionsOpen && (
-        <div className="max-h-[42vh] space-y-2 overflow-y-auto border-b border-surface-700/60 p-3">
-          <QuickActions />
-          <PresetGallery />
-        </div>
-      )}
-
-      {/* The always-visible, thumb-friendly tile row comes FIRST so the tiles
-          are the top thing in the tray; the instruction + Tools sit just below. */}
-      <div className="px-3 pt-2">
-        <TileGrid variant="row" />
-      </div>
-
-      {/* Armed-tile callout — bold "now tap your frame" cue, mobile-prominent. */}
-      <div className="px-3 pt-1.5">
-        <ArmedBanner placement="tray" />
-      </div>
-
-      {/* Instruction + optional Tools — moved BELOW the picker. */}
-      <div className="px-3 pb-3 pt-1.5">
+      {/* Instruction + Tools toggle — ABOVE the picker so the actions are the
+          first thing in the tray. */}
+      <div className="px-3 pb-1.5 pt-3">
         <div className="flex items-center gap-2">
           <p className="flex-1 rounded-full border-2 border-brand-gold/60 bg-brand-gold/15 px-3 py-1.5
             text-center text-[13px] font-extrabold leading-snug text-[#1e1b17]">
@@ -95,6 +82,24 @@ function MobileTileTray() {
             {optionsOpen ? "Done" : "⚙ Tools"}
           </button>
         </div>
+      </div>
+
+      {/* Optional design tools — open by default; collapsible via the gear. */}
+      {optionsOpen && (
+        <div className="max-h-[42vh] space-y-2 overflow-y-auto border-b border-surface-700/60 px-3 pb-3 pt-1">
+          <QuickActions />
+          <PresetGallery />
+        </div>
+      )}
+
+      {/* Thumb-friendly tile row, BELOW the tools. */}
+      <div className="px-3 pt-2">
+        <TileGrid variant="row" />
+      </div>
+
+      {/* Armed-tile callout — bold "now tap your frame" cue, mobile-prominent. */}
+      <div className="px-3 pb-3 pt-1.5">
+        <ArmedBanner placement="tray" />
       </div>
     </div>
   );

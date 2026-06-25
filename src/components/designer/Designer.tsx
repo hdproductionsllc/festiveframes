@@ -23,6 +23,26 @@ import { LOOK_PRESETS } from "@/data/look-presets";
 // NOTE: the "On Your Car" preview (CarPreview / preview-store / stock-cars) is
 // intentionally unmounted for launch but kept in the codebase for later.
 
+/**
+ * Race a promise against a timeout. If `promise` doesn't settle within `ms`,
+ * resolve with `fallback` instead so a hung canvas render (notably iOS Safari's
+ * capped <canvas>) can never strand the order flow. A rejection also resolves to
+ * the fallback — the caller treats both "slow" and "failed" the same: proceed.
+ */
+function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
+  return new Promise<T>((resolve) => {
+    let settled = false;
+    const done = (v: T) => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timer);
+      resolve(v);
+    };
+    const timer = window.setTimeout(() => done(fallback), ms);
+    promise.then((v) => done(v)).catch(() => done(fallback));
+  });
+}
+
 export function Designer() {
   const frameConfig = useDesignStore((s) => s.frameConfig);
   const slots = useDesignStore((s) => s.slots);
@@ -211,26 +231,51 @@ export function Designer() {
       const orderId = (crypto.randomUUID?.() ?? `ord-${Date.now()}-${Math.floor(Math.random() * 1e6)}`);
 
       // Reuse the proof rendered for the review step (fall back to rendering it).
+      // The proof is the one artifact we genuinely want before paying, so it's
+      // worth a short wait — but still time-boxed so a stuck canvas can never
+      // strand the customer on "Sending you to checkout…".
       let proof: NamedImage | null = pendingProofRef.current;
       if (!proof) {
-        const proofUrl = await composeFrameImage(2000);
+        const proofUrl = await withTimeout(composeFrameImage(2000), 8000, null);
         proof = proofUrl ? { name: "frame-proof", dataUrl: proofUrl } : null;
       }
 
-      // Banner files (one per text bar).
-      const banners: NamedImage[] = [];
-      for (const bar of s.textBars) {
-        const url = await composeBarImage(bar.id);
-        if (url) banners.push({ name: `banner-${bar.row}-${bar.startIndex}`, dataUrl: url });
-      }
-
-      // eufyMake print sheet(s). Desktop-only — throws on phones (canvas too
-      // large). On mobile we ship without it; Bill regenerates on desktop.
+      // The remaining production artifacts (banners + the full-res eufyMake print
+      // sheet) are heavy canvas renders. On mobile they can THROW (iOS caps the
+      // canvas size — see eufy-print.ts) or hang, and historically that froze the
+      // whole order on "Sending you to checkout…". They are OPTIONAL for the
+      // redirect: the design JSON we POST below lets Bill regenerate every one of
+      // them on his desktop. So we render them under a hard timeout and a catch —
+      // whatever succeeds gets shipped, a mobile failure ships nothing extra, and
+      // EITHER WAY we always fall through to the Stripe redirect.
+      let banners: NamedImage[] = [];
       let printSheets: NamedImage[] = [];
       try {
-        const { sheets } = await composeEufyPrintSheets(EUFY_JIG_3X12);
-        printSheets = sheets.map((dataUrl, i) => ({ name: `eufy-print-sheet-${i + 1}`, dataUrl }));
+        const heavyArtifacts = (async () => {
+          // Banner files (one per text bar).
+          const b: NamedImage[] = [];
+          for (const bar of s.textBars) {
+            const url = await composeBarImage(bar.id);
+            if (url) b.push({ name: `banner-${bar.row}-${bar.startIndex}`, dataUrl: url });
+          }
+          // eufyMake print sheet(s). Desktop-only — throws on phones (canvas too
+          // large). On mobile we ship without it; Bill regenerates on desktop.
+          let p: NamedImage[] = [];
+          try {
+            const { sheets } = await composeEufyPrintSheets(EUFY_JIG_3X12);
+            p = sheets.map((dataUrl, i) => ({ name: `eufy-print-sheet-${i + 1}`, dataUrl }));
+          } catch {
+            p = [];
+          }
+          return { banners: b, printSheets: p };
+        })();
+        const heavy = await withTimeout(heavyArtifacts, 12000, { banners: [], printSheets: [] });
+        banners = heavy.banners;
+        printSheets = heavy.printSheets;
       } catch {
+        // Any unexpected failure → ship without the heavy artifacts; the design
+        // JSON still regenerates them. Never block the redirect.
+        banners = [];
         printSheets = [];
       }
 
@@ -377,13 +422,56 @@ function ReviewOrderModal({
 }) {
   const [confirmed, setConfirmed] = useState(false);
 
+  // Save the proof image. iOS Safari does NOT honor `<a download>` for data URLs
+  // (the tap just does nothing), so we route the bytes through a Blob + object
+  // URL, which the download attribute DOES respect on every desktop browser.
+  // iOS Safari still ignores `download` even for blob URLs, so there we fall back
+  // to opening the image in a new tab where the user can long-press → "Save to
+  // Photos". Object URLs are revoked after use to avoid leaking memory.
   const download = () => {
     if (!proof) return;
     const safe = (designName || "festive-frame").replace(/[^a-zA-Z0-9 -]/g, "").trim().replace(/ /g, "-").toLowerCase() || "festive-frame";
+
+    // Data URL → Blob → object URL.
+    let blobUrl: string | null = null;
+    try {
+      const [meta, b64] = proof.split(",");
+      const mime = /:(.*?);/.exec(meta)?.[1] ?? "image/png";
+      const bin = atob(b64);
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      blobUrl = URL.createObjectURL(new Blob([bytes], { type: mime }));
+    } catch {
+      blobUrl = null;
+    }
+
+    const isIOS =
+      typeof navigator !== "undefined" &&
+      (/iP(hone|ad|od)/.test(navigator.userAgent) ||
+        // iPadOS 13+ reports as Mac; disambiguate by touch support.
+        (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1));
+
+    // iOS ignores the download attribute entirely → open the image so the user
+    // can long-press and save it. Fall back to the data URL if the Blob failed.
+    if (isIOS) {
+      const opened = window.open(blobUrl ?? proof, "_blank");
+      if (opened && blobUrl) {
+        // Give the new tab time to load the bytes before revoking.
+        window.setTimeout(() => URL.revokeObjectURL(blobUrl!), 60000);
+      } else if (blobUrl) {
+        URL.revokeObjectURL(blobUrl);
+      }
+      return;
+    }
+
+    // Desktop: trigger a real download via the object URL (preferred) or data URL.
     const a = document.createElement("a");
-    a.href = proof;
+    a.href = blobUrl ?? proof;
     a.download = `${safe}-proof.png`;
+    document.body.appendChild(a);
     a.click();
+    a.remove();
+    if (blobUrl) window.setTimeout(() => URL.revokeObjectURL(blobUrl!), 1000);
   };
 
   return (
