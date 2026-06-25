@@ -67,25 +67,32 @@ export function PaletteTile({ piece, size = "md", tapToPlace = false }: PaletteT
   };
 
   return (
+    // IMPORTANT: the draggable node (setNodeRef) must stay TRANSFORM-FREE — dnd-kit
+    // computes the DragOverlay's position from this element's rect, and any CSS
+    // transform on it (scale/translate) corrupts that math and throws the drag
+    // ghost across the screen. All hover/active/selected transforms live on the
+    // inner wrapper instead; the draggable just handles layout + pointer + opacity.
     <div
       ref={setNodeRef}
       {...attributes}
       {...listeners}
       onClick={handleClick}
       style={style}
-      className={`
-        relative flex flex-col items-center gap-1 rounded-lg cursor-grab active:cursor-grabbing
-        transition-all duration-150 motion-safe:hover:-translate-y-0.5 active:scale-95
-        ${size === "lg" ? "shrink-0 p-2" : "p-1.5"}
-        ${isSelected
-          ? "ring-2 ring-brand-gold bg-surface-700 scale-105"
-          : "hover:bg-surface-700/50"
-        }
-        ${justAdded ? "scale-110 ring-2 ring-emerald-400" : ""}
-        ${isDragging ? "opacity-50" : ""}
-      `}
+      className={`relative cursor-grab active:cursor-grabbing ${size === "lg" ? "shrink-0" : ""} ${isDragging ? "opacity-50" : ""}`}
       title={tapToPlace ? `Tap to add “${piece.name}” — or drag onto the frame` : piece.name}
     >
+      <div
+        className={`
+          flex flex-col items-center gap-1 rounded-lg transition-all duration-150
+          motion-safe:hover:-translate-y-0.5 active:scale-95
+          ${size === "lg" ? "p-2" : "p-1.5"}
+          ${isSelected
+            ? "ring-2 ring-brand-gold bg-surface-700 scale-105"
+            : "hover:bg-surface-700/50"
+          }
+          ${justAdded ? "scale-110 ring-2 ring-emerald-400" : ""}
+        `}
+      >
       <div
         className={`flex items-center justify-center overflow-hidden ${isDieCut ? "" : "rounded-md tile-3d"}`}
         style={{
@@ -114,6 +121,7 @@ export function PaletteTile({ piece, size = "md", tapToPlace = false }: PaletteT
       >
         {piece.name}
       </span>
+      </div>
     </div>
   );
 }
