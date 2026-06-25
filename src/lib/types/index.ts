@@ -97,6 +97,18 @@ export interface PlacedTextBar extends TextBarPlacement {
   qr: boolean; // whether the QR rides inside this bar
 }
 
+/**
+ * A live, drag-time preview of exactly where a banner will land on drop. It uses
+ * the SAME placement math the store applies on commit, so the on-frame ghost
+ * lines up precisely with the bar's real landing spot. `valid` is false when the
+ * hovered row can't fit the banner (show a "can't drop" state, not a lie).
+ */
+export interface BannerPreview extends TextBarPlacement {
+  valid: boolean;
+  /** Background color of the dragged banner, for the translucent ghost fill. */
+  backgroundColor: string;
+}
+
 export interface FrameDesign {
   id: string;
   name: string;

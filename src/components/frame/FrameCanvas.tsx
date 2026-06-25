@@ -2,7 +2,7 @@
 
 import { forwardRef, useImperativeHandle, useRef } from "react";
 import { useDraggable } from "@dnd-kit/core";
-import type { FrameConfig, PlacedTile, BottomBarConfig, QRCodeConfig, PlacedTextBar } from "@/lib/types";
+import type { FrameConfig, PlacedTile, BottomBarConfig, QRCodeConfig, PlacedTextBar, TextBarPlacement, BannerPreview } from "@/lib/types";
 import { getTotalWidthInches } from "@/lib/constants/frame";
 import { useFrameLayout } from "@/hooks/useFrameLayout";
 import { useDesignStore } from "@/stores/design-store";
@@ -17,6 +17,8 @@ interface FrameCanvasProps {
   qrCode: QRCodeConfig;
   plateState: string;
   overSlotId?: string | null;
+  /** Live drag-time footprint of where a dragged banner will land (or null). */
+  bannerPreview?: BannerPreview | null;
 }
 
 export interface FrameCanvasHandle {
@@ -84,7 +86,7 @@ function PlacedBar({
 }
 
 export const FrameCanvas = forwardRef<FrameCanvasHandle, FrameCanvasProps>(
-  function FrameCanvas({ frameConfig, slots, bottomBar, qrCode, plateState, overSlotId }, ref) {
+  function FrameCanvas({ frameConfig, slots, bottomBar, qrCode, plateState, overSlotId, bannerPreview }, ref) {
     const frameRef = useRef<HTMLDivElement>(null);
     const textBars = useDesignStore((s) => s.textBars);
     const selectedBarId = useDesignStore((s) => s.selectedBarId);
@@ -108,8 +110,10 @@ export const FrameCanvas = forwardRef<FrameCanvasHandle, FrameCanvasProps>(
     const wingPx = hasWings ? frameConfig.wingWidthInches * scale : 0;
     const innerWidthPx = frameConfig.widthInches * scale;
 
-    // Each bar sits over a run of top/bottom slots (gapless: step == tile).
-    const barRect = (bar: PlacedTextBar) => ({
+    // Each bar sits over a run of top/bottom slots (gapless: step == tile). The
+    // drag-time ghost reuses this EXACT geometry so it lines up perfectly with
+    // where the real bar will land.
+    const barRect = (bar: TextBarPlacement) => ({
       x: wingPx + bar.startIndex * tileSize,
       y: bar.row === "top" ? 0 : containerHeight - tileSize,
       width: bar.widthUnits * tileSize,
@@ -323,6 +327,32 @@ export const FrameCanvas = forwardRef<FrameCanvasHandle, FrameCanvasProps>(
                 onSelect={() => selectBar(bar.id)}
               />
             ))}
+
+          {/* Banner landing preview — a translucent, banner-shaped ghost over the
+              EXACT run of slots the dragged banner will occupy on drop (computed
+              in DndProvider with the same placement math the store commits, and
+              positioned with the same `barRect` geometry as a real placed bar, so
+              there's no drift). Valid → the banner's color + a dashed ink outline
+              reading "it lands HERE"; invalid (row can't fit it) → a red tint. */}
+          {containerWidth > 0 && bannerPreview && (
+            <div
+              aria-hidden
+              className="pointer-events-none absolute z-[3] rounded-[3px]"
+              style={{
+                ...barRect(bannerPreview),
+                background: bannerPreview.valid
+                  ? bannerPreview.backgroundColor
+                  : "rgba(214,69,69,0.18)",
+                opacity: bannerPreview.valid ? 0.55 : 1,
+                border: bannerPreview.valid
+                  ? "2px dashed #1e1b17"
+                  : "2px dashed #d64545",
+                boxShadow: bannerPreview.valid
+                  ? "0 0 14px 2px rgba(248,197,59,0.45)"
+                  : "0 0 12px 2px rgba(214,69,69,0.4)",
+              }}
+            />
+          )}
 
           {/* Frame edge highlight */}
           <div

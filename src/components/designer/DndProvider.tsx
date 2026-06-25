@@ -13,9 +13,10 @@ import {
   type DragEndEvent,
   type DragOverEvent,
 } from "@dnd-kit/core";
-import type { TextBarRow } from "@/lib/types";
+import type { TextBarRow, BannerPreview } from "@/lib/types";
 import { useDesignStore } from "@/stores/design-store";
 import { useUIStore } from "@/stores/ui-store";
+import { measureTextBarUnits, rowLength, findFreeStart } from "@/lib/utils/text-bar";
 import { getPiece } from "@/data/sets";
 import { PlacedTileView } from "@/components/frame/PlacedTileView";
 import { playSound } from "@/lib/utils/sound";
@@ -24,9 +25,10 @@ import { emitTilePlaced } from "@/lib/utils/place-fx";
 interface DndProviderProps {
   children: React.ReactNode;
   onOverSlotChange: (slotId: string | null) => void;
+  onBannerPreviewChange: (preview: BannerPreview | null) => void;
 }
 
-export function DndProvider({ children, onOverSlotChange }: DndProviderProps) {
+export function DndProvider({ children, onOverSlotChange, onBannerPreviewChange }: DndProviderProps) {
   const [dragPieceId, setDragPieceId] = useState<string | null>(null);
   const [dragKind, setDragKind] = useState<
     "tile" | "placed-tile" | "textbar" | "placed-textbar" | null
@@ -40,6 +42,8 @@ export function DndProvider({ children, onOverSlotChange }: DndProviderProps) {
   const removeTextBar = useDesignStore((s) => s.removeTextBar);
   const textBars = useDesignStore((s) => s.textBars);
   const bottomBar = useDesignStore((s) => s.bottomBar);
+  const qrCode = useDesignStore((s) => s.qrCode);
+  const frameConfig = useDesignStore((s) => s.frameConfig);
   const soundEnabled = useUIStore((s) => s.soundEnabled);
 
   const pointerSensor = useSensor(PointerSensor, {
@@ -71,9 +75,62 @@ export function DndProvider({ children, onOverSlotChange }: DndProviderProps) {
   const handleDragOver = useCallback(
     (event: DragOverEvent) => {
       const overId = event.over?.id as string | undefined;
+      const data = event.active.data.current;
+      const kind = data?.type as string | undefined;
+      const slotMatch = overId?.match(/^frame:(top|bottom)-(\d+)$/);
+
+      // Banner drags get a banner-shaped FOOTPRINT preview instead of the
+      // single-cell tile glow. Compute the landing rect with the SAME placement
+      // math the store commits, so the ghost lines up exactly with where the
+      // bar really lands. Tile drags keep the single-cell `isOver` glow.
+      if (kind === "textbar" || kind === "placed-textbar") {
+        onOverSlotChange(null); // suppress the single-cell glow for banner drags
+        if (!slotMatch) {
+          onBannerPreviewChange(null);
+          return;
+        }
+        const row = slotMatch[1] as TextBarRow;
+        const dropIndex = parseInt(slotMatch[2], 10);
+        const maxUnits = rowLength(frameConfig, row);
+
+        if (kind === "textbar") {
+          // New banner: width from the draft, centered free start — mirrors
+          // `placeTextBar` (qr rides the FIRST bar only; the drop column only
+          // chose the row, the column resolves to the centered free run).
+          const isFirst = textBars.length === 0;
+          const qr = isFirst ? qrCode.enabled : false;
+          const widthUnits = measureTextBarUnits(bottomBar, qr, maxUnits);
+          const preferred = Math.round((maxUnits - widthUnits) / 2);
+          const start = findFreeStart(textBars, row, widthUnits, maxUnits, preferred);
+          onBannerPreviewChange(
+            start === null
+              ? { row, startIndex: 0, widthUnits, valid: false, backgroundColor: bottomBar.backgroundColor }
+              : { row, startIndex: start, widthUnits, valid: true, backgroundColor: bottomBar.backgroundColor }
+          );
+          return;
+        }
+
+        // Moving an existing bar: its own width, snapped to the nearest free
+        // column at the drop (excluding itself) — mirrors `moveTextBar`.
+        const bar = textBars.find((b) => b.id === dragBarId);
+        if (!bar) {
+          onBannerPreviewChange(null);
+          return;
+        }
+        const start = findFreeStart(textBars, row, bar.widthUnits, maxUnits, dropIndex, bar.id);
+        onBannerPreviewChange(
+          start === null
+            ? { row, startIndex: bar.startIndex, widthUnits: bar.widthUnits, valid: false, backgroundColor: bar.config.backgroundColor }
+            : { row, startIndex: start, widthUnits: bar.widthUnits, valid: true, backgroundColor: bar.config.backgroundColor }
+        );
+        return;
+      }
+
+      // Tile drags: keep the existing single-cell glow path.
+      onBannerPreviewChange(null);
       onOverSlotChange(overId?.startsWith("frame:") ? overId : null);
     },
-    [onOverSlotChange]
+    [onOverSlotChange, onBannerPreviewChange, textBars, bottomBar, qrCode, frameConfig, dragBarId]
   );
 
   const handleDragEnd = useCallback(
@@ -82,6 +139,7 @@ export function DndProvider({ children, onOverSlotChange }: DndProviderProps) {
       setDragKind(null);
       setDragBarId(null);
       onOverSlotChange(null);
+      onBannerPreviewChange(null);
 
       const overId = event.over?.id as string | undefined;
       const data = event.active.data.current;
@@ -142,6 +200,7 @@ export function DndProvider({ children, onOverSlotChange }: DndProviderProps) {
       removeTextBar,
       soundEnabled,
       onOverSlotChange,
+      onBannerPreviewChange,
     ]
   );
 
@@ -150,7 +209,8 @@ export function DndProvider({ children, onOverSlotChange }: DndProviderProps) {
     setDragKind(null);
     setDragBarId(null);
     onOverSlotChange(null);
-  }, [onOverSlotChange]);
+    onBannerPreviewChange(null);
+  }, [onOverSlotChange, onBannerPreviewChange]);
 
   const piece = dragPieceId ? getPiece(dragPieceId) : null;
   const dragBar = dragBarId ? textBars.find((b) => b.id === dragBarId) : null;
