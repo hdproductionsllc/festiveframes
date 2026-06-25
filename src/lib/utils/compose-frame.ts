@@ -69,7 +69,9 @@ function drawTextBar(
 ) {
   const cfg = bar.config;
   ctx.save();
-  roundRect(ctx, x, y, w, h, Math.max(2, h * 0.06));
+  // Sharp 90° corners — printed banner artwork must NOT be rounded.
+  ctx.beginPath();
+  ctx.rect(x, y, w, h);
   ctx.clip();
   ctx.fillStyle = cfg.backgroundColor;
   ctx.fillRect(x, y, w, h);
@@ -93,7 +95,8 @@ function drawTextBar(
     const qx = x + w - s - h * QR_GAP_RATIO;
     const qy = y + (h - s) / 2;
     ctx.fillStyle = "#ffffff";
-    roundRect(ctx, qx, qy, s, s, s * 0.06);
+    ctx.beginPath();
+    ctx.rect(qx, qy, s, s);
     ctx.fill();
     ctx.drawImage(qrImg, qx, qy, s, s);
   }
