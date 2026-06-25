@@ -122,6 +122,60 @@ function productionHtml(o: ProductionOrderInput): string {
   );
 }
 
+/** Concise plain-text alternative for the founders/production email. */
+function productionText(o: ProductionOrderInput): string {
+  const fileList = [
+    o.proof ? "the full composite proof" : null,
+    o.printSheets.length ? `${o.printSheets.length} eufyMake print sheet(s)` : "NO print sheet (ordered on mobile — regenerate on desktop from /build)",
+    o.banners.length ? `${o.banners.length} banner file(s)` : null,
+    "the parts-list CSV",
+  ].filter(Boolean).join(", ");
+  const ship = o.shippingLines.filter(Boolean).join("\n") || "Address on file";
+  return [
+    `PRODUCTION ORDER — ${o.parts.designName || "Custom frame"}`,
+    `New paid order · ${usd(o.amountTotalCents)}`,
+    ``,
+    `Order: ${o.orderId}`,
+    `Stripe: ${o.sessionId}`,
+    `Customer: ${o.customerName ?? "—"} <${o.customerEmail ?? "—"}>`,
+    `Plate: ${o.parts.plateState}${o.parts.qr.enabled ? ` · QR: ${o.parts.qr.url}` : ""}`,
+    ``,
+    `Bill — attached for the eufy: ${fileList}.`,
+    `Files attached to this email.`,
+    ``,
+    `Ship to:`,
+    ship,
+  ].join("\n");
+}
+
+/** Concise plain-text alternative for the customer confirmation email. */
+function customerText(o: ProductionOrderInput): string {
+  const first = o.customerName ? `, ${o.customerName.split(" ")[0]}` : "";
+  const ship = o.shippingLines.filter(Boolean).join("\n") || "Address on file";
+  return [
+    `You're in${first}!`,
+    ``,
+    `Thanks for your order — it's confirmed and headed into production. Your`,
+    `license-plate frame is now in our shop. A proof of the exact frame you`,
+    `designed is attached to this email.`,
+    ``,
+    `Order: ${o.orderId}`,
+    `Total: ${usd(o.amountTotalCents)}`,
+    ``,
+    `Ship to:`,
+    ship,
+    ``,
+    `A thank-you from the founders:`,
+    `Every frame is made to order, by hand, right here in the USA — and yours`,
+    `is now in our shop. Thank you for flying your colors with us. We can't`,
+    `wait for you to see it on your car.`,
+    `— Henry, Becky & Bill`,
+    ``,
+    `Made to order in the USA · St. Louis, Missouri.`,
+    `Questions? Reach a real human at hello@festiveframes.co.`,
+  ].join("\n");
+}
+
 function customerHtml(o: ProductionOrderInput): string {
   const first = o.customerName ? `, ${esc(o.customerName.split(" ")[0])}` : "";
   const proofImg = o.proof ? `<div style="margin:16px 0;text-align:center;"><img src="cid:proof" alt="Your frame proof" style="max-width:100%;border:1px solid #e4d7b6;border-radius:8px;"/></div>` : "";
@@ -172,6 +226,7 @@ export async function sendProductionEmails(o: ProductionOrderInput): Promise<boo
         replyTo: o.customerEmail ?? undefined,
         subject: `🇺🇸 PRODUCTION — ${o.parts.designName || "Custom frame"} — ${o.customerName ?? o.customerEmail ?? o.orderId}`,
         html: productionHtml(o),
+        text: productionText(o),
         attachments,
       });
     } catch (err) {
@@ -191,8 +246,10 @@ export async function sendProductionEmails(o: ProductionOrderInput): Promise<boo
       await resend.emails.send({
         from,
         to: o.customerEmail,
+        ...(founderList.length ? { bcc: founderList } : {}),
         subject: "Your Festive Frames order is confirmed 🎆",
         html: customerHtml(o),
+        text: customerText(o),
         attachments: customerAttachments,
       });
     } catch (err) {
