@@ -279,16 +279,38 @@ body {
     inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
-/* Drop target glow — a gentle gold pulse so the live drop cell feels alive.
-   Falls back to a static glow under reduced motion (the global block below
-   neutralizes the animation duration). */
-.drop-target-glow {
-  box-shadow: 0 0 12px 2px rgba(255, 215, 0, 0.4);
-  animation: ff-drop-pulse 0.9s ease-in-out infinite;
+/* ── Tile drop indicator ─────────────────────────────────────────────────────
+   ONE element (in FrameCanvas) marks the exact cell a dragged tile will land in.
+   It GLIDES from cell to cell instead of a glow popping on/off each slot: a short,
+   GPU-friendly transition on `transform` (position) + `opacity` (show/hide) gives
+   a precise, smoothly-tracking cue. A crisp gold dashed outline reads "it lands
+   HERE"; the soft glow ties it to the rest of the gold festive language. The
+   reduced-motion block below neutralizes the transition (it snaps, no glide). */
+.ff-drop-indicator {
+  border-radius: 3px;
+  outline: 2px dashed rgba(248, 197, 59, 0.95);
+  outline-offset: -2px;
+  background: rgba(248, 197, 59, 0.12);
+  box-shadow: 0 0 14px 2px rgba(248, 197, 59, 0.5);
+  transition:
+    transform 110ms cubic-bezier(0.22, 1, 0.36, 1),
+    width 110ms cubic-bezier(0.22, 1, 0.36, 1),
+    height 110ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 110ms ease-out;
+  will-change: transform, opacity;
 }
-@keyframes ff-drop-pulse {
-  0%, 100% { box-shadow: 0 0 10px 1px rgba(248, 197, 59, 0.35); }
-  50% { box-shadow: 0 0 18px 4px rgba(248, 197, 59, 0.7); }
+
+/* ── Empty cell separation ───────────────────────────────────────────────────
+   Empty cells stay gapless cream (no black flash on tile removal), but each must
+   read as its OWN tile rather than melting into one white blob with its
+   neighbors. A faint hairline + a soft inset shadow hint the same 3D grid the
+   filled tiles show — subtle and on-theme, no big black gaps. */
+.ff-empty-cell {
+  background: #ffffff;
+  box-shadow:
+    inset 0 0 0 1px rgba(30, 27, 23, 0.08),
+    inset 0 1px 2px rgba(30, 27, 23, 0.06),
+    inset 0 -1px 1px rgba(255, 255, 255, 0.7);
 }
 
 /* ── CTA delight: a sweeping shine + a press "pop" for the header buttons ──── */

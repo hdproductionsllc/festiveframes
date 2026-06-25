@@ -120,6 +120,11 @@ export const FrameCanvas = forwardRef<FrameCanvasHandle, FrameCanvasProps>(
       height: tileSize,
     });
 
+    // The cell a dragged TILE will land in (or null). One positioned indicator
+    // glides to this rect instead of toggling a glow on each cell, so the cue
+    // tracks the cursor smoothly and matches the exact landing slot.
+    const overSlot = overSlotId ? frameSlots.find((s) => s.id === overSlotId) : null;
+
     return (
       <div ref={containerRef} className="w-full flex flex-col items-center">
         {/* Main frame */}
@@ -305,15 +310,35 @@ export const FrameCanvas = forwardRef<FrameCanvasHandle, FrameCanvasProps>(
             />
           )}
 
-          {/* All rail slots (standard + wing zones) */}
+          {/* All rail slots (standard + wing zones). The slots no longer carry an
+              `isOver` flag — a single gliding indicator (below) renders the drop
+              cue instead, so a drag never re-renders every cell. */}
           {frameSlots.map((slot) => (
             <RailSlot
               key={slot.id}
               slot={slot}
               placedTile={slots[slot.id]}
-              isOver={overSlotId === slot.id}
             />
           ))}
+
+          {/* Tile drop indicator — ONE element that glides to the target cell.
+              It's always mounted (while the frame has size) and driven purely by
+              transform/size + opacity, so moving the cursor cell-to-cell slides
+              the cue smoothly instead of popping a glow on and off each slot.
+              Sized to the live `overSlot` rect, so it marks the EXACT cell the
+              tile will drop into; opacity 0 (and pointer-events off) when idle. */}
+          {containerWidth > 0 && (
+            <div
+              aria-hidden
+              className="ff-drop-indicator pointer-events-none absolute left-0 top-0 z-[2]"
+              style={{
+                width: overSlot ? overSlot.width : tileSize,
+                height: overSlot ? overSlot.height : tileSize,
+                transform: `translate3d(${overSlot ? overSlot.x : 0}px, ${overSlot ? overSlot.y : 0}px, 0)`,
+                opacity: overSlot ? 1 : 0,
+              }}
+            />
+          )}
 
           {/* Text bars — draggable; drag off the frame to remove */}
           {containerWidth > 0 &&

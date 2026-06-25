@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { memo, useEffect, useState } from "react";
 import { useDroppable, useDraggable } from "@dnd-kit/core";
 import type { FrameSlot, PlacedTile } from "@/lib/types";
 import { PlacedTileView } from "./PlacedTileView";
@@ -14,10 +14,9 @@ import { emitTilePlaced, onTilePlaced } from "@/lib/utils/place-fx";
 interface RailSlotProps {
   slot: FrameSlot;
   placedTile: PlacedTile | undefined;
-  isOver?: boolean;
 }
 
-export function RailSlot({ slot, placedTile, isOver }: RailSlotProps) {
+function RailSlotInner({ slot, placedTile }: RailSlotProps) {
   const { setNodeRef } = useDroppable({ id: slot.id });
   const placeTile = useDesignStore((s) => s.placeTile);
   const selectedPieceId = usePaletteStore((s) => s.selectedPieceId);
@@ -69,7 +68,7 @@ export function RailSlot({ slot, placedTile, isOver }: RailSlotProps) {
     <div
       ref={setNodeRef}
       onClick={handleClick}
-      className={`absolute transition-all duration-150 ${cursorClass}`}
+      className={`absolute ${cursorClass}`}
       style={{
         left: slot.x,
         top: slot.y,
@@ -91,26 +90,23 @@ export function RailSlot({ slot, placedTile, isOver }: RailSlotProps) {
           pieceId={placedTile.pieceId}
           width={slot.width}
           height={slot.height}
-          isOver={!!isOver}
           armed={selectedPieceId != null}
           landing={landing}
         />
       ) : (
-        <div
-          className={`w-full h-full flex items-center justify-center ${isOver ? "drop-target-glow" : ""}`}
-        >
+        <div className="w-full h-full flex items-center justify-center">
           {/* Empty cell — gold hover ring when a tap would place the armed tile
-              here, so empty slots read as clickable drop targets. Gapless: the
-              cell fills edge-to-edge in design-surface cream. */}
+              here, so empty slots read as clickable drop targets. Gapless (no
+              black gaps on tile removal), but each empty reads as its OWN tile
+              via `ff-empty-cell`: a faint hairline + soft inset shadow that hints
+              the same 3D grid the filled tiles show, without reintroducing gaps. */}
           <div
-            className={`rounded-[2px] transition-shadow ${
+            className={`ff-empty-cell rounded-[2px] transition-shadow ${
               selectedPieceId != null ? "group-hover:ring-2 group-hover:ring-brand-gold/70" : ""
             }`}
             style={{
               width: slot.width,
               height: slot.height,
-              background: "#ffffff",
-              border: "1px solid transparent",
             }}
           />
         </div>
@@ -123,6 +119,15 @@ export function RailSlot({ slot, placedTile, isOver }: RailSlotProps) {
     </div>
   );
 }
+
+/**
+ * Memoized: a drag no longer re-renders every cell. The drop cue is now a single
+ * gliding indicator in FrameCanvas (no per-slot `isOver`), so a RailSlot only
+ * re-renders when ITS own props change (its placed tile) — not on every pointer
+ * move. The `armed`/sparkle state it still reads comes from stable store hooks,
+ * which update independently of the drag. This kills the per-move re-render storm.
+ */
+export const RailSlot = memo(RailSlotInner);
 
 /**
  * A placed tile: draggable to move it to another cell, or drag it OFF the frame
@@ -138,7 +143,6 @@ function PlacedTileCell({
   pieceId,
   width,
   height,
-  isOver,
   armed,
   landing,
 }: {
@@ -146,7 +150,6 @@ function PlacedTileCell({
   pieceId: string;
   width: number;
   height: number;
-  isOver: boolean;
   armed: boolean;
   landing?: boolean;
 }) {
@@ -218,8 +221,7 @@ function PlacedTileCell({
         title="Drag to move · drag off the frame to remove"
         className={`absolute inset-0 cursor-grab active:cursor-grabbing transition-transform duration-150
           ${isDragging ? "opacity-40" : "hover:scale-[1.04]"}
-          ${poofing ? "animate-tile-poof" : landing ? "motion-safe:animate-tile-snap" : ""}
-          ${isOver ? "drop-target-glow" : ""}`}
+          ${poofing ? "animate-tile-poof" : landing ? "motion-safe:animate-tile-snap" : ""}`}
         style={{ touchAction: "none" }}
       >
         <PlacedTileView pieceId={pieceId} width={width} height={height} />
