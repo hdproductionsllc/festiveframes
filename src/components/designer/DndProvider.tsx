@@ -1,15 +1,14 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback } from "react";
 import {
   DndContext,
   DragOverlay,
   PointerSensor,
   TouchSensor,
-  pointerWithin,
-  closestCenter,
   useSensor,
   useSensors,
+  type ClientRect,
   type CollisionDetection,
   type DragStartEvent,
   type DragEndEvent,
@@ -31,41 +30,50 @@ interface DndProviderProps {
 }
 
 /**
- * Collision strategy for the builder.
+ * Collision strategy for the builder — POINTER-BASED and consistent.
  *
- * `pointerWithin` alone is precise but BRITTLE: the moment the cursor crosses a
- * cell border, slips over the center plate area (which has no droppable), or the
- * pointer outruns hit-testing on a fast flick, `over` snaps to null and the drop
- * cue blinks out — the core "clunky" feel.
+ * The single source of truth is the CURSOR position: we pick the droppable whose
+ * center is nearest the pointer. This matters because palette tiles drag via a
+ * source transform (the floating tile is offset from the cursor), so any rect-
+ * based strategy (`closestCenter`) would resolve to where the tile element is,
+ * not where the cursor is — making the drop land somewhere other than the
+ * preview. Pointer-based throughout means the drop indicator and the actual drop
+ * ALWAYS agree, and the tile lands exactly under the cursor.
  *
- * So: try `pointerWithin` first (exact when truly inside a cell — keeps every
- * placement honest). If it finds nothing, fall back to `closestCenter` to pick
- * the NEAREST cell so there is always a sensible target near the cursor and the
- * indicator glides instead of flickering. But only ACCEPT that nearest cell when
- * the pointer is reasonably close to it: if you've dragged well off the frame,
- * the fallback yields nothing → `over` is null → "drag off to remove" still fires.
+ * Over a real cell the pointer is inside it, so that cell wins. Over the center
+ * plate / gaps it resolves to the nearest cell to the cursor and the indicator
+ * glides there. Drag well off the frame (pointer further than ~0.75 of a tile
+ * from every cell) → no target → "drag off to remove" still fires.
  */
 const collisionStrategy: CollisionDetection = (args) => {
-  const within = pointerWithin(args);
-  if (within.length > 0) return within;
-
   const pointer = args.pointerCoordinates;
   if (!pointer) return [];
 
-  const nearest = closestCenter(args);
-  if (nearest.length === 0) return [];
+  let best: (typeof args.droppableContainers)[number] | null = null;
+  let bestRect: ClientRect | null = null;
+  let bestDist = Infinity;
+  for (const c of args.droppableContainers) {
+    const r = args.droppableRects.get(c.id);
+    if (!r) continue;
+    const dx = pointer.x - (r.left + r.width / 2);
+    const dy = pointer.y - (r.top + r.height / 2);
+    const d = dx * dx + dy * dy;
+    if (d < bestDist) {
+      bestDist = d;
+      best = c;
+      bestRect = r;
+    }
+  }
+  if (!best || !bestRect) return [];
 
-  // Gate the nearest cell on real proximity so off-frame drags read as "remove".
-  // Tolerance scales with cell size: accept when the pointer is within ~70% of a
-  // tile beyond the cell's edges (a forgiving but bounded catch radius).
-  const top = nearest[0];
-  const rect = args.droppableRects.get(top.id);
-  if (!rect) return [];
-
-  const margin = Math.max(rect.width, rect.height) * 0.7;
-  const withinX = pointer.x >= rect.left - margin && pointer.x <= rect.right + margin;
-  const withinY = pointer.y >= rect.top - margin && pointer.y <= rect.bottom + margin;
-  return withinX && withinY ? nearest : [];
+  // Off-frame → no target so "drag off to remove" still works.
+  const margin = Math.max(bestRect.width, bestRect.height) * 0.75;
+  const near =
+    pointer.x >= bestRect.left - margin &&
+    pointer.x <= bestRect.right + margin &&
+    pointer.y >= bestRect.top - margin &&
+    pointer.y <= bestRect.bottom + margin;
+  return near ? [{ id: best.id }] : [];
 };
 
 export function DndProvider({ children, onOverSlotChange, onBannerPreviewChange }: DndProviderProps) {
@@ -90,66 +98,26 @@ export function DndProvider({ children, onOverSlotChange, onBannerPreviewChange 
     activationConstraint: { distance: 5 },
   });
   // Touch drag activation, tuned so all three gestures stay distinct on a phone:
-  //  • a quick TAP releases before `delay` → never starts a drag (stays a tap,
-  //    so tap-to-arm and tap-to-place work cleanly);
-  //  • a SCROLL flick moves past `tolerance` before `delay` elapses → cancels
-  //    drag activation, so the tray/page still scrolls;
-  //  • a deliberate PRESS-AND-HOLD (past `delay`, finger fairly still) → starts
-  //    the drag. `tolerance` is a hair more forgiving than before so natural
-  //    finger jitter during the hold doesn't read as a scroll and kill the drag.
+  //  • a quick TAP releases before `delay` → never starts a drag (stays a tap);
+  //  • a SCROLL flick past `tolerance` before `delay` → cancels, page still scrolls;
+  //  • a deliberate PRESS-AND-HOLD → starts the drag.
   const touchSensor = useSensor(TouchSensor, {
     activationConstraint: { delay: 180, tolerance: 8 },
   });
   const sensors = useSensors(pointerSensor, touchSensor);
 
-  // rAF-coalesced drop-cue updates. `onDragOver` fires many times per second; we
-  // don't want each one to immediately re-render the canvas. Instead we stash the
-  // latest pending cue and flush it once per animation frame, so at most one state
-  // update lands per frame and the drop indicator tracks the cursor smoothly
-  // without a re-render storm. The whole cue is one cheap object (slot id OR
-  // banner preview), so a single coalesced push covers both paths.
-  const rafRef = useRef<number | null>(null);
-  const pendingRef = useRef<{ slotId: string | null; banner: BannerPreview | null } | null>(null);
-
-  const flushCue = useCallback(() => {
-    rafRef.current = null;
-    const pending = pendingRef.current;
-    if (!pending) return;
-    pendingRef.current = null;
-    onOverSlotChange(pending.slotId);
-    onBannerPreviewChange(pending.banner);
-  }, [onOverSlotChange, onBannerPreviewChange]);
-
-  // Drop / cancel: kill any in-flight frame and a pending cue so a stale queued
-  // flush can't re-show the indicator after the drag is already over, then clear
-  // both cues synchronously.
-  const clearCue = useCallback(() => {
-    if (rafRef.current != null) {
-      cancelAnimationFrame(rafRef.current);
-      rafRef.current = null;
-    }
-    pendingRef.current = null;
-    onOverSlotChange(null);
-    onBannerPreviewChange(null);
-  }, [onOverSlotChange, onBannerPreviewChange]);
-
-  const queueCue = useCallback(
+  // Drop-cue updates go through directly (no rAF coalescing): `onDragOver` only
+  // fires when the `over` target CHANGES (not every pixel), so this is cheap, and
+  // — critically — the visible indicator is ALWAYS the live `over` that the drop
+  // will use, so the preview can never be a frame stale relative to the drop.
+  // RailSlot is memoized, so updating the cue re-renders only the indicator.
+  const setCue = useCallback(
     (slotId: string | null, banner: BannerPreview | null) => {
-      pendingRef.current = { slotId, banner };
-      if (rafRef.current == null) {
-        rafRef.current = requestAnimationFrame(flushCue);
-      }
+      onOverSlotChange(slotId);
+      onBannerPreviewChange(banner);
     },
-    [flushCue]
+    [onOverSlotChange, onBannerPreviewChange]
   );
-
-  // Cancel any in-flight frame on unmount so a queued flush can't fire after the
-  // provider is gone.
-  useEffect(() => {
-    return () => {
-      if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
-    };
-  }, []);
 
   const handleDragStart = useCallback((event: DragStartEvent) => {
     const data = event.active.data.current;
@@ -168,15 +136,12 @@ export function DndProvider({ children, onOverSlotChange, onBannerPreviewChange 
       const kind = data?.type as string | undefined;
       const slotMatch = overId?.match(/^frame:(top|bottom)-(\d+)$/);
 
-      // Banner drags get a banner-shaped FOOTPRINT preview instead of the
-      // single-cell tile indicator. Compute the landing rect with the SAME
-      // placement math the store commits, so the ghost lines up exactly with
-      // where the bar really lands. Tile drags drive the gliding cell indicator.
+      // Banner drags get a banner-shaped FOOTPRINT preview instead of the single
+      // cell indicator. Compute the landing rect with the SAME placement math the
+      // store commits, so the ghost lines up exactly with where the bar lands.
       if (kind === "textbar" || kind === "placed-textbar") {
-        // Banner drags never use the single-cell tile indicator (slotId always
-        // null); they get the banner-shaped footprint instead.
         if (!slotMatch) {
-          queueCue(null, null);
+          setCue(null, null);
           return;
         }
         const row = slotMatch[1] as TextBarRow;
@@ -185,14 +150,14 @@ export function DndProvider({ children, onOverSlotChange, onBannerPreviewChange 
 
         if (kind === "textbar") {
           // New banner: width from the draft, centered free start — mirrors
-          // `placeTextBar` (qr rides the FIRST bar only; the drop column only
-          // chose the row, the column resolves to the centered free run).
+          // `placeTextBar` (qr rides the FIRST bar only; the drop column chose the
+          // row, the column resolves to the centered free run).
           const isFirst = textBars.length === 0;
           const qr = isFirst ? qrCode.enabled : false;
           const widthUnits = measureTextBarUnits(bottomBar, qr, maxUnits);
           const preferred = Math.round((maxUnits - widthUnits) / 2);
           const start = findFreeStart(textBars, row, widthUnits, maxUnits, preferred);
-          queueCue(
+          setCue(
             null,
             start === null
               ? { row, startIndex: 0, widthUnits, valid: false, backgroundColor: bottomBar.backgroundColor }
@@ -205,11 +170,11 @@ export function DndProvider({ children, onOverSlotChange, onBannerPreviewChange 
         // column at the drop (excluding itself) — mirrors `moveTextBar`.
         const bar = textBars.find((b) => b.id === dragBarId);
         if (!bar) {
-          queueCue(null, null);
+          setCue(null, null);
           return;
         }
         const start = findFreeStart(textBars, row, bar.widthUnits, maxUnits, dropIndex, bar.id);
-        queueCue(
+        setCue(
           null,
           start === null
             ? { row, startIndex: bar.startIndex, widthUnits: bar.widthUnits, valid: false, backgroundColor: bar.config.backgroundColor }
@@ -219,9 +184,9 @@ export function DndProvider({ children, onOverSlotChange, onBannerPreviewChange 
       }
 
       // Tile drags: drive the single gliding drop indicator via the over slot id.
-      queueCue(overId?.startsWith("frame:") ? overId : null, null);
+      setCue(overId?.startsWith("frame:") ? overId : null, null);
     },
-    [queueCue, textBars, bottomBar, qrCode, frameConfig, dragBarId]
+    [setCue, textBars, bottomBar, qrCode, frameConfig, dragBarId]
   );
 
   const handleDragEnd = useCallback(
@@ -229,7 +194,7 @@ export function DndProvider({ children, onOverSlotChange, onBannerPreviewChange 
       setDragPieceId(null);
       setDragKind(null);
       setDragBarId(null);
-      clearCue();
+      setCue(null, null);
 
       const overId = event.over?.id as string | undefined;
       const data = event.active.data.current;
@@ -258,8 +223,7 @@ export function DndProvider({ children, onOverSlotChange, onBannerPreviewChange 
       }
 
       // Placed tile: dropped on another cell MOVES it; dropped off the frame
-      // POOFS it away. Mirrors the placed-textbar drag model exactly so the
-      // whole builder is one consistent "drag on / drag off" interaction.
+      // POOFS it away. Mirrors the placed-textbar drag model.
       if (data?.type === "placed-tile") {
         const fromSlotId = data.slotId as string;
         if (overId?.startsWith("frame:")) {
@@ -289,7 +253,7 @@ export function DndProvider({ children, onOverSlotChange, onBannerPreviewChange 
       moveTextBar,
       removeTextBar,
       soundEnabled,
-      clearCue,
+      setCue,
     ]
   );
 
@@ -297,8 +261,8 @@ export function DndProvider({ children, onOverSlotChange, onBannerPreviewChange 
     setDragPieceId(null);
     setDragKind(null);
     setDragBarId(null);
-    clearCue();
-  }, [clearCue]);
+    setCue(null, null);
+  }, [setCue]);
 
   const piece = dragPieceId ? getPiece(dragPieceId) : null;
   const dragBar = dragBarId ? textBars.find((b) => b.id === dragBarId) : null;
@@ -334,13 +298,8 @@ export function DndProvider({ children, onOverSlotChange, onBannerPreviewChange 
             </span>
           </div>
         ) : piece && dragKind === "placed-tile" ? (
-          // Plain, statically-positioned, tile-sized ghost. dnd-kit's overlay
-          // wrapper is the thing that follows the pointer (position:fixed); its
-          // child MUST NOT carry any absolute offset of its own (a placed tile's
-          // draggable is `position:absolute; left:0; top:0`, which would otherwise
-          // pin the ghost to the wrapper's corner). A relative, fixed-size box
-          // guarantees the ghost renders under the cursor for BOTH palette-tile
-          // and placed-tile drags.
+          // Plain, statically-positioned, tile-sized ghost (placed-tile drags use
+          // the overlay; palette tiles use a source transform).
           <div
             className="relative pointer-events-none opacity-90"
             style={{ width: 48, height: 48 }}
