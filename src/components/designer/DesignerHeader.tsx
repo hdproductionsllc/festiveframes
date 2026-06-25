@@ -6,6 +6,8 @@ import { useDesignStore } from "@/stores/design-store";
 import { useUIStore } from "@/stores/ui-store";
 import { celebrateOrder } from "@/lib/utils/celebrate";
 import { StateSelector } from "@/components/frame/StateSelector";
+import { surfacedSets } from "@/data/sets";
+import { usePaletteStore } from "@/stores/palette-store";
 
 interface DesignerHeaderProps {
   onExport: () => void;
@@ -22,6 +24,8 @@ export function DesignerHeader({ onExport, onExportParts, onOrder, ordering }: D
   const exportState = useUIStore((s) => s.exportState);
   const soundEnabled = useUIStore((s) => s.soundEnabled);
   const toggleSound = useUIStore((s) => s.toggleSound);
+  const activeSetId = usePaletteStore((s) => s.activeSetId);
+  const setActiveSet = usePaletteStore((s) => s.setActiveSet);
 
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
@@ -84,11 +88,37 @@ export function DesignerHeader({ onExport, onExportParts, onOrder, ordering }: D
               text-sm font-semibold text-[#faf0d6] placeholder:text-[#faf0d6]/45
               transition-colors hover:border-[#faf0d6]/40 focus:border-[#f8c53b] focus:outline-none"
           />
-          <div className="flex items-center gap-1.5">
-            <span className="hidden sm:block px-1 text-[10px] uppercase tracking-wide text-[#faf0d6]/45">
-              State
-            </span>
-            <StateSelector theme="header" />
+          <div className="flex items-center gap-2">
+            {/* Snappet theme picker — auto-grows as more sets are surfaced
+                (driven by `surfacedSets`). Today there's just "4th of July". */}
+            <div className="flex items-center gap-1.5">
+              <span className="hidden sm:block px-1 text-[10px] uppercase tracking-wide text-[#faf0d6]/45">
+                Theme
+              </span>
+              <select
+                aria-label="Snappet theme"
+                value={activeSetId}
+                onChange={(e) => setActiveSet(e.target.value)}
+                className="px-2 py-1 rounded-md bg-[#2a2620] border border-[#faf0d6]/20
+                  text-[#faf0d6] text-xs font-medium
+                  focus:outline-none focus:border-[#f8c53b]/70 transition-colors
+                  cursor-pointer appearance-none
+                  bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%2212%22%20viewBox%3D%220%200%2012%2012%22%3E%3Cpath%20fill%3D%22%23faf0d6%22%20d%3D%22M6%208L1%203h10z%22%2F%3E%3C%2Fsvg%3E')]
+                  bg-no-repeat bg-[right_0.5rem_center] pr-6"
+              >
+                {surfacedSets.map((set) => (
+                  <option key={set.id} value={set.id} className="bg-[#2a2620] text-[#faf0d6]">
+                    {set.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="hidden sm:block px-1 text-[10px] uppercase tracking-wide text-[#faf0d6]/45">
+                State
+              </span>
+              <StateSelector theme="header" />
+            </div>
           </div>
         </div>
       </div>

@@ -311,12 +311,6 @@ export function BottomBarEditor() {
               max={12}
               onChange={(letterSpacing) => setCfg({ letterSpacing })}
             />
-
-            {selected && textBars[0]?.id === selected.id && (
-              <p className="rounded-lg bg-[#1e1b17]/[0.06] px-3 py-2 text-[11px] font-semibold text-[#1e1b17]/65">
-                Your QR code rides on this bar — scan-to-shop, baked right in.
-              </p>
-            )}
           </>
         )}
       </div>

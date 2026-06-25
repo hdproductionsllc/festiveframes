@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { SetTabs } from "./SetTabs";
 import { TileGrid } from "./TileGrid";
 import { QuickActions } from "@/components/designer/QuickActions";
 import { PresetGallery } from "@/components/designer/PresetGallery";
@@ -32,8 +31,8 @@ export function TilePalette() {
 function DesktopPaletteContent() {
   return (
     <div className="flex flex-col gap-2">
-      <SetTabs />
-      <p className="text-surface-400 text-xs text-center px-2 leading-relaxed">
+      <p className="rounded-full border-2 border-brand-gold/60 bg-brand-gold/15 px-3 py-2
+        text-center text-sm font-extrabold leading-snug text-brand-gold">
         Drag a tile onto your frame. Drag one off to remove it.
       </p>
       <TileGrid />
@@ -82,19 +81,19 @@ function MobileTileTray() {
 
       <div className="px-3 pt-2">
         <div className="mb-1.5 flex items-center gap-2">
-          <SetTabs />
+          <p className="flex-1 rounded-full border-2 border-brand-gold/60 bg-brand-gold/15 px-3 py-1.5
+            text-center text-[13px] font-extrabold leading-snug text-brand-gold">
+            Tap a tile to add it. Tap a placed tile to remove it.
+          </p>
           <button
             onClick={() => setOptionsOpen((v) => !v)}
             aria-expanded={optionsOpen}
-            className="ml-auto shrink-0 rounded-full bg-surface-800 px-3 py-1.5 text-xs font-semibold
+            className="shrink-0 rounded-full bg-surface-800 px-3 py-1.5 text-xs font-semibold
               text-surface-200 active:scale-95 transition-transform"
           >
             {optionsOpen ? "Done" : "⚙ Tools"}
           </button>
         </div>
-        <p className="mb-1.5 text-center text-[11px] font-medium text-surface-300">
-          Tap a tile to add it. Tap a placed tile to remove it.
-        </p>
       </div>
 
       {/* The always-visible, thumb-friendly tile row */}
