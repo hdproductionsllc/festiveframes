@@ -157,5 +157,6 @@ export const FRAME_BASE_PRICE = 24.99;
 // Max undo/redo history depth
 export const MAX_HISTORY_DEPTH = 50;
 
-// Bottom bar text constraints
-export const BOTTOM_BAR_MAX_CHARS = 26;
+// Bottom bar text constraints. The banner auto-fits (shrinks the font to fit the
+// width), so the cap is really a readability floor on a ~1"-tall banner.
+export const BOTTOM_BAR_MAX_CHARS = 40;
