@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import { useDesignStore } from "@/stores/design-store";
 import { useUIStore } from "@/stores/ui-store";
+import { celebrateOrder } from "@/lib/utils/celebrate";
 
 interface DesignerHeaderProps {
   onExport: () => void;
@@ -42,6 +43,16 @@ export function DesignerHeader({ onExport, onExportParts, onOrder, ordering }: D
     : null;
 
   const hasDesign = Object.keys(slots).length > 0;
+
+  // The dopamine hit: fire the red/white/blue fireworks the instant the user
+  // commits to ordering, then hand straight off to the real order flow. The
+  // celebration is purely visual chrome (auto-cleaning canvas, reduced-motion
+  // aware) and never blocks or alters the checkout logic in `onOrder`.
+  const handleOrderClick = () => {
+    if (!hasDesign || ordering) return;
+    celebrateOrder();
+    onOrder();
+  };
 
   return (
     <header className="flex flex-wrap items-center justify-between gap-3 border-b-[3px] border-[#1e1b17] bg-[#1e1b17] px-4 py-2">
@@ -86,8 +97,8 @@ export function DesignerHeader({ onExport, onExportParts, onOrder, ordering }: D
         <button
           onClick={onExport}
           disabled={exportState === "exporting"}
-          className="rounded-full border-2 border-[#1e1b17] bg-[#3fb0e6] px-4 py-1.5 text-sm font-semibold text-[#fff9ec]
-            transition-all hover:brightness-110 active:scale-95 disabled:opacity-50"
+          className="ff-cta-shine relative overflow-hidden rounded-full border-2 border-[#1e1b17] bg-[#3fb0e6] px-4 py-1.5 text-sm font-semibold text-[#fff9ec]
+            transition-all hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0 active:scale-95 disabled:opacity-50"
         >
           {exportState === "exporting" ? "Saving…" : "Save Image"}
         </button>
@@ -109,11 +120,11 @@ export function DesignerHeader({ onExport, onExportParts, onOrder, ordering }: D
         <div className="relative flex flex-col items-end">
           <button
             data-tour="order"
-            onClick={onOrder}
+            onClick={handleOrderClick}
             disabled={!hasDesign || ordering}
             title={hasDesign ? "Order your custom frame" : "Add at least one tile to your frame to order"}
-            className="rounded-full border-2 border-[#1e1b17] bg-[#f8c53b] px-6 py-2 text-sm font-extrabold uppercase tracking-wide text-[#1e1b17]
-              shadow-[0_2px_0_#1e1b17] transition-all hover:brightness-105 active:translate-y-0.5 active:shadow-none disabled:cursor-not-allowed disabled:opacity-40"
+            className="ff-cta-shine ff-cta-pop relative overflow-hidden rounded-full border-2 border-[#1e1b17] bg-[#f8c53b] px-6 py-2 text-sm font-extrabold uppercase tracking-wide text-[#1e1b17]
+              shadow-[0_2px_0_#1e1b17] transition-all hover:brightness-105 active:translate-y-0.5 active:shadow-none disabled:cursor-not-allowed disabled:opacity-40 motion-safe:disabled:animate-none"
           >
             {ordering ? "Starting…" : "Order · $39"}
           </button>

@@ -4,10 +4,12 @@ import { useEffect, useState } from "react";
 import { useDroppable, useDraggable } from "@dnd-kit/core";
 import type { FrameSlot, PlacedTile } from "@/lib/types";
 import { PlacedTileView } from "./PlacedTileView";
+import { SparkleBurst } from "./SparkleBurst";
 import { useDesignStore } from "@/stores/design-store";
 import { usePaletteStore } from "@/stores/palette-store";
 import { useUIStore } from "@/stores/ui-store";
 import { playSound } from "@/lib/utils/sound";
+import { emitTilePlaced, onTilePlaced } from "@/lib/utils/place-fx";
 
 interface RailSlotProps {
   slot: FrameSlot;
@@ -21,6 +23,23 @@ export function RailSlot({ slot, placedTile, isOver }: RailSlotProps) {
   const selectedPieceId = usePaletteStore((s) => s.selectedPieceId);
   const soundEnabled = useUIStore((s) => s.soundEnabled);
 
+  // A festive snap+sparkle whenever a tile LANDS in this cell. Every place site
+  // (drag-drop, tap-to-place, palette tap, move) emits a `tile-placed` event for
+  // the target slot; we subscribe and, when it's OUR slot, bump `burstKey` to
+  // remount the one-shot sparkle overlay and flag `landing` to play the snap pop.
+  // Event-driven so it fires only on real placements; CSS gates the showy bits
+  // on motion-safe. The brief `landing` flag self-clears after the animation.
+  const [burstKey, setBurstKey] = useState(0);
+  const [landing, setLanding] = useState(false);
+  useEffect(() => {
+    return onTilePlaced((placedSlotId) => {
+      if (placedSlotId !== slot.id) return;
+      setBurstKey((k) => k + 1);
+      setLanding(true);
+      window.setTimeout(() => setLanding(false), 320);
+    });
+  }, [slot.id]);
+
   const handleClick = () => {
     // Tap-to-place: when a palette tile is armed, tapping any cell drops it here
     // (replacing whatever was there). The touch-friendly mirror of dragging a
@@ -29,6 +48,7 @@ export function RailSlot({ slot, placedTile, isOver }: RailSlotProps) {
     if (!selectedPieceId) return;
     const setId = selectedPieceId.split(":")[0];
     placeTile(slot.id, selectedPieceId, setId);
+    emitTilePlaced(slot.id);
     if (soundEnabled) playSound("snap");
   };
 
@@ -58,6 +78,7 @@ export function RailSlot({ slot, placedTile, isOver }: RailSlotProps) {
           height={slot.height}
           isOver={!!isOver}
           armed={selectedPieceId != null}
+          landing={landing}
         />
       ) : (
         <div
@@ -79,6 +100,11 @@ export function RailSlot({ slot, placedTile, isOver }: RailSlotProps) {
           />
         </div>
       )}
+
+      {/* One-shot patriotic sparkle when a tile lands here. Keyed so each landing
+          remounts a fresh, self-removing burst; pointer-events off so it never
+          blocks the next interaction. */}
+      {burstKey > 0 && <SparkleBurst key={burstKey} />}
     </div>
   );
 }
@@ -99,6 +125,7 @@ function PlacedTileCell({
   height,
   isOver,
   armed,
+  landing,
 }: {
   slotId: string;
   pieceId: string;
@@ -106,6 +133,7 @@ function PlacedTileCell({
   height: number;
   isOver: boolean;
   armed: boolean;
+  landing?: boolean;
 }) {
   const removeTile = useDesignStore((s) => s.removeTile);
   const soundEnabled = useUIStore((s) => s.soundEnabled);
@@ -154,7 +182,7 @@ function PlacedTileCell({
       title="Drag to move · drag off the frame to remove"
       className={`cursor-grab active:cursor-grabbing transition-transform duration-150
         ${isDragging ? "opacity-40" : "hover:scale-[1.04]"}
-        ${poofing ? "animate-tile-poof" : ""}
+        ${poofing ? "animate-tile-poof" : landing ? "motion-safe:animate-tile-snap" : ""}
         ${isOver ? "drop-target-glow" : ""}`}
       style={{
         position: "absolute",
@@ -167,6 +195,9 @@ function PlacedTileCell({
       }}
     >
       <PlacedTileView pieceId={pieceId} width={width} height={height} />
+
+      {/* Poof puff — a quick patriotic sparkle puff as the tile disappears. */}
+      {poofing && <SparkleBurst variant="poof" />}
 
       {/* Touch fallback remove — a small, obvious ✕ revealed on tap. */}
       {showRemove && (

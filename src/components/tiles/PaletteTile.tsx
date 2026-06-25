@@ -10,6 +10,7 @@ import { getAllSlotIds } from "@/lib/utils/slot-generator";
 import { coveredSlotIds } from "@/lib/utils/text-bar";
 import { TileArtwork, hasCustomArtwork, canDieCut } from "./TileArtwork";
 import { playSound } from "@/lib/utils/sound";
+import { emitTilePlaced } from "@/lib/utils/place-fx";
 
 interface PaletteTileProps {
   piece: TilePiece;
@@ -47,6 +48,7 @@ export function PaletteTile({ piece, size = "md", tapToPlace = false }: PaletteT
     );
     if (!target) return false;
     store.placeTile(target, piece.id, piece.id.split(":")[0]);
+    emitTilePlaced(target);
     return true;
   };
 
@@ -73,7 +75,7 @@ export function PaletteTile({ piece, size = "md", tapToPlace = false }: PaletteT
       style={style}
       className={`
         relative flex flex-col items-center gap-1 rounded-lg cursor-grab active:cursor-grabbing
-        transition-all duration-150
+        transition-all duration-150 motion-safe:hover:-translate-y-0.5 active:scale-95
         ${size === "lg" ? "shrink-0 p-2" : "p-1.5"}
         ${isSelected
           ? "ring-2 ring-brand-gold bg-surface-700 scale-105"

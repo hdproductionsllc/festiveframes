@@ -18,6 +18,7 @@ import { useUIStore } from "@/stores/ui-store";
 import { getPiece } from "@/data/sets";
 import { PlacedTileView } from "@/components/frame/PlacedTileView";
 import { playSound } from "@/lib/utils/sound";
+import { emitTilePlaced } from "@/lib/utils/place-fx";
 
 interface DndProviderProps {
   children: React.ReactNode;
@@ -106,6 +107,7 @@ export function DndProvider({ children, onOverSlotChange }: DndProviderProps) {
         const fromSlotId = data.slotId as string;
         if (overId?.startsWith("frame:")) {
           moveTile(fromSlotId, overId);
+          emitTilePlaced(overId);
           if (soundEnabled) playSound("snap");
         } else {
           removeTile(fromSlotId);
@@ -118,6 +120,7 @@ export function DndProvider({ children, onOverSlotChange }: DndProviderProps) {
       if (overId?.startsWith("frame:") && pieceId) {
         const setId = pieceId.split(":")[0];
         placeTile(overId, pieceId, setId);
+        emitTilePlaced(overId);
         if (soundEnabled) playSound("snap");
       }
     },

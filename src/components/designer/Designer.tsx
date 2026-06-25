@@ -262,6 +262,21 @@ export function Designer() {
 
             {/* Frame canvas */}
             <div className="relative">
+              {/* Ambient festivity: two faint, slow twinkles drifting near the
+                  frame's corners — decorative UI chrome only (aria-hidden,
+                  pointer-events off), deliberately subtle and offset in time so
+                  they never compete with the design canvas. Hidden entirely under
+                  reduced motion (the global block freezes the keyframes). */}
+              <span
+                aria-hidden="true"
+                className="ff-twinkle motion-reduce:hidden"
+                style={{ top: "-6px", left: "8%", animationDelay: "1.2s" }}
+              />
+              <span
+                aria-hidden="true"
+                className="ff-twinkle motion-reduce:hidden"
+                style={{ bottom: "-6px", right: "12%", animationDelay: "3.6s", color: "rgba(63,176,230,0.5)" }}
+              />
               <FrameCanvas
                 ref={canvasRef}
                 frameConfig={frameConfig}

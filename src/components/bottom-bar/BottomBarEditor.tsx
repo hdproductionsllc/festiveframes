@@ -250,9 +250,9 @@ export function BottomBarEditor() {
                     key={s}
                     type="button"
                     onClick={() => setCfg({ text: s })}
-                    className={`rounded-full border-2 px-2.5 py-1 text-[12px] font-bold transition-all active:scale-95
+                    className={`rounded-full border-2 px-2.5 py-1 text-[12px] font-bold transition-all active:scale-95 motion-safe:hover:-translate-y-0.5
                       ${active
-                        ? "border-[#1e1b17] bg-[#ed5aa0] text-white"
+                        ? "border-[#1e1b17] bg-[#ed5aa0] text-white shadow-[2px_2px_0_#1e1b17]"
                         : "border-[#1e1b17]/15 bg-white text-[#1e1b17] hover:border-[#ed5aa0] hover:bg-[#ed5aa0]/10"}`}
                   >
                     {s}

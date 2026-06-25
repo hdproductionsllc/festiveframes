@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { track } from "@/lib/analytics";
+import { celebrateWelcome } from "@/lib/utils/celebrate";
 import { CoachmarkTour, type TourStep } from "./CoachmarkTour";
 
 const STORAGE_KEY = "ff:onboarding:build:v2";
@@ -101,6 +102,9 @@ export function OnboardingPopup() {
     if (!seen) {
       previouslyFocused.current = document.activeElement as HTMLElement | null;
       setOpen(true);
+      // First-run flourish: a small, festive confetti pop so onboarding feels
+      // fun (no-op under reduced motion; auto-cleans its own canvas).
+      celebrateWelcome();
     }
   }, []);
 
@@ -208,7 +212,7 @@ export function OnboardingPopup() {
         </button>
 
         <h2 id="ff-onboarding-title" className="pr-8 text-xl font-bold text-surface-50">
-          Welcome to the Builder 🎆
+          Welcome to the Builder <span className="ff-wiggle">🎆</span>
         </h2>
         <p className="mt-3 text-sm leading-relaxed text-surface-300">
           Building your 4th-of-July plate frame takes about a minute. Want a quick
