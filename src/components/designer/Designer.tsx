@@ -253,7 +253,7 @@ export function Designer() {
           <TilePalette />
 
           {/* Main content area — sticky on desktop so it follows scroll */}
-          <div className="flex-1 flex flex-col gap-4 min-w-0 md:sticky md:top-4 md:self-start">
+          <div className="flex-1 flex flex-col gap-3 min-w-0 md:sticky md:top-4 md:self-start">
             {/* State selector */}
             <div className="flex items-center gap-2">
               <span className="text-xs text-surface-400">Your State:</span>

@@ -18,9 +18,13 @@ export function QuickActions() {
   const sfx = (name: SoundName) => { if (soundEnabled) playSound(name); };
 
   const handleFillAll = () => {
-    if (!selectedPieceId) return;
-    const setId = selectedPieceId.split(":")[0];
-    fillAll(selectedPieceId, setId);
+    // Prefer the user's selected tile; otherwise gracefully fall back to the
+    // active set's first piece so "Fill All" always does something obvious
+    // instead of silently no-op'ing.
+    const pieceId = selectedPieceId ?? pieces[0]?.id ?? null;
+    if (!pieceId) return;
+    const setId = pieceId.split(":")[0];
+    fillAll(pieceId, setId);
     sfx("cascade");
   };
 
@@ -37,8 +41,12 @@ export function QuickActions() {
       icon: "🪣",
       color: "bsk-blue",
       onClick: handleFillAll,
-      disabled: !selectedPieceId,
-      title: "Fill all slots with selected tile",
+      // Enabled as long as the set has tiles — uses your selected tile, or the
+      // set's first tile if you haven't picked one yet.
+      disabled: pieces.length === 0,
+      title: selectedPieceId
+        ? "Fill every slot with your selected tile"
+        : "Fill every slot with this set's first tile (tap a tile to choose)",
     },
     {
       label: "Random",

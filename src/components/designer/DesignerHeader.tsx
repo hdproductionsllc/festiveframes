@@ -103,16 +103,26 @@ export function DesignerHeader({ onExport, onExportParts, onOrder, ordering }: D
             Parts ⚙
           </button>
         )}
-        {/* Primary call to action: place the made-to-order frame order. */}
-        <button
-          data-tour="order"
-          onClick={onOrder}
-          disabled={!hasDesign || ordering}
-          className="rounded-full border-2 border-[#1e1b17] bg-[#f8c53b] px-6 py-2 text-sm font-extrabold uppercase tracking-wide text-[#1e1b17]
-            shadow-[0_2px_0_#1e1b17] transition-all hover:brightness-105 active:translate-y-0.5 active:shadow-none disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          {ordering ? "Starting…" : "Order · $39"}
-        </button>
+        {/* Primary call to action: place the made-to-order frame order. When
+            it's disabled (empty frame) explain why via tooltip + a small hint so
+            the dead-looking button isn't a mystery. */}
+        <div className="relative flex flex-col items-end">
+          <button
+            data-tour="order"
+            onClick={onOrder}
+            disabled={!hasDesign || ordering}
+            title={hasDesign ? "Order your custom frame" : "Add at least one tile to your frame to order"}
+            className="rounded-full border-2 border-[#1e1b17] bg-[#f8c53b] px-6 py-2 text-sm font-extrabold uppercase tracking-wide text-[#1e1b17]
+              shadow-[0_2px_0_#1e1b17] transition-all hover:brightness-105 active:translate-y-0.5 active:shadow-none disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {ordering ? "Starting…" : "Order · $39"}
+          </button>
+          {!hasDesign && (
+            <span className="pointer-events-none absolute top-full mt-1 whitespace-nowrap text-[10px] font-semibold text-[#f8c53b]/90">
+              Add a tile to order
+            </span>
+          )}
+        </div>
       </div>
     </header>
   );

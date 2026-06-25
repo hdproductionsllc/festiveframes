@@ -63,7 +63,11 @@ function PlacedBar({
         height: rect.height,
         touchAction: "none",
         zIndex: selected ? 2 : 1,
-        boxShadow: selected ? "0 0 0 2px #FFD700" : undefined,
+        // Selected bar gets a bold gold ring + glow so the on-frame bar and the
+        // editor panel below read as the same object.
+        boxShadow: selected
+          ? "0 0 0 3px #f8c53b, 0 0 14px 2px rgba(248,197,59,0.55)"
+          : undefined,
         borderRadius: 3,
       }}
     >
