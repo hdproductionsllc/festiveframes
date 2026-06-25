@@ -41,11 +41,17 @@ export interface OrderEmailData {
   } | null;
 }
 
-const NAVY = "#1B2A4A";
-const NAVY_DEEP = "#0F1B33";
-const CREAM = "#F4ECD8";
-const RED = "#C8102E";
-const INK = "#14213A";
+// Cartoon sticker palette (matches the homepage + transactional emails).
+const PAGE = "#fff9ec"; // warm cream page background
+const CARD = "#faf0d6"; // card background
+const INK = "#1e1b17"; // text + borders
+const GOLD = "#f8c53b"; // header accent
+const PINK = "#ed5aa0"; // primary accent
+const BLUE = "#3fb0e6"; // secondary accent
+const RED = "#C8102E"; // alert/attention accent
+const SHADOW = "5px 5px 0 #1e1b17"; // signature hard offset shadow
+const DISPLAY_FONT = "'Fredoka', 'Arial Black', Helvetica, Arial, sans-serif";
+const BODY_FONT = "Helvetica, Arial, sans-serif";
 
 function usd(cents: number): string {
   return `$${(cents / 100).toFixed(2)}`;
@@ -56,10 +62,10 @@ function itemRows(items: OrderItem[]): string {
     .map(
       (i) => `
       <tr>
-        <td style="padding:8px 0;border-bottom:1px solid #e4d7b6;color:${INK};font-size:14px;">
+        <td style="padding:8px 0;border-bottom:2px solid ${INK};color:${INK};font-size:14px;">
           ${i.quantity} &times; ${escapeHtml(i.name)}
         </td>
-        <td style="padding:8px 0;border-bottom:1px solid #e4d7b6;color:${INK};font-size:14px;text-align:right;white-space:nowrap;">
+        <td style="padding:8px 0;border-bottom:2px solid ${INK};color:${INK};font-size:14px;text-align:right;white-space:nowrap;">
           ${usd(i.amountCents)}
         </td>
       </tr>`,
@@ -93,15 +99,15 @@ function fulfillmentBlock(o: OrderEmailData): string {
 
 function shell(headline: string, inner: string): string {
   return `
-  <div style="background:${CREAM};padding:24px 0;font-family:Arial,Helvetica,sans-serif;">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;margin:0 auto;">
-      <tr><td style="background:${NAVY_DEEP};border-radius:10px 10px 0 0;padding:20px 24px;text-align:center;">
-        <span style="color:${CREAM};font-size:22px;font-weight:bold;letter-spacing:2px;text-transform:uppercase;">Festive Frames</span>
+  <div style="background:${PAGE};padding:28px 12px;font-family:${BODY_FONT};">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;margin:0 auto;">
+      <tr><td style="background:${GOLD};border:3px solid ${INK};border-radius:18px 18px 0 0;padding:20px 24px;text-align:center;box-shadow:${SHADOW};">
+        <span style="color:${INK};font-size:26px;font-weight:bold;letter-spacing:0.5px;font-family:${DISPLAY_FONT};">Festive Frames</span>
       </td></tr>
-      <tr><td style="background:#FAF3E1;border:1px solid #e4d7b6;border-top:none;border-radius:0 0 10px 10px;padding:24px;">
-        <h1 style="margin:0 0 12px;color:${NAVY};font-size:20px;">${escapeHtml(headline)}</h1>
+      <tr><td style="background:${CARD};border:3px solid ${INK};border-top:none;border-radius:0 0 18px 18px;padding:26px 24px;box-shadow:${SHADOW};">
+        <h1 style="margin:0 0 14px;color:${INK};font-size:22px;font-weight:bold;font-family:${DISPLAY_FONT};">${escapeHtml(headline)}</h1>
         ${inner}
-        <p style="margin:20px 0 0;color:${INK};font-size:12px;opacity:0.7;">Questions? Reply to this email or reach us at hello@festiveframes.co. Made in the USA, St. Louis, Missouri.</p>
+        <p style="margin:22px 0 0;color:${INK};font-size:12px;line-height:1.5;">Questions? Reply to this email or reach us at hello@festiveframes.co. Made in the USA, St. Louis, Missouri.</p>
       </td></tr>
     </table>
   </div>`;
@@ -116,11 +122,11 @@ function customerHtml(o: OrderEmailData): string {
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
       ${itemRows(o.items)}
       <tr>
-        <td style="padding:10px 0 0;color:${NAVY};font-size:15px;font-weight:bold;">Total</td>
-        <td style="padding:10px 0 0;color:${NAVY};font-size:15px;font-weight:bold;text-align:right;">${usd(o.totalCents)}</td>
+        <td style="padding:10px 0 0;color:${PINK};font-size:16px;font-weight:bold;font-family:${DISPLAY_FONT};">Total</td>
+        <td style="padding:10px 0 0;color:${PINK};font-size:16px;font-weight:bold;text-align:right;font-family:${DISPLAY_FONT};">${usd(o.totalCents)}</td>
       </tr>
     </table>
-    <div style="margin:18px 0 0;padding:14px 16px;background:${CREAM};border-radius:8px;">
+    <div style="margin:20px 0 0;padding:14px 16px;background:${PAGE};border:3px solid ${INK};border-radius:14px;box-shadow:${SHADOW};">
       ${fulfillmentBlock(o)}
     </div>`,
   );
@@ -137,12 +143,12 @@ function adminHtml(o: OrderEmailData): string {
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
       ${itemRows(o.items)}
       <tr>
-        <td style="padding:10px 0 0;color:${NAVY};font-size:15px;font-weight:bold;">Total</td>
-        <td style="padding:10px 0 0;color:${NAVY};font-size:15px;font-weight:bold;text-align:right;">${usd(o.totalCents)}</td>
+        <td style="padding:10px 0 0;color:${PINK};font-size:16px;font-weight:bold;font-family:${DISPLAY_FONT};">Total</td>
+        <td style="padding:10px 0 0;color:${PINK};font-size:16px;font-weight:bold;text-align:right;font-family:${DISPLAY_FONT};">${usd(o.totalCents)}</td>
       </tr>
     </table>
-    <div style="margin:18px 0 0;padding:14px 16px;background:${CREAM};border-radius:8px;">
-      <p style="margin:0 0 6px;color:${RED};font-size:13px;font-weight:bold;text-transform:uppercase;">Fulfillment</p>
+    <div style="margin:20px 0 0;padding:14px 16px;background:${PAGE};border:3px solid ${INK};border-radius:14px;box-shadow:${SHADOW};">
+      <p style="margin:0 0 8px;display:inline-block;padding:5px 12px;background:${RED};color:${PAGE};font-size:12px;font-weight:bold;text-transform:uppercase;border:3px solid ${INK};border-radius:99px;">Fulfillment</p>
       ${fulfillmentBlock(o)}
     </div>`,
   );
@@ -220,9 +226,9 @@ export async function sendReviewEmail(r: ReviewSubmission): Promise<void> {
       subject: `New review (${r.rating}/5) from ${r.name}`,
       html: shell(
         `New review - ${stars}`,
-        `<p style="margin:0 0 8px;color:${NAVY};font-size:15px;font-weight:bold;">${escapeHtml(r.name)}</p>
-         <blockquote style="margin:0;color:${INK};font-size:14px;line-height:1.6;font-style:italic;">&ldquo;${escapeHtml(r.body)}&rdquo;</blockquote>
-         <p style="margin:16px 0 0;color:${INK};font-size:12px;opacity:0.7;">Verify this is genuine, then add it to src/content/copy.ts (home.reviews) to publish.</p>`,
+        `<p style="margin:0 0 8px;color:${PINK};font-size:16px;font-weight:bold;font-family:${DISPLAY_FONT};">${escapeHtml(r.name)}</p>
+         <blockquote style="margin:0;padding:12px 16px;background:${PAGE};border:3px solid ${INK};border-radius:14px;box-shadow:${SHADOW};color:${INK};font-size:14px;line-height:1.6;font-style:italic;">&ldquo;${escapeHtml(r.body)}&rdquo;</blockquote>
+         <p style="margin:16px 0 0;color:${INK};font-size:12px;">Verify this is genuine, then add it to src/content/copy.ts (home.reviews) to publish.</p>`,
       ),
     });
   } catch (err) {
@@ -261,8 +267,8 @@ export async function sendContactEmail(c: ContactSubmission): Promise<void> {
         `<p style="margin:0 0 8px;color:${INK};font-size:13px;">
            <strong>From:</strong> ${escapeHtml(c.name)} &lt;${escapeHtml(c.email)}&gt;
          </p>
-         <div style="margin:14px 0 0;padding:14px 16px;background:${CREAM};border-radius:8px;">
-           <p style="margin:0 0 6px;color:${RED};font-size:13px;font-weight:bold;text-transform:uppercase;">What they're celebrating</p>
+         <div style="margin:14px 0 0;padding:14px 16px;background:${PAGE};border:3px solid ${INK};border-radius:14px;box-shadow:${SHADOW};">
+           <p style="margin:0 0 8px;display:inline-block;padding:5px 12px;background:${BLUE};color:${INK};font-size:12px;font-weight:bold;text-transform:uppercase;border:3px solid ${INK};border-radius:99px;">What they're celebrating</p>
            <p style="margin:0;color:${INK};font-size:14px;line-height:1.6;white-space:pre-wrap;">${escapeHtml(c.message)}</p>
          </div>`,
       ),

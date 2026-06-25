@@ -21,11 +21,17 @@
 import { Resend } from "resend";
 import { partsListCsv, partsListHtml, type PartsList } from "@/lib/order/parts-list";
 
-const NAVY = "#1B2A4A";
-const NAVY_DEEP = "#0F1B33";
-const CREAM = "#F4ECD8";
-const RED = "#C8102E";
-const INK = "#14213A";
+// Cartoon sticker palette (matches the homepage).
+const PAGE = "#fff9ec"; // warm cream page background
+const CARD = "#faf0d6"; // card background
+const INK = "#1e1b17"; // text + borders
+const GOLD = "#f8c53b"; // header accent
+const PINK = "#ed5aa0"; // primary accent
+const BLUE = "#3fb0e6"; // secondary accent
+const RED = "#C8102E"; // alert/attention accent
+const SHADOW = "5px 5px 0 #1e1b17"; // signature hard offset shadow
+const DISPLAY_FONT = "'Fredoka', 'Arial Black', Helvetica, Arial, sans-serif";
+const BODY_FONT = "Helvetica, Arial, sans-serif";
 
 export interface NamedImage {
   /** Filename without extension, e.g. "eufy-sheet-1-of-2". */
@@ -60,15 +66,15 @@ function usd(cents: number): string {
 
 function shell(headline: string, inner: string): string {
   return `
-  <div style="background:${CREAM};padding:24px 0;font-family:Arial,Helvetica,sans-serif;">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;margin:0 auto;">
-      <tr><td style="background:${NAVY_DEEP};border-radius:10px 10px 0 0;padding:20px 24px;text-align:center;">
-        <span style="color:${CREAM};font-size:22px;font-weight:bold;letter-spacing:2px;text-transform:uppercase;">Festive Frames</span>
+  <div style="background:${PAGE};padding:28px 12px;font-family:${BODY_FONT};">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;margin:0 auto;">
+      <tr><td style="background:${GOLD};border:3px solid ${INK};border-radius:18px 18px 0 0;padding:20px 24px;text-align:center;box-shadow:${SHADOW};">
+        <span style="color:${INK};font-size:26px;font-weight:bold;letter-spacing:0.5px;font-family:${DISPLAY_FONT};">Festive Frames</span>
       </td></tr>
-      <tr><td style="background:#FAF3E1;border:1px solid #e4d7b6;border-top:none;border-radius:0 0 10px 10px;padding:24px;">
-        <h1 style="margin:0 0 12px;color:${NAVY};font-size:20px;">${esc(headline)}</h1>
+      <tr><td style="background:${CARD};border:3px solid ${INK};border-top:none;border-radius:0 0 18px 18px;padding:26px 24px;box-shadow:${SHADOW};">
+        <h1 style="margin:0 0 14px;color:${INK};font-size:22px;font-weight:bold;font-family:${DISPLAY_FONT};">${esc(headline)}</h1>
         ${inner}
-        <p style="margin:20px 0 0;color:${INK};font-size:12px;opacity:0.7;">Made to order in the USA · St. Louis, Missouri. Questions? Reach a real human at hello@festiveframes.co.</p>
+        <p style="margin:22px 0 0;color:${INK};font-size:12px;line-height:1.5;">Made to order in the USA &middot; St. Louis, Missouri. Questions? Reach a real human at hello@festiveframes.co.</p>
       </td></tr>
     </table>
   </div>`;
@@ -89,8 +95,8 @@ function shippingBlock(lines: string[]): string {
 }
 
 const FOUNDERS_THANK_YOU = `
-  <div style="margin:18px 0 0;padding:16px 18px;background:${CREAM};border-radius:8px;">
-    <p style="margin:0 0 8px;color:${NAVY};font-size:15px;font-weight:bold;">A thank-you from the founders</p>
+  <div style="margin:20px 0 0;padding:16px 18px;background:${PAGE};border:3px solid ${INK};border-radius:14px;box-shadow:${SHADOW};">
+    <p style="margin:0 0 8px;color:${PINK};font-size:16px;font-weight:bold;font-family:${DISPLAY_FONT};">A thank-you from the founders</p>
     <p style="margin:0;color:${INK};font-size:14px;line-height:1.6;">
       Every frame is made to order, by hand, right here in the USA — and yours is now in our shop.
       Thank you for flying your colors with us. We can't wait for you to see it on your car.
@@ -109,7 +115,7 @@ function productionHtml(o: ProductionOrderInput): string {
   return shell(
     `Production order — ${esc(o.parts.designName || "Custom frame")}`,
     `
-    <p style="margin:0 0 8px;color:${RED};font-size:13px;font-weight:bold;text-transform:uppercase;">New paid order · ${usd(o.amountTotalCents)}</p>
+    <p style="margin:0 0 14px;display:inline-block;padding:6px 14px;background:${RED};color:${PAGE};font-size:13px;font-weight:bold;text-transform:uppercase;border:3px solid ${INK};border-radius:99px;">New paid order · ${usd(o.amountTotalCents)}</p>
     <p style="margin:0 0 8px;color:${INK};font-size:13px;">
       <strong>Order:</strong> ${esc(o.orderId)}<br/>
       <strong>Stripe:</strong> ${esc(o.sessionId)}<br/>
@@ -118,7 +124,7 @@ function productionHtml(o: ProductionOrderInput): string {
     </p>
     <p style="margin:0 0 12px;color:${INK};font-size:13px;"><strong>Bill — attached for the eufy:</strong> ${esc(fileList)}.</p>
     ${partsListHtml(o.parts)}
-    <div style="margin:16px 0 0;padding:14px 16px;background:${CREAM};border-radius:8px;">${shippingBlock(o.shippingLines)}</div>`,
+    <div style="margin:18px 0 0;padding:14px 16px;background:${PAGE};border:3px solid ${INK};border-radius:14px;box-shadow:${SHADOW};">${shippingBlock(o.shippingLines)}</div>`,
   );
 }
 
@@ -178,7 +184,7 @@ function customerText(o: ProductionOrderInput): string {
 
 function customerHtml(o: ProductionOrderInput): string {
   const first = o.customerName ? `, ${esc(o.customerName.split(" ")[0])}` : "";
-  const proofImg = o.proof ? `<div style="margin:16px 0;text-align:center;"><img src="cid:proof" alt="Your frame proof" style="max-width:100%;border:1px solid #e4d7b6;border-radius:8px;"/></div>` : "";
+  const proofImg = o.proof ? `<div style="margin:18px 0;text-align:center;"><img src="cid:proof" alt="Your frame proof" style="max-width:100%;border:3px solid ${INK};border-radius:14px;box-shadow:${SHADOW};"/></div>` : "";
   return shell(
     `You're in${first}! 🎆`,
     `
@@ -187,8 +193,8 @@ function customerHtml(o: ProductionOrderInput): string {
       license-plate frame you designed:
     </p>
     ${proofImg}
-    <p style="margin:0 0 4px;color:${INK};font-size:14px;"><strong>Order:</strong> ${esc(o.orderId)} · <strong>Total:</strong> ${usd(o.amountTotalCents)}</p>
-    <div style="margin:14px 0 0;padding:12px 14px;background:${CREAM};border-radius:8px;">${shippingBlock(o.shippingLines)}</div>
+    <p style="margin:0 0 4px;padding-left:12px;border-left:5px solid ${BLUE};color:${INK};font-size:14px;"><strong>Order:</strong> ${esc(o.orderId)} · <strong>Total:</strong> ${usd(o.amountTotalCents)}</p>
+    <div style="margin:16px 0 0;padding:14px 16px;background:${PAGE};border:3px solid ${INK};border-radius:14px;box-shadow:${SHADOW};">${shippingBlock(o.shippingLines)}</div>
     ${FOUNDERS_THANK_YOU}`,
   );
 }
