@@ -89,9 +89,8 @@ export function RailSlot({ slot, placedTile, isOver }: RailSlotProps) {
             style={{
               width: slot.width - inset * 2,
               height: slot.height - inset * 2,
-              background: "rgba(0,0,0,0.3)",
-              boxShadow: "inset 0 2px 4px rgba(0,0,0,0.5), inset 0 -1px 1px rgba(255,255,255,0.03)",
-              border: "1px solid rgba(0,0,0,0.4)",
+              background: "transparent",
+              border: "1px solid transparent",
             }}
           />
         </div>

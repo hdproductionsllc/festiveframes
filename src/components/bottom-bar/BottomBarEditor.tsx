@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef } from "react";
 import { useDraggable } from "@dnd-kit/core";
 import { useDesignStore } from "@/stores/design-store";
 import { BOTTOM_BAR_MAX_CHARS } from "@/lib/constants/frame";
@@ -9,14 +10,15 @@ import { ColorPicker } from "@/components/ui/ColorPicker";
 import type { BottomBarConfig, PlacedTextBar } from "@/lib/types";
 
 /**
- * TEXT-BAR EDITOR — direct manipulation.
+ * TEXT-BAR EDITOR — built the way a person thinks: "I'll write my phrase (or tap
+ * a ready-made one) and it shows up on my frame."
  *
- * Model: there is no visible "draft." You either have NO bars (empty state with
- * one big "Add a text bar" call to action) or you have bars and are editing the
- * SELECTED one live. If you start typing / styling with nothing selected, a bar
- * is auto-created + selected for you so your change is immediately visible on the
- * frame. Drag-to-place is kept as a clearly-labeled secondary way to choose the
- * exact top/bottom spot.
+ * The text field + slogan chips ARE the entry point. Typing a character or
+ * tapping a slogan creates the bar on the frame instantly and starts editing it
+ * live — no separate "add" step, no invisible draft. The text input is ALWAYS
+ * mounted in the same spot, so creating the bar never steals your focus mid-type.
+ * Styling (font / colors / size) reveals once you've started. Drag-to-place stays
+ * as a clearly-secondary way to drop a bar on an exact top/bottom run.
  */
 
 /* ── Drag handle: drop a bar onto a precise top/bottom run ─────────────────── */
@@ -33,29 +35,15 @@ function DragToPlace({ label }: { label: string }) {
       ref={setNodeRef}
       {...attributes}
       {...listeners}
-      // Drag only — a plain click is handled by the primary "Add" button, so we
-      // intentionally do NOT add a bar on click here (avoids a confusing double
-      // add when the user just taps the drag handle).
       title="Drag me onto the top or bottom of the frame to place a bar exactly"
       className={`flex w-full items-center gap-2.5 rounded-xl border-2 border-dashed border-[#1e1b17]/30
-        bg-white/60 px-3 py-2.5 text-left cursor-grab active:cursor-grabbing
-        transition-all hover:bg-white active:scale-[0.99]
+        bg-white/50 px-3 py-2 text-left cursor-grab active:cursor-grabbing
+        transition-all hover:bg-white/80 active:scale-[0.99]
         focus:outline-none focus-visible:ring-2 focus-visible:ring-[#ed5aa0]
         ${isDragging ? "opacity-50" : ""}`}
     >
-      <span className="select-none text-lg leading-none text-[#1e1b17]/50" aria-hidden>⠿</span>
-      <div className="flex min-w-0 flex-col">
-        <span className="text-[13px] font-bold text-[#1e1b17]">{label}</span>
-        <span className="text-[11px] font-medium text-[#1e1b17]/55">Drag onto the top or bottom row</span>
-      </div>
-      <div className="ml-auto overflow-hidden rounded-[4px] px-2 py-1" style={{ background: bottomBar.backgroundColor }}>
-        <span
-          className="block max-w-[110px] truncate text-xs font-bold"
-          style={{ fontFamily: bottomBar.fontFamily, color: bottomBar.textColor, letterSpacing: bottomBar.letterSpacing }}
-        >
-          {bottomBar.text || "YOUR TEXT"}
-        </span>
-      </div>
+      <span className="select-none text-base leading-none text-[#1e1b17]/45" aria-hidden>⠿</span>
+      <span className="text-[12px] font-semibold text-[#1e1b17]/65">{label}</span>
     </button>
   );
 }
@@ -82,7 +70,6 @@ function BarRow({
           ? "border-[#1e1b17] bg-white shadow-[2px_2px_0_#1e1b17]"
           : "border-transparent bg-white/55 hover:bg-white/80"}`}
     >
-      {/* Live mini-swatch of the bar so the list reads like the frame */}
       <div
         className="flex h-7 w-12 shrink-0 items-center justify-center overflow-hidden rounded-[4px] border border-[#1e1b17]/20"
         style={{ background: bar.config.backgroundColor }}
@@ -140,33 +127,38 @@ export function BottomBarEditor() {
   const updateTextBar = useDesignStore((s) => s.updateTextBar);
   const addTextBar = useDesignStore((s) => s.addTextBar);
 
-  // The bar being edited: the explicitly-selected one, else (so the controls are
-  // never editing "nothing" while bars exist) the most recently added bar.
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // The bar being edited: the explicitly-selected one, else the most recent bar
+  // (so the controls are never editing "nothing" while bars exist).
   const selected: PlacedTextBar | null =
     textBars.find((b) => b.id === selectedBarId) ?? textBars[textBars.length - 1] ?? null;
   const cfg = selected ? selected.config : bottomBar;
   const hasBars = textBars.length > 0;
 
   /**
-   * The heart of direct manipulation: any styling/text change applies to the
-   * selected bar LIVE. With no bar yet, the first change auto-creates + selects
-   * one (via the store, which also selects it) so the user sees their edit land
-   * on the frame instantly — no invisible draft to reason about.
+   * Any text/style change applies to the selected bar live. With no bar yet, the
+   * FIRST change seeds the draft then creates+selects the bar — so a single
+   * keystroke or slogan tap makes the bar appear on the frame. The text input is
+   * the same element before and after, so focus survives the create.
    */
   const setCfg = (u: Partial<BottomBarConfig>) => {
     if (selected) {
       updateTextBar(selected.id, u);
       return;
     }
-    // No bar yet — seed the draft so the new bar is born with this change, then
-    // create + select it. addTextBar() copies the current draft into the bar.
     updateBottomBar(u);
     addTextBar();
   };
 
-  // Keep the panel pointed at a real bar: if the user clicks one on the frame it
-  // selects; if they delete the selected one, fall through to the newest bar.
-  const editingId = selected?.id ?? null;
+  // Start a fresh bar and drop the cursor in the field so you can just type.
+  const startAnotherBar = () => {
+    addTextBar();
+    requestAnimationFrame(() => {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    });
+  };
 
   return (
     <div className="bsk-panel-pink space-y-4 rounded-xl border border-surface-700/50 bg-surface-800/50 p-4">
@@ -181,101 +173,89 @@ export function BottomBarEditor() {
         )}
       </div>
 
-      {!hasBars ? (
-        /* ── EMPTY STATE — one obvious, inviting action ─────────────────── */
-        <div className="space-y-3">
-          <button
-            type="button"
-            onClick={() => addTextBar()}
-            className="flex w-full flex-col items-center gap-1 rounded-2xl border-[3px] border-dashed border-[#ed5aa0]
-              bg-white/70 px-4 py-6 text-center transition-all hover:bg-white active:scale-[0.99]
-              focus:outline-none focus-visible:ring-2 focus-visible:ring-[#ed5aa0]"
-          >
-            <span className="text-3xl leading-none">➕</span>
-            <span className="text-base font-extrabold uppercase tracking-wide text-[#ed5aa0]">Add a text bar</span>
-            <span className="text-[12px] font-semibold text-[#1e1b17]/65">
-              Add a slogan or message — then style it right here
-            </span>
-          </button>
-          <DragToPlace label="Want to choose the spot?" />
-        </div>
-      ) : (
-        <>
-          {/* Placed bars list — tap to edit, icon to remove */}
+      {/* Placed-bars list + "add another" (only once bars exist). Kept as a single
+          child slot so the editor card below stays put and never remounts. */}
+      {hasBars && (
+        <div className="space-y-2">
           <ul className="space-y-1.5">
             {textBars.map((b, i) => (
               <BarRow
                 key={b.id}
                 bar={b}
                 index={i}
-                selected={b.id === editingId}
+                selected={b.id === (selected?.id ?? null)}
                 onSelect={() => selectBar(b.id)}
                 onRemove={() => removeTextBar(b.id)}
               />
             ))}
           </ul>
+          <button
+            type="button"
+            onClick={startAnotherBar}
+            className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-[#1e1b17]/15
+              bg-white/55 px-3 py-2 text-sm font-bold text-[#1e1b17] transition-all hover:bg-white
+              focus:outline-none focus-visible:ring-2 focus-visible:ring-[#ed5aa0]"
+          >
+            <span aria-hidden>＋</span> Add another bar
+          </button>
+        </div>
+      )}
 
-          {/* Add another */}
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            <button
-              type="button"
-              onClick={() => addTextBar()}
-              className="flex items-center justify-center gap-2 rounded-xl border-2 border-[#ed5aa0] bg-[#ed5aa0]
-                px-3 py-2.5 text-sm font-extrabold uppercase tracking-wide text-white shadow-[2px_2px_0_#1e1b17]
-                transition-all hover:brightness-105 active:translate-y-0.5 active:shadow-none
-                focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1e1b17]"
-            >
-              <span aria-hidden>＋</span> Add another bar
-            </button>
-            <DragToPlace label="Place precisely" />
+      {/* Editor card — ALWAYS rendered. When there are no bars this IS the entry
+          point: type or tap a slogan and the bar appears on your frame. */}
+      <div className="space-y-4 rounded-2xl border-2 border-[#1e1b17] bg-white/70 p-3.5 shadow-[3px_3px_0_#1e1b17]">
+        <p className="text-[12px] font-bold uppercase tracking-wide text-[#ed5aa0]">
+          {hasBars ? `Editing the ${selected?.row === "top" ? "top" : "bottom"} bar` : "Add a phrase to your frame"}
+        </p>
+
+        {/* 1 · Type your phrase */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wide text-[#1e1b17]/70">Your text</span>
+            <span className="text-[10px] font-semibold text-[#1e1b17]/45">
+              {cfg.text.length}/{BOTTOM_BAR_MAX_CHARS}
+            </span>
           </div>
+          <input
+            ref={inputRef}
+            type="text"
+            value={cfg.text}
+            onChange={(e) => setCfg({ text: e.target.value.toUpperCase().slice(0, BOTTOM_BAR_MAX_CHARS) })}
+            maxLength={BOTTOM_BAR_MAX_CHARS}
+            placeholder="Type your phrase…"
+            className="w-full rounded-lg border-2 border-[#1e1b17]/15 bg-white px-3 py-2.5 text-base font-bold
+              text-[#1e1b17] placeholder:text-[#1e1b17]/35 focus:border-[#ed5aa0] focus:outline-none"
+          />
 
-          {/* ── Editor for the selected bar ──────────────────────────────── */}
-          <div className="space-y-4 rounded-2xl border-2 border-[#1e1b17] bg-white/70 p-3.5 shadow-[3px_3px_0_#1e1b17]">
-            <p className="text-[12px] font-bold uppercase tracking-wide text-[#ed5aa0]">
-              Editing the {selected?.row === "top" ? "top" : "bottom"} bar
-            </p>
-
-            {/* 1 · Text */}
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wide text-[#1e1b17]/70">Text</span>
-                <span className="text-[10px] font-semibold text-[#1e1b17]/45">
-                  {cfg.text.length}/{BOTTOM_BAR_MAX_CHARS}
-                </span>
-              </div>
-              <input
-                type="text"
-                value={cfg.text}
-                onChange={(e) => setCfg({ text: e.target.value.toUpperCase().slice(0, BOTTOM_BAR_MAX_CHARS) })}
-                maxLength={BOTTOM_BAR_MAX_CHARS}
-                placeholder="YOUR TEXT HERE"
-                className="w-full rounded-lg border-2 border-[#1e1b17]/15 bg-white px-3 py-2.5 text-sm font-semibold
-                  text-[#1e1b17] placeholder:text-[#1e1b17]/35
-                  focus:border-[#ed5aa0] focus:outline-none"
-              />
-              {/* Slogan quick-fill */}
-              <select
-                value=""
-                onChange={(e) => {
-                  if (e.target.value) setCfg({ text: e.target.value });
-                }}
-                className="w-full rounded-lg border-2 border-[#1e1b17]/15 bg-white px-3 py-2 text-sm
-                  text-[#1e1b17] focus:border-[#ed5aa0] focus:outline-none"
-              >
-                <option value="">Quick-fill a 4th of July slogan…</option>
-                {JULY4_SLOGANS.map((s) => (
-                  <option key={s} value={s}>
+          {/* Slogan chips — one tap fills (and creates) the bar. */}
+          <div>
+            <span className="text-[11px] font-semibold text-[#1e1b17]/55">Or tap a ready-made one:</span>
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
+              {JULY4_SLOGANS.map((s) => {
+                const active = cfg.text === s;
+                return (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => setCfg({ text: s })}
+                    className={`rounded-full border-2 px-2.5 py-1 text-[12px] font-bold transition-all active:scale-95
+                      ${active
+                        ? "border-[#1e1b17] bg-[#ed5aa0] text-white"
+                        : "border-[#1e1b17]/15 bg-white text-[#1e1b17] hover:border-[#ed5aa0] hover:bg-[#ed5aa0]/10"}`}
+                  >
                     {s}
-                  </option>
-                ))}
-              </select>
+                  </button>
+                );
+              })}
             </div>
+          </div>
+        </div>
 
-            {/* 2 · Font */}
+        {/* Style controls appear once there's a bar to style. */}
+        {hasBars && (
+          <>
             <FontSelector value={cfg.fontFamily} onChange={(fontFamily) => setCfg({ fontFamily })} />
 
-            {/* 3 · Colors */}
             <div className="space-y-1.5">
               <span className="text-xs font-bold uppercase tracking-wide text-[#1e1b17]/70">Colors</span>
               <div className="flex gap-4">
@@ -284,12 +264,11 @@ export function BottomBarEditor() {
               </div>
             </div>
 
-            {/* 4 · Size */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold uppercase tracking-wide text-[#1e1b17]/70">Text Size</span>
                 <span className="text-xs font-semibold tabular-nums text-[#1e1b17]/70">
-                  {Math.round((cfg.fontSize ?? 0.8) * 100)}%
+                  {Math.round((cfg.fontSize ?? 0.85) * 100)}%
                 </span>
               </div>
               <input
@@ -297,7 +276,7 @@ export function BottomBarEditor() {
                 min={40}
                 max={100}
                 step={1}
-                value={Math.round((cfg.fontSize ?? 0.8) * 100)}
+                value={Math.round((cfg.fontSize ?? 0.85) * 100)}
                 onChange={(e) => setCfg({ fontSize: Number(e.target.value) / 100 })}
                 className="w-full h-1.5 cursor-pointer appearance-none rounded-full bg-[#1e1b17]/15
                   [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:appearance-none
@@ -306,7 +285,6 @@ export function BottomBarEditor() {
               />
             </div>
 
-            {/* Letter spacing */}
             <PinkSlider
               label="Letter Spacing"
               value={cfg.letterSpacing}
@@ -320,15 +298,17 @@ export function BottomBarEditor() {
                 Your QR code rides on this bar — scan-to-shop, baked right in.
               </p>
             )}
-          </div>
-        </>
-      )}
+          </>
+        )}
+      </div>
+
+      {/* Secondary: drag to place on an exact run (only meaningful before/while adding). */}
+      <DragToPlace label="Prefer to place it yourself? Drag a bar onto the frame" />
     </div>
   );
 }
 
-/* Pink-skinned slider for the light editor card (the shared Slider is tuned for
-   the dark panels; this matches the editor's white card + pink accent). */
+/* Pink-skinned slider for the light editor card. */
 function PinkSlider({
   label,
   value,
