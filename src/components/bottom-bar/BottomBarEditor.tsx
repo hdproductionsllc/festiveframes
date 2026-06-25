@@ -39,20 +39,27 @@ function DragToPlace() {
         {...attributes}
         {...listeners}
         title="Grab and drag this bar onto the top or bottom of your frame"
-        className={`flex w-full items-center gap-2 rounded-xl border-2 border-dashed border-[#1e1b17]/40
-          bg-white/70 p-1.5 cursor-grab active:cursor-grabbing transition-all hover:bg-white active:scale-[0.99]
+        className={`flex w-full flex-col items-center gap-1.5 rounded-xl border-2 border-dashed border-[#1e1b17]/40
+          bg-white/70 p-2.5 cursor-grab active:cursor-grabbing transition-all hover:bg-white active:scale-[0.99]
           focus:outline-none focus-visible:ring-2 focus-visible:ring-[#ed5aa0] ${isDragging ? "opacity-50" : ""}`}
       >
-        <span className="select-none pl-1 text-lg leading-none text-[#1e1b17]/40" aria-hidden>⠿</span>
-        <div className="flex-1 overflow-hidden rounded-[4px] px-2 py-1.5" style={{ background: bottomBar.backgroundColor }}>
+        {/* A representative banner pill: one tile tall and only as wide as its
+            text needs — a long, short bar (not the full panel width), so the
+            handle reads as "this is the shape that lands on your frame." The grip
+            sits inside the pill on the left; the bar auto-sizes to the text. */}
+        <div
+          className="inline-flex max-w-full items-center gap-1.5 overflow-hidden rounded-[4px] px-2.5 py-1"
+          style={{ background: bottomBar.backgroundColor }}
+        >
+          <span className="select-none text-sm leading-none opacity-50" style={{ color: bottomBar.textColor }} aria-hidden>⠿</span>
           <span
-            className="block truncate text-center text-sm font-extrabold"
+            className="block truncate text-sm font-extrabold leading-tight"
             style={{ fontFamily: bottomBar.fontFamily, color: bottomBar.textColor, letterSpacing: bottomBar.letterSpacing }}
           >
             {bottomBar.text || "YOUR TEXT"}
           </span>
         </div>
-        <span className="shrink-0 rounded-full bg-[#1e1b17]/10 px-2 py-1 text-[10px] font-extrabold uppercase tracking-wide text-[#1e1b17]/60">
+        <span className="rounded-full bg-[#1e1b17]/10 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-[#1e1b17]/60">
           Drag &amp; drop
         </span>
       </button>

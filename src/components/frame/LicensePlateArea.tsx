@@ -58,7 +58,25 @@ export function LicensePlateArea({ x, y, width, height, plateState }: LicensePla
   const showImage = plateImageUrl && !imageFailed;
 
   return (
-    <div className="absolute" style={{ left: x, top: y, width, height }}>
+    <div
+      className="absolute"
+      style={{
+        left: x,
+        top: y,
+        width,
+        height,
+        // On-screen-only drop shadow so the plate reads as sitting INSIDE the
+        // frame with depth: a soft cast shadow below/around it, plus a tight
+        // contact shadow at the seam. Lives on this (non-clipping) wrapper so it
+        // isn't cut off by the plate's own overflow-hidden. NOT applied to the
+        // print/export render (compose-frame.ts), which draws the plate flat.
+        borderRadius: Math.max(3, width * 0.012),
+        boxShadow:
+          "0 6px 16px rgba(0,0,0,0.45), " +
+          "0 2px 5px rgba(0,0,0,0.35), " +
+          "0 1px 0 rgba(255,255,255,0.06)",
+      }}
+    >
       <div
         className="w-full h-full overflow-hidden relative"
         style={{

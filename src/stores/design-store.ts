@@ -632,16 +632,43 @@ export const useDesignStore = create<DesignState>()(
     },
     {
       name: "festive-frames-design-v5",
-      // NOTE: the design (slots, textBars) and the draft bar styling are NOT
-      // persisted — refreshing clears the design, reseeds a fresh random July
-      // 4th layout, and resets the bar to the loud default.
+      // Persist the FULL design so a reload restores exactly what the "Saved"
+      // indicator promises. History is intentionally NOT persisted (undo/redo is
+      // a within-session affordance, not a saved part of the design).
+      version: 6,
       partialize: (state) => ({
         designName: state.designName,
         plateState: state.plateState,
+        slots: state.slots,
+        textBars: state.textBars,
+        selectedBarId: state.selectedBarId,
+        qrCode: state.qrCode,
+        bottomBar: state.bottomBar,
         frameConfig: state.frameConfig,
         dieCut: state.dieCut,
         updatedAt: state.updatedAt,
       }),
+      // v6 is the first version to persist slots/textBars/qrCode/bottomBar. Any
+      // persisted blob from before v6 only ever carried meta (name/state/frame/
+      // dieCut) — it never held a real design — so dropping the design-shaped
+      // fields from an old blob is safe: they were absent anyway, and the seed
+      // logic will populate a fresh design for that (effectively design-less)
+      // user. Keep the meta fields so their name/state/frame survive the bump.
+      migrate: (persisted, version) => {
+        if (version < 6 && persisted && typeof persisted === "object") {
+          const old = persisted as Record<string, unknown>;
+          // Strip any pre-v6 design-shaped fields (there were none persisted
+          // before v6) and keep only the meta the old blob actually carried.
+          return {
+            designName: old.designName,
+            plateState: old.plateState,
+            frameConfig: old.frameConfig,
+            dieCut: old.dieCut,
+            updatedAt: old.updatedAt,
+          } as unknown as DesignState;
+        }
+        return persisted as DesignState;
+      },
       merge: (persisted, current) => {
         const merged = { ...current, ...(persisted as object) } as DesignState;
         const fc = merged.frameConfig;

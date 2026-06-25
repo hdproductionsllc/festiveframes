@@ -5,11 +5,35 @@ import { plateDesigns } from "@/data/plates";
 
 interface StateSelectorProps {
   compact?: boolean;
+  /** "header": dark header chrome styling (matches the designer header). */
+  theme?: "header";
 }
 
-export function StateSelector({ compact }: StateSelectorProps) {
+export function StateSelector({ compact, theme }: StateSelectorProps) {
   const plateState = useDesignStore((s) => s.plateState);
   const setPlateState = useDesignStore((s) => s.setPlateState);
+
+  if (theme === "header") {
+    return (
+      <select
+        aria-label="License plate state"
+        value={plateState}
+        onChange={(e) => setPlateState(e.target.value)}
+        className="px-2 py-1 rounded-md bg-[#2a2620] border border-[#faf0d6]/20
+          text-[#faf0d6] text-xs font-medium
+          focus:outline-none focus:border-[#f8c53b]/70 transition-colors
+          cursor-pointer appearance-none
+          bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%2212%22%20viewBox%3D%220%200%2012%2012%22%3E%3Cpath%20fill%3D%22%23faf0d6%22%20d%3D%22M6%208L1%203h10z%22%2F%3E%3C%2Fsvg%3E')]
+          bg-no-repeat bg-[right_0.5rem_center] pr-6"
+      >
+        {plateDesigns.map((plate) => (
+          <option key={plate.abbr} value={plate.abbr} className="bg-[#2a2620] text-[#faf0d6]">
+            {plate.state}
+          </option>
+        ))}
+      </select>
+    );
+  }
 
   if (compact) {
     return (

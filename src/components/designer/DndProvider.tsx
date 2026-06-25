@@ -176,7 +176,17 @@ export function DndProvider({ children, onOverSlotChange }: DndProviderProps) {
             </span>
           </div>
         ) : piece ? (
-          <div className="opacity-90 pointer-events-none">
+          // Plain, statically-positioned, tile-sized ghost. dnd-kit's overlay
+          // wrapper is the thing that follows the pointer (position:fixed); its
+          // child MUST NOT carry any absolute offset of its own (a placed tile's
+          // draggable is `position:absolute; left:0; top:0`, which would otherwise
+          // pin the ghost to the wrapper's corner). A relative, fixed-size box
+          // guarantees the ghost renders under the cursor for BOTH palette-tile
+          // and placed-tile drags.
+          <div
+            className="relative pointer-events-none opacity-90"
+            style={{ width: 48, height: 48 }}
+          >
             <PlacedTileView pieceId={piece.id} width={48} height={48} />
           </div>
         ) : null}

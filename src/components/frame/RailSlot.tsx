@@ -174,39 +174,55 @@ function PlacedTileCell({
 
   return (
     <div
-      ref={setNodeRef}
-      {...attributes}
-      {...listeners}
       data-tile-cell={slotId}
-      onClick={handleTileClick}
-      title="Drag to move · drag off the frame to remove"
-      className={`cursor-grab active:cursor-grabbing transition-transform duration-150
-        ${isDragging ? "opacity-40" : "hover:scale-[1.04]"}
-        ${poofing ? "animate-tile-poof" : landing ? "motion-safe:animate-tile-snap" : ""}
-        ${isOver ? "drop-target-glow" : ""}`}
       style={{
         position: "absolute",
         left: 0,
         top: 0,
         width,
         height,
-        touchAction: "none",
         zIndex: showRemove ? 3 : undefined,
       }}
     >
-      <PlacedTileView pieceId={pieceId} width={width} height={height} />
+      {/* Cream empty-cell surface painted BEHIND the tile. When the tile shrinks
+          and fades on removal (or while it's the drag source), what shows through
+          is the design-surface cream — never the black frame base (#111111). This
+          is the same surface the empty cell paints, so removal lands cleanly on
+          cream with no black flash. */}
+      <div
+        aria-hidden
+        className="absolute inset-0 rounded-[2px]"
+        style={{ background: "#faf0d6" }}
+      />
 
-      {/* Poof puff — a quick patriotic sparkle puff as the tile disappears. */}
-      {poofing && <SparkleBurst variant="poof" />}
+      <div
+        ref={setNodeRef}
+        {...attributes}
+        {...listeners}
+        onClick={handleTileClick}
+        title="Drag to move · drag off the frame to remove"
+        className={`absolute inset-0 cursor-grab active:cursor-grabbing transition-transform duration-150
+          ${isDragging ? "opacity-40" : "hover:scale-[1.04]"}
+          ${poofing ? "animate-tile-poof" : landing ? "motion-safe:animate-tile-snap" : ""}
+          ${isOver ? "drop-target-glow" : ""}`}
+        style={{ touchAction: "none" }}
+      >
+        <PlacedTileView pieceId={pieceId} width={width} height={height} />
 
-      {/* Touch fallback remove — a small, obvious ✕ revealed on tap. */}
+        {/* Poof puff — a quick patriotic sparkle puff as the tile disappears. */}
+        {poofing && <SparkleBurst variant="poof" />}
+      </div>
+
+      {/* Touch fallback remove — a small, obvious ✕ revealed on tap. Lives on the
+          outer wrapper (not the poofing tile) so it stays put and never shrinks
+          with the poof. */}
       {showRemove && (
         <button
           type="button"
           aria-label="Remove tile"
           onPointerDown={(e) => e.stopPropagation()}
           onClick={handleRemove}
-          className="absolute -right-1.5 -top-1.5 grid h-5 w-5 place-items-center rounded-full
+          className="absolute -right-1.5 -top-1.5 z-[4] grid h-5 w-5 place-items-center rounded-full
             border-2 border-[#1e1b17] bg-brand-red text-[11px] font-black leading-none text-white
             shadow-[1px_1px_0_#1e1b17] active:scale-90"
           style={{ touchAction: "manipulation" }}

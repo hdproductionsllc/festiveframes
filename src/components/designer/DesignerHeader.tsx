@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useDesignStore } from "@/stores/design-store";
 import { useUIStore } from "@/stores/ui-store";
 import { celebrateOrder } from "@/lib/utils/celebrate";
+import { StateSelector } from "@/components/frame/StateSelector";
 
 interface DesignerHeaderProps {
   onExport: () => void;
@@ -68,16 +69,28 @@ export function DesignerHeader({ onExport, onExportParts, onOrder, ordering }: D
             className="h-20 w-auto sm:h-28"
           />
         </a>
-        <div className="hidden sm:block h-6 w-px bg-[#faf0d6]/25" />
-        <input
-          type="text"
-          value={designName}
-          onChange={(e) => setDesignName(e.target.value)}
-          placeholder="Name your design"
-          className="hidden sm:block max-w-[200px] border-b border-transparent bg-transparent px-1 py-0.5
-            text-sm font-semibold text-[#faf0d6] placeholder:text-[#faf0d6]/45
-            transition-colors hover:border-[#faf0d6]/40 focus:border-[#f8c53b] focus:outline-none"
-        />
+        <div className="hidden sm:block h-10 w-px bg-[#faf0d6]/25" />
+        {/* Name + state stack: the design name on top, the State selector
+            directly beneath it. On mobile the name input is hidden (space), but
+            the State selector stays visible so the plate's state is always
+            reachable. */}
+        <div className="flex flex-col gap-1">
+          <input
+            type="text"
+            value={designName}
+            onChange={(e) => setDesignName(e.target.value)}
+            placeholder="Name your design"
+            className="hidden sm:block max-w-[200px] border-b border-transparent bg-transparent px-1 py-0.5
+              text-sm font-semibold text-[#faf0d6] placeholder:text-[#faf0d6]/45
+              transition-colors hover:border-[#faf0d6]/40 focus:border-[#f8c53b] focus:outline-none"
+          />
+          <div className="flex items-center gap-1.5">
+            <span className="hidden sm:block px-1 text-[10px] uppercase tracking-wide text-[#faf0d6]/45">
+              State
+            </span>
+            <StateSelector theme="header" />
+          </div>
+        </div>
       </div>
 
       {/* Actions */}

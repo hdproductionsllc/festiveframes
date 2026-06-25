@@ -10,7 +10,6 @@ import { ExportPartsList } from "./ExportPartsList";
 import { FrameCanvas, type FrameCanvasHandle } from "@/components/frame/FrameCanvas";
 import { TilePalette } from "@/components/tiles/TilePalette";
 import { BottomBarEditor } from "@/components/bottom-bar/BottomBarEditor";
-import { StateSelector } from "@/components/frame/StateSelector";
 import { composeFrameImage, composeBarImage } from "@/lib/utils/compose-frame";
 import { composeEufyPrintSheets } from "@/lib/utils/eufy-print";
 import { EUFY_JIG_3X12 } from "@/config/eufy-jig";
@@ -43,11 +42,16 @@ export function Designer() {
 
   useKeyboardShortcuts();
 
-  // First load on a blank canvas → a July 4th design. If the visitor arrived
-  // from a homepage "Build this look" button (/build?look=<id>), seed that
-  // look's themed starting point (featured tiles + slogan bar); otherwise fall
-  // back to a random + mirrored fill. On a returning design, just patch any
-  // empty cells so there are never blanks.
+  // First load → seed a July 4th design ONLY for a brand-new visitor with a
+  // blank canvas. If the visitor arrived from a homepage "Build this look"
+  // button (/build?look=<id>), seed that look's themed starting point (featured
+  // tiles + slogan bar); otherwise fall back to a random + mirrored fill.
+  //
+  // A RETURNING user's design is restored from persistence (zustand `persist`,
+  // synchronous localStorage → already hydrated by the time this runs). Such a
+  // design must be left EXACTLY as saved — never re-seeded and never patched —
+  // so the "Saved" indicator stays truthful. We treat any restored slots OR
+  // text bars as "has a design" and bail without touching it.
   useEffect(() => {
     if (seededRef.current) return;
     seededRef.current = true;
@@ -56,12 +60,11 @@ export function Designer() {
     const pieces = set.pieces.map((p) => ({ pieceId: p.id, setId: set.id }));
     if (!pieces.length) return;
     const store = useDesignStore.getState();
-    const blank = Object.keys(store.slots).length === 0;
+    const hasDesign =
+      Object.keys(store.slots).length > 0 || store.textBars.length > 0;
 
-    if (!blank) {
-      store.fillEmpty(pieces);
-      return;
-    }
+    // Returning user: a saved design was restored — leave it untouched.
+    if (hasDesign) return;
 
     // Read the requested look from the URL (read-once, client-only — avoids the
     // useSearchParams Suspense requirement on this otherwise-static page).
@@ -254,12 +257,6 @@ export function Designer() {
 
           {/* Main content area — sticky on desktop so it follows scroll */}
           <div className="flex-1 flex flex-col gap-3 min-w-0 md:sticky md:top-4 md:self-start">
-            {/* State selector */}
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-surface-400">Your State:</span>
-              <StateSelector compact />
-            </div>
-
             {/* Frame canvas */}
             <div className="relative">
               {/* Ambient festivity: two faint, slow twinkles drifting near the
