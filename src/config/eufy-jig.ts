@@ -19,7 +19,10 @@ export interface EufyJigConfig {
   /** Jig sheet size in inches (also the printable PNG size at `dpi`). */
   sheetWidthInches: number;
   sheetHeightInches: number;
-  /** Output resolution. 720 matches the tile art's native ~651px square. */
+  /** Output resolution. 300 DPI = print-industry standard, ample for bold sticker
+      art at ~1"; keeps print files small. (720 matched the source art's ~651px
+      square — overkill for UV print.) Geometry is in inches, so DPI only scales
+      the render uniformly — tile/pocket alignment is unaffected. */
   dpi: number;
   /** Printable square face per tile, inches. Fills the full tile top (no inset margin). */
   tileFaceInches: number;
@@ -32,7 +35,7 @@ export interface EufyJigConfig {
 export const EUFY_JIG: EufyJigConfig = {
   sheetWidthInches: 9.9,
   sheetHeightInches: 3.3,
-  dpi: 720,
+  dpi: 300,
   // Matches the artwork square in the .ai proof, so each tile keeps the frame-lip
   // border the jig has (~0.08" from the outer tiles to the 9.9x3.3 sheet edge).
   // The jig's outer footprint IS 9.9x3.3, so this PNG aligns corner-to-corner.
@@ -83,7 +86,7 @@ export function makeGridJig(opts: {
   pocketFaceInches: number;
   dpi?: number;
 }): EufyJigConfig {
-  const { rows, cols, pitchInches, faceInches, pocketFaceInches, dpi = 720 } = opts;
+  const { rows, cols, pitchInches, faceInches, pocketFaceInches, dpi = 300 } = opts;
   const margin = pocketFaceInches / 2;
   const round = (n: number) => Math.round(n * 1e4) / 1e4;
   const colCentersInches = Array.from({ length: cols }, (_, i) => round(margin + i * pitchInches));
@@ -105,7 +108,7 @@ export const EUFY_JIG_3X12: EufyJigConfig = makeGridJig({
   pitchInches: 1.06,
   faceInches: 1.02,
   pocketFaceInches: 0.992,
-  dpi: 720,
+  dpi: 300,
 });
 
 /** Total tile pockets on one jig sheet (reading order: row-major, top row first). */
