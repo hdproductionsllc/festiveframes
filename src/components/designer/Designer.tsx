@@ -304,9 +304,9 @@ export function Designer() {
             is the hero across the FULL WIDTH up top, and the two working panels
             (tile palette + text-bar editor) sit in a row beneath it. */}
         <main className="flex-1 flex flex-col gap-4 p-4 mx-auto w-full max-w-7xl">
-          {/* Frame canvas — full-width hero, centered and capped so it never
-              gets absurd on ultrawide displays. */}
-          <div className="w-full max-w-5xl mx-auto flex flex-col gap-3">
+          {/* Frame canvas — full-width hero, the SAME width as the two tool
+              panels below it so the builder reads as one cohesive block. */}
+          <div className="w-full flex flex-col gap-3">
             {/* Armed-tile callout — appears right above the frame the moment a
                 tile is armed, telling you in plain words to tap the frame. */}
             <ArmedBanner placement="frame" />
@@ -345,8 +345,8 @@ export function Designer() {
             {/* Tile palette panel — ~55–60% on desktop. */}
             <TilePalette />
 
-            {/* Text-bar editor panel — ~40–45% on desktop. */}
-            <div className="w-full lg:basis-0 lg:grow-[45] min-w-0">
+            {/* Text-bar editor panel — wider (~60%) on desktop. */}
+            <div className="w-full lg:basis-0 lg:grow-[60] min-w-0">
               <BottomBarEditor />
             </div>
           </div>
