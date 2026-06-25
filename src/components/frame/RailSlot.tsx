@@ -1,6 +1,7 @@
 "use client";
 
-import { useDroppable } from "@dnd-kit/core";
+import { useEffect, useState } from "react";
+import { useDroppable, useDraggable } from "@dnd-kit/core";
 import type { FrameSlot, PlacedTile } from "@/lib/types";
 import { PlacedTileView } from "./PlacedTileView";
 import { useDesignStore } from "@/stores/design-store";
@@ -17,36 +18,25 @@ interface RailSlotProps {
 export function RailSlot({ slot, placedTile, isOver }: RailSlotProps) {
   const { setNodeRef } = useDroppable({ id: slot.id });
   const placeTile = useDesignStore((s) => s.placeTile);
-  const removeTile = useDesignStore((s) => s.removeTile);
   const selectedPieceId = usePaletteStore((s) => s.selectedPieceId);
-  const activeTool = usePaletteStore((s) => s.activeTool);
-
   const soundEnabled = useUIStore((s) => s.soundEnabled);
 
   const handleClick = () => {
-    if (activeTool === "eraser") {
-      removeTile(slot.id);
-      if (soundEnabled) playSound("pop");
-    } else if (activeTool === "paint" && selectedPieceId) {
-      const setId = selectedPieceId.split(":")[0];
-      placeTile(slot.id, selectedPieceId, setId);
-      if (soundEnabled) playSound("snap");
-    }
+    // Tap-to-place: when a palette tile is armed, tapping any cell drops it here
+    // (replacing whatever was there). The touch-friendly mirror of dragging a
+    // tile onto the frame. (Tapping a placed tile with no armed piece reveals
+    // its remove ✕ — handled inside PlacedTileCell.)
+    if (!selectedPieceId) return;
+    const setId = selectedPieceId.split(":")[0];
+    placeTile(slot.id, selectedPieceId, setId);
+    if (soundEnabled) playSound("snap");
   };
 
-  // The slot is actionable when a click would do something: erasing a placed
-  // tile, or painting the selected piece into an empty/occupied slot. Only then
-  // do we surface a pointer cursor + hover highlight so empty slots clearly
-  // invite a click instead of looking inert.
-  const isActionable =
-    (activeTool === "eraser" && placedTile != null) ||
-    (activeTool === "paint" && selectedPieceId != null);
-  const cursorClass = isActionable ? "cursor-pointer group" : "cursor-default";
-
-  // Gapless: every cell (placed or empty) fills edge-to-edge. Empty cells are
-  // painted the design-surface cream so a cleared spot reads as empty/background
-  // instead of showing the black frame + groove rim underneath.
-  const inset = 0;
+  // A cell invites interaction when a tap would do something: place the armed
+  // tile (any cell) or reveal the remove affordance (a filled cell). Only then
+  // do we surface a pointer cursor + soft hover ring.
+  const isActionable = selectedPieceId != null || placedTile != null;
+  const cursorClass = isActionable ? "group cursor-pointer" : "cursor-default";
 
   return (
     <div
@@ -61,40 +51,137 @@ export function RailSlot({ slot, placedTile, isOver }: RailSlotProps) {
       }}
     >
       {placedTile ? (
-        <div
-          className={isOver ? "drop-target-glow" : ""}
-          style={{
-            position: "absolute",
-            left: inset,
-            top: inset,
-            width: slot.width - inset * 2,
-            height: slot.height - inset * 2,
-          }}
-        >
-          <PlacedTileView
-            pieceId={placedTile.pieceId}
-            width={slot.width - inset * 2}
-            height={slot.height - inset * 2}
-          />
-        </div>
+        <PlacedTileCell
+          slotId={slot.id}
+          pieceId={placedTile.pieceId}
+          width={slot.width}
+          height={slot.height}
+          isOver={!!isOver}
+          armed={selectedPieceId != null}
+        />
       ) : (
         <div
           className={`w-full h-full flex items-center justify-center ${isOver ? "drop-target-glow" : ""}`}
         >
-          {/* Empty slot groove — gets a gold hover ring when a click would place
-              the selected tile here, so empty slots read as clickable targets. */}
+          {/* Empty cell — gold hover ring when a tap would place the armed tile
+              here, so empty slots read as clickable drop targets. Gapless: the
+              cell fills edge-to-edge in design-surface cream. */}
           <div
             className={`rounded-[2px] transition-shadow ${
-              isActionable ? "group-hover:ring-2 group-hover:ring-brand-gold/70" : ""
+              selectedPieceId != null ? "group-hover:ring-2 group-hover:ring-brand-gold/70" : ""
             }`}
             style={{
-              width: slot.width - inset * 2,
-              height: slot.height - inset * 2,
+              width: slot.width,
+              height: slot.height,
               background: "#faf0d6",
               border: "1px solid transparent",
             }}
           />
         </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * A placed tile: draggable to move it to another cell, or drag it OFF the frame
+ * to poof it away (handled in DndProvider via `type: "placed-tile"`). Mirrors
+ * the placed-textbar drag model so the whole builder is one interaction.
+ *
+ * Touch fallback: with no armed palette tile, tapping reveals a ✕ to remove
+ * (drag-off is awkward on a phone). The ✕ state lives here so it auto-clears
+ * when the tile is moved/removed and this component unmounts.
+ */
+function PlacedTileCell({
+  slotId,
+  pieceId,
+  width,
+  height,
+  isOver,
+  armed,
+}: {
+  slotId: string;
+  pieceId: string;
+  width: number;
+  height: number;
+  isOver: boolean;
+  armed: boolean;
+}) {
+  const removeTile = useDesignStore((s) => s.removeTile);
+  const soundEnabled = useUIStore((s) => s.soundEnabled);
+  const [showRemove, setShowRemove] = useState(false);
+  const [poofing, setPoofing] = useState(false);
+
+  const { setNodeRef, attributes, listeners, isDragging } = useDraggable({
+    id: `placed-tile:${slotId}`,
+    data: { type: "placed-tile", slotId, pieceId },
+  });
+
+  // Dismiss the ✕ on any outside tap so it never lingers.
+  useEffect(() => {
+    const dismiss = (e: PointerEvent) => {
+      // A tap on our own ✕/tile is handled by the local handlers; ignore those.
+      if (!(e.target as HTMLElement)?.closest?.(`[data-tile-cell="${slotId}"]`)) {
+        setShowRemove(false);
+      }
+    };
+    window.addEventListener("pointerdown", dismiss);
+    return () => window.removeEventListener("pointerdown", dismiss);
+  }, [slotId]);
+
+  const handleTileClick = (e: React.MouseEvent) => {
+    // When a palette tile is armed, let the cell's click bubble so RailSlot
+    // does the place. Otherwise this tap toggles the remove ✕.
+    if (armed) return;
+    e.stopPropagation();
+    setShowRemove((v) => !v);
+  };
+
+  const handleRemove = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setPoofing(true);
+    if (soundEnabled) playSound("pop");
+    window.setTimeout(() => removeTile(slotId), 200); // let the poof play out
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      {...attributes}
+      {...listeners}
+      data-tile-cell={slotId}
+      onClick={handleTileClick}
+      title="Drag to move · drag off the frame to remove"
+      className={`cursor-grab active:cursor-grabbing transition-transform duration-150
+        ${isDragging ? "opacity-40" : "hover:scale-[1.04]"}
+        ${poofing ? "animate-tile-poof" : ""}
+        ${isOver ? "drop-target-glow" : ""}`}
+      style={{
+        position: "absolute",
+        left: 0,
+        top: 0,
+        width,
+        height,
+        touchAction: "none",
+        zIndex: showRemove ? 3 : undefined,
+      }}
+    >
+      <PlacedTileView pieceId={pieceId} width={width} height={height} />
+
+      {/* Touch fallback remove — a small, obvious ✕ revealed on tap. */}
+      {showRemove && (
+        <button
+          type="button"
+          aria-label="Remove tile"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={handleRemove}
+          className="absolute -right-1.5 -top-1.5 grid h-5 w-5 place-items-center rounded-full
+            border-2 border-[#1e1b17] bg-brand-red text-[11px] font-black leading-none text-white
+            shadow-[1px_1px_0_#1e1b17] active:scale-90"
+          style={{ touchAction: "manipulation" }}
+        >
+          ✕
+        </button>
       )}
     </div>
   );

@@ -54,8 +54,8 @@ const TOUR_STEPS: TourStep[] = [
   {
     key: "canvas",
     resolve: resolveCanvas,
-    title: "Drag or tap to place it",
-    body: "Tap a tile to drop it into the next open spot, or drag it straight onto any slot on the frame.",
+    title: "Drag tiles on — drag one off to remove",
+    body: "Drag a tile onto any slot to place it, or tap a tile then tap a slot. Changed your mind? Drag a placed tile off the frame and it poofs away (on a phone, tap it and hit the ✕).",
     placement: "auto",
   },
   {

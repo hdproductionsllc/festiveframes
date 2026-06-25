@@ -26,9 +26,13 @@ interface DndProviderProps {
 
 export function DndProvider({ children, onOverSlotChange }: DndProviderProps) {
   const [dragPieceId, setDragPieceId] = useState<string | null>(null);
-  const [dragKind, setDragKind] = useState<"tile" | "textbar" | "placed-textbar" | null>(null);
+  const [dragKind, setDragKind] = useState<
+    "tile" | "placed-tile" | "textbar" | "placed-textbar" | null
+  >(null);
   const [dragBarId, setDragBarId] = useState<string | null>(null);
   const placeTile = useDesignStore((s) => s.placeTile);
+  const moveTile = useDesignStore((s) => s.moveTile);
+  const removeTile = useDesignStore((s) => s.removeTile);
   const placeTextBar = useDesignStore((s) => s.placeTextBar);
   const moveTextBar = useDesignStore((s) => s.moveTextBar);
   const removeTextBar = useDesignStore((s) => s.removeTextBar);
@@ -46,7 +50,9 @@ export function DndProvider({ children, onOverSlotChange }: DndProviderProps) {
 
   const handleDragStart = useCallback((event: DragStartEvent) => {
     const data = event.active.data.current;
-    setDragKind((data?.type as "tile" | "textbar" | "placed-textbar") ?? null);
+    setDragKind(
+      (data?.type as "tile" | "placed-tile" | "textbar" | "placed-textbar") ?? null
+    );
     setDragPieceId((data?.pieceId as string | undefined) ?? null);
     setDragBarId((data?.id as string | undefined) ?? null);
     if (soundEnabled) playSound("pickup");
@@ -93,6 +99,21 @@ export function DndProvider({ children, onOverSlotChange }: DndProviderProps) {
         return;
       }
 
+      // Placed tile: dropped on another cell MOVES it; dropped off the frame
+      // POOFS it away. Mirrors the placed-textbar drag model exactly so the
+      // whole builder is one consistent "drag on / drag off" interaction.
+      if (data?.type === "placed-tile") {
+        const fromSlotId = data.slotId as string;
+        if (overId?.startsWith("frame:")) {
+          moveTile(fromSlotId, overId);
+          if (soundEnabled) playSound("snap");
+        } else {
+          removeTile(fromSlotId);
+          if (soundEnabled) playSound("pop");
+        }
+        return;
+      }
+
       const pieceId = data?.pieceId as string | undefined;
       if (overId?.startsWith("frame:") && pieceId) {
         const setId = pieceId.split(":")[0];
@@ -100,7 +121,16 @@ export function DndProvider({ children, onOverSlotChange }: DndProviderProps) {
         if (soundEnabled) playSound("snap");
       }
     },
-    [placeTile, placeTextBar, moveTextBar, removeTextBar, soundEnabled, onOverSlotChange]
+    [
+      placeTile,
+      moveTile,
+      removeTile,
+      placeTextBar,
+      moveTextBar,
+      removeTextBar,
+      soundEnabled,
+      onOverSlotChange,
+    ]
   );
 
   const handleDragCancel = useCallback(() => {

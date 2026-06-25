@@ -7,7 +7,6 @@ import { usePaletteStore } from "@/stores/palette-store";
 export function useKeyboardShortcuts() {
   const undo = useDesignStore((s) => s.undo);
   const redo = useDesignStore((s) => s.redo);
-  const setTool = usePaletteStore((s) => s.setTool);
   const clearSelection = usePaletteStore((s) => s.clearSelection);
 
   useEffect(() => {
@@ -30,21 +29,13 @@ export function useKeyboardShortcuts() {
         return;
       }
 
-      // Tool shortcuts
-      switch (e.key.toLowerCase()) {
-        case "p":
-          setTool("paint");
-          break;
-        case "r":
-          setTool("eraser");
-          break;
-        case "escape":
-          clearSelection();
-          break;
+      // Escape clears the armed tap-to-place tile.
+      if (e.key.toLowerCase() === "escape") {
+        clearSelection();
       }
     }
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [undo, redo, setTool, clearSelection]);
+  }, [undo, redo, clearSelection]);
 }

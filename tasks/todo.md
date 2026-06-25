@@ -1,32 +1,31 @@
-# Builder intuitiveness redesign — text bar + layout
+# Builder one-model interaction (place/move/remove via drag)
 
-## Goal
-Direct manipulation for text bars. Kill the invisible "draft" surface.
-Keep drag-to-place as a clearly-labeled secondary path.
+Goal: KILL the paint/eraser tool toggle. One consistent model:
+- Drag palette tile -> cell = place (replace if occupied). [already works]
+- Drag a PLACED tile -> another cell = move.
+- Drag a PLACED tile OFF the frame = remove (poof). Mirror placed-textbar behavior.
+- Tap-to-place stays (select palette tile, tap cell). Touch removal fallback: tap placed tile -> small X.
 
-## Text bar
-- [ ] Empty state: big inviting "+ Add a text bar" primary action when no bars.
-- [ ] Auto-create+select when user types/styles/picks slogan with no bar selected.
-- [ ] Selected bar -> all controls edit it live; panel says which bar.
-- [ ] Strengthen selected-bar highlight on canvas.
-- [ ] Consolidate add affordances (drop "+ New bar" header link; one add path).
-- [ ] Keep drag-to-place, secondary + labeled.
-- [ ] Per-bar list: text + row, big tap targets, icon Remove, selected state, friendly empty.
-- [ ] Controls order: text -> font -> colors -> size. Slogans = quick-fill.
+## Tasks
+- [x] Study DndProvider, RailSlot, PlacedTileView, design-store, palette-store, FrameCanvas, ToolBar, Coachmark
+- [ ] design-store: add `moveTile(fromSlotId, toSlotId)` (move/replace, covered-slot aware)
+- [ ] DndProvider: handle `type: "placed-tile"` (move on frame, remove off frame, poof sound, overlay ghost)
+- [ ] RailSlot: placed tile draggable; remove activeTool click logic; keep tap-to-place; touch X-remove fallback
+- [ ] Delete ToolBar entirely + its usages in TilePalette
+- [ ] palette-store: drop activeTool/setTool/DesignTool
+- [ ] useKeyboardShortcuts: drop P/R tool keys; Escape clears selection
+- [ ] types: remove DesignTool
+- [ ] globals.css: add poof keyframe
+- [ ] Onboarding coachmark copy: teach the one model
+- [ ] next build (exit 0) + npm run lint (no NEW errors)
 
-## Layout
-- [ ] Tighten flow, mobile ergonomics, safe-area, sticker theme.
+## Review
+DONE. One model shipped: drag palette tile -> place; drag placed tile -> move;
+drag placed tile off frame -> poof (mirrors placed-textbar). Tap-to-place kept;
+touch removal = tap placed tile -> ✕. Eraser/paint tool fully deleted (ToolBar
+component, palette-store activeTool/setTool, DesignTool type, P/R shortcuts).
+Added moveTile to design-store, placed-tile branch in DndProvider, tile-poof
+keyframe, grab cursor + hover-lift affordances, updated coachmark + hints.
 
-## Quick wins
-- [ ] Disabled Order -> helper "Add at least one tile to order".
-- [ ] Fill All -> gracefully use active set's first tile when none selected.
-
-## Constraints
-- DO NOT touch order/checkout, api, lib/order, lib/email, thanks, text-bar.ts,
-  defaults.ts, QR rule, no-overlap helpers, (home).
-- Preserve all functionality.
-
-## Verify
-- [x] npx next build exits 0
-- [x] npm run lint no new errors (only pre-existing warnings)
-- [x] NO commit/push (left on master, no commits)
+Build: next build exits 0 (33/33 pages). Lint: 0 errors, 20 warnings (all
+pre-existing img/set-state; none in my changed logic). On master, no commits.

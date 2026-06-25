@@ -119,10 +119,6 @@ export interface DesignPreset {
   thumbnail?: string;
 }
 
-// ─── Tools ──────────────────────────────────────────────────
-
-export type DesignTool = "paint" | "eraser";
-
 // ─── Export ─────────────────────────────────────────────────
 
 export type ExportState = "idle" | "exporting" | "done" | "error";

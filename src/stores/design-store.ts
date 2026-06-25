@@ -93,6 +93,13 @@ interface DesignState {
   // Actions — tiles
   placeTile: (slotId: string, pieceId: string, setId: string) => void;
   removeTile: (slotId: string) => void;
+  /**
+   * Move a placed tile from one slot to another (drag a tile to a new cell).
+   * Dropping on an occupied cell REPLACES it; the source cell is cleared. A
+   * drop onto a slot hidden under a text bar is ignored so the move never
+   * vanishes a tile into a covered cell.
+   */
+  moveTile: (fromSlotId: string, toSlotId: string) => void;
   fillAll: (pieceId: string, setId: string) => void;
   randomFill: (pieces: Array<{ pieceId: string; setId: string }>) => void;
   fillEmpty: (pieces: Array<{ pieceId: string; setId: string }>) => void;
@@ -198,8 +205,27 @@ export const useDesignStore = create<DesignState>()(
 
         removeTile: (slotId) => {
           set((state) => {
+            if (!state.slots[slotId]) return state;
             const newSlots = { ...state.slots };
             delete newSlots[slotId];
+            return {
+              ...pushHistory(),
+              slots: newSlots,
+              updatedAt: Date.now(),
+            };
+          });
+        },
+
+        moveTile: (fromSlotId, toSlotId) => {
+          set((state) => {
+            if (fromSlotId === toSlotId) return state;
+            const tile = state.slots[fromSlotId];
+            if (!tile) return state;
+            // Never move a tile onto a cell hidden under a text bar.
+            if (coveredSlotIds(state.textBars).includes(toSlotId)) return state;
+            const newSlots = { ...state.slots };
+            delete newSlots[fromSlotId];
+            newSlots[toSlotId] = { ...tile }; // replaces whatever was there
             return {
               ...pushHistory(),
               slots: newSlots,

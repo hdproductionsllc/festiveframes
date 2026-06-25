@@ -1,33 +1,28 @@
 import { create } from "zustand";
-import type { DesignTool } from "@/lib/types";
 import { getSeasonalSetId } from "@/data/sets";
 
 interface PaletteState {
   activeSetId: string;
+  /**
+   * The tile currently armed for tap-to-place. Tapping a palette tile selects
+   * it; tapping a frame cell then drops it there. There is no separate paint /
+   * eraser tool — placing is drag-or-tap, and removing is drag-a-placed-tile
+   * off the frame (or tap-✕ on touch). One model, no modes.
+   */
   selectedPieceId: string | null;
-  activeTool: DesignTool;
 
   setActiveSet: (setId: string) => void;
   selectPiece: (pieceId: string | null) => void;
-  setTool: (tool: DesignTool) => void;
   clearSelection: () => void;
 }
 
 export const usePaletteStore = create<PaletteState>()((set) => ({
   activeSetId: getSeasonalSetId(),
   selectedPieceId: null,
-  activeTool: "paint",
 
   setActiveSet: (setId) => set({ activeSetId: setId }),
 
-  selectPiece: (pieceId) =>
-    set({ selectedPieceId: pieceId, activeTool: "paint" }),
+  selectPiece: (pieceId) => set({ selectedPieceId: pieceId }),
 
-  setTool: (tool) =>
-    set((state) => ({
-      activeTool: tool,
-      selectedPieceId: tool === "paint" ? state.selectedPieceId : null,
-    })),
-
-  clearSelection: () => set({ selectedPieceId: null, activeTool: "paint" }),
+  clearSelection: () => set({ selectedPieceId: null }),
 }));

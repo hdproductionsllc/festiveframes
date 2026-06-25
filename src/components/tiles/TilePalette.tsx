@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { SetTabs } from "./SetTabs";
 import { TileGrid } from "./TileGrid";
-import { ToolBar } from "@/components/designer/ToolBar";
 import { QuickActions } from "@/components/designer/QuickActions";
 import { PresetGallery } from "@/components/designer/PresetGallery";
 
@@ -34,9 +33,8 @@ function DesktopPaletteContent() {
   return (
     <div className="flex flex-col gap-2">
       <SetTabs />
-      <ToolBar />
-      <p className="text-surface-400 text-xs text-center px-2">
-        Drag a tile onto the frame, or tap to select then tap a slot
+      <p className="text-surface-400 text-xs text-center px-2 leading-relaxed">
+        Drag a tile onto your frame. Drag one off to remove it.
       </p>
       <TileGrid />
       <QuickActions />
@@ -77,7 +75,6 @@ function MobileTileTray() {
       {/* Optional design tools — tucked away so the tray stays focused on tiles */}
       {optionsOpen && (
         <div className="max-h-[42vh] space-y-2 overflow-y-auto border-b border-surface-700/60 p-3">
-          <ToolBar />
           <QuickActions />
           <PresetGallery />
         </div>
@@ -96,7 +93,7 @@ function MobileTileTray() {
           </button>
         </div>
         <p className="mb-1.5 text-center text-[11px] font-medium text-surface-300">
-          Tap a tile to add it — or drag it up onto your frame
+          Tap a tile to add it. Tap a placed tile to remove it.
         </p>
       </div>
 
