@@ -62,7 +62,7 @@ export interface PlacedTile {
 export interface BottomBarConfig {
   text: string;
   fontFamily: string;
-  fontSize: number; // percentage of bar height (0.25–0.75), default 0.42
+  fontSize: number; // auto-fit fill (0–1): 1 = fill the bar, lower scales down. Default 1.
   textColor: string;
   backgroundColor: string;
   textAlign: "left" | "center" | "right";

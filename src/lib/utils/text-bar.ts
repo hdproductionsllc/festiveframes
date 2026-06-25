@@ -7,6 +7,89 @@ export function rowLength(config: FrameConfig, row: TextBarRow): number {
   return row === "top" ? config.topSlots : config.bottomSlots;
 }
 
+// ── Shared text-bar geometry & auto-fit ──────────────────────────────────────
+// ONE source of truth for how big the banner text gets, used by the DOM preview
+// (BottomTextBar), the print/proof render (drawTextBar) and the auto-width
+// measure below. Everything is expressed as a fraction of the bar HEIGHT `h`, so
+// the same text in the same bar looks identical at any zoom / resolution.
+
+/** QR square side, as a fraction of bar height. */
+export const QR_SIZE_RATIO = 0.82;
+/** Gap between the QR and the text edge, as a fraction of bar height. */
+export const QR_GAP_RATIO = 0.12;
+/** Side padding (each side), as a fraction of bar height. */
+export const SIDE_PAD_RATIO = 0.16;
+/** Glyph height cap, as a fraction of bar height — breathing room for ascenders/descenders. */
+export const HEIGHT_CAP_RATIO = 0.8;
+
+/**
+ * Horizontal space available for the text inside a bar of height `h`, after side
+ * padding and (when present) the QR + its gap. Mirrors drawTextBar's geometry.
+ */
+export function textBarAvailWidth(w: number, h: number, qrEnabled: boolean): number {
+  const sidePad = h * SIDE_PAD_RATIO + (qrEnabled ? h * QR_SIZE_RATIO + h * QR_GAP_RATIO : 0);
+  return w - sidePad * 2;
+}
+
+/** Measured glyph height for a given em size (uses real font metrics when available). */
+function glyphHeight(ctx: CanvasRenderingContext2D, text: string, fontPx: number): number {
+  const m = ctx.measureText(text);
+  const asc = m.actualBoundingBoxAscent;
+  const desc = m.actualBoundingBoxDescent;
+  if (typeof asc === "number" && typeof desc === "number" && asc + desc > 0) return asc + desc;
+  return fontPx * 0.9; // fallback ≈ cap height of a 700-weight face
+}
+
+/** Width of `text` at `fontPx` including letter-spacing between glyphs. */
+function measuredWidth(ctx: CanvasRenderingContext2D, text: string, fontPx: number, letterSpacing: number): number {
+  return ctx.measureText(text).width + letterSpacing * Math.max(0, text.length - 1);
+}
+
+/**
+ * The LARGEST font size (px) such that `text` fits within `availWidth` AND its
+ * glyph height stays within `h * HEIGHT_CAP_RATIO`. Grows to fill the bar (short
+ * text → big, capped by height) and shrinks for long text (capped by width).
+ *
+ * `fill` (0–1, the cfg.fontSize slider) scales the result DOWN from the full fit
+ * — 1.0 fills the bar, lower shrinks it. The same canvas+font is used everywhere
+ * so the preview, the print render and the measure all agree.
+ */
+export function fitTextBarFont(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  fontFamily: string,
+  letterSpacing: number,
+  h: number,
+  availWidth: number,
+  fill: number,
+): number {
+  if (availWidth <= 0 || h <= 0) return 0;
+  const heightCap = h * HEIGHT_CAP_RATIO * fill;
+  const setFont = (px: number) => { ctx.font = `700 ${px}px ${fontFamily}`; };
+
+  // Height-driven ceiling: scale a probe font so its glyph height hits the cap.
+  const probe = h;
+  setFont(probe);
+  const probeGlyph = glyphHeight(ctx, text, probe) || probe * 0.9;
+  let fontPx = (heightCap / probeGlyph) * probe;
+
+  // Width clamp: shrink proportionally if the height-driven size overflows width.
+  setFont(fontPx);
+  const w = measuredWidth(ctx, text, fontPx, letterSpacing);
+  if (w > availWidth) fontPx *= availWidth / w;
+
+  return Math.max(1, fontPx);
+}
+
+/** Module-scoped measuring canvas so callers don't each allocate one. */
+let _measureCtx: CanvasRenderingContext2D | null = null;
+function measureCtx(): CanvasRenderingContext2D | null {
+  if (_measureCtx) return _measureCtx;
+  if (typeof document === "undefined") return null;
+  _measureCtx = document.createElement("canvas").getContext("2d");
+  return _measureCtx;
+}
+
 /**
  * Auto-fit the text bar to its text, snapped UP to a whole number of tile
  * units. Measured against a fixed reference unit (not live pixels) so the
@@ -20,24 +103,30 @@ export function measureTextBarUnits(
   qrEnabled: boolean,
   maxUnits: number
 ): number {
-  const U = 100; // reference px per tile unit
-  const fontPx = U * (cfg.fontSize ?? 0.85);
-  const text = (cfg.text || "YOUR TEXT HERE").toUpperCase();
+  const U = 100; // reference px per tile unit (= bar height)
+  const fill = cfg.fontSize ?? 1;
+  const text = cfg.text || "YOUR TEXT HERE";
 
-  let textPx = text.length * fontPx * 0.62; // fallback estimate
-  if (typeof document !== "undefined") {
-    const ctx = document.createElement("canvas").getContext("2d");
-    if (ctx) {
-      ctx.font = `700 ${fontPx}px ${cfg.fontFamily}`;
-      textPx = ctx.measureText(text).width;
-    }
+  // Size the bar so the AUTO-FIT font (height-driven, before any width clamp)
+  // fits without shrinking — i.e. the bar is wide enough that the fitted text
+  // is height-limited, not width-limited. This keeps the freshly-placed width in
+  // step with what the preview/render will actually draw.
+  const ctx = measureCtx();
+  let textPx: number;
+  let fontPx: number;
+  if (ctx) {
+    // Height-driven font at this fill (ignoring width — that's what we're sizing for).
+    fontPx = fitTextBarFont(ctx, text, cfg.fontFamily, cfg.letterSpacing, U, Number.POSITIVE_INFINITY, fill);
+    ctx.font = `700 ${fontPx}px ${cfg.fontFamily}`;
+    textPx = ctx.measureText(text).width + cfg.letterSpacing * Math.max(0, text.length - 1);
+  } else {
+    fontPx = U * HEIGHT_CAP_RATIO * fill;
+    textPx = text.length * fontPx * 0.62 + cfg.letterSpacing * Math.max(0, text.length - 1);
   }
-  // letter-spacing sits between glyphs, scaled to the reference font size.
-  textPx += cfg.letterSpacing * (fontPx / 28) * Math.max(0, text.length - 1);
 
-  const padX = U * 0.25; // small side margins — borderless, text fills the bar
-  const qrPx = qrEnabled ? 1.3 * U : 0; // reserve QR width on both sides → text stays centered
-  const totalPx = (textPx + padX + qrPx) * 1.0; // hug the text; render shrink-fits as the guard
+  // Side padding + reserved QR (both sides), matching the render geometry.
+  const sidePad = U * SIDE_PAD_RATIO + (qrEnabled ? U * QR_SIZE_RATIO + U * QR_GAP_RATIO : 0);
+  const totalPx = textPx + sidePad * 2;
 
   let units = Math.ceil(totalPx / U);
   // Force ODD width so the bar can sit perfectly centered on an odd-width row

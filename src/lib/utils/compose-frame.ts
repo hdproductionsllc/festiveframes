@@ -2,7 +2,13 @@ import QRCode from "qrcode";
 import type { PlacedTextBar } from "@/lib/types";
 import { useDesignStore } from "@/stores/design-store";
 import { generateSlots } from "@/lib/utils/slot-generator";
-import { coveredSlotIds } from "@/lib/utils/text-bar";
+import {
+  coveredSlotIds,
+  fitTextBarFont,
+  textBarAvailWidth,
+  QR_SIZE_RATIO,
+  QR_GAP_RATIO,
+} from "@/lib/utils/text-bar";
 import { getScale, getContainerHeight, getPlateArea } from "@/lib/utils/layout";
 import { getPiece } from "@/data/sets";
 import { getPlateImageUrl, getPlateImageDisplay } from "@/data/plate-images";
@@ -68,26 +74,23 @@ function drawTextBar(
   ctx.fillStyle = cfg.backgroundColor;
   ctx.fillRect(x, y, w, h);
 
-  const qrSize = bar.qr ? h * 0.82 : 0;
-  const sidePad = h * 0.16 + (bar.qr ? qrSize + h * 0.12 : 0);
-  const avail = w - sidePad * 2;
+  const qrSize = bar.qr ? h * QR_SIZE_RATIO : 0;
+  const avail = textBarAvailWidth(w, h, bar.qr);
   const text = (cfg.text || "YOUR TEXT HERE");
-  let fontPx = h * (cfg.fontSize ?? 0.8);
-  const font = () => { ctx.font = `700 ${fontPx}px ${cfg.fontFamily}`; };
-  font();
-  let guard = 0;
-  while (ctx.measureText(text).width > avail && fontPx > 6 && guard++ < 200) {
-    fontPx -= 1;
-    font();
-  }
+  // Auto-fit: largest font that fills the bar (height-capped) yet fits the width.
+  const fontPx = fitTextBarFont(ctx, text, cfg.fontFamily, cfg.letterSpacing, h, avail, cfg.fontSize ?? 1);
+  ctx.font = `700 ${fontPx}px ${cfg.fontFamily}`;
+  // Apply letter-spacing if the canvas supports it (so it matches the measure).
+  try { (ctx as CanvasRenderingContext2D & { letterSpacing?: string }).letterSpacing = `${cfg.letterSpacing}px`; } catch { /* unsupported */ }
   ctx.fillStyle = cfg.textColor;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillText(text, x + w / 2, y + h / 2 + h * 0.04);
+  try { (ctx as CanvasRenderingContext2D & { letterSpacing?: string }).letterSpacing = "0px"; } catch { /* unsupported */ }
 
   if (bar.qr && qrImg) {
     const s = qrSize;
-    const qx = x + w - s - h * 0.12;
+    const qx = x + w - s - h * QR_GAP_RATIO;
     const qy = y + (h - s) / 2;
     ctx.fillStyle = "#ffffff";
     roundRect(ctx, qx, qy, s, s, s * 0.06);

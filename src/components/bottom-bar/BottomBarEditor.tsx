@@ -242,7 +242,7 @@ export function BottomBarEditor() {
             ref={inputRef}
             type="text"
             value={cfg.text}
-            onChange={(e) => setCfg({ text: e.target.value.toUpperCase().slice(0, BOTTOM_BAR_MAX_CHARS) })}
+            onChange={(e) => setCfg({ text: e.target.value.slice(0, BOTTOM_BAR_MAX_CHARS) })}
             maxLength={BOTTOM_BAR_MAX_CHARS}
             placeholder="Type your phrase…"
             className="w-full rounded-lg border-2 border-[#1e1b17]/15 bg-white px-3 py-2.5 text-base font-bold
@@ -290,7 +290,7 @@ export function BottomBarEditor() {
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold uppercase tracking-wide text-[#1e1b17]/70">Text Size</span>
                 <span className="text-xs font-semibold tabular-nums text-[#1e1b17]/70">
-                  {Math.round((cfg.fontSize ?? 0.85) * 100)}%
+                  {Math.round((cfg.fontSize ?? 1) * 100)}%
                 </span>
               </div>
               <input
@@ -298,7 +298,7 @@ export function BottomBarEditor() {
                 min={40}
                 max={100}
                 step={1}
-                value={Math.round((cfg.fontSize ?? 0.85) * 100)}
+                value={Math.round((cfg.fontSize ?? 1) * 100)}
                 onChange={(e) => setCfg({ fontSize: Number(e.target.value) / 100 })}
                 className="w-full h-1.5 cursor-pointer appearance-none rounded-full bg-[#1e1b17]/15
                   [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:appearance-none

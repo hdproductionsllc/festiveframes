@@ -3,6 +3,12 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { BottomBarConfig, QRCodeConfig } from "@/lib/types";
 import { QRCodeOverlay } from "@/components/qr-code/QRCodeOverlay";
+import {
+  fitTextBarFont,
+  textBarAvailWidth,
+  QR_SIZE_RATIO,
+  QR_GAP_RATIO,
+} from "@/lib/utils/text-bar";
 
 interface BottomTextBarProps {
   config: BottomBarConfig;
@@ -13,14 +19,12 @@ interface BottomTextBarProps {
   height: number;
 }
 
-const PAD_X = 12; // matches px-3
-
 export function BottomTextBar({ config, qrConfig, x, y, width, height }: BottomTextBarProps) {
-  const baseFontSize = Math.max(10, height * (config.fontSize ?? 0.42));
-  const qrSize = Math.min(qrConfig.size, height * 0.85);
+  // QR sized exactly like the render (fraction of bar height) so preview == print.
+  const qrSize = height * QR_SIZE_RATIO;
 
   const spanRef = useRef<HTMLSpanElement>(null);
-  const [fontSize, setFontSize] = useState(baseFontSize);
+  const [fontSize, setFontSize] = useState(() => height * 0.6);
   const [fontTick, setFontTick] = useState(0);
 
   // Re-measure once web fonts finish loading (metrics change Bebas etc.).
@@ -33,25 +37,23 @@ export function BottomTextBar({ config, qrConfig, x, y, width, height }: BottomT
     };
   }, []);
 
-  // Reserve the QR's width on BOTH sides so the text stays centered on the bar
-  // (a one-sided reserve would shove centered text off-center — looks janky).
-  const sidePad = PAD_X + (qrConfig.enabled ? qrSize + 8 : 0);
+  // Side padding mirrors the render geometry (fractions of bar height); the QR's
+  // width is reserved on BOTH sides so centered text stays centered, exactly as
+  // textBarAvailWidth() computes it for the proof render.
+  const sidePad = (width - textBarAvailWidth(width, height, qrConfig.enabled)) / 2;
 
-  // Shrink the font until the text fits — guarantees no cut-off, whatever the
-  // quantized bar width turned out to be.
+  // AUTO-FIT: grow the font to the largest size that fills the bar height and
+  // still fits the available width — the SAME shared rule the proof render uses,
+  // so the live preview matches the exported banner exactly (true WYSIWYG).
   useLayoutEffect(() => {
     const span = spanRef.current;
     if (!span) return;
-    const avail = width - sidePad * 2;
+    const ctx = (span.ownerDocument.createElement("canvas")).getContext("2d");
+    if (!ctx) return;
+    const avail = textBarAvailWidth(width, height, qrConfig.enabled);
     if (avail <= 0) return;
-    let fs = baseFontSize;
-    span.style.fontSize = `${fs}px`;
-    let guard = 0;
-    while (span.scrollWidth > avail && fs > 6 && guard < 80) {
-      fs -= 1;
-      span.style.fontSize = `${fs}px`;
-      guard++;
-    }
+    const text = config.text || "YOUR TEXT HERE";
+    const fs = fitTextBarFont(ctx, text, config.fontFamily, config.letterSpacing, height, avail, config.fontSize ?? 1);
     setFontSize(fs);
   }, [
     config.text,
@@ -61,8 +63,6 @@ export function BottomTextBar({ config, qrConfig, x, y, width, height }: BottomT
     width,
     height,
     qrConfig.enabled,
-    qrSize,
-    baseFontSize,
     fontTick,
   ]);
 
@@ -101,7 +101,7 @@ export function BottomTextBar({ config, qrConfig, x, y, width, height }: BottomT
         </span>
 
         {qrConfig.enabled && (
-          <div className="absolute right-2 flex h-full items-center">
+          <div className="absolute flex h-full items-center" style={{ right: height * QR_GAP_RATIO }}>
             <QRCodeOverlay url={qrConfig.url} size={qrSize} />
           </div>
         )}
