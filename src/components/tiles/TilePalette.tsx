@@ -19,7 +19,7 @@ export function TilePalette() {
       {/* Desktop / Tablet — palette panel (left side of the tools row) */}
       <aside
         data-tour="tiles"
-        className="bsk-panel-blue hidden md:flex flex-col w-full lg:basis-0 lg:grow-[40] min-w-0 p-3 bg-surface-800/50 rounded-xl border border-surface-700/50"
+        className="bsk-panel-blue hidden md:flex flex-col w-full lg:basis-0 lg:grow-[50] min-w-0 p-3 bg-surface-800/50 rounded-xl border border-surface-700/50"
       >
         <DesktopPaletteContent />
       </aside>

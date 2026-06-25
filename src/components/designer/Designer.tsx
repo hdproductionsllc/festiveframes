@@ -345,8 +345,8 @@ export function Designer() {
             {/* Tile palette panel — ~55–60% on desktop. */}
             <TilePalette />
 
-            {/* Text-bar editor panel — wider (~60%) on desktop. */}
-            <div className="w-full lg:basis-0 lg:grow-[60] min-w-0">
+            {/* Text-bar editor panel — equal width to the palette on desktop. */}
+            <div className="w-full lg:basis-0 lg:grow-[50] min-w-0">
               <BottomBarEditor />
             </div>
           </div>
