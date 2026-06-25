@@ -28,7 +28,7 @@ export const metadata: Metadata = {
     type: "website",
     title: copy.buy.metaTitle,
     description: copy.buy.metaDescription,
-    siteName: copy.site.brandName,
+    siteName: copy.site.brandEntity,
     // Image comes from the file-convention OG image, resolved absolutely via
     // metadataBase in the root layout.
   },

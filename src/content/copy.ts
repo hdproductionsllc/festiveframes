@@ -83,7 +83,15 @@ export interface HomeCopy {
 }
 
 export interface SiteCopy {
+  /** Recognizable brand name. Used as the JSON-LD Organization `name`. */
   brandName: string;
+  /**
+   * Locked brand entity string ("Festive Frames – Custom License Plate Frames").
+   * Used for OG/Twitter siteName and the Organization alternateName so search
+   * engines and AI resolve THIS brand rather than the unrelated UK
+   * festiveframes.co.uk. Pairs the brand with its category unambiguously.
+   */
+  brandEntity: string;
   tagline: string;
 }
 
@@ -162,6 +170,7 @@ export interface Copy {
 export const copy: Copy = {
   site: {
     brandName: "Festive Frames",
+    brandEntity: "Festive Frames – Custom License Plate Frames",
     tagline: "Design your own. Made by hand to order.",
   },
 

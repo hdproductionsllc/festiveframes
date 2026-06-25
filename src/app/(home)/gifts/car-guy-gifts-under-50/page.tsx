@@ -12,7 +12,11 @@ const PAGE_URL = `${SITE_URL}${PAGE_PATH}`;
 
 // Price-qualified gift listicle targeting "car guy gifts under $50". Anchors the
 // $39 custom frame as the hero pick alongside honest, general gift categories.
-const META_TITLE = "Car Guy Gifts Under $50 They'll Actually Use";
+// Gift-intent title; append the locked brand entity so the brand and its
+// "License Plate Frames" category co-occur in the <title> (this page's headline
+// targets the gift keyword, not the category).
+const META_TITLE =
+  "Car Guy Gifts Under $50 They'll Actually Use | Festive Frames – Custom License Plate Frames";
 const META_DESCRIPTION =
   "Car guy gifts under $50 he'll actually use, led by a $39 custom patriotic license plate frame he designs himself. Handmade in St. Louis, ships fast.";
 
@@ -23,7 +27,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     url: PAGE_URL,
-    siteName: copy.site.brandName,
+    siteName: copy.site.brandEntity,
     title: META_TITLE,
     description: META_DESCRIPTION,
     images: [`${SITE_URL}/opengraph-image`],

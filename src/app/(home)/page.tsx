@@ -33,7 +33,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     url: SITE_URL,
-    siteName: copy.site.brandName,
+    siteName: copy.site.brandEntity,
     title: copy.home.metaTitle,
     description: copy.home.metaDescription,
     images: [`${SITE_URL}/opengraph-image`],
@@ -57,9 +57,15 @@ function buildJsonLd() {
   const organization = {
     "@type": ["Organization", "OnlineStore"],
     "@id": `${SITE_URL}/#organization`,
+    // Keep the recognizable brand as `name`; the locked entity string is the
+    // alternateName so Google/AI disambiguate this brand from the unrelated UK
+    // festiveframes.co.uk by pairing it with its product category.
     name: copy.site.brandName,
+    alternateName: copy.site.brandEntity,
     url: SITE_URL,
     slogan: copy.site.tagline,
+    description:
+      "Festive Frames makes custom, personalized license plate frames you design yourself: pick a theme, snap on the tiles you want, and add your phrase. Every frame is made to order by hand in St. Louis, USA.",
     logo: `${SITE_URL}/brand/seal.png`,
     image: `${SITE_URL}/brand/seal.png`,
     areaServed: "US",

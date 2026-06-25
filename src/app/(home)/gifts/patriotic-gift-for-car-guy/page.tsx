@@ -14,7 +14,11 @@ const PAGE_URL = `${SITE_URL}${PAGE_PATH}`;
 // guy". Funnels gift shoppers straight into the builder. Lives in the (home)
 // route group so it inherits the sticker theme + fonts; brings its own
 // Header/Footer for full home chrome.
-const META_TITLE = "Patriotic Gift for the Car Guy Who Has Everything";
+// Gift-intent title; append the locked brand entity so the brand and its
+// "License Plate Frames" category co-occur in the <title> (this page's headline
+// targets the gift keyword, not the category).
+const META_TITLE =
+  "Patriotic Gift for the Car Guy Who Has Everything | Festive Frames – Custom License Plate Frames";
 const META_DESCRIPTION =
   "The patriotic gift for the car guy who has everything: a custom America's 250th license plate frame he designs himself. $39, handmade in St. Louis, ships fast.";
 
@@ -25,7 +29,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     url: PAGE_URL,
-    siteName: copy.site.brandName,
+    siteName: copy.site.brandEntity,
     title: META_TITLE,
     description: META_DESCRIPTION,
     images: [`${SITE_URL}/opengraph-image`],

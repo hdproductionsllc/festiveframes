@@ -34,7 +34,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     url: `${SITE_URL}/build`,
-    siteName: copy.site.brandName,
+    siteName: copy.site.brandEntity,
     title: copy.build.metaTitle,
     description: copy.build.metaDescription,
   },
