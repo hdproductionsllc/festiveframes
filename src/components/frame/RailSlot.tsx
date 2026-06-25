@@ -58,6 +58,13 @@ export function RailSlot({ slot, placedTile, isOver }: RailSlotProps) {
   const isActionable = selectedPieceId != null || placedTile != null;
   const cursorClass = isActionable ? "group cursor-pointer" : "cursor-default";
 
+  // KEY mobile cue: while a tile is armed there is NO hover on touch, so EVERY
+  // cell wears a persistent gold dashed outline + slow pulse — a loud, standing
+  // invitation to "tap the frame to drop." It overlays both empty and filled
+  // cells (you can replace a filled cell) and vanishes the instant nothing is
+  // armed. Reduced-motion users still get the static dashed ring (pulse frozen).
+  const armed = selectedPieceId != null;
+
   return (
     <div
       ref={setNodeRef}
@@ -70,6 +77,14 @@ export function RailSlot({ slot, placedTile, isOver }: RailSlotProps) {
         height: slot.height,
       }}
     >
+      {/* Persistent armed-state drop cue — sits ABOVE the tile/cell art but below
+          the remove ✕ and sparkle; pointer-events off so it never eats the tap. */}
+      {armed && (
+        <span
+          aria-hidden
+          className="ff-armed-cue pointer-events-none absolute inset-0 z-[2] rounded-[3px]"
+        />
+      )}
       {placedTile ? (
         <PlacedTileCell
           slotId={slot.id}

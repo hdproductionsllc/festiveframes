@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { TileGrid } from "./TileGrid";
+import { ArmedBanner } from "./ArmedBanner";
 import { QuickActions } from "@/components/designer/QuickActions";
 import { PresetGallery } from "@/components/designer/PresetGallery";
 
@@ -33,9 +34,12 @@ function DesktopPaletteContent() {
     <div className="flex flex-col gap-2">
       <p className="rounded-full border-2 border-brand-gold/60 bg-brand-gold/15 px-3 py-2
         text-center text-sm font-extrabold leading-snug text-[#1e1b17]">
-        Drag a tile onto your frame. Drag one off to remove it.
+        Tap a tile, then tap your frame to drop it. Or drag a tile on (drag one off to remove).
       </p>
       <TileGrid />
+      {/* Armed-tile callout — also surfaces here, next to the picker, so the
+          "now tap the frame" instruction is visible no matter where you look. */}
+      <ArmedBanner placement="tray" />
       <QuickActions />
       <PresetGallery />
     </div>
@@ -79,11 +83,23 @@ function MobileTileTray() {
         </div>
       )}
 
+      {/* The always-visible, thumb-friendly tile row comes FIRST so the tiles
+          are the top thing in the tray; the instruction + Tools sit just below. */}
       <div className="px-3 pt-2">
-        <div className="mb-1.5 flex items-center gap-2">
+        <TileGrid variant="row" />
+      </div>
+
+      {/* Armed-tile callout — bold "now tap your frame" cue, mobile-prominent. */}
+      <div className="px-3 pt-1.5">
+        <ArmedBanner placement="tray" />
+      </div>
+
+      {/* Instruction + optional Tools — moved BELOW the picker. */}
+      <div className="px-3 pb-3 pt-1.5">
+        <div className="flex items-center gap-2">
           <p className="flex-1 rounded-full border-2 border-brand-gold/60 bg-brand-gold/15 px-3 py-1.5
             text-center text-[13px] font-extrabold leading-snug text-[#1e1b17]">
-            Tap a tile to add it. Tap a placed tile to remove it.
+            Tap a tile, then tap your frame to drop it.
           </p>
           <button
             onClick={() => setOptionsOpen((v) => !v)}
@@ -94,11 +110,6 @@ function MobileTileTray() {
             {optionsOpen ? "Done" : "⚙ Tools"}
           </button>
         </div>
-      </div>
-
-      {/* The always-visible, thumb-friendly tile row */}
-      <div className="px-3 pb-3">
-        <TileGrid variant="row" />
       </div>
     </div>
   );

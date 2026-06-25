@@ -27,11 +27,11 @@ export function TileGrid({ variant = "grid" }: TileGridProps) {
   if (variant === "row") {
     return (
       <div
-        className="flex gap-2 overflow-x-auto overflow-y-hidden pb-1
+        className="flex gap-2 overflow-x-auto overflow-y-hidden pb-1 pt-3
           [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
       >
         {pieces.map((piece) => (
-          <PaletteTile key={piece.id} piece={piece} size="lg" tapToPlace />
+          <PaletteTile key={piece.id} piece={piece} size="lg" />
         ))}
       </div>
     );

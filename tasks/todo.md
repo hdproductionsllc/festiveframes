@@ -1,22 +1,16 @@
-# Builder fixes — persistence, header state selector, plate shadow
+# Builder mobile usability + clarity pass
 
-Branch: master (do NOT commit/push). Build GREEN.
+## Goal
+Make tile placement SUPER OBVIOUS. Tap-to-arm + tap-frame-to-place, drag still works.
 
-## 1. Design persistence (data-loss bug) — DONE
-- [x] partialize now persists FULL design: designName, plateState, slots, textBars,
-      selectedBarId, qrCode, bottomBar, frameConfig, dieCut, updatedAt (history NOT persisted)
-- [x] persist version bumped to 6 + migrate() strips pre-v6 blobs to meta-only (safe)
-- [x] Seed guard: returning user (slots OR textBars present) is left EXACTLY as saved —
-      no re-seed, no fillEmpty patch; brand-new visitor still gets the seeded design
-
-## 2. State selector moved into header — DONE
-- [x] StateSelector now under the "Name your design" input (left cluster) in DesignerHeader
-- [x] theme="header" variant matches dark header chrome; visible on mobile too (name hidden)
-- [x] Removed from Designer.tsx (+ unused import); plate still reflects state (store-driven)
-
-## 3. Plate drop shadow — DONE
-- [x] Soft cast + contact shadow on LicensePlateArea on-screen wrapper (export untouched)
-
-## Verify — DONE
-- [x] npx next build exits 0
-- [x] npm run lint: 0 errors, only pre-existing warnings (no new)
+## Tasks
+- [x] palette-store: add a one-time "armed hint seen" flag (for finger hint)
+- [x] PaletteTile: tile-tap ARMS (selects) only. Removed placeInNextEmpty/tapToPlace. Loud armed state + "PLACING" badge. Tap-again disarms.
+- [x] TileGrid: dropped tapToPlace prop (keep size lg for mobile); pt-3 so badge isn't clipped.
+- [x] RailSlot: persistent armed cue on EVERY cell (ff-armed-cue gold dashed + slow pulse) without hover, removed when nothing armed.
+- [x] New ArmedBanner component: bold banner shown when a tile is armed. Near frame + palette.
+- [x] One-time finger hint pointing at frame first time armed.
+- [x] TilePalette: moved mobile callout + Tools button BELOW TileGrid. Armed banner shown.
+- [x] DndProvider: tuned TouchSensor to {delay:180, tolerance:8}.
+- [x] globals.css: armed-cell cue + armed-pulse + finger hint keyframes, reduced-motion safe.
+- [x] Build green (exit 0) + lint 0 errors (warnings all pre-existing).

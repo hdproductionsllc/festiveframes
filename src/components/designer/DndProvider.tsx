@@ -50,8 +50,16 @@ export function DndProvider({ children, onOverSlotChange }: DndProviderProps) {
   const pointerSensor = useSensor(PointerSensor, {
     activationConstraint: { distance: 5 },
   });
+  // Touch drag activation, tuned so all three gestures stay distinct on a phone:
+  //  • a quick TAP releases before `delay` → never starts a drag (stays a tap,
+  //    so tap-to-arm and tap-to-place work cleanly);
+  //  • a SCROLL flick moves past `tolerance` before `delay` elapses → cancels
+  //    drag activation, so the tray/page still scrolls;
+  //  • a deliberate PRESS-AND-HOLD (past `delay`, finger fairly still) → starts
+  //    the drag. `tolerance` is a hair more forgiving than before so natural
+  //    finger jitter during the hold doesn't read as a scroll and kill the drag.
   const touchSensor = useSensor(TouchSensor, {
-    activationConstraint: { delay: 150, tolerance: 5 },
+    activationConstraint: { delay: 180, tolerance: 8 },
   });
   const sensors = useSensors(pointerSensor, touchSensor);
 

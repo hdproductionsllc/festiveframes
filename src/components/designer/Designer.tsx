@@ -9,6 +9,7 @@ import { DesignerHeader } from "./DesignerHeader";
 import { ExportPartsList } from "./ExportPartsList";
 import { FrameCanvas, type FrameCanvasHandle } from "@/components/frame/FrameCanvas";
 import { TilePalette } from "@/components/tiles/TilePalette";
+import { ArmedBanner } from "@/components/tiles/ArmedBanner";
 import { BottomBarEditor } from "@/components/bottom-bar/BottomBarEditor";
 import { composeFrameImage, composeBarImage } from "@/lib/utils/compose-frame";
 import { composeEufyPrintSheets } from "@/lib/utils/eufy-print";
@@ -307,6 +308,10 @@ export function Designer() {
 
           {/* Main content area — sticky on desktop so it follows scroll */}
           <div className="flex-1 flex flex-col gap-3 min-w-0 md:sticky md:top-4 md:self-start">
+            {/* Armed-tile callout — appears right above the frame the moment a
+                tile is armed, telling you in plain words to tap the frame. */}
+            <ArmedBanner placement="frame" />
+
             {/* Frame canvas */}
             <div className="relative">
               {/* Ambient festivity: two faint, slow twinkles drifting near the

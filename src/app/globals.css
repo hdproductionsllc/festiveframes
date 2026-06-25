@@ -219,6 +219,51 @@ body {
   100% { transform: translate(var(--ff-dx), var(--ff-dy)) scale(0.4); opacity: 0; }
 }
 
+/* ── Armed-state cues ───────────────────────────────────────────────────────
+   When a palette tile is ARMED (selected for tap-to-place), two cues fire:
+   1. `ff-armed-cue` — a soft gold DASHED outline + slow pulse painted over EVERY
+      frame cell, so on touch (no hover) it's obvious you tap the frame to drop.
+   2. `animate-armed-pulse` — the chosen palette tile breathes a gold glow so it
+      reads as "this is the one I'm placing."
+   Both are pure box-shadow/opacity (GPU-friendly) and motion-safe: the global
+   reduced-motion block freezes the pulse, leaving the static dashed ring/glow. */
+.ff-armed-cue {
+  outline: 2px dashed rgba(248, 197, 59, 0.85);
+  outline-offset: -3px;
+  box-shadow: inset 0 0 0 9999px rgba(248, 197, 59, 0.08);
+  animation: ff-armed-cue-pulse 1.3s ease-in-out infinite;
+}
+@keyframes ff-armed-cue-pulse {
+  0%, 100% {
+    outline-color: rgba(248, 197, 59, 0.55);
+    box-shadow: inset 0 0 0 9999px rgba(248, 197, 59, 0.05);
+  }
+  50% {
+    outline-color: rgba(248, 197, 59, 1);
+    box-shadow: inset 0 0 0 9999px rgba(248, 197, 59, 0.16);
+  }
+}
+
+@keyframes ff-armed-pulse {
+  0%, 100% { box-shadow: 0 0 10px 1px rgba(248, 197, 59, 0.45); }
+  50% { box-shadow: 0 0 18px 5px rgba(248, 197, 59, 0.8); }
+}
+.animate-armed-pulse {
+  animation: ff-armed-pulse 1.3s ease-in-out infinite;
+}
+
+/* ── One-time "now tap the frame" finger hint ────────────────────────────────
+   A big 👆 that taps toward the frame the very first time a visitor arms a tile,
+   teaching the arm→tap-frame flow without any reading. One-shot (3 bounces) and
+   shown once per session; hidden entirely under reduced motion. */
+.ff-finger-hint {
+  animation: ff-finger-tap 0.9s ease-in-out 3;
+}
+@keyframes ff-finger-tap {
+  0%, 100% { transform: translateY(0) rotate(-8deg); }
+  50% { transform: translateY(10px) rotate(-8deg); }
+}
+
 /* Rail groove inset shadow */
 .rail-groove {
   box-shadow:
