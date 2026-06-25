@@ -110,6 +110,38 @@ export const fourthOfJulySet: TileSet = {
       emoji: "🎩",
       backgroundColor: "#FFFFFF",
     },
+    {
+      id: "july4th:colonial-flag",
+      setId: "july4th",
+      name: "Colonial Flag",
+      artworkUrl: `${A}/colonial-flag.png`,
+      emoji: "🇺🇸",
+      backgroundColor: "#FFFFFF",
+    },
+    {
+      id: "july4th:pinwheel-snappet",
+      setId: "july4th",
+      name: "Pinwheel",
+      artworkUrl: `${A}/pinwheel-snappet.png`,
+      emoji: "🌀",
+      backgroundColor: "#FFFFFF",
+    },
+    {
+      id: "july4th:pennant-blue-dot",
+      setId: "july4th",
+      name: "Blue Pennant",
+      artworkUrl: `${A}/pennant-blue-dot.png`,
+      emoji: "🔵",
+      backgroundColor: "#FFFFFF",
+    },
+    {
+      id: "july4th:pennant-red-stripe",
+      setId: "july4th",
+      name: "Striped Pennant",
+      artworkUrl: `${A}/pennant-red-stripe.png`,
+      emoji: "🔴",
+      backgroundColor: "#FFFFFF",
+    },
 
     // ─── Bold patterns & bursts ───────────────────────────────
     {

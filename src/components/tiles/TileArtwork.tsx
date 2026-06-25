@@ -79,6 +79,8 @@ const DIE_CUT_ELIGIBLE = new Set([
   "eagle", "liberty", "sparkler",
   "star-white", "star-gold", "firework-red", "firework-blue",
   "rocket", "medal", "bell", "party", "usa",
+  // 4th of July — Becky Newman die-cut snappets
+  "colonial-flag", "pinwheel-snappet", "pennant-blue-dot", "pennant-red-stripe",
   // Easter
   "bunny", "rabbit", "hatching-chick", "baby-chick", "egg",
   "tulip", "blossom", "butterfly", "dove", "lamb",

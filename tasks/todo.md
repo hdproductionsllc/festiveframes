@@ -1,21 +1,27 @@
-# Sticker-theme sweep — restyle remaining customer-facing pages
+# Task: Process Becky Newman 4th of July snappet artwork — DONE (branch master, no commit)
 
-## Scope (confirmed by import-graph analysis)
-Live customer-facing surfaces inside `.sticker-theme`:
-- `(site)` layout wraps: /thanks (done), /privacy, /returns, /terms
-- Client islands reachable from live pages: EmailCaptureForm (thanks), SharePrompt (thanks), LeaveReview (kept for reuse)
-- Root 404 (`not-found.tsx`) — customer-facing, currently `marketing-theme`
+## Replacements (drop-in PNG swap, id/name/registration unchanged)
+- [x] `Final Waving flag.png` -> public/tiles/july4/waving-flag.png
+- [x] `Final Firecracker snappet.png` -> public/tiles/july4/firecracker.png
+- [x] `Final white star with red square.png` -> public/tiles/july4/star-red.png
+- [x] `Final white star with blue square.png` -> public/tiles/july4/star-blue.png
 
-LEAVE ALONE (intentionally legacy): /classic, /buy, and ALL `components/site/home/*` + `components/site/buy/*` + ReviewsCarousel/FoundingScarcity (used only by /classic and /buy). Builder + /confirmation use the dark workbench theme (out of scope).
+## New featured tiles (PNG copied + registered)
+- [x] colonial-flag.png — id july4th:colonial-flag, "Colonial Flag"
+- [x] pinwheel-snappet.png — id july4th:pinwheel-snappet, "Pinwheel"
+- [x] pennant-blue-dot.png — id july4th:pennant-blue-dot, "Blue Pennant"
+- [x] pennant-red-stripe.png — id july4th:pennant-red-stripe, "Striped Pennant"
 
-## Tasks
-- [x] Restyle `(site)/privacy/page.tsx` body to sticker theme (keep text)
-- [x] Restyle `(site)/returns/page.tsx` body to sticker theme (keep text)
-- [x] Restyle `(site)/terms/page.tsx` body to sticker theme (keep text)
-- [x] Reskin `EmailCaptureForm.tsx` (cream input, ink outline, gold/pink button)
-- [x] Reskin `SharePrompt.tsx` (sticker button)
-- [x] Reskin `LeaveReview.tsx` (sticker form/inputs/button)
-- [x] Restyle root `not-found.tsx` to sticker theme (self-contained)
-- [x] `npx next build` exit 0
-- [x] `npm run lint` no new errors (0 errors; only pre-existing warnings)
-- [x] Report
+## Processing
+- [x] Resized all to 1200x1200, palette PNG, alpha preserved on the 6 die-cut shapes
+      (star-red/star-blue are full-bleed square designs with no transparent area — correct)
+- [x] Added 4 new ids to DIE_CUT_ELIGIBLE in TileArtwork.tsx
+- [x] Registered 4 new tiles in FEATURED section of fourth-of-july.ts
+
+## Decision
+- Pinwheel: ADDED as new realistic die-cut snappet (july4th:pinwheel-snappet).
+  Existing flat geometric pattern july4th:pinwheel left untouched (different art, still valid).
+
+## Verify
+- [x] npx next build — exit 0
+- [x] npm run lint — 0 errors, 19 pre-existing warnings (none in changed files)
