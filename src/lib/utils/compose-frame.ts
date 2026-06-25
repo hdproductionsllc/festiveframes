@@ -189,8 +189,13 @@ export async function composeFrameImage(width = 1600): Promise<string> {
   return canvas.toDataURL("image/png");
 }
 
-/** Render a single placed text bar to a print-ready PNG data URL. */
-export async function composeBarImage(barId: string, unitPx = 220): Promise<string> {
+/**
+ * Render a single placed text bar to a print-ready PNG data URL.
+ * unitPx 357 ≈ 360 DPI at the 0.991" tile pitch — crisp banner text (a touch
+ * higher than the tiles' 300 DPI, since text edges benefit) while keeping the
+ * file small.
+ */
+export async function composeBarImage(barId: string, unitPx = 357): Promise<string> {
   if (typeof document === "undefined") return "";
   const s = useDesignStore.getState();
   const bar = s.textBars.find((b) => b.id === barId);
