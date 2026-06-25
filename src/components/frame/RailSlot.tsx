@@ -43,9 +43,10 @@ export function RailSlot({ slot, placedTile, isOver }: RailSlotProps) {
     (activeTool === "paint" && selectedPieceId != null);
   const cursorClass = isActionable ? "cursor-pointer group" : "cursor-default";
 
-  // Gapless: placed tiles fill the whole cell so neighbors butt edge-to-edge
-  // (0.985" grid). Empty slots keep a hair of inset to show the recessed groove.
-  const inset = placedTile ? 0 : slot.width * 0.08;
+  // Gapless: every cell (placed or empty) fills edge-to-edge. Empty cells are
+  // painted the design-surface cream so a cleared spot reads as empty/background
+  // instead of showing the black frame + groove rim underneath.
+  const inset = 0;
 
   return (
     <div
@@ -89,7 +90,7 @@ export function RailSlot({ slot, placedTile, isOver }: RailSlotProps) {
             style={{
               width: slot.width - inset * 2,
               height: slot.height - inset * 2,
-              background: "transparent",
+              background: "#faf0d6",
               border: "1px solid transparent",
             }}
           />

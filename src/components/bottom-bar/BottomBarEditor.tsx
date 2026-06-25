@@ -21,8 +21,9 @@ import type { BottomBarConfig, PlacedTextBar } from "@/lib/types";
  * as a clearly-secondary way to drop a bar on an exact top/bottom run.
  */
 
-/* ── Drag handle: drop a bar onto a precise top/bottom run ─────────────────── */
-function DragToPlace({ label }: { label: string }) {
+/* ── The draggable bar itself: grab it and drop it on a precise top/bottom run.
+   Shows a live preview of the bar so it clearly reads "grab me and drop me in." */
+function DragToPlace() {
   const bottomBar = useDesignStore((s) => s.bottomBar);
   const { setNodeRef, attributes, listeners, isDragging } = useDraggable({
     id: "textbar",
@@ -30,21 +31,32 @@ function DragToPlace({ label }: { label: string }) {
   });
 
   return (
-    <button
-      type="button"
-      ref={setNodeRef}
-      {...attributes}
-      {...listeners}
-      title="Drag me onto the top or bottom of the frame to place a bar exactly"
-      className={`flex w-full items-center gap-2.5 rounded-xl border-2 border-dashed border-[#1e1b17]/30
-        bg-white/50 px-3 py-2 text-left cursor-grab active:cursor-grabbing
-        transition-all hover:bg-white/80 active:scale-[0.99]
-        focus:outline-none focus-visible:ring-2 focus-visible:ring-[#ed5aa0]
-        ${isDragging ? "opacity-50" : ""}`}
-    >
-      <span className="select-none text-base leading-none text-[#1e1b17]/45" aria-hidden>⠿</span>
-      <span className="text-[12px] font-semibold text-[#1e1b17]/65">{label}</span>
-    </button>
+    <div className="space-y-1.5">
+      <span className="text-[11px] font-semibold text-[#1e1b17]/55">Or grab the bar and drop it exactly where you want:</span>
+      <button
+        type="button"
+        ref={setNodeRef}
+        {...attributes}
+        {...listeners}
+        title="Grab and drag this bar onto the top or bottom of your frame"
+        className={`flex w-full items-center gap-2 rounded-xl border-2 border-dashed border-[#1e1b17]/40
+          bg-white/70 p-1.5 cursor-grab active:cursor-grabbing transition-all hover:bg-white active:scale-[0.99]
+          focus:outline-none focus-visible:ring-2 focus-visible:ring-[#ed5aa0] ${isDragging ? "opacity-50" : ""}`}
+      >
+        <span className="select-none pl-1 text-lg leading-none text-[#1e1b17]/40" aria-hidden>⠿</span>
+        <div className="flex-1 overflow-hidden rounded-[4px] px-2 py-1.5" style={{ background: bottomBar.backgroundColor }}>
+          <span
+            className="block truncate text-center text-sm font-extrabold"
+            style={{ fontFamily: bottomBar.fontFamily, color: bottomBar.textColor, letterSpacing: bottomBar.letterSpacing }}
+          >
+            {bottomBar.text || "YOUR TEXT"}
+          </span>
+        </div>
+        <span className="shrink-0 rounded-full bg-[#1e1b17]/10 px-2 py-1 text-[10px] font-extrabold uppercase tracking-wide text-[#1e1b17]/60">
+          Drag &amp; drop
+        </span>
+      </button>
+    </div>
   );
 }
 
@@ -302,8 +314,8 @@ export function BottomBarEditor() {
         )}
       </div>
 
-      {/* Secondary: drag to place on an exact run (only meaningful before/while adding). */}
-      <DragToPlace label="Prefer to place it yourself? Drag a bar onto the frame" />
+      {/* Secondary: grab the bar and drop it on an exact top/bottom run. */}
+      <DragToPlace />
     </div>
   );
 }
