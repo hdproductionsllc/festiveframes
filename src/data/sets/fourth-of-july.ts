@@ -110,14 +110,6 @@ export const fourthOfJulySet: TileSet = {
       emoji: "🎩",
       backgroundColor: "#FFFFFF",
     },
-    {
-      id: "july4th:qr-code",
-      setId: "july4th",
-      name: "QR Code",
-      artworkUrl: `${A}/qr.png`,
-      emoji: "🔳",
-      backgroundColor: "#FFFFFF",
-    },
 
     // ─── Bold patterns & bursts ───────────────────────────────
     {

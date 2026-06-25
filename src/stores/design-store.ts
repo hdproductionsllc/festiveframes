@@ -28,13 +28,25 @@ function makeTextBarId(existing: PlacedTextBar[]): string {
 }
 
 /**
- * The FIRST banner in a design must always carry the QR code; subsequent bars
- * are optional. Re-assert that invariant after any add/remove/reorder so it can
- * never drift. Returns the same array reference when nothing changes.
+ * There is exactly ONE optional QR code per design, and it rides the FIRST
+ * banner. This syncs that invariant to the design-level `qrEnabled` flag: the
+ * first bar's `qr` matches `qrEnabled`, every other bar is forced `qr = false`.
+ * Re-assert after any add/remove/reorder or QR toggle so it can never drift.
+ * Returns the same array reference when nothing changes.
+ *
+ * NOTE: this only flips the `qr` flag — it does NOT re-fit widths. Callers that
+ * change whether the first bar carries the QR must re-measure that bar's width
+ * (see `setQrEnabled`) so it reserves/frees the QR's space.
  */
-function enforceFirstBarQr(bars: PlacedTextBar[]): PlacedTextBar[] {
-  if (bars.length === 0 || bars[0].qr) return bars;
-  return bars.map((b, i) => (i === 0 ? { ...b, qr: true } : b));
+function syncFirstBarQr(bars: PlacedTextBar[], qrEnabled: boolean): PlacedTextBar[] {
+  let changed = false;
+  const next = bars.map((b, i) => {
+    const want = i === 0 ? qrEnabled : false;
+    if (b.qr === want) return b;
+    changed = true;
+    return { ...b, qr: want };
+  });
+  return changed ? next : bars;
 }
 
 /**
@@ -148,9 +160,10 @@ interface DesignState {
   removeTextBar: (id: string) => void;
   selectBar: (id: string | null) => void;
   updateTextBar: (id: string, updates: Partial<BottomBarConfig>) => void;
-  updateTextBarQr: (id: string, enabled: boolean) => void;
 
-  // Actions — QR
+  // Actions — QR (design-level: one optional QR on the FIRST banner)
+  /** Toggle the design's QR on/off; syncs the first bar's `qr` and re-fits it. */
+  setQrEnabled: (enabled: boolean) => void;
   updateQRCode: (updates: Partial<QRCodeConfig>) => void;
 
   // Actions — appearance
@@ -416,10 +429,10 @@ export const useDesignStore = create<DesignState>()(
           set((state) => {
             const maxUnits = rowLength(state.frameConfig, row);
             const config = { ...state.bottomBar };
-            // The first bar ALWAYS carries the QR (required); additional bars
-            // start without it and can toggle it freely.
+            // One optional QR per design rides the FIRST banner. A newly placed
+            // first bar inherits the design's QR toggle; later bars never carry it.
             const isFirst = state.textBars.length === 0;
-            const qr = isFirst ? true : false;
+            const qr = isFirst ? state.qrCode.enabled : false;
             const widthUnits = measureTextBarUnits(config, qr, maxUnits);
             // New bars prefer the row center, but must land on a FREE run — never
             // on top of an existing bar. `startIndex` (the drop point) only chose
@@ -440,7 +453,7 @@ export const useDesignStore = create<DesignState>()(
             // A bar REPLACES the tiles it covers (no hidden layers): the covered
             // tiles are deleted, so what you see is what prints and removing the
             // bar leaves the area blank.
-            const newBars = enforceFirstBarQr([...state.textBars, bar]);
+            const newBars = syncFirstBarQr([...state.textBars, bar], state.qrCode.enabled);
             return {
               ...pushHistory(),
               textBars: newBars,
@@ -493,13 +506,32 @@ export const useDesignStore = create<DesignState>()(
         },
 
         removeTextBar: (id) => {
-          set((state) => ({
-            ...pushHistory(),
-            // Removing the first bar promotes the next one — re-assert the QR rule.
-            textBars: enforceFirstBarQr(state.textBars.filter((b) => b.id !== id)),
-            selectedBarId: state.selectedBarId === id ? null : state.selectedBarId,
-            updatedAt: Date.now(),
-          }));
+          set((state) => {
+            const remaining = state.textBars.filter((b) => b.id !== id);
+            // Removing the first bar promotes the next one to carry the QR (if the
+            // design has it enabled). Sync the flags, then re-fit the new first
+            // bar so its width reserves/frees the QR space correctly.
+            let synced = syncFirstBarQr(remaining, state.qrCode.enabled);
+            const first = synced[0];
+            if (first && first !== remaining[0]) {
+              // The first bar's qr flag actually changed during promotion — re-fit.
+              const maxUnits = rowLength(state.frameConfig, first.row);
+              const { widthUnits, startIndex } = fitWidth(
+                synced,
+                first,
+                measureTextBarUnits(first.config, first.qr, maxUnits),
+                maxUnits
+              );
+              synced = synced.map((b, i) => (i === 0 ? { ...b, widthUnits, startIndex } : b));
+            }
+            return {
+              ...pushHistory(),
+              textBars: synced,
+              slots: clearCoveredTiles(state.slots, synced),
+              selectedBarId: state.selectedBarId === id ? null : state.selectedBarId,
+              updatedAt: Date.now(),
+            };
+          });
         },
 
         selectBar: (id) => {
@@ -529,30 +561,36 @@ export const useDesignStore = create<DesignState>()(
           });
         },
 
-        updateTextBarQr: (id, enabled) => {
+        setQrEnabled: (enabled) => {
           set((state) => {
-            const bar = state.textBars.find((b) => b.id === id);
-            if (!bar) return state;
-            // The first bar's QR is required — refuse to turn it off.
-            if (!enabled && state.textBars[0]?.id === id) return state;
-            const maxUnits = rowLength(state.frameConfig, bar.row);
-            const { widthUnits, startIndex } = fitWidth(
-              state.textBars,
-              bar,
-              measureTextBarUnits(bar.config, enabled, maxUnits),
-              maxUnits
-            );
-            const updated: PlacedTextBar = { ...bar, qr: enabled, widthUnits, startIndex };
-            const newBars = state.textBars.map((b) => (b.id === id ? updated : b));
+            if (state.qrCode.enabled === enabled) return state;
+            const qrCode = { ...state.qrCode, enabled };
+            // Flip the first bar's qr to match (others stay off), then re-fit the
+            // first bar so it reserves the QR's space when on and frees it when
+            // off — never overlapping a neighbor. No bars yet → just store the flag.
+            let textBars = syncFirstBarQr(state.textBars, enabled);
+            const first = textBars[0];
+            if (first) {
+              const maxUnits = rowLength(state.frameConfig, first.row);
+              const { widthUnits, startIndex } = fitWidth(
+                textBars,
+                first,
+                measureTextBarUnits(first.config, first.qr, maxUnits),
+                maxUnits
+              );
+              textBars = textBars.map((b, i) => (i === 0 ? { ...b, widthUnits, startIndex } : b));
+            }
             return {
               ...pushHistory(),
-              textBars: newBars,
-              slots: clearCoveredTiles(state.slots, newBars),
+              qrCode,
+              textBars,
+              slots: clearCoveredTiles(state.slots, textBars),
               updatedAt: Date.now(),
             };
           });
         },
 
+        // A URL change just re-renders the QR (same footprint) — no resize needed.
         updateQRCode: (updates) => {
           set((state) => ({
             qrCode: { ...state.qrCode, ...updates },
@@ -731,10 +769,12 @@ export const useDesignStore = create<DesignState>()(
         // Migrate single text bar → array of placed bars
         if (merged.textBars === undefined) {
           const legacy = (merged as unknown as { textBar?: TextBarPlacement | null }).textBar;
-          merged.textBars = enforceFirstBarQr(
+          const qrEnabled = merged.qrCode?.enabled ?? false;
+          merged.textBars = syncFirstBarQr(
             legacy
-              ? [{ id: "tb-legacy", ...legacy, config: { ...merged.bottomBar }, qr: merged.qrCode?.enabled ?? false }]
-              : []
+              ? [{ id: "tb-legacy", ...legacy, config: { ...merged.bottomBar }, qr: qrEnabled }]
+              : [],
+            qrEnabled
           );
         }
         delete (merged as unknown as { textBar?: unknown }).textBar;

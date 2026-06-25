@@ -145,6 +145,9 @@ export function BottomBarEditor() {
   const selectBar = useDesignStore((s) => s.selectBar);
   const updateTextBar = useDesignStore((s) => s.updateTextBar);
   const addTextBar = useDesignStore((s) => s.addTextBar);
+  const qrCode = useDesignStore((s) => s.qrCode);
+  const setQrEnabled = useDesignStore((s) => s.setQrEnabled);
+  const updateQRCode = useDesignStore((s) => s.updateQRCode);
 
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -315,8 +318,89 @@ export function BottomBarEditor() {
         )}
       </div>
 
+      {/* Add a QR code — one optional QR rides the FIRST banner. */}
+      {hasBars && (
+        <QrSection
+          enabled={qrCode.enabled}
+          url={qrCode.url}
+          onToggle={setQrEnabled}
+          onUrlChange={(url) => updateQRCode({ url })}
+        />
+      )}
+
       {/* Secondary: grab the bar and drop it on an exact top/bottom run. */}
       <DragToPlace />
+    </div>
+  );
+}
+
+/* ── "Add a QR code" — one optional QR per design, on the first banner ─────────
+   Toggle is bound to qrCode.enabled (→ setQrEnabled, which re-fits the first bar
+   so the QR reserves/frees space). When on, a URL field links it anywhere; blank
+   falls back to festiveframes.co at render time. */
+const QR_FALLBACK_URL = "https://festiveframes.co";
+
+function QrSection({
+  enabled,
+  url,
+  onToggle,
+  onUrlChange,
+}: {
+  enabled: boolean;
+  url: string;
+  onToggle: (enabled: boolean) => void;
+  onUrlChange: (url: string) => void;
+}) {
+  return (
+    <div className="space-y-3 rounded-2xl border-2 border-[#1e1b17] bg-white/70 p-3.5 shadow-[3px_3px_0_#1e1b17]">
+      <label className="flex cursor-pointer items-start gap-3">
+        <span className="relative mt-0.5 inline-flex shrink-0">
+          <input
+            type="checkbox"
+            checked={enabled}
+            onChange={(e) => onToggle(e.target.checked)}
+            className="peer sr-only"
+          />
+          <span
+            aria-hidden
+            className="block h-6 w-11 rounded-full bg-[#1e1b17]/20 transition-colors peer-checked:bg-[#ed5aa0]
+              peer-focus-visible:ring-2 peer-focus-visible:ring-[#ed5aa0] peer-focus-visible:ring-offset-2"
+          />
+          <span
+            aria-hidden
+            className="pointer-events-none absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow
+              transition-transform peer-checked:translate-x-5"
+          />
+        </span>
+        <span className="min-w-0">
+          <span className="flex items-center gap-1.5 text-sm font-extrabold text-[#1e1b17]">
+            <span aria-hidden>🔳</span> Add a QR code
+          </span>
+          <span className="mt-0.5 block text-[12px] font-medium leading-snug text-[#1e1b17]/60">
+            Link it to anything — your Instagram, website, a playlist, a Venmo, a tribute page. Sits on your
+            first banner. Defaults to festiveframes.co.
+          </span>
+        </span>
+      </label>
+
+      {enabled && (
+        <div className="space-y-1.5 pl-[3.5rem]">
+          <span className="text-[11px] font-bold uppercase tracking-wide text-[#1e1b17]/70">Link (URL)</span>
+          <input
+            type="url"
+            inputMode="url"
+            value={url}
+            onChange={(e) => onUrlChange(e.target.value)}
+            onBlur={(e) => {
+              const trimmed = e.target.value.trim();
+              onUrlChange(trimmed || QR_FALLBACK_URL);
+            }}
+            placeholder={QR_FALLBACK_URL}
+            className="w-full rounded-lg border-2 border-[#1e1b17]/15 bg-white px-3 py-2 text-sm font-semibold
+              text-[#1e1b17] placeholder:text-[#1e1b17]/35 focus:border-[#ed5aa0] focus:outline-none"
+          />
+        </div>
+      )}
     </div>
   );
 }
