@@ -2,10 +2,10 @@
 // inline so the -50% translate loop is seamless. Decorative; reduced-motion is
 // handled globally.
 const PHRASES = [
-  "★ SNAP IT ON",
-  "★ SWAP ANY TIME",
-  "★ 50+ TILES PER KIT",
-  "★ ZERO TOOLS",
+  "★ DESIGN YOUR OWN",
+  "★ PICK A THEME",
+  "★ ADD YOUR PHRASE",
+  "★ MADE TO ORDER",
   "★ MADE IN ST. LOUIS",
   "★ UV PRINTED",
   "★ PARTY ON YOUR PLATE",

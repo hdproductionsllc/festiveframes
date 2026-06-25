@@ -1,9 +1,9 @@
 const INK = "#1e1b17";
 
 const FEATURES = [
-  { glyph: "⚑", title: "Install once", body: "Bolt on with your existing plate screws a single time. Never touch tools again.", accent: "#ed5aa0" },
-  { glyph: "◈", title: "Snap-on tiles", body: "Tiles click in by hand and pop off in seconds. Endless combinations from one kit.", accent: "#3fb0e6" },
-  { glyph: "★", title: "Made to order in the USA", body: "Every kit is designed and UV printed to order, by hand, in St. Louis. No warehouse, no mass inventory.", accent: "#f8c53b" },
+  { glyph: "✎", title: "You design it", body: "Pick a theme, snap on the tiles you want, and add your own phrase. Your frame, your call.", accent: "#ed5aa0" },
+  { glyph: "◈", title: "Themes for every season", body: "The Fourth of July and America's 250th is live now. More seasonal themes are on the way.", accent: "#3fb0e6" },
+  { glyph: "★", title: "Made to order in the USA", body: "Every frame is designed and UV printed to order, by hand, in St. Louis. No warehouse, no mass inventory.", accent: "#f8c53b" },
   { glyph: "☂", title: "Built for the road", body: "Vetted for highway speeds, automatic car washes, and the full swing of weather.", accent: "#9b5fd0" },
 ];
 

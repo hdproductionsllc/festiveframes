@@ -9,9 +9,9 @@ const SOCIALS = [
 ];
 
 const SHOP = [
-  { label: "Freedom Frame Set", href: "/build" },
-  { label: "Two-Set Bundle", href: "/build" },
-  { label: "Browse looks", href: "#looks" },
+  { label: "Design your frame", href: "/build" },
+  { label: "Design two frames", href: "/build" },
+  { label: "Browse themes", href: "#looks" },
   { label: "Custom orders", href: "#custom" },
 ];
 
@@ -35,9 +35,9 @@ export function Footer({ year }: { year: number }) {
             className="mb-3.5 h-[132px] w-auto"
           />
           <p className="m-0 mb-[18px] max-w-[300px] text-[15px] font-semibold leading-[1.5] text-[#c8c1ad]">
-            Customizable snap-on license plate frame kits. Install the frame once,
-            then swap decorative tiles to dress up your plate for any season. Made
-            in St. Louis, USA.
+            Design your own custom license plate frame. Pick a theme, snap on the
+            tiles you want, add your phrase, and we hand-make it to order. Made in
+            St. Louis, USA.
           </p>
           <div className="flex gap-2.5">
             {SOCIALS.map((s) => (
@@ -57,9 +57,9 @@ export function Footer({ year }: { year: number }) {
         <FooterColumn title="Help" links={HELP} />
 
         <div>
-          <div className="s-display mb-3.5 text-base font-semibold text-[#f8c53b]">Get the tile drops</div>
+          <div className="s-display mb-3.5 text-base font-semibold text-[#f8c53b]">Get the new themes</div>
           <p className="m-0 mb-3 text-sm font-semibold text-[#c8c1ad]">
-            New tiles + seasonal sets. First access for the list. No spam, ever.
+            New seasonal themes and tiles. First access for the list. No spam, ever.
           </p>
           <EmailForm />
         </div>

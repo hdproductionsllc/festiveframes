@@ -27,22 +27,23 @@ export function Looks() {
       <div className="mb-7 flex flex-wrap items-end justify-between gap-6">
         <div>
           <div className="mb-1.5 text-[15px] font-extrabold tracking-[1.5px] text-[#ed5aa0]">
-            ONE FRAME, ENDLESS LOOKS
+            FOURTH OF JULY THEME · MORE COMING
           </div>
           <h2 className="m-0 text-[clamp(34px,6vw,46px)] font-bold leading-none tracking-[-1px]">
-            Find your flair
+            Start from a look
           </h2>
         </div>
         <p className="m-0 max-w-[360px] text-[17px] font-semibold text-[#6a6354]">
-          Real kits, real frames. The tiles snap around the border — never over
-          your plate — so your bumper goes from boring to block-party in seconds.
+          Every design below is a starting point in our launch theme. The tiles
+          sit around the border — never over your plate — so your bumper goes from
+          boring to block-party.
         </p>
       </div>
 
       <p className="mb-6 max-w-[680px] text-[16px] font-bold text-[#6a6354]">
-        Every look is a starting point — tap{" "}
-        <span className="text-[#ed5aa0]">Build this look</span> and make it yours
-        in the builder.
+        Pick any look as your starting point — tap{" "}
+        <span className="text-[#ed5aa0]">Build this look</span> and design it your
+        way in the builder.
       </p>
 
       {/* filter pills */}
@@ -115,8 +116,8 @@ export function Looks() {
         ))}
       </div>
       <p className="m-0 mt-[26px] text-center text-[15px] font-bold text-[#6a6354]">
-        Same frame, same plate — just snap on a different set of tiles. No tools,
-        no extra purchase.
+        Start from any look, then make it your own — swap tiles, change the
+        phrase, design the frame you actually want.
       </p>
     </section>
   );

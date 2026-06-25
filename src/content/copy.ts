@@ -162,7 +162,7 @@ export interface Copy {
 export const copy: Copy = {
   site: {
     brandName: "Festive Frames",
-    tagline: "Install once. Swap tiles forever.",
+    tagline: "Design your own. Made by hand to order.",
   },
 
   home: {
@@ -170,21 +170,21 @@ export const copy: Copy = {
       "Custom Patriotic License Plate Frames | America 250",
     metaDescription:
       "Design your own patriotic license plate frame for America's 250th. Snap-on stars, eagles & a custom phrase. $39, handmade in USA, ships fast. 30-day guarantee.",
-    heroH1: "Customizable License Plate Frames with Snap-On Tiles",
-    heroSubhead: "Install once. Swap tiles forever.",
-    primaryCta: { label: "Design your Freedom Frame", href: "/build" },
-    secondaryCta: { label: "See what's inside", href: "/build" },
+    heroH1: "Design Your Own Custom Patriotic License Plate Frame",
+    heroSubhead: "Pick a theme, add your tiles and phrase, made by hand to order.",
+    primaryCta: { label: "Design your frame", href: "/build" },
+    secondaryCta: { label: "See the themes", href: "/build" },
 
     whatItIs: [
-      "One frame installs on your plate a single time.",
-      "Tiles snap into the border and swap out whenever you want.",
-      "Every kit arrives complete, with all the tiles ready to go.",
+      "You design your own frame: pick a theme, the tiles, and your phrase.",
+      "The launch theme is the Fourth of July and America's 250th, with more coming.",
+      "We hand-make every frame to order in the USA, then ship it fast.",
     ],
 
     howItWorks: [
-      { step: "Install the frame once." },
-      { step: "Snap in your kit." },
-      { step: "Swap tiles forever." },
+      { step: "Pick a theme." },
+      { step: "Design it: tiles plus your phrase." },
+      { step: "We hand-make and ship it." },
     ],
 
     // Material described in plain language per product owner (the same hard
@@ -251,23 +251,23 @@ export const copy: Copy = {
       },
     ],
 
-    emailCapturePrompt: "Kit drops and early access. No spam, ever.",
-    ctaHeading: "Make your plate yours.",
+    emailCapturePrompt: "New theme drops and early access. No spam, ever.",
+    ctaHeading: "Design your frame.",
 
     seo: {
       heading: "Custom license plate frames you actually want to look at",
       intro:
-        "Festive Frames makes customizable, snap-on license plate frames with interchangeable decorative tiles. Install the frame once with your existing plate screws, then snap patriotic tiles, stars, stripes, flags, and fireworks, into the border and swap them whenever the season or the mood changes. It is a personalized license plate frame that fits all standard US plates in all 50 states, designed and made in St. Louis, USA.",
+        "Festive Frames lets you design your own custom license plate frame online. Pick a theme, snap on the patriotic tiles you want, stars, stripes, flags, and fireworks, and add your own phrase along the bottom bar. We hand-make every frame to order in St. Louis, USA. It is a personalized license plate frame that fits all standard US plates in all 50 states.",
       sections: [
         {
           heading: "A patriotic license plate frame for the Fourth of July",
           body:
-            "The Freedom Frame Set is built for Independence Day. Dress up your car with a red, white, and blue license plate frame loaded with American flag tiles, bold stars, chevrons, and firework bursts. It is the easy 4th of July car decoration that takes ten seconds to restyle, and because the tiles pop right off, the same frame carries you into every holiday and game day after.",
+            "Our launch theme is the Fourth of July and America's 250th, 1776 to 2026. Design your own red, white, and blue license plate frame with American flag tiles, bold stars, chevrons, and firework bursts, then add your phrase. It is the easy 4th of July car decoration you design yourself, and more seasonal themes are on the way.",
         },
         {
-          heading: "Snap-on, swappable, and tool-free",
+          heading: "Design your own, theme by theme",
           body:
-            "Most decorative license plate frames lock you into one look. This one does not. The interchangeable tiles snap into the rail by hand, with no tools and no adhesive, so you can mix and match designs or spell out phrases like LAND OF THE FREE on the bottom bar. Buy the frame once, change it endlessly.",
+            "Most decorative license plate frames come pre-made in one look. This one is yours to design. Choose a theme, snap the tiles you want into the rail by hand, and spell out phrases like LAND OF THE FREE on the bottom bar. New seasonal themes drop through the year, so there is always a fresh frame to design.",
         },
         {
           heading: "Made in the USA and built for the road",
@@ -277,7 +277,7 @@ export const copy: Copy = {
         {
           heading: "A car gift that is actually fun",
           body:
-            "Looking for a gift for the car lover, the proud American, or the neighbor who decorates for every holiday? A Festive Frames kit is a personalized, made-in-USA license plate frame that arrives complete and ready to snap on. Order two and keep one for the second car.",
+            "Looking for a gift for the car lover, the proud American, or the neighbor who decorates for every holiday? A custom Festive Frames frame is a personalized, made-in-USA license plate frame you design yourself and we make by hand. Design two and keep one for the second car.",
         },
       ],
     },
@@ -306,25 +306,25 @@ export const copy: Copy = {
     founding: {
       scarcityLine:
         "Our launch run for America's 250th birthday. Once these are claimed, the Founding Edition is gone for good.",
-      cta: "Claim your Founding kit",
+      cta: "Claim your Founding frame",
     },
 
     story: {
       heading: "Made by Midwest folks who wanted driving to be more fun",
       body:
-        "We are a small crew in St. Louis. We got tired of license plate frames that do one boring thing forever, so we built one you can restyle in ten seconds. No overseas factory, no committee, no nonsense. Just people who figure your car should get to celebrate too. We are kicking it off with a Founding Edition for America's 250th, and we are pretty proud of how it turned out. Here is why we think you will like it.",
+        "We are a small crew in St. Louis. We got tired of license plate frames that come pre-made in one boring look, so we built one you design yourself: pick a theme, choose your tiles, add your phrase. No overseas factory, no committee, no nonsense. Just people who figure your car should get to celebrate too. We are kicking it off with a Fourth of July theme for America's 250th, with more seasonal themes on the way. Here is why we think you will like it.",
       reasons: [
         {
-          title: "Install once, restyle forever",
-          body: "Bolt the frame on a single time with your existing plate screws. After that you never touch tools again.",
+          title: "You design it your way",
+          body: "Pick a theme, snap on the tiles you want, and type your own bottom-bar phrase. Every frame is one of a kind because you make it.",
         },
         {
-          title: "Snap-on tiles, ten-second swaps",
-          body: "Tiles click into the border by hand. Change your whole look for the season, the holiday, or the mood in seconds.",
+          title: "A theme for every season",
+          body: "The Fourth of July and America's 250th is live now, and new seasonal themes drop through the year.",
         },
         {
           title: "Designed and made in St. Louis",
-          body: "Every frame and tile is made right here in the USA, and the tiles are UV printed so the colors stay bright.",
+          body: "Every frame and tile is made to order right here in the USA, and the tiles are UV printed so the colors stay bright.",
         },
         {
           title: "Built for the real world",
@@ -380,29 +380,29 @@ export const copy: Copy = {
   },
 
   buy: {
-    metaTitle: "Shop the Freedom Frame Set",
+    metaTitle: "Design Your Own Custom License Plate Frame",
     metaDescription:
-      "Shop the Freedom Frame Set: a snap-on license plate frame kit you design yourself, with a goodie bag of surprise extra tiles. Install once, swap tiles forever. Ships nationwide, $5 flat rate.",
+      "Design your own custom license plate frame: pick a theme, snap on the tiles you want, and add your phrase. Made by hand to order in the USA, with a goodie bag of surprise extra tiles. Ships nationwide, $5 flat rate.",
     h1: "Make your license plate the most fun part of your car.",
-    subhead: "Snap it on. Swap it forever.",
+    subhead: "Design it. We hand-make it.",
     ctaSubline: "$5 flat US shipping. Order by June 28 to get it before the Fourth.",
     guarantee: "30-day guarantee. If you do not love it, send it back.",
 
     whatsInKit: {
-      heading: "What's in the kit",
+      heading: "What you get",
       items: [
-        "Frame rail that fits all standard US plates, designed by you, installs once with your existing screws",
+        "Your custom frame, designed by you, fits all standard US plates and installs with your existing screws",
         "A goodie bag of surprise extra tiles in every order",
         "Ready-made bottom-bar slogans to start from, or write your own: USA, LAND OF THE FREE, HOME OF THE BRAVE, and LET FREEDOM RING",
         "Quick-start card",
       ],
       caption:
-        "You design the frame, then every order ships with a goodie bag of surprise extra tiles, so you can mix, match, and restyle any time. Buy once, change endlessly.",
+        "You design the frame, pick a theme, and add your phrase. Then every order ships with a goodie bag of surprise extra tiles so you can mix, match, and restyle any time.",
     },
 
     howItWorks: {
       heading: "How it works",
-      line: "It bolts on in minutes using the same two screws that already hold a frame to your plate, no drilling and no new hardware. Then the tiles snap into the border by hand, no tools. Swap them whenever you want.",
+      line: "Pick a theme, snap on the tiles you want, and add your phrase in the online builder. We hand-make your frame to order, then it ships. It installs with the same two screws that already hold a frame to your plate, no drilling and no new hardware.",
     },
 
     builtToLast: {
@@ -415,27 +415,27 @@ export const copy: Copy = {
 
     trust: {
       heading: "Out around St. Louis",
-      caption: "A few looks at the Freedom Frame Set on the road.",
+      caption: "A few custom Festive Frames on the road.",
     },
 
     offer: {
       single: {
-        title: "Freedom Frame Set",
+        title: "Your custom frame",
         items: [
-          "Design-your-own frame rail",
+          "A frame you design yourself",
           "A goodie bag of surprise extra tiles",
           "Bottom-bar phrases to start from, or make your own",
         ],
         cta: "Buy Now",
       },
       bundle: {
-        title: "Two-Set Bundle",
+        title: "Design two frames",
         items: [
-          "Everything in the set, x2",
+          "Two custom frames, designed your way",
           "One for you, one for a gift or the second car",
         ],
         cta: "Buy Now",
-        mixLabel: "Two sets",
+        mixLabel: "Two frames",
       },
     },
 
@@ -481,31 +481,31 @@ export const copy: Copy = {
   thanks: {
     metaTitle: "Order Confirmed",
     metaDescription:
-      "Your Festive Frames kit is reserved. See your order details and what comes next.",
-    headline: "You're in. Your kit is reserved.",
-    genericHeadline: "You're in. Your kit is reserved.",
+      "Your custom Festive Frames frame is reserved. See your order details and what comes next.",
+    headline: "You're in. Your frame is reserved.",
+    genericHeadline: "You're in. Your frame is reserved.",
     genericBody:
-      "Your order is confirmed. Check your email for the receipt and the details on getting your kit.",
+      "Your order is confirmed. Check your email for the receipt and the details on getting your frame.",
     shipping: {
       heading: "On its way to you",
-      body: "We pack and ship from St. Louis. Your kit ships to the address you entered, and your emailed receipt has the details.",
+      body: "We hand-make your frame to order in St. Louis, then ship it to the address you entered. Your emailed receipt has the details.",
     },
     tease: {
-      heading: "New tile drops are coming.",
-      body: "Seasonal packs, holiday sets, limited runs. Your frame fits them all.",
+      heading: "New seasonal themes are coming.",
+      body: "Holiday themes, seasonal drops, fresh tiles. Always something new to design.",
     },
-    emailCapturePrompt: "Get first access to every new drop. No spam, ever.",
+    emailCapturePrompt: "Get first access to every new theme. No spam, ever.",
     share: {
       heading: "Tell a friend",
       body: "Know someone whose ride needs this? Send them the link.",
-      shareText: "I just grabbed a Festive Frames kit. Snap-on plate frames you swap whenever you want.",
+      shareText: "I just designed a custom Festive Frames license plate frame. You pick a theme and design your own.",
     },
     builderCta: { label: "Design another frame", href: "/build" },
   },
 
   anchorPhrases: [
-    "One-time frame install.",
-    "Buy once, change endlessly.",
-    "Install once. Swap forever.",
+    "Design your own frame.",
+    "Pick a theme. Make it yours.",
+    "Made by hand to order.",
   ],
 };

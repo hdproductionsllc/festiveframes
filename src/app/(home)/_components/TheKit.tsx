@@ -6,7 +6,7 @@ import { BuyButton } from "./BuyButton";
 const INK = "#1e1b17";
 
 const INCLUDED = [
-  "A design-your-own frame rail that fits all standard US plates",
+  "Your custom frame, designed by you, fits all standard US plates",
   "A goodie bag of surprise extra tiles in every order",
   "Ready-made bottom-bar phrases to start from, or write your own: USA, LAND OF THE FREE, HOME OF THE BRAVE, LET FREEDOM RING",
   "Quick-start card — installs in seconds with your existing screws",
@@ -17,42 +17,43 @@ const INCLUDED = [
 // on-page Stripe checkout (BuyButton); the secondary link opens the builder.
 const TIERS = [
   {
-    name: "Freedom Frame Set",
+    name: "Your custom frame",
     which: "single" as const,
     price: formatUsd(offer.singlePrice),
-    note: "/ kit",
+    note: "/ frame",
     popular: false,
     accent: "#3fb0e6",
-    cta: "Choose this set",
-    bullets: ["Design-your-own frame rail", "A goodie bag of surprise extra tiles", "Bottom-bar phrases to start from, or make your own", "Quick-start card"],
+    cta: "Design your frame",
+    bullets: ["A frame you design yourself", "A goodie bag of surprise extra tiles", "Bottom-bar phrases to start from, or make your own", "Quick-start card"],
   },
   {
-    name: "Two-Set Bundle",
+    name: "Design two frames",
     which: "bundle" as const,
     price: formatUsd(offer.bundlePrice),
-    note: "/ 2 sets",
+    note: "/ 2 frames",
     popular: true,
     accent: "#ed5aa0",
-    cta: "Claim the bundle",
-    bullets: ["Everything in the set, ×2", "One for you, one to gift", "Save $9 vs. two singles", "30-day guarantee"],
+    cta: "Design two frames",
+    bullets: ["Two custom frames, designed your way", "One for you, one to gift", "Mix themes or match them", "30-day guarantee"],
   },
 ];
 
-export function TheKit({ remaining, cap }: { remaining: number; cap: number }) {
+export function TheKit() {
   return (
     <section id="kit" className="mx-auto max-w-[1240px] px-5 py-[72px] sm:px-7">
       <div className="mb-3.5 text-center">
         <span className="inline-flex items-center gap-2 rounded-full bg-[#1e1b17] px-4 py-[7px] text-[13px] font-extrabold tracking-[1px] text-[#faf0d6]">
-          FOUNDING EDITION · {remaining} OF {cap} LEFT
+          FOUNDING EDITION · AMERICA&apos;S 250TH · 1776-2026
         </span>
       </div>
       <h2 className="m-0 mb-3 text-center text-[clamp(34px,6vw,48px)] font-bold leading-none tracking-[-1px]">
-        Meet the Freedom Frame Set
+        Design your frame
       </h2>
       <p className="mx-auto mb-11 max-w-[560px] text-center text-lg font-semibold text-[#6a6354]">
-        Our launch kit for America&apos;s 250th. Design your own frame, then make
-        it yours — every order ships with a goodie bag of surprise extra tiles.
-        Restyle it for the Fourth, a parade, or game day — as often as you like.
+        Start with our launch theme, the Fourth of July and America&apos;s 250th,
+        then make it yours: snap on the tiles you want, add your own phrase, and
+        every order ships with a goodie bag of surprise extra tiles. More seasonal
+        themes are coming.
       </p>
 
       <div className="grid items-stretch gap-7 lg:grid-cols-[1fr_1.15fr]">
@@ -61,7 +62,7 @@ export function TheKit({ remaining, cap }: { remaining: number; cap: number }) {
           className="relative overflow-hidden rounded-[24px] border-[4px] border-[#1e1b17] bg-[#f8c53b] p-[34px]"
           style={{ boxShadow: `8px 8px 0 ${INK}` }}
         >
-          <h3 className="s-display m-0 mb-[18px] text-[26px] font-bold">What&apos;s in every kit</h3>
+          <h3 className="s-display m-0 mb-[18px] text-[26px] font-bold">What you get</h3>
           <div className="flex flex-col gap-3.5">
             {INCLUDED.map((item) => (
               <div key={item} className="flex items-start gap-3">
@@ -131,7 +132,7 @@ export function TheKit({ remaining, cap }: { remaining: number; cap: number }) {
             $5 flat shipping · 30-day guarantee · order by June 28 to get it before the Fourth
             <br />
             <Link href="/build" className="font-bold text-[#ed5aa0] underline underline-offset-2">
-              Want to design your own? Open the builder →
+              Start designing in the builder →
             </Link>
           </div>
         </div>

@@ -3,10 +3,10 @@ import Image from "next/image";
 
 const INK = "#1e1b17";
 
-// Sticky header: ink announcement bar (live Founding scarcity) over a cream nav
-// with the badge logo, in-page anchor links, and a yellow "Shop" pill that
-// routes to the custom-first builder (/build). Server component (no interactivity).
-export function Header({ remaining, cap }: { remaining: number; cap: number }) {
+// Sticky header: ink announcement bar (Founding Edition / America's 250th moment)
+// over a cream nav with the badge logo, in-page anchor links, and a yellow "Shop"
+// pill that routes to the custom-first builder (/build). Server component.
+export function Header() {
   return (
     <header className="sticky top-0 z-50">
       {/* announcement bar */}
@@ -14,14 +14,11 @@ export function Header({ remaining, cap }: { remaining: number; cap: number }) {
         href="/build"
         className="block border-b-[3px] border-[#1e1b17] bg-[#1e1b17] px-4 py-[9px] text-center text-[13px] font-bold leading-snug text-[#faf0d6] no-underline sm:text-sm"
       >
-        <span className="text-[#f8c53b]">★</span> America&apos;s 250th · Founding
-        Edition — only{" "}
-        <span className="text-[#3fb0e6]">
-          {remaining} of {cap}
-        </span>{" "}
-        kits left ·{" "}
+        <span className="text-[#f8c53b]">★</span> Founding Edition · America&apos;s
+        250th ·{" "}
+        <span className="text-[#3fb0e6]">1776-2026</span> ·{" "}
         <span className="text-[#ed5aa0] underline underline-offset-[3px]">
-          Claim yours →
+          Design your frame →
         </span>
       </Link>
 
@@ -41,13 +38,13 @@ export function Header({ remaining, cap }: { remaining: number; cap: number }) {
           <div className="flex-1" />
           <div className="flex items-center gap-6">
             <Link href="#looks" className="hidden text-base font-bold text-[#1e1b17] no-underline lg:inline">
-              Looks
+              Themes
             </Link>
             <Link href="#how" className="hidden text-base font-bold text-[#1e1b17] no-underline lg:inline">
               How It Works
             </Link>
             <Link href="#kit" className="hidden text-base font-bold text-[#1e1b17] no-underline lg:inline">
-              The Kit
+              Design Yours
             </Link>
             <Link href="#custom" className="hidden text-base font-bold text-[#1e1b17] no-underline lg:inline">
               Custom Orders
@@ -61,7 +58,7 @@ export function Header({ remaining, cap }: { remaining: number; cap: number }) {
                 ["--press-shadow-press" as string]: `1px 1px 0 ${INK}`,
               }}
             >
-              Shop the kit
+              Design your frame
               <span aria-hidden className="text-lg leading-none">→</span>
             </Link>
           </div>

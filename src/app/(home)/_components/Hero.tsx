@@ -42,16 +42,15 @@ export function Hero() {
         </div>
 
         <h1 className="m-0 mb-[18px] text-[clamp(44px,8vw,66px)] font-bold leading-[0.96] tracking-[-1.5px]">
-          Park with
+          Design your own
           <br />
-          <span className="text-[#ed5aa0]">personality.</span>
+          <span className="text-[#ed5aa0]">license plate frame.</span>
         </h1>
 
         <p className="m-0 mb-[30px] max-w-[460px] text-[20px] font-medium leading-[1.5] text-[#3a352c]">
-          Design your own frame, then make it yours — plus a goodie bag of
-          surprise extra tiles and zero tools. Restyle your plate for the Fourth,
-          game day, or just because, in about ten seconds flat. Every kit is made
-          to order, by hand, in the USA.
+          You design it: pick a theme, snap on the tiles you want, add your own
+          bottom-bar phrase. The launch theme is the Fourth of July and
+          America&apos;s 250th. We hand-make it to order in the USA. $39.
         </p>
 
         <div className="flex flex-wrap items-center gap-[14px]">
@@ -64,7 +63,7 @@ export function Hero() {
               ["--press-shadow-press" as string]: `2px 2px 0 ${INK}`,
             }}
           >
-            Claim your kit
+            Design your frame
           </Link>
           <Link
             href="#looks"
@@ -75,7 +74,7 @@ export function Hero() {
               ["--press-shadow-press" as string]: `2px 2px 0 ${INK}`,
             }}
           >
-            Browse the looks
+            Browse the themes
           </Link>
         </div>
 

@@ -3,7 +3,6 @@ import { copy } from "@/content/copy";
 import { getKit, getActiveKits } from "@/config/kits";
 import { offer } from "@/config/offers";
 import { SITE_URL } from "@/config/season";
-import { getFoundingCounts } from "@/lib/founding-status";
 import { Header } from "./_components/Header";
 import { Countdown } from "./_components/Countdown";
 import { Hero } from "./_components/Hero";
@@ -85,7 +84,7 @@ function buildJsonLd() {
     "@id": `${SITE_URL}/#product`,
     name: americanClassic?.name ?? "Freedom Frame Set",
     description:
-      "A customizable, snap-on license plate frame kit with 50+ interchangeable patriotic tiles. Install once, swap tiles forever. Designed and made in St. Louis, USA.",
+      "Design your own custom patriotic license plate frame for America's 250th. Pick a theme, snap on the patriotic tiles you want, and add your own phrase. Made by hand to order in St. Louis, USA.",
     image: [`${SITE_URL}/redesign/looks/years250.png`, `${SITE_URL}/redesign/looks/sampler.png`],
     brand: { "@type": "Brand", name: copy.site.brandName },
     category: "License Plate Frames",
@@ -150,7 +149,6 @@ function buildJsonLd() {
 
 export default async function HomePage() {
   const jsonLd = buildJsonLd();
-  const { remaining, cap } = await getFoundingCounts();
   const year = new Date().getFullYear();
 
   return (
@@ -160,7 +158,7 @@ export default async function HomePage() {
         // JSON-LD is static, server-rendered, and built from trusted config.
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <Header remaining={remaining} cap={cap} />
+      <Header />
       <Countdown />
       <main id="main" tabIndex={-1} className="flex-1">
         <Hero />
@@ -168,7 +166,7 @@ export default async function HomePage() {
         <Looks />
         <HowItWorks />
         <WhyUs />
-        <TheKit remaining={remaining} cap={cap} />
+        <TheKit />
         <CustomOrders />
         <OurStory />
         <Reviews />

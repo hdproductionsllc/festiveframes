@@ -3,7 +3,6 @@ import Link from "next/link";
 import Image from "next/image";
 import { copy } from "@/content/copy";
 import { SITE_URL } from "@/config/season";
-import { getFoundingCounts } from "@/lib/founding-status";
 import { Header } from "../_components/Header";
 import { Footer } from "../_components/Footer";
 
@@ -88,7 +87,6 @@ function buildJsonLd() {
 
 export default async function VeteranPage() {
   const jsonLd = buildJsonLd();
-  const { remaining, cap } = await getFoundingCounts();
   const year = new Date().getFullYear();
 
   return (
@@ -97,7 +95,7 @@ export default async function VeteranPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <Header remaining={remaining} cap={cap} />
+      <Header />
       <main id="main" tabIndex={-1} className="flex-1">
         {/* Hero */}
         <section className="mx-auto max-w-[920px] px-5 pb-6 pt-[64px] text-center sm:px-7">

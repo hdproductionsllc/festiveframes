@@ -3,20 +3,20 @@ const INK = "#1e1b17";
 const STEPS = [
   {
     num: "1",
-    title: "Install the frame once",
-    body: "Bolt the rail onto your plate with your existing screws. No drilling, no new hardware.",
+    title: "Pick a theme",
+    body: "Start with the launch theme: the Fourth of July and America's 250th. New seasonal themes drop soon.",
     accent: "#ed5aa0",
   },
   {
     num: "2",
-    title: "Snap in your tiles",
-    body: "Tiles click into the border by hand — no tools, no adhesive. Spell a phrase on the bottom bar.",
+    title: "Design it",
+    body: "Snap on the tiles you want and type your own bottom-bar phrase in the online builder. No tools, all you.",
     accent: "#3fb0e6",
   },
   {
     num: "3",
-    title: "Swap whenever",
-    body: "New season, new holiday, new mood? Restyle the whole look in about ten seconds.",
+    title: "We hand-make & ship it",
+    body: "We UV print your frame to order, by hand, in St. Louis, then ship it fast to your door.",
     accent: "#f8c53b",
   },
 ];
@@ -26,15 +26,14 @@ export function HowItWorks() {
     <section id="how" className="mx-auto max-w-[1240px] px-5 py-16 sm:px-7">
       <div className="mb-12 text-center">
         <div className="mb-1.5 text-[15px] font-extrabold tracking-[1.5px] text-[#3fb0e6]">
-          THREE SNAPS AND DONE
+          THREE STEPS TO YOUR FRAME
         </div>
         <h2 className="m-0 text-[clamp(34px,6vw,46px)] font-bold leading-none tracking-[-1px]">
           How it works
         </h2>
         <p className="mx-auto mt-4 max-w-[540px] text-base font-semibold leading-[1.5] text-[#6a6354]">
-          Once you order, we design and UV print your kit to order, by hand, in
-          St. Louis. Nothing sits in a warehouse — your frame is made fresh for
-          you, then it ships.
+          Pick a theme, design it your way, and we make it. Nothing sits in a
+          warehouse — your frame is hand-made fresh for you, then it ships.
         </p>
       </div>
       <div className="grid gap-6 md:grid-cols-3">
