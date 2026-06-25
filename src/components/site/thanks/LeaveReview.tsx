@@ -33,14 +33,14 @@ export function LeaveReview() {
 
   if (status === "done") {
     return (
-      <p className="rounded-lg border border-brand-gold/50 bg-brand-navy-soft/30 px-6 py-5 text-base font-medium text-brand-navy">
+      <p className="rounded-[18px] border-[3px] border-[#1e1b17] bg-[#fff9ec] px-6 py-5 text-base font-bold text-[#1e1b17] shadow-[5px_5px_0_#1e1b17]">
         Thank you — we read every review and feature the real ones on the site.
       </p>
     );
   }
 
   return (
-    <form onSubmit={submit} className="rounded-lg border border-brand-navy-soft/40 bg-brand-cream-soft px-6 py-6">
+    <form onSubmit={submit} className="rounded-[24px] border-[4px] border-[#1e1b17] bg-[#fff9ec] px-6 py-6 shadow-[8px_8px_0_#1e1b17]">
       <div className="flex gap-1" role="radiogroup" aria-label="Rating">
         {[1, 2, 3, 4, 5].map((n) => (
           <button
@@ -52,7 +52,7 @@ export function LeaveReview() {
             aria-label={`${n} star${n > 1 ? "s" : ""}`}
             aria-pressed={rating === n}
             className={`text-3xl leading-none transition-colors ${
-              n <= (hover || rating) ? "text-brand-gold" : "text-brand-navy-soft/30"
+              n <= (hover || rating) ? "text-[#f8c53b]" : "text-[#1e1b17]/20"
             }`}
           >
             ★
@@ -65,24 +65,28 @@ export function LeaveReview() {
         onChange={(e) => setBody(e.target.value.slice(0, 1000))}
         placeholder="What did you do with it, and how did it go?"
         rows={3}
-        className="mt-4 w-full rounded-md border border-brand-navy/20 bg-white px-3 py-2 text-sm text-brand-ink placeholder:text-brand-ink/50 focus:border-brand-navy/50 focus:outline-none"
+        className="mt-4 w-full rounded-[12px] border-[3px] border-[#1e1b17] bg-[#faf0d6] px-3 py-2 text-sm font-semibold text-[#1e1b17] placeholder:font-medium placeholder:text-[#6a6354] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1e1b17]"
       />
       <input
         value={name}
         onChange={(e) => setName(e.target.value.slice(0, 80))}
         placeholder="Your name and town (e.g. Dana R., St. Louis)"
-        className="mt-3 w-full rounded-md border border-brand-navy/20 bg-white px-3 py-2 text-sm text-brand-ink placeholder:text-brand-ink/50 focus:border-brand-navy/50 focus:outline-none"
+        className="mt-3 w-full rounded-[12px] border-[3px] border-[#1e1b17] bg-[#faf0d6] px-3 py-2 text-sm font-semibold text-[#1e1b17] placeholder:font-medium placeholder:text-[#6a6354] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1e1b17]"
       />
 
       <button
         type="submit"
         disabled={status === "sending"}
-        className="mt-4 inline-flex items-center justify-center rounded-md bg-brand-red px-5 py-2.5 text-sm font-semibold uppercase tracking-wide text-brand-white transition-colors hover:bg-brand-red/90 disabled:opacity-70"
+        className="s-press mt-4 inline-flex items-center justify-center rounded-full border-[3px] border-[#1e1b17] bg-[#f8c53b] px-5 py-2.5 text-sm font-extrabold text-[#1e1b17] shadow-[5px_5px_0_#1e1b17] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1e1b17] disabled:opacity-70"
+        style={{
+          ["--press-shadow-lift" as string]: "7px 7px 0 #1e1b17",
+          ["--press-shadow-press" as string]: "2px 2px 0 #1e1b17",
+        }}
       >
         {status === "sending" ? "Sending..." : "Submit review"}
       </button>
       {status === "error" && (
-        <p role="alert" className="mt-2 text-sm font-medium text-brand-red">
+        <p role="alert" className="mt-2 text-sm font-bold text-[#ed5aa0]">
           Add a rating, a few words, and your name, then try again.
         </p>
       )}

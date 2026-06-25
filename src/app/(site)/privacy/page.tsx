@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { SITE_URL } from "@/config/season";
 
-// Privacy policy at "/privacy". Server Component. Inherits the (site) marketing
-// chrome (SiteHeader, SiteFooter, .marketing-theme) from the route group layout,
+// Privacy policy at "/privacy". Server Component. Inherits the (site) sticker
+// chrome (SiteHeader, SiteFooter, .sticker-theme) from the route group layout,
 // so this file renders only the page content.
 //
 // LEGAL NOTE: This is a plain-language, general-purpose privacy policy written
@@ -25,13 +25,23 @@ export default function PrivacyPage() {
   return (
     <article className="mx-auto max-w-3xl px-4 py-12 sm:px-6 sm:py-16">
       <header className="mb-8">
-        <h1 className="font-mkt-display text-3xl font-bold tracking-tight text-brand-navy-deep sm:text-4xl">
+        <span
+          className="mb-4 inline-flex items-center gap-2 rounded-full border-[3px] border-[#1e1b17] bg-[#fff9ec] px-4 py-[7px] text-sm font-extrabold tracking-[0.3px] text-[#1e1b17]"
+          style={{ boxShadow: "3px 3px 0 #1e1b17" }}
+        >
+          <span className="inline-block h-[11px] w-[11px] rounded-full bg-[#3fb0e6]" />
+          Privacy
+        </span>
+        <h1 className="s-display text-[clamp(32px,6vw,48px)] font-bold leading-[1] tracking-[-1.5px] text-[#1e1b17]">
           Privacy Policy
         </h1>
-        <p className="mt-2 text-sm text-brand-navy/70">Updated June 2026</p>
+        <p className="mt-2 text-sm font-bold text-[#6a6354]">Updated June 2026</p>
       </header>
 
-      <div className="space-y-8 text-base leading-relaxed text-brand-navy/90">
+      <div
+        className="space-y-8 rounded-[24px] border-[4px] border-[#1e1b17] bg-[#fff9ec] px-6 py-7 text-base font-medium leading-relaxed text-[#3a352c] sm:px-8 sm:py-8"
+        style={{ boxShadow: "8px 8px 0 #1e1b17" }}
+      >
         <section>
           <p>
             Festive Frames makes snap-on license plate frame kits. This policy
@@ -44,7 +54,7 @@ export default function PrivacyPage() {
         </section>
 
         <section>
-          <h2 className="font-mkt-display text-xl font-semibold text-brand-navy-deep">
+          <h2 className="s-display text-xl font-bold tracking-[-0.5px] text-[#1e1b17]">
             What we collect
           </h2>
           <ul className="mt-3 list-disc space-y-2 pl-5">
@@ -71,7 +81,7 @@ export default function PrivacyPage() {
         </section>
 
         <section>
-          <h2 className="font-mkt-display text-xl font-semibold text-brand-navy-deep">
+          <h2 className="s-display text-xl font-bold tracking-[-0.5px] text-[#1e1b17]">
             How we use your information
           </h2>
           <ul className="mt-3 list-disc space-y-2 pl-5">
@@ -91,7 +101,7 @@ export default function PrivacyPage() {
         </section>
 
         <section>
-          <h2 className="font-mkt-display text-xl font-semibold text-brand-navy-deep">
+          <h2 className="s-display text-xl font-bold tracking-[-0.5px] text-[#1e1b17]">
             Who we share it with
           </h2>
           <p className="mt-3">
@@ -124,7 +134,7 @@ export default function PrivacyPage() {
         </section>
 
         <section>
-          <h2 className="font-mkt-display text-xl font-semibold text-brand-navy-deep">
+          <h2 className="s-display text-xl font-bold tracking-[-0.5px] text-[#1e1b17]">
             Cookies and local storage
           </h2>
           <p className="mt-3">
@@ -146,7 +156,7 @@ export default function PrivacyPage() {
         </section>
 
         <section>
-          <h2 className="font-mkt-display text-xl font-semibold text-brand-navy-deep">
+          <h2 className="s-display text-xl font-bold tracking-[-0.5px] text-[#1e1b17]">
             How long we keep it
           </h2>
           <p className="mt-3">
@@ -158,7 +168,7 @@ export default function PrivacyPage() {
         </section>
 
         <section>
-          <h2 className="font-mkt-display text-xl font-semibold text-brand-navy-deep">
+          <h2 className="s-display text-xl font-bold tracking-[-0.5px] text-[#1e1b17]">
             Your choices
           </h2>
           <ul className="mt-3 list-disc space-y-2 pl-5">
@@ -178,7 +188,7 @@ export default function PrivacyPage() {
         </section>
 
         <section>
-          <h2 className="font-mkt-display text-xl font-semibold text-brand-navy-deep">
+          <h2 className="s-display text-xl font-bold tracking-[-0.5px] text-[#1e1b17]">
             Children
           </h2>
           <p className="mt-3">
@@ -190,7 +200,7 @@ export default function PrivacyPage() {
         </section>
 
         <section>
-          <h2 className="font-mkt-display text-xl font-semibold text-brand-navy-deep">
+          <h2 className="s-display text-xl font-bold tracking-[-0.5px] text-[#1e1b17]">
             Changes to this policy
           </h2>
           <p className="mt-3">
@@ -201,14 +211,14 @@ export default function PrivacyPage() {
         </section>
 
         <section>
-          <h2 className="font-mkt-display text-xl font-semibold text-brand-navy-deep">
+          <h2 className="s-display text-xl font-bold tracking-[-0.5px] text-[#1e1b17]">
             Contact us
           </h2>
           <p className="mt-3">
             Questions about this policy or your information? Email us at{" "}
             <a
               href={`mailto:${CONTACT_EMAIL}`}
-              className="font-semibold text-brand-navy underline decoration-brand-gold underline-offset-2 transition-colors hover:text-brand-gold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-gold"
+              className="font-bold text-[#1e1b17] underline decoration-[#ed5aa0] decoration-2 underline-offset-2 transition-colors hover:text-[#ed5aa0] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#3fb0e6]"
             >
               {CONTACT_EMAIL}
             </a>

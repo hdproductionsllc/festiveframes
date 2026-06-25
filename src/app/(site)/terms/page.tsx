@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { SITE_URL } from "@/config/season";
 
 // Terms of Service at "/terms". Server Component in the (site) route group, so
-// it inherits SiteHeader, SiteFooter, and .marketing-theme chrome and renders
+// it inherits SiteHeader, SiteFooter, and .sticker-theme chrome and renders
 // only the page content here.
 //
 // LEGAL NOTE: These are basic, plain-language Terms of Service for selling
@@ -24,13 +24,23 @@ export default function TermsPage() {
   return (
     <article className="mx-auto max-w-3xl px-4 py-12 sm:px-6 sm:py-16">
       <header className="mb-8">
-        <h1 className="font-mkt-display text-3xl font-bold tracking-tight text-brand-navy-deep sm:text-4xl">
+        <span
+          className="mb-4 inline-flex items-center gap-2 rounded-full border-[3px] border-[#1e1b17] bg-[#fff9ec] px-4 py-[7px] text-sm font-extrabold tracking-[0.3px] text-[#1e1b17]"
+          style={{ boxShadow: "3px 3px 0 #1e1b17" }}
+        >
+          <span className="inline-block h-[11px] w-[11px] rounded-full bg-[#9b5fd0]" />
+          Terms
+        </span>
+        <h1 className="s-display text-[clamp(32px,6vw,48px)] font-bold leading-[1] tracking-[-1.5px] text-[#1e1b17]">
           Terms of Service
         </h1>
-        <p className="mt-2 text-sm text-brand-navy/70">Updated June 2026</p>
+        <p className="mt-2 text-sm font-bold text-[#6a6354]">Updated June 2026</p>
       </header>
 
-      <div className="space-y-8 text-base leading-relaxed text-brand-navy/90">
+      <div
+        className="space-y-8 rounded-[24px] border-[4px] border-[#1e1b17] bg-[#fff9ec] px-6 py-7 text-base font-medium leading-relaxed text-[#3a352c] sm:px-8 sm:py-8"
+        style={{ boxShadow: "8px 8px 0 #1e1b17" }}
+      >
         <section>
           <p>
             These Terms of Service govern your use of the Festive Frames website
@@ -41,7 +51,7 @@ export default function TermsPage() {
         </section>
 
         <section>
-          <h2 className="font-mkt-display text-xl font-semibold text-brand-navy-deep">
+          <h2 className="s-display text-xl font-bold tracking-[-0.5px] text-[#1e1b17]">
             Our products
           </h2>
           <p className="mt-3">
@@ -53,7 +63,7 @@ export default function TermsPage() {
         </section>
 
         <section>
-          <h2 className="font-mkt-display text-xl font-semibold text-brand-navy-deep">
+          <h2 className="s-display text-xl font-bold tracking-[-0.5px] text-[#1e1b17]">
             Orders and acceptance
           </h2>
           <p className="mt-3">
@@ -65,7 +75,7 @@ export default function TermsPage() {
         </section>
 
         <section>
-          <h2 className="font-mkt-display text-xl font-semibold text-brand-navy-deep">
+          <h2 className="s-display text-xl font-bold tracking-[-0.5px] text-[#1e1b17]">
             Pricing and payment
           </h2>
           <p className="mt-3">
@@ -78,7 +88,7 @@ export default function TermsPage() {
         </section>
 
         <section>
-          <h2 className="font-mkt-display text-xl font-semibold text-brand-navy-deep">
+          <h2 className="s-display text-xl font-bold tracking-[-0.5px] text-[#1e1b17]">
             Shipping and delivery
           </h2>
           <p className="mt-3">
@@ -91,7 +101,7 @@ export default function TermsPage() {
         </section>
 
         <section>
-          <h2 className="font-mkt-display text-xl font-semibold text-brand-navy-deep">
+          <h2 className="s-display text-xl font-bold tracking-[-0.5px] text-[#1e1b17]">
             Returns and refunds
           </h2>
           <p className="mt-3">
@@ -102,7 +112,7 @@ export default function TermsPage() {
         </section>
 
         <section>
-          <h2 className="font-mkt-display text-xl font-semibold text-brand-navy-deep">
+          <h2 className="s-display text-xl font-bold tracking-[-0.5px] text-[#1e1b17]">
             Acceptable use
           </h2>
           <p className="mt-3">
@@ -116,7 +126,7 @@ export default function TermsPage() {
         </section>
 
         <section>
-          <h2 className="font-mkt-display text-xl font-semibold text-brand-navy-deep">
+          <h2 className="s-display text-xl font-bold tracking-[-0.5px] text-[#1e1b17]">
             Disclaimers and limitation of liability
           </h2>
           <p className="mt-3">
@@ -129,7 +139,7 @@ export default function TermsPage() {
         </section>
 
         <section>
-          <h2 className="font-mkt-display text-xl font-semibold text-brand-navy-deep">
+          <h2 className="s-display text-xl font-bold tracking-[-0.5px] text-[#1e1b17]">
             Changes to these terms
           </h2>
           <p className="mt-3">
@@ -141,14 +151,14 @@ export default function TermsPage() {
         </section>
 
         <section>
-          <h2 className="font-mkt-display text-xl font-semibold text-brand-navy-deep">
+          <h2 className="s-display text-xl font-bold tracking-[-0.5px] text-[#1e1b17]">
             Contact us
           </h2>
           <p className="mt-3">
             Questions about these terms? Email us at{" "}
             <a
               href={`mailto:${CONTACT_EMAIL}`}
-              className="font-semibold text-brand-navy underline decoration-brand-gold underline-offset-2 transition-colors hover:text-brand-gold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-gold"
+              className="font-bold text-[#1e1b17] underline decoration-[#ed5aa0] decoration-2 underline-offset-2 transition-colors hover:text-[#ed5aa0] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#3fb0e6]"
             >
               {CONTACT_EMAIL}
             </a>

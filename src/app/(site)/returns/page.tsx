@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { SITE_URL } from "@/config/season";
 
 // Returns & Refund policy at "/returns". Server Component in the (site) route
-// group, so it inherits SiteHeader, SiteFooter, and .marketing-theme chrome and
+// group, so it inherits SiteHeader, SiteFooter, and .sticker-theme chrome and
 // renders only the page content here.
 //
 // LEGAL NOTE: This is a plain-language Returns & Refund policy written with
@@ -24,13 +24,23 @@ export default function ReturnsPage() {
   return (
     <article className="mx-auto max-w-3xl px-4 py-12 sm:px-6 sm:py-16">
       <header className="mb-8">
-        <h1 className="font-mkt-display text-3xl font-bold tracking-tight text-brand-navy-deep sm:text-4xl">
+        <span
+          className="mb-4 inline-flex items-center gap-2 rounded-full border-[3px] border-[#1e1b17] bg-[#fff9ec] px-4 py-[7px] text-sm font-extrabold tracking-[0.3px] text-[#1e1b17]"
+          style={{ boxShadow: "3px 3px 0 #1e1b17" }}
+        >
+          <span className="inline-block h-[11px] w-[11px] rounded-full bg-[#f8c53b]" />
+          30-day guarantee
+        </span>
+        <h1 className="s-display text-[clamp(32px,6vw,48px)] font-bold leading-[1] tracking-[-1.5px] text-[#1e1b17]">
           Returns &amp; Refunds
         </h1>
-        <p className="mt-2 text-sm text-brand-navy/70">Updated June 2026</p>
+        <p className="mt-2 text-sm font-bold text-[#6a6354]">Updated June 2026</p>
       </header>
 
-      <div className="space-y-8 text-base leading-relaxed text-brand-navy/90">
+      <div
+        className="space-y-8 rounded-[24px] border-[4px] border-[#1e1b17] bg-[#fff9ec] px-6 py-7 text-base font-medium leading-relaxed text-[#3a352c] sm:px-8 sm:py-8"
+        style={{ boxShadow: "8px 8px 0 #1e1b17" }}
+      >
         <section>
           <p>
             We want you to love your Festive Frames kit. If it is not right, you
@@ -41,7 +51,7 @@ export default function ReturnsPage() {
         </section>
 
         <section>
-          <h2 className="font-mkt-display text-xl font-semibold text-brand-navy-deep">
+          <h2 className="s-display text-xl font-bold tracking-[-0.5px] text-[#1e1b17]">
             Our 30-day guarantee
           </h2>
           <p className="mt-3">
@@ -53,7 +63,7 @@ export default function ReturnsPage() {
         </section>
 
         <section>
-          <h2 className="font-mkt-display text-xl font-semibold text-brand-navy-deep">
+          <h2 className="s-display text-xl font-bold tracking-[-0.5px] text-[#1e1b17]">
             How to start a return
           </h2>
           <ol className="mt-3 list-decimal space-y-2 pl-5">
@@ -61,7 +71,7 @@ export default function ReturnsPage() {
               Email us at{" "}
               <a
                 href={`mailto:${CONTACT_EMAIL}`}
-                className="font-semibold text-brand-navy underline decoration-brand-gold underline-offset-2 transition-colors hover:text-brand-gold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-gold"
+                className="font-bold text-[#1e1b17] underline decoration-[#ed5aa0] decoration-2 underline-offset-2 transition-colors hover:text-[#ed5aa0] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#3fb0e6]"
               >
                 {CONTACT_EMAIL}
               </a>{" "}
@@ -80,7 +90,7 @@ export default function ReturnsPage() {
         </section>
 
         <section>
-          <h2 className="font-mkt-display text-xl font-semibold text-brand-navy-deep">
+          <h2 className="s-display text-xl font-bold tracking-[-0.5px] text-[#1e1b17]">
             Condition of returned items
           </h2>
           <p className="mt-3">
@@ -92,7 +102,7 @@ export default function ReturnsPage() {
         </section>
 
         <section>
-          <h2 className="font-mkt-display text-xl font-semibold text-brand-navy-deep">
+          <h2 className="s-display text-xl font-bold tracking-[-0.5px] text-[#1e1b17]">
             Refund timeline
           </h2>
           <p className="mt-3">
@@ -104,7 +114,7 @@ export default function ReturnsPage() {
         </section>
 
         <section>
-          <h2 className="font-mkt-display text-xl font-semibold text-brand-navy-deep">
+          <h2 className="s-display text-xl font-bold tracking-[-0.5px] text-[#1e1b17]">
             Who pays return shipping
           </h2>
           <p className="mt-3">
@@ -116,7 +126,7 @@ export default function ReturnsPage() {
         </section>
 
         <section>
-          <h2 className="font-mkt-display text-xl font-semibold text-brand-navy-deep">
+          <h2 className="s-display text-xl font-bold tracking-[-0.5px] text-[#1e1b17]">
             Damaged or incorrect orders
           </h2>
           <p className="mt-3">
@@ -128,14 +138,14 @@ export default function ReturnsPage() {
         </section>
 
         <section>
-          <h2 className="font-mkt-display text-xl font-semibold text-brand-navy-deep">
+          <h2 className="s-display text-xl font-bold tracking-[-0.5px] text-[#1e1b17]">
             Contact us
           </h2>
           <p className="mt-3">
             Questions about a return or refund? Email us at{" "}
             <a
               href={`mailto:${CONTACT_EMAIL}`}
-              className="font-semibold text-brand-navy underline decoration-brand-gold underline-offset-2 transition-colors hover:text-brand-gold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-gold"
+              className="font-bold text-[#1e1b17] underline decoration-[#ed5aa0] decoration-2 underline-offset-2 transition-colors hover:text-[#ed5aa0] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#3fb0e6]"
             >
               {CONTACT_EMAIL}
             </a>

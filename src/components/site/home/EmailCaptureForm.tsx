@@ -39,7 +39,7 @@ export function EmailCaptureForm() {
     return (
       <p
         role="status"
-        className="rounded-md border border-brand-gold/60 bg-brand-navy-soft/40 px-4 py-3 text-base font-medium text-brand-cream"
+        className="rounded-[14px] border-[3px] border-[#1e1b17] bg-[#fff9ec] px-4 py-3 text-base font-bold text-[#1e1b17] shadow-[4px_4px_0_#1e1b17]"
       >
         You are on the list. Watch your inbox for new tile drops and seasonal
         sets.
@@ -68,12 +68,16 @@ export function EmailCaptureForm() {
         placeholder="you@example.com"
         aria-invalid={status === "error"}
         aria-describedby={status === "error" ? "email-capture-error" : undefined}
-        className="w-full rounded-md border border-brand-navy-soft/60 bg-brand-cream-soft px-4 py-3 text-base text-brand-ink placeholder:text-brand-ink/65 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-gold"
+        className="w-full rounded-[14px] border-[3px] border-[#1e1b17] bg-[#fff9ec] px-4 py-3 text-base font-semibold text-[#1e1b17] placeholder:font-medium placeholder:text-[#6a6354] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1e1b17]"
       />
       <button
         type="submit"
         disabled={status === "submitting"}
-        className="inline-flex shrink-0 items-center justify-center rounded-md bg-brand-red px-6 py-3 text-base font-semibold uppercase tracking-wide text-brand-white transition-colors hover:bg-brand-red/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-gold disabled:opacity-70"
+        className="s-press inline-flex shrink-0 items-center justify-center rounded-[14px] border-[3px] border-[#1e1b17] bg-[#f8c53b] px-6 py-3 text-base font-extrabold text-[#1e1b17] shadow-[5px_5px_0_#1e1b17] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1e1b17] disabled:opacity-70"
+        style={{
+          ["--press-shadow-lift" as string]: "7px 7px 0 #1e1b17",
+          ["--press-shadow-press" as string]: "2px 2px 0 #1e1b17",
+        }}
       >
         {status === "submitting" ? "Joining..." : "Join the list"}
       </button>
@@ -82,7 +86,7 @@ export function EmailCaptureForm() {
         <p
           id="email-capture-error"
           role="alert"
-          className="mt-2 text-sm font-medium text-brand-gold"
+          className="mt-2 inline-block rounded-full bg-[#1e1b17] px-3 py-1 text-sm font-bold text-[#fff9ec]"
         >
           Something went wrong. Please check your email and try again.
         </p>

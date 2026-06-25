@@ -1,14 +1,21 @@
-# Restyle (site) chrome + /thanks to sticker theme
+# Sticker-theme sweep — restyle remaining customer-facing pages
 
-## Plan
-- [x] (site)/layout.tsx — swap marketing-theme for sticker-theme, import sticker.css, add Fredoka/Nunito font vars
-- [x] SiteHeader.tsx — rebuild in sticker style (cream bar, ink outline, badge logo, "Design your frame" pill -> /build)
-- [x] SiteFooter.tsx — restyle to match home dark-ink Footer, keep existing links + email + logo
-- [x] thanks/page.tsx — reskin all sections to sticker cards (cream, ink outline, hard shadow, accents)
-- [x] OrderFulfiller.tsx — reskin its container div only (logic untouched)
-- [x] Legacy /buy + /classic pages re-wrapped in marketing-theme so they keep Americana look (they share the group layout)
-- [x] Verify: next build exit 0 + lint 0 errors (19 pre-existing warnings, none in changed files)
+## Scope (confirmed by import-graph analysis)
+Live customer-facing surfaces inside `.sticker-theme`:
+- `(site)` layout wraps: /thanks (done), /privacy, /returns, /terms
+- Client islands reachable from live pages: EmailCaptureForm (thanks), SharePrompt (thanks), LeaveReview (kept for reuse)
+- Root 404 (`not-found.tsx`) — customer-facing, currently `marketing-theme`
 
-## Preserve — confirmed intact
-- All /thanks components/props/data flow unchanged (OrderFulfiller logic, PurchaseTracker, LeaveReview, EmailCaptureForm, SharePrompt, getOrderView, robots noindex)
-- Order pipeline, builder, homepage, routing untouched
+LEAVE ALONE (intentionally legacy): /classic, /buy, and ALL `components/site/home/*` + `components/site/buy/*` + ReviewsCarousel/FoundingScarcity (used only by /classic and /buy). Builder + /confirmation use the dark workbench theme (out of scope).
+
+## Tasks
+- [x] Restyle `(site)/privacy/page.tsx` body to sticker theme (keep text)
+- [x] Restyle `(site)/returns/page.tsx` body to sticker theme (keep text)
+- [x] Restyle `(site)/terms/page.tsx` body to sticker theme (keep text)
+- [x] Reskin `EmailCaptureForm.tsx` (cream input, ink outline, gold/pink button)
+- [x] Reskin `SharePrompt.tsx` (sticker button)
+- [x] Reskin `LeaveReview.tsx` (sticker form/inputs/button)
+- [x] Restyle root `not-found.tsx` to sticker theme (self-contained)
+- [x] `npx next build` exit 0
+- [x] `npm run lint` no new errors (0 errors; only pre-existing warnings)
+- [x] Report
