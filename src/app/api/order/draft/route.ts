@@ -31,7 +31,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: "Missing orderId/parts/artifacts" }, { status: 400 });
   }
   try {
-    saveDraft({ orderId: body.orderId, parts: body.parts, artifacts: body.artifacts, design: body.design });
+    await saveDraft({ orderId: body.orderId, parts: body.parts, artifacts: body.artifacts, design: body.design });
     return NextResponse.json({ ok: true }, { status: 200 });
   } catch (err) {
     console.error("[order/draft] save failed:", err);

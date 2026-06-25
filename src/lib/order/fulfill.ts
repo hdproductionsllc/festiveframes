@@ -44,10 +44,10 @@ export async function fulfillOrder(
   session: Stripe.Checkout.Session,
   payload?: { parts: PartsList; artifacts: OrderArtifacts },
 ): Promise<FulfillResult> {
-  const data = payload ?? (() => {
-    const d = getDraft(orderId);
+  const data = payload ?? (await (async () => {
+    const d = await getDraft(orderId);
     return d ? { parts: d.parts, artifacts: d.artifacts } : undefined;
-  })();
+  })());
 
   const customerEmail = session.customer_details?.email ?? null;
 
@@ -59,7 +59,7 @@ export async function fulfillOrder(
   }
 
   // Claim fulfillment — only the first caller proceeds.
-  if (!markFulfilled(orderId)) return "already";
+  if (!(await markFulfilled(orderId))) return "already";
 
   const input: ProductionOrderInput = {
     orderId,
@@ -80,7 +80,7 @@ export async function fulfillOrder(
     return "sent";
   } catch (err) {
     // Release the claim so the backup trigger can retry, and alert a human.
-    unmarkFulfilled(orderId);
+    await unmarkFulfilled(orderId);
     const reason = err instanceof Error ? err.message : "unknown error";
     console.error(`[fulfill] sending failed for order ${orderId}:`, err);
     await sendFulfillmentFailureAlert(orderId, session.id, customerEmail, reason);
