@@ -8,7 +8,6 @@ import {
   TouchSensor,
   useSensor,
   useSensors,
-  pointerWithin,
   closestCenter,
   MeasuringStrategy,
   type CollisionDetection,
@@ -32,7 +31,7 @@ interface DndProviderProps {
 }
 
 /**
- * Collision strategy for the builder — POINTER-DRIVEN.
+ * Collision strategy for the builder — POINTER-DRIVEN, by point-to-RECT distance.
  *
  * The drop target is the cell under the user's finger/cursor, full stop. We key
  * off the pointer position (`args.pointerCoordinates`) — NOT the dragged
@@ -45,40 +44,71 @@ interface DndProviderProps {
  *   • palette tiles drag via a source transform; placed tiles/banners drag via
  *     the DragOverlay. The cursor is the one reference common to all of them.
  *
- *   1. Prefer the cell that literally CONTAINS the pointer (`pointerWithin`). A
- *      bottom-rail cursor resolves to a bottom cell and a top-rail cursor to a
- *      top cell, so a banner can never jump rails.
- *   2. Pointer in a gap between cells but still near the frame → the cell whose
- *      center is nearest the POINTER, gated on proximity.
- *   3. Pointer well off the frame → no target, preserving "drag off to remove".
+ * We rank cells by the distance from the pointer to each cell's RECTANGLE (0 when
+ * the pointer is inside it), NOT to its center. This is what makes the drop cue
+ * track the pointer's column tightly:
+ *   • Over a column → that cell's rect distance is 0 the instant the pointer
+ *     crosses the column edge, so `over` switches exactly at the cell boundary
+ *     (no overdrag, no midpoint hysteresis).
+ *   • Drifted vertically off the thin rail band (the cursor naturally leads the
+ *     banner up toward the plate as you drag) → the cell in the SAME column on
+ *     the NEAREST rail still wins, because point-to-rect distance only measures
+ *     the vertical gap to the band, not to a faraway center. A center-distance
+ *     fallback instead lost the target entirely once the cursor drifted more than
+ *     ~1 tile off the band (over went null → the preview froze until you dragged
+ *     much further), and could snap a bottom banner onto a SIDE/FAR rail near the
+ *     corners — the "preview lags the pointer" bug.
+ *   • Pointer well off the frame → distance exceeds the gate → no target, so
+ *     "drag off the frame to remove" still works.
  */
+const pointToRectDistanceSq = (
+  px: number,
+  py: number,
+  rect: { left: number; top: number; width: number; height: number }
+): number => {
+  const dx = Math.max(rect.left - px, 0, px - (rect.left + rect.width));
+  const dy = Math.max(rect.top - py, 0, py - (rect.top + rect.height));
+  return dx * dx + dy * dy;
+};
+
 const collisionStrategy: CollisionDetection = (args) => {
   const pointer = args.pointerCoordinates;
   if (!pointer) return closestCenter(args); // keyboard drag: no pointer
 
-  // 1) Cell directly under the pointer wins.
-  const within = pointerWithin(args);
-  if (within.length > 0) return within;
-
-  // 2) Otherwise the cell whose center is closest to the pointer.
+  // The cell whose RECTANGLE is nearest the pointer (0 when the pointer is inside
+  // it). A pointer inside a cell yields distance 0, so a cell that contains the
+  // pointer always wins — switching exactly at the cell boundary. We also union
+  // the cell rects into the frame's bounding box: anywhere INSIDE the frame is a
+  // valid aim (resolve to the nearest rail's column, even when the cursor drifts
+  // off the thin rail band into the plate area), and only a pointer that leaves
+  // the frame by a margin reads as "drag off to remove".
   let best: { id: string | number } | null = null;
-  let bestDist = Infinity;
-  let bestRect: { width: number; height: number } | null = null;
+  let bestDistSq = Infinity;
+  let bestTile = 0;
+  let minLeft = Infinity, minTop = Infinity, maxRight = -Infinity, maxBottom = -Infinity;
   for (const container of args.droppableContainers) {
     const rect = args.droppableRects.get(container.id);
     if (!rect) continue;
-    const cx = rect.left + rect.width / 2;
-    const cy = rect.top + rect.height / 2;
-    const dist = Math.hypot(pointer.x - cx, pointer.y - cy);
-    if (dist < bestDist) {
-      bestDist = dist;
+    if (rect.left < minLeft) minLeft = rect.left;
+    if (rect.top < minTop) minTop = rect.top;
+    if (rect.left + rect.width > maxRight) maxRight = rect.left + rect.width;
+    if (rect.top + rect.height > maxBottom) maxBottom = rect.top + rect.height;
+    const distSq = pointToRectDistanceSq(pointer.x, pointer.y, rect);
+    if (distSq < bestDistSq) {
+      bestDistSq = distSq;
       best = { id: container.id };
-      bestRect = rect;
+      bestTile = Math.max(rect.width, rect.height);
     }
   }
-  if (!best || !bestRect) return [];
-  const limit = Math.max(bestRect.width, bestRect.height) * 1.25; // off-frame => remove
-  return bestDist <= limit ? [best] : [];
+  if (!best) return [];
+  // Off-frame → no target (preserves "drag off to remove"). Resolve whenever the
+  // pointer is inside the frame box, or within ~0.75 tile of its outer edge; past
+  // that margin the user has clearly dragged off the frame.
+  const margin = bestTile * 0.75;
+  const distToFrameSq = pointToRectDistanceSq(pointer.x, pointer.y, {
+    left: minLeft, top: minTop, width: maxRight - minLeft, height: maxBottom - minTop,
+  });
+  return distToFrameSq <= margin * margin ? [best] : [];
 };
 
 export function DndProvider({ children, onOverSlotChange, onBannerPreviewChange }: DndProviderProps) {

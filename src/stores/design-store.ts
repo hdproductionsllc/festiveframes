@@ -151,6 +151,11 @@ interface DesignState {
   // Actions — text bars (draggable slogan bars)
   placeTextBar: (row: TextBarRow, startIndex: number) => void;
   /**
+   * Place a CENTERED bar on the given row (no drag). Used by tap-to-add and the
+   * preset seeder. Returns true when a bar was added (false if the row is full).
+   */
+  placeTextBarCentered: (row: TextBarRow) => boolean;
+  /**
    * Click-to-add: place a new bar in a sensible default spot without a drag.
    * Prefers the BOTTOM row (centered); falls back to TOP if bottom is full;
    * does nothing if both rows are full. Returns true when a bar was added.
@@ -495,23 +500,28 @@ export const useDesignStore = create<DesignState>()(
           });
         },
 
+        placeTextBarCentered: (row) => {
+          // Place a CENTERED bar on `row` with no drag. The freshly-measured width
+          // is forced ODD and the rows are odd (13), so (maxUnits - width) is even
+          // → the bar centers perfectly. Used by tap-to-add AND the preset seeder,
+          // which needs each banner centered between its flanking tiles exactly as
+          // the marketing previews show (a left-aligned bar would land on — and
+          // delete — the flanking tiles).
+          const state = get();
+          const maxUnits = rowLength(state.frameConfig, row);
+          const isFirst = state.textBars.length === 0;
+          const qr = isFirst ? state.qrCode.enabled : false;
+          const widthUnits = measureTextBarUnits(state.bottomBar, qr, maxUnits);
+          const centered = Math.round((maxUnits - widthUnits) / 2);
+          const before = state.textBars.length;
+          get().placeTextBar(row, centered);
+          return get().textBars.length > before;
+        },
+
         addTextBar: () => {
-          // Tap-to-add: drop a CENTERED bar with no drag (the reliable path,
-          // especially on mobile). Try the bottom row first, then the top; compute
-          // the centered free column and hand it to placeTextBar (which honors the
-          // index). No-ops if both rows are full.
-          const placeCentered = (row: TextBarRow): boolean => {
-            const state = get();
-            const maxUnits = rowLength(state.frameConfig, row);
-            const isFirst = state.textBars.length === 0;
-            const qr = isFirst ? state.qrCode.enabled : false;
-            const widthUnits = measureTextBarUnits(state.bottomBar, qr, maxUnits);
-            const centered = Math.round((maxUnits - widthUnits) / 2);
-            const before = state.textBars.length;
-            get().placeTextBar(row, centered);
-            return get().textBars.length > before;
-          };
-          return placeCentered("bottom") || placeCentered("top");
+          // Tap-to-add: drop a CENTERED bar with no drag (reliable, especially on
+          // mobile). Bottom row first, then top; no-ops if both rows are full.
+          return get().placeTextBarCentered("bottom") || get().placeTextBarCentered("top");
         },
 
         moveTextBar: (id, row, startIndex) => {

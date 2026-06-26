@@ -25,6 +25,10 @@ Plan: C:\Users\david\.claude\plans\majestic-petting-gray.md
 - [x] ROOT CAUSE: FrameCanvas preview ghost spread barRect {x,y} raw into style — x/y aren't CSS box props, so ghost had no left/top and froze at top-left. (My pointer-collision fix was sound but not the cause.)
 - [x] Fix: map x→left, y→top like a real PlacedBar. Verified via headless browser repro: ghost lands under cursor on correct rail. build + lint clean.
 
-## Still to verify before/at deploy
-- [ ] LIVE Stripe test (test mode): cart of 2 → $69; cart of 3 (qty) → $108; receipt shows designs + discount; /thanks fires ONE customer email + per-design production emails to Bill; webhook backup idempotent
-- [ ] Manual click-through of banner drag on a real device (agent verified headless)
+## SHIPPED 2026-06-26 (commit ce6352f → master → Railway auto-deploy; CI green)
+
+## Post-deploy verification (on www.festiveframes.co)
+- [ ] LIVE order test (use the 100%-off promo on a single frame for $0): cart → checkout → /thanks fires production + customer emails; webhook idempotent
+- [ ] Multi-frame: cart of 2 → $69, cart of 3 → $108; receipt shows each design + discount; founders get one production email PER design w/ make-qty; customer gets ONE combined confirmation
+- [ ] Drag a banner on the live site — ghost lands under cursor on correct rail
+- [ ] Confirm Railway env vars are live (STRIPE_SECRET_KEY live, STRIPE_WEBHOOK_SECRET for live endpoint, RESEND_API_KEY, EMAIL_FROM, PRODUCTION_EMAILS, ADMIN_ORDER_EMAIL, SITE_URL)

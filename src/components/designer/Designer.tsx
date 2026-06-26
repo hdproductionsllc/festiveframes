@@ -140,10 +140,13 @@ export function Designer() {
         );
       }
 
-      // 3. Place the banner(s). Each placed bar freezes the current draft
-      //    `bottomBar`, so set its text + colors right before placing it. The
-      //    store forces the QR onto the FIRST bar placed; placing the bottom bar
-      //    first keeps the QR on the bottom banner for two-banner looks.
+      // 3. Place the banner(s) CENTERED on their row. Each placed bar freezes the
+      //    current draft `bottomBar`, so set its text + colors right before placing
+      //    it. The store forces the QR onto the FIRST bar placed; placing the bottom
+      //    bar first keeps the QR on the bottom banner for two-banner looks.
+      //    Centering (not start-0) is REQUIRED: presets flank the banner with tiles
+      //    on both ends, and a left-aligned bar would land on — and delete — those
+      //    flanking tiles (the "banner offset + missing tiles" bug).
       const placeBanner = (
         row: "top" | "bottom",
         banner: NonNullable<typeof preset.bottomBar>
@@ -154,7 +157,7 @@ export function Designer() {
           ...(banner.backgroundColor ? { backgroundColor: banner.backgroundColor } : {}),
           ...(banner.textColor ? { textColor: banner.textColor } : {}),
         });
-        useDesignStore.getState().placeTextBar(row, 0);
+        useDesignStore.getState().placeTextBarCentered(row);
       };
       if (preset.bottomBar) placeBanner("bottom", preset.bottomBar);
       if (preset.topBar) placeBanner("top", preset.topBar);
@@ -361,10 +364,12 @@ export function Designer() {
         {/* A license-plate frame is a WIDE, SHORT landscape shape. So the canvas
             is the hero across the FULL WIDTH up top, and the two working panels
             (tile palette + text-bar editor) sit in a row beneath it. */}
-        <main className="flex-1 flex flex-col gap-4 p-4 mx-auto w-full max-w-7xl">
-          {/* Frame canvas — full-width hero, the SAME width as the two tool
-              panels below it so the builder reads as one cohesive block. */}
-          <div className="w-full flex flex-col gap-3">
+        <main className="flex-1 grid grid-cols-1 lg:grid-cols-[1.1fr_0.9fr] gap-4 p-4 mx-auto w-full max-w-7xl items-start">
+          {/* Frame canvas — full-width hero (spans both tool columns on desktop).
+              On MOBILE the tile palette is reordered ABOVE the frame (order-1) so
+              you see the tiles you can place before the license plate; the canvas
+              sits in the middle and the text-bar editor below it. */}
+          <div className="order-2 lg:order-none lg:col-span-2 w-full flex flex-col gap-3">
             {/* Armed-tile callout — appears right above the frame the moment a
                 tile is armed, telling you in plain words to tap the frame. */}
             <ArmedBanner placement="frame" />
@@ -398,16 +403,16 @@ export function Designer() {
             </div>
           </div>
 
-          {/* Tools row — the tile palette (left) and the text-bar editor (right)
-              sit side by side on desktop, stacked on mobile. */}
-          <div className="flex flex-col lg:flex-row gap-4 items-start">
-            {/* Tile palette panel — ~55–60% on desktop. */}
+          {/* Tile palette — ABOVE the frame on mobile (order-1) so the tiles read
+              first; row-2 col-1 on desktop. */}
+          <div className="order-1 lg:order-none min-w-0">
             <TilePalette />
+          </div>
 
-            {/* Text-bar editor panel — equal width to the palette on desktop. */}
-            <div className="w-full lg:basis-0 lg:grow-[50] min-w-0">
-              <BottomBarEditor />
-            </div>
+          {/* Text-bar editor — below the frame on mobile (order-3); row-2 col-2 on
+              desktop, beside the palette. */}
+          <div className="order-3 lg:order-none min-w-0">
+            <BottomBarEditor />
           </div>
         </main>
       </DndProvider>
