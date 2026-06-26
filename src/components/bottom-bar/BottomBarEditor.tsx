@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef } from "react";
+import { useDraggable } from "@dnd-kit/core";
 import { useDesignStore } from "@/stores/design-store";
 import { BOTTOM_BAR_MAX_CHARS } from "@/lib/constants/frame";
 import { JULY4_SLOGANS } from "@/data/slogans";
@@ -20,10 +21,61 @@ import type { BottomBarConfig, PlacedTextBar } from "@/lib/types";
  * mounted in the same spot, so creating the bar never steals your focus mid-type.
  * Styling (font / colors / size) reveals once you've started.
  *
- * Placement is DRAG-FREE and deterministic: a bar lands centered when you add it,
- * and the Position controls (rail toggle + left/right nudge) move it via explicit
- * taps — no aiming, identical on phone and desktop. (Tiles still drag.)
+ * Placement is dual-path so each input picks the gesture it's best at:
+ *   • TAP "+ Add a banner" → lands a CENTERED bar (reliable on phone, no aiming);
+ *   • DRAG the handle below → drops a bar on an exact top/bottom run;
+ *   • the Position controls (rail toggle + left/right nudge) reposition a placed
+ *     bar via explicit taps as a drag-free fallback.
+ * (Tiles still drag too.)
  */
+
+/* ── The draggable handle: grab it and drop a fresh bar on a precise top/bottom
+   run. Secondary to the tap-to-add button above it; shows a live preview of the
+   bar so it clearly reads "grab me and drop me in." Drives `useDraggable({id:
+   "textbar"})`, which DndProvider commits via `placeTextBar` on drop. */
+function DragToPlace() {
+  const bottomBar = useDesignStore((s) => s.bottomBar);
+  const { setNodeRef, attributes, listeners, isDragging } = useDraggable({
+    id: "textbar",
+    data: { type: "textbar" },
+  });
+
+  return (
+    <div className="space-y-1.5">
+      {/* Secondary — drag the pill onto a precise spot (it lands where you drop). */}
+      <span className="block text-center text-[11px] font-semibold text-[#1e1b17]/45">
+        …or drag it exactly where you want
+      </span>
+      <button
+        type="button"
+        ref={setNodeRef}
+        {...attributes}
+        {...listeners}
+        title="Drag this bar onto the top or bottom of your frame — it lands where you drop it"
+        style={{ touchAction: "none" }}
+        className={`flex w-full flex-col items-center gap-1.5 rounded-xl border-2 border-dashed border-[#1e1b17]/40
+          bg-white/70 p-2.5 cursor-grab active:cursor-grabbing transition-all hover:bg-white active:scale-[0.99]
+          focus:outline-none focus-visible:ring-2 focus-visible:ring-[#ed5aa0] ${isDragging ? "opacity-50" : ""}`}
+      >
+        <div
+          className="inline-flex max-w-full items-center gap-1.5 overflow-hidden rounded-[4px] px-2.5 py-1"
+          style={{ background: bottomBar.backgroundColor }}
+        >
+          <span className="select-none text-sm leading-none opacity-50" style={{ color: bottomBar.textColor }} aria-hidden>⠿</span>
+          <span
+            className="block truncate text-sm font-extrabold leading-tight"
+            style={{ fontFamily: bottomBar.fontFamily, color: bottomBar.textColor, letterSpacing: bottomBar.letterSpacing }}
+          >
+            {bottomBar.text || "YOUR TEXT"}
+          </span>
+        </div>
+        <span className="rounded-full bg-[#1e1b17]/10 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-[#1e1b17]/60">
+          Drag onto the frame
+        </span>
+      </button>
+    </div>
+  );
+}
 
 /* ── One row in the placed-bars list ──────────────────────────────────────── */
 function BarRow({
@@ -194,6 +246,10 @@ export function BottomBarEditor() {
       >
         + Add a banner
       </button>
+
+      {/* Secondary placement path: drag the handle to drop a bar on an exact run.
+          The tap button above stays the reliable primary; this is for precision. */}
+      <DragToPlace />
 
       {/* Placed-bars list + "add another" (only once bars exist). Kept as a single
           child slot so the editor card below stays put and never remounts. */}
