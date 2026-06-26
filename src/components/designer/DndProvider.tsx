@@ -8,6 +8,7 @@ import {
   TouchSensor,
   useSensor,
   useSensors,
+  pointerWithin,
   closestCenter,
   MeasuringStrategy,
   type CollisionDetection,
@@ -31,38 +32,53 @@ interface DndProviderProps {
 }
 
 /**
- * Collision strategy for the builder — built on dnd-kit's `closestCenter`.
+ * Collision strategy for the builder — POINTER-DRIVEN.
  *
- * `closestCenter` ranks droppables by distance from the dragged element's
- * TRANSLATED collision rect (`args.collisionRect`), NOT the raw element. This is
- * the correct reference for BOTH drag models we use:
- *   • palette tiles drag via a source transform — their collision rect tracks the
- *     transformed (floating) tile;
- *   • placed tiles AND banners drag via the DragOverlay — their collision rect is
- *     the overlay ghost, which sits where the user is dragging.
- * Because the rect of a dragged BOTTOM banner stays at the bottom of the frame,
- * the nearest cell can only ever be a bottom cell — a bottom banner can no longer
- * resolve to a top cell (the old pointer-only math could, since the cursor could
- * drift above the bar's center). Drag it up to the top rail and the rect's center
- * crosses into the top cells, so it correctly resolves to top.
+ * The drop target is the cell under the user's finger/cursor, full stop. We key
+ * off the pointer position (`args.pointerCoordinates`) — NOT the dragged
+ * element's rect — because our drag sources live in very different places:
+ *   • a NEW banner is dragged from a button in the editor panel BELOW the frame,
+ *     so its source-element rect sits down in the panel, nowhere near the frame.
+ *     An element-rect collision (closestCenter) therefore resolves to whichever
+ *     cell is nearest that panel button — the "ghost stuck in a corner, drop
+ *     snaps to the top-right" bug.
+ *   • palette tiles drag via a source transform; placed tiles/banners drag via
+ *     the DragOverlay. The cursor is the one reference common to all of them.
  *
- * We gate the nearest hit on PROXIMITY so dragging well off the frame yields no
- * target — that preserves "drag off the frame to remove" for tiles and banners.
+ *   1. Prefer the cell that literally CONTAINS the pointer (`pointerWithin`). A
+ *      bottom-rail cursor resolves to a bottom cell and a top-rail cursor to a
+ *      top cell, so a banner can never jump rails.
+ *   2. Pointer in a gap between cells but still near the frame → the cell whose
+ *      center is nearest the POINTER, gated on proximity.
+ *   3. Pointer well off the frame → no target, preserving "drag off to remove".
  */
 const collisionStrategy: CollisionDetection = (args) => {
-  const hits = closestCenter(args);
-  if (hits.length === 0) return [];
-  const nearest = hits[0];
-  const rect = args.droppableRects.get(nearest.id);
-  const dragRect = args.collisionRect;
-  if (!rect || !dragRect) return hits; // permissive if unmeasured
-  const dcx = dragRect.left + dragRect.width / 2;
-  const dcy = dragRect.top + dragRect.height / 2;
-  const cx = rect.left + rect.width / 2;
-  const cy = rect.top + rect.height / 2;
-  const dist = Math.hypot(dcx - cx, dcy - cy);
-  const limit = Math.max(rect.width, rect.height) * 1.25; // forgiving; off-frame => remove
-  return dist <= limit ? hits : [];
+  const pointer = args.pointerCoordinates;
+  if (!pointer) return closestCenter(args); // keyboard drag: no pointer
+
+  // 1) Cell directly under the pointer wins.
+  const within = pointerWithin(args);
+  if (within.length > 0) return within;
+
+  // 2) Otherwise the cell whose center is closest to the pointer.
+  let best: { id: string | number } | null = null;
+  let bestDist = Infinity;
+  let bestRect: { width: number; height: number } | null = null;
+  for (const container of args.droppableContainers) {
+    const rect = args.droppableRects.get(container.id);
+    if (!rect) continue;
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const dist = Math.hypot(pointer.x - cx, pointer.y - cy);
+    if (dist < bestDist) {
+      bestDist = dist;
+      best = { id: container.id };
+      bestRect = rect;
+    }
+  }
+  if (!best || !bestRect) return [];
+  const limit = Math.max(bestRect.width, bestRect.height) * 1.25; // off-frame => remove
+  return bestDist <= limit ? [best] : [];
 };
 
 export function DndProvider({ children, onOverSlotChange, onBannerPreviewChange }: DndProviderProps) {
@@ -276,7 +292,7 @@ export function DndProvider({ children, onOverSlotChange, onBannerPreviewChange 
       <DragOverlay dropAnimation={null}>
         {overlayBar ? (
           <div
-            className="pointer-events-none inline-flex max-w-[280px] items-center rounded-[3px] px-3 opacity-90"
+            className="ff-drag-lift pointer-events-none inline-flex max-w-[280px] items-center rounded-[3px] px-3"
             style={{ height: 34, background: overlayBar.backgroundColor }}
           >
             <span
@@ -291,10 +307,10 @@ export function DndProvider({ children, onOverSlotChange, onBannerPreviewChange 
             </span>
           </div>
         ) : piece && dragKind === "placed-tile" ? (
-          // Plain, statically-positioned, tile-sized ghost (placed-tile drags use
+          // Tile-sized ghost that lifts off the workbench (placed-tile drags use
           // the overlay; palette tiles use a source transform).
           <div
-            className="relative pointer-events-none opacity-90"
+            className="ff-drag-lift relative pointer-events-none"
             style={{ width: 48, height: 48 }}
           >
             <PlacedTileView pieceId={piece.id} width={48} height={48} />

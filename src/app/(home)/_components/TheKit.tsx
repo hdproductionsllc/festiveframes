@@ -1,7 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
 import { offer, formatUsd } from "@/config/offers";
-import { BuyButton } from "./BuyButton";
 
 const INK = "#1e1b17";
 
@@ -12,13 +11,13 @@ const INCLUDED = [
   "Quick-start card — installs in seconds with your existing screws",
 ];
 
-// Pricing comes from the single source of truth (config/offers); the server
-// re-derives the authoritative amount at checkout. The pricing-card CTAs run the
-// on-page Stripe checkout (BuyButton); the secondary link opens the builder.
+// Pricing comes from the single source of truth (config/offers). Both pricing-card
+// CTAs open the BUILDER (/build) — you always design first. The 2-for-$69 pair
+// price is applied in the cart at checkout (build one, add a second), never as an
+// up-front charge for an undesigned frame.
 const TIERS = [
   {
     name: "Your custom frame",
-    which: "single" as const,
     price: formatUsd(offer.singlePrice),
     note: "/ frame",
     popular: false,
@@ -28,13 +27,12 @@ const TIERS = [
   },
   {
     name: "Design two frames",
-    which: "bundle" as const,
     price: formatUsd(offer.bundlePrice),
     note: "/ 2 frames",
     popular: true,
     accent: "#ed5aa0",
-    cta: "Design two frames",
-    bullets: ["Two custom frames, designed your way", "One for you, one to gift", "Mix themes or match them", "30-day guarantee"],
+    cta: "Start designing",
+    bullets: ["Build one, then add a second in your cart — 2 for $69", "One for you, one to gift", "Mix themes or match them", "30-day guarantee"],
   },
 ];
 
@@ -110,17 +108,18 @@ export function TheKit() {
                   </div>
                 ))}
               </div>
-              <BuyButton
-                selection={t.which}
-                label={t.cta}
-                className="s-display s-press w-full cursor-pointer rounded-full border-[3px] border-[#1e1b17] p-3 text-center text-base font-semibold text-[#fff9ec] disabled:opacity-70"
+              <Link
+                href="/build"
+                className="s-display s-press block w-full cursor-pointer rounded-full border-[3px] border-[#1e1b17] p-3 text-center text-base font-semibold text-[#fff9ec]"
                 style={{
                   background: t.accent,
                   boxShadow: `4px 4px 0 ${INK}`,
                   ["--press-shadow-lift" as string]: `6px 6px 0 ${INK}`,
                   ["--press-shadow-press" as string]: `1px 1px 0 ${INK}`,
                 }}
-              />
+              >
+                {t.cta}
+              </Link>
             </div>
           ))}
           <div className="text-center text-sm font-bold text-[#6a6354] sm:col-span-2">

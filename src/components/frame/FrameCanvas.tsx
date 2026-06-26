@@ -363,12 +363,22 @@ export const FrameCanvas = forwardRef<FrameCanvasHandle, FrameCanvasProps>(
               positioned with the same `barRect` geometry as a real placed bar, so
               there's no drift). Valid → the banner's color + a dashed ink outline
               reading "it lands HERE"; invalid (row can't fit it) → a red tint. */}
-          {containerWidth > 0 && bannerPreview && (
+          {containerWidth > 0 && bannerPreview && (() => {
+            // `barRect` yields {x, y, width, height} — map x/y to left/top the same
+            // way a real PlacedBar does. (Spreading it raw wrote invalid `x:`/`y:`
+            // CSS on the div, pinning the ghost to the frame's top-left corner.)
+            const r = barRect(bannerPreview);
+            return (
             <div
               aria-hidden
-              className="pointer-events-none absolute z-[3] rounded-[3px]"
+              className={`ff-banner-preview pointer-events-none absolute z-[3] rounded-[3px] ${
+                bannerPreview.valid ? "" : "ff-banner-preview--invalid"
+              }`}
               style={{
-                ...barRect(bannerPreview),
+                left: r.x,
+                top: r.y,
+                width: r.width,
+                height: r.height,
                 background: bannerPreview.valid
                   ? bannerPreview.backgroundColor
                   : "rgba(214,69,69,0.18)",
@@ -381,7 +391,8 @@ export const FrameCanvas = forwardRef<FrameCanvasHandle, FrameCanvasProps>(
                   : "0 0 12px 2px rgba(214,69,69,0.4)",
               }}
             />
-          )}
+            );
+          })()}
 
           {/* Frame edge highlight */}
           <div

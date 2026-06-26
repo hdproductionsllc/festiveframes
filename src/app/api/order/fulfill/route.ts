@@ -13,14 +13,15 @@ import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 
 import { getStripe } from "@/lib/stripe";
-import { fulfillOrder } from "@/lib/order/fulfill";
+import { fulfillOrder, fulfillCart } from "@/lib/order/fulfill";
 import type { PartsList } from "@/lib/order/parts-list";
 import type { OrderArtifacts } from "@/lib/order/store";
 
 export const runtime = "nodejs";
 
 interface FulfillBody {
-  orderId: string;
+  orderId?: string;
+  cartId?: string;
   sessionId: string;
   parts?: PartsList;
   artifacts?: OrderArtifacts;
@@ -33,8 +34,8 @@ export async function POST(request: Request): Promise<NextResponse> {
   } catch {
     return NextResponse.json({ error: "Invalid body" }, { status: 400 });
   }
-  if (!body.orderId || !body.sessionId) {
-    return NextResponse.json({ error: "Missing orderId/sessionId" }, { status: 400 });
+  if (!body.sessionId || (!body.orderId && !body.cartId)) {
+    return NextResponse.json({ error: "Missing sessionId and orderId/cartId" }, { status: 400 });
   }
 
   let stripe: Stripe;
@@ -57,10 +58,22 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: "Unknown session" }, { status: 400 });
   }
 
-  // Trust gate: the session must be paid and must belong to this order.
+  // Trust gate: the session must be paid before we generate anything.
   if (session.payment_status === "unpaid") {
     return NextResponse.json({ error: "Not paid" }, { status: 402 });
   }
+
+  // Cart order: the session must belong to this cart. Designs + quantities are
+  // read from the server-side cart draft, so no client payload is trusted here.
+  if (body.cartId) {
+    if ((session.metadata?.cartId ?? null) !== body.cartId) {
+      return NextResponse.json({ error: "Cart mismatch" }, { status: 400 });
+    }
+    const result = await fulfillCart(body.cartId, session);
+    return NextResponse.json({ ok: true, result }, { status: 200 });
+  }
+
+  // Single custom-frame order.
   if ((session.metadata?.orderId ?? null) !== body.orderId) {
     return NextResponse.json({ error: "Order mismatch" }, { status: 400 });
   }
@@ -68,6 +81,6 @@ export async function POST(request: Request): Promise<NextResponse> {
   const payload =
     body.parts && body.artifacts ? { parts: body.parts, artifacts: body.artifacts } : undefined;
 
-  const result = await fulfillOrder(body.orderId, session, payload);
+  const result = await fulfillOrder(body.orderId!, session, payload);
   return NextResponse.json({ ok: true, result }, { status: 200 });
 }

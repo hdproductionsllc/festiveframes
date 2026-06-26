@@ -54,6 +54,10 @@ export interface ProductionOrderInput {
   printSheets: NamedImage[];
   /** Custom text-bar banner files. */
   banners: NamedImage[];
+  /** How many of THIS exact design to make (cart line quantity). Default 1. */
+  quantity?: number;
+  /** Context line for one design within a multi-design cart, e.g. "Design 2 of 3". */
+  cartNote?: string | null;
 }
 
 function esc(s: unknown): string {
@@ -120,7 +124,7 @@ const FOUNDERS_THANK_YOU = `
       Every frame is made to order, by hand, right here in the USA — and yours is now in our shop.
       Thank you for flying your colors with us. We can't wait for you to see it on your car.
     </p>
-    <p style="margin:10px 0 0;color:${INK};font-size:14px;font-style:italic;">— Henry, Becky &amp; Bill</p>
+    <p style="margin:10px 0 0;color:${INK};font-size:14px;font-style:italic;">— Becky, Bill and Henry</p>
   </div>`;
 
 function productionHtml(o: ProductionOrderInput, droppedNote?: string | null): string {
@@ -135,12 +139,17 @@ function productionHtml(o: ProductionOrderInput, droppedNote?: string | null): s
     ? `<p style="margin:0 0 12px;padding:10px 14px;background:${RED};color:${PAGE};font-size:13px;font-weight:bold;border:3px solid ${INK};border-radius:10px;">${esc(droppedNote)}</p>`
     : "";
 
+  const qty = Math.max(1, Math.floor(o.quantity ?? 1));
+  const makeBadge = `<p style="margin:0 0 14px;display:inline-block;padding:6px 14px;background:${GOLD};color:${INK};font-size:14px;font-weight:bold;text-transform:uppercase;border:3px solid ${INK};border-radius:99px;">Make &times;${qty}</p>`;
+  const cartLine = o.cartNote ? `<strong>Cart:</strong> ${esc(o.cartNote)}<br/>` : "";
+
   return shell(
     `Production order — ${esc(o.parts.designName || "Custom frame")}`,
     `
     <p style="margin:0 0 14px;display:inline-block;padding:6px 14px;background:${RED};color:${PAGE};font-size:13px;font-weight:bold;text-transform:uppercase;border:3px solid ${INK};border-radius:99px;">New paid order · ${usd(o.amountTotalCents)}</p>
+    ${qty > 1 || o.cartNote ? makeBadge : ""}
     <p style="margin:0 0 8px;color:${INK};font-size:13px;">
-      <strong>Order:</strong> ${esc(o.orderId)}<br/>
+      ${cartLine}<strong>Order:</strong> ${esc(o.orderId)}<br/>
       <strong>Stripe:</strong> ${esc(o.sessionId)}<br/>
       <strong>Customer:</strong> ${esc(o.customerName ?? "—")} &lt;${esc(o.customerEmail ?? "—")}&gt;<br/>
       <strong>Plate:</strong> ${esc(o.parts.plateState)}${o.parts.qr.enabled ? ` · <strong>QR:</strong> ${esc(o.parts.qr.url)}` : ""}
@@ -161,9 +170,12 @@ function productionText(o: ProductionOrderInput, droppedNote?: string | null): s
     "the parts-list CSV",
   ].filter(Boolean).join(", ");
   const ship = o.shippingLines.filter(Boolean).join("\n") || "Address on file";
+  const qty = Math.max(1, Math.floor(o.quantity ?? 1));
   return [
     `PRODUCTION ORDER — ${o.parts.designName || "Custom frame"}`,
     `New paid order · ${usd(o.amountTotalCents)}`,
+    `MAKE x${qty}`,
+    o.cartNote ? `Cart: ${o.cartNote}` : null,
     ``,
     `Order: ${o.orderId}`,
     `Stripe: ${o.sessionId}`,
@@ -199,7 +211,7 @@ function customerText(o: ProductionOrderInput): string {
     `Every frame is made to order, by hand, right here in the USA — and yours`,
     `is now in our shop. Thank you for flying your colors with us. We can't`,
     `wait for you to see it on your car.`,
-    `— Henry, Becky & Bill`,
+    `— Becky, Bill and Henry`,
     ``,
     `Made to order in the USA · St. Louis, Missouri.`,
     `Questions? Reach a real human at hello@festiveframes.co.`,
@@ -235,7 +247,10 @@ function customerHtml(o: ProductionOrderInput): string {
  * A customer-email failure does NOT throw (production already went out) but it
  * is never silent — it fires sendFulfillmentFailureAlert so a human is notified.
  */
-export async function sendProductionEmails(o: ProductionOrderInput): Promise<void> {
+export async function sendProductionEmails(
+  o: ProductionOrderInput,
+  opts?: { skipCustomer?: boolean },
+): Promise<void> {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
     // Hard failure: a paid order cannot be silently dropped. In local dev with
@@ -317,7 +332,11 @@ export async function sendProductionEmails(o: ProductionOrderInput): Promise<voi
   // Production already went out; a customer-email failure does NOT throw (we
   // don't want to release the claim and re-send the production email), but it
   // must never be silent — alert the team so they can manually confirm.
-  if (o.customerEmail) {
+  //
+  // In a multi-design CART, the per-design customer email is suppressed
+  // (skipCustomer) — fulfillCart sends ONE combined confirmation for the whole
+  // order instead, so the buyer isn't emailed N times.
+  if (o.customerEmail && !opts?.skipCustomer) {
     const customerAttachments = proofAttachment
       ? [{ ...proofAttachment, contentId: "proof" }]
       : [];
@@ -341,6 +360,126 @@ export async function sendProductionEmails(o: ProductionOrderInput): Promise<voi
         `Production email SENT, but the CUSTOMER CONFIRMATION email FAILED (${reason}). Reach out to the customer manually — their order IS in production.`,
       );
     }
+  }
+}
+
+export interface CartCustomerInput {
+  /** cartId, shown to the buyer as their order reference. */
+  cartId: string;
+  sessionId: string;
+  customerEmail: string;
+  customerName: string | null;
+  amountTotalCents: number;
+  shippingLines: string[];
+  /** One entry per design in the cart. */
+  designs: { designName: string; quantity: number; proof: NamedImage | null }[];
+}
+
+/** "2 frames" / "1 frame" etc. */
+function framesLabel(n: number): string {
+  return `${n} frame${n === 1 ? "" : "s"}`;
+}
+
+function cartCustomerHtml(o: CartCustomerInput): string {
+  const first = o.customerName ? `, ${esc(o.customerName.split(" ")[0])}` : "";
+  const totalFrames = o.designs.reduce((s, d) => s + d.quantity, 0);
+  const rows = o.designs
+    .map((d, i) => {
+      const img = d.proof
+        ? `<img src="cid:proof-${i}" alt="Proof of ${esc(d.designName)}" style="width:120px;max-width:40%;border:3px solid ${INK};border-radius:10px;box-shadow:${SHADOW};"/>`
+        : "";
+      return `
+      <tr>
+        <td style="padding:8px 0;border-bottom:2px solid ${INK};vertical-align:middle;">${img}</td>
+        <td style="padding:8px 0 8px 12px;border-bottom:2px solid ${INK};color:${INK};font-size:14px;vertical-align:middle;">
+          <strong>${esc(d.designName || "Custom frame")}</strong><br/>Make &times;${d.quantity}
+        </td>
+      </tr>`;
+    })
+    .join("");
+  return shell(
+    `You're in${first}! 🎆`,
+    `
+    <p style="margin:0 0 12px;color:${INK};font-size:14px;line-height:1.6;">
+      Thanks for your order — it's confirmed and headed into production. Here are the
+      ${esc(framesLabel(totalFrames))} you designed:
+    </p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">${rows}</table>
+    <p style="margin:14px 0 4px;padding-left:12px;border-left:5px solid ${BLUE};color:${INK};font-size:14px;"><strong>Order:</strong> ${esc(o.cartId)} · <strong>Total:</strong> ${usd(o.amountTotalCents)}</p>
+    <div style="margin:16px 0 0;padding:14px 16px;background:${PAGE};border:3px solid ${INK};border-radius:14px;box-shadow:${SHADOW};">${shippingBlock(o.shippingLines)}</div>
+    ${FOUNDERS_THANK_YOU}`,
+  );
+}
+
+function cartCustomerText(o: CartCustomerInput): string {
+  const first = o.customerName ? `, ${o.customerName.split(" ")[0]}` : "";
+  const totalFrames = o.designs.reduce((s, d) => s + d.quantity, 0);
+  const ship = o.shippingLines.filter(Boolean).join("\n") || "Address on file";
+  const lines = o.designs.map((d) => `  • ${d.designName || "Custom frame"} ×${d.quantity}`);
+  return [
+    `You're in${first}!`,
+    ``,
+    `Thanks for your order — it's confirmed and headed into production.`,
+    `Your ${framesLabel(totalFrames)}:`,
+    ...lines,
+    ``,
+    `Order: ${o.cartId}`,
+    `Total: ${usd(o.amountTotalCents)}`,
+    ``,
+    `Ship to:`,
+    ship,
+    ``,
+    `A thank-you from the founders:`,
+    `Every frame is made to order, by hand, right here in the USA. Thank you for`,
+    `flying your colors with us. We can't wait for you to see them on your car.`,
+    `— Becky, Bill and Henry`,
+    ``,
+    `Made to order in the USA · St. Louis, Missouri.`,
+    `Questions? Reach a real human at hello@festiveframes.co.`,
+  ].join("\n");
+}
+
+/**
+ * ONE combined confirmation for a multi-design cart (the per-design production
+ * emails to the founders are sent separately by fulfillCart). Never throws —
+ * production already went out; a failure here alerts the team instead.
+ */
+export async function sendCartCustomerEmail(o: CartCustomerInput): Promise<void> {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) return;
+  const from = process.env.EMAIL_FROM || "Festive Frames <onboarding@resend.dev>";
+  const founderList = (process.env.PRODUCTION_EMAILS || process.env.ADMIN_ORDER_EMAIL || "")
+    .split(",").map((s) => s.trim()).filter(Boolean);
+  const resend = new Resend(apiKey);
+
+  // Inline each design's proof as a cid attachment (proof-0, proof-1, …).
+  const attachments = o.designs
+    .map((d, i) => {
+      if (!d.proof) return null;
+      const a = toAttachment(d.proof);
+      return a ? { ...a, contentId: `proof-${i}` } : null;
+    })
+    .filter(Boolean) as Attachment[];
+
+  try {
+    await resend.emails.send({
+      from,
+      to: o.customerEmail,
+      bcc: founderList.length ? founderList : undefined,
+      subject: "Your Festive Frames order is confirmed",
+      html: cartCustomerHtml(o),
+      text: cartCustomerText(o),
+      attachments,
+    });
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : "unknown error";
+    console.error("[email-production] cart customer email failed:", err);
+    await sendFulfillmentFailureAlert(
+      o.cartId,
+      o.sessionId,
+      o.customerEmail,
+      `Production emails SENT, but the CUSTOMER CONFIRMATION for the cart FAILED (${reason}). Reach out to the customer manually — their order IS in production.`,
+    );
   }
 }
 

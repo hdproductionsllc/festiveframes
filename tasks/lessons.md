@@ -39,4 +39,31 @@ First cut of the eufy print sheet clipped each tile's art to a rounded square
 UV print that leaves the tile's corners BARE/unprinted. **Print output should be exactly
 what the press needs (full square face), not what looks nice on screen.** Keep a square
 clip only to stop cover-fit overflow bleeding into neighbours; no radius.
+
+## Don't delete a feature the owner asked to keep — fix it (2026-06-26)
+When banner drag-and-drop misbehaved I removed it entirely and replaced it with buttons —
+the owner had explicitly said NOT to ditch it. Wrong call. **A buggy feature the user wants
+gets fixed, not deleted.** Restore-and-fix, keep deterministic controls only as a *fallback*.
+
+## DnD collision: key off the POINTER, not the dragged element's rect (2026-06-26)
+The collision strategy SHOULD key off the pointer, not the dragged element's box:
+`pointerWithin` first (containment → a banner can't cross rails), then nearest cell center
+*to `args.pointerCoordinates`* with a proximity gate (off-frame ⇒ no target ⇒ "drag off to
+remove"). This is the right design and is in place. BUT — see below — it was NOT the cause
+of the "ghost stuck top-left / snaps to top-right" bug, so changing it alone fixed nothing.
+
+## The REAL "preview ghost frozen top-left" bug: invalid CSS x/y on a div (2026-06-26)
+The banner landing-preview ghost in `FrameCanvas.tsx` did `style={{ ...barRect(preview) }}`.
+`barRect` returns `{x, y, width, height}` — but **`x`/`y` are SVG attributes, NOT CSS box
+properties**. React emitted `x: 768px; y: 0px;` which a `<div>` silently ignores, so the
+absolutely-positioned ghost had no `left`/`top` and stuck at the frame's static origin
+(top-left) — ALWAYS rendering as `{row:"top", startIndex:0}` no matter the real drop. The
+drop math was correct the whole time; only the ghost was visually frozen. Fix: map
+`x→left, y→top` exactly like the committed `PlacedBar` does.
+**Lessons:** (1) when a fix "changes nothing," the symptom is probably in a DIFFERENT layer
+than your theory — REPRODUCE before re-fixing (a headless-browser repro dumping the ghost's
+computed style found this in minutes; my plausible "collision" theory cost a wasted cycle).
+(2) Spreading a geometry object straight into `style` is dangerous — invalid CSS keys fail
+silently. (3) If a value object is consumed as CSS box position, name it `{left, top}` (or
+have `barRect` return a CSS-ready contract) so the mismatch can't recur.
 </content>

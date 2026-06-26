@@ -1,14 +1,19 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useCartStore } from "@/stores/cart-store";
 
-// Client relay for a custom builder order. After Stripe redirects back to
-// /thanks, this reads the design + artifacts stashed in localStorage and
-// POSTs them to /api/order/fulfill, which verifies the session is paid before
-// emailing the production packet + the customer's proof. It survives the
-// Stripe redirect (same-origin localStorage) and a server restart. The server
-// also fulfills from its in-memory draft via the webhook, and fulfillment is
-// idempotent, so this never double-sends.
+// Client relay for a paid builder order. After Stripe redirects back to /thanks,
+// this POSTs to /api/order/fulfill, which verifies the session is paid before
+// emailing the production packet(s) + the customer's proof. It survives the
+// Stripe redirect and a server restart. The server ALSO fulfills via the webhook,
+// and fulfillment is idempotent, so this never double-sends.
+//
+// Two shapes:
+//   • Single custom frame — carries the design + artifacts in localStorage as a
+//     resilience backup to the server draft.
+//   • Cart (one or more designs) — the server-side cart draft is authoritative,
+//     so the relay only needs the cartId; on success the local cart is cleared.
 
 interface PendingOrder {
   orderId: string;
@@ -16,26 +21,39 @@ interface PendingOrder {
   artifacts?: unknown;
 }
 
-export function OrderFulfiller({ orderId, sessionId }: { orderId: string; sessionId: string }) {
+export function OrderFulfiller({
+  orderId,
+  cartId,
+  sessionId,
+}: {
+  orderId?: string;
+  cartId?: string;
+  sessionId: string;
+}) {
   const [status, setStatus] = useState<"working" | "done" | "error">("working");
   const ran = useRef(false);
+  const clearCart = useCartStore((s) => s.clear);
 
   useEffect(() => {
     if (ran.current) return;
     ran.current = true;
 
-    let pending: PendingOrder | null = null;
-    try {
-      const raw = localStorage.getItem("ff:pending-order");
-      if (raw) pending = JSON.parse(raw) as PendingOrder;
-    } catch {
-      pending = null;
+    let body: Record<string, unknown>;
+    if (cartId) {
+      body = { cartId, sessionId };
+    } else {
+      let pending: PendingOrder | null = null;
+      try {
+        const raw = localStorage.getItem("ff:pending-order");
+        if (raw) pending = JSON.parse(raw) as PendingOrder;
+      } catch {
+        pending = null;
+      }
+      body =
+        pending && pending.orderId === orderId
+          ? { orderId, sessionId, parts: pending.parts, artifacts: pending.artifacts }
+          : { orderId, sessionId };
     }
-
-    const body =
-      pending && pending.orderId === orderId
-        ? { orderId, sessionId, parts: pending.parts, artifacts: pending.artifacts }
-        : { orderId, sessionId };
 
     fetch("/api/order/fulfill", {
       method: "POST",
@@ -44,11 +62,14 @@ export function OrderFulfiller({ orderId, sessionId }: { orderId: string; sessio
     })
       .then((r) => {
         if (!r.ok) throw new Error(String(r.status));
+        // Success: a cart order is now placed — empty the local cart so a refresh
+        // or "design another" starts clean. Also clear the single-order relay.
+        if (cartId) clearCart();
         try { localStorage.removeItem("ff:pending-order"); } catch {}
         setStatus("done");
       })
       .catch(() => setStatus("error"));
-  }, [orderId, sessionId]);
+  }, [orderId, cartId, sessionId, clearCart]);
 
   return (
     <div

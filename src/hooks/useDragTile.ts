@@ -16,13 +16,19 @@ export function useDragTile(pieceId: string) {
   // palette now a no-overflow panel, the tile isn't clipped; a high z-index lifts
   // it above the design, and pointer-events:none lets the drop target underneath
   // be detected (pointer-based collision) so dropping works.
+  // While dragging, the tile LIFTS: a constant scale + playful tilt + drop shadow
+  // composed onto the cursor-follow translate. The scale/rotate are constant (no
+  // CSS transition on transform — that would lag the cursor-follow), so it reads
+  // as picked-up without ever trailing the pointer. Drop accuracy is unaffected:
+  // collision is pointer-driven, not based on the tile's scaled rect.
   const style: CSSProperties | undefined = transform
     ? {
-        transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+        transform: `translate3d(${transform.x}px, ${transform.y}px, 0) scale(1.12) rotate(-3deg)`,
         zIndex: 1000,
         position: "relative",
         pointerEvents: "none",
-        opacity: isDragging ? 0.9 : 1,
+        opacity: isDragging ? 0.95 : 1,
+        filter: "drop-shadow(0 10px 14px rgba(0, 0, 0, 0.4))",
       }
     : undefined;
 

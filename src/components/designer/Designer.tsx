@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useDesignStore } from "@/stores/design-store";
 import { useUIStore } from "@/stores/ui-store";
+import { useCartStore } from "@/stores/cart-store";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { DndProvider } from "./DndProvider";
 import { DesignerHeader } from "./DesignerHeader";
@@ -60,6 +61,7 @@ export function Designer() {
   const [frameImage, setFrameImage] = useState<string | null>(null);
   const [showParts, setShowParts] = useState(false);
   const [ordering, setOrdering] = useState(false);
+  const [orderError, setOrderError] = useState<string | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [reviewProof, setReviewProof] = useState<string | null>(null);
   const pendingProofRef = useRef<NamedImage | null>(null);
@@ -217,121 +219,128 @@ export function Designer() {
     }
   }, [ordering]);
 
-  // Step 2: the customer confirmed the proof — render every production artifact
-  // client-side (reusing the proof), stash them for the post-payment relay,
-  // create the $39 Stripe session, and redirect.
-  const confirmOrder = useCallback(async () => {
-    if (ordering) return;
-    setOrdering(true);
-    if (soundEnabled) playSound("chime");
+  // Render every production artifact client-side (reusing the review proof) and
+  // stash the design to the SERVER draft keyed by a fresh orderId. The server
+  // draft is the durable carrier the cart + fulfillment read from, so this AWAITS
+  // the save and only succeeds if it persisted. Returns the new cart line's
+  // metadata, or null on failure (so the caller can surface an error rather than
+  // adding a design we can't actually produce).
+  const prepareDesignDraft = useCallback(async (): Promise<
+    { orderId: string; designName: string; thumbDataUrl: string | null } | null
+  > => {
+    const s = useDesignStore.getState();
+    if (Object.keys(s.slots).length === 0) return null;
+    const orderId = (crypto.randomUUID?.() ?? `ord-${Date.now()}-${Math.floor(Math.random() * 1e6)}`);
+
+    // Reuse the proof rendered for the review step (fall back to rendering it),
+    // time-boxed so a stuck canvas can never strand the flow.
+    let proof: NamedImage | null = pendingProofRef.current;
+    if (!proof) {
+      const proofUrl = await withTimeout(composeFrameImage(2000), 8000, null);
+      proof = proofUrl ? { name: "frame-proof", dataUrl: proofUrl } : null;
+    }
+
+    // A small thumbnail for the cart row (kept tiny so the persisted cart stays
+    // well under the localStorage quota). Optional — the cart works without it.
+    const thumbDataUrl = await withTimeout(composeFrameImage(360), 5000, null);
+
+    // Heavy artifacts (banner files + full-res eufyMake print sheet) are OPTIONAL
+    // for checkout — Bill can regenerate them from the design JSON on his desktop.
+    // They can THROW or hang on mobile (iOS caps the canvas), so they're rendered
+    // under a hard timeout + catch; whatever succeeds gets shipped.
+    let banners: NamedImage[] = [];
+    let printSheets: NamedImage[] = [];
     try {
-      const s = useDesignStore.getState();
-      if (Object.keys(s.slots).length === 0) {
-        setOrdering(false);
-        return;
-      }
-      const orderId = (crypto.randomUUID?.() ?? `ord-${Date.now()}-${Math.floor(Math.random() * 1e6)}`);
-
-      // Reuse the proof rendered for the review step (fall back to rendering it).
-      // The proof is the one artifact we genuinely want before paying, so it's
-      // worth a short wait — but still time-boxed so a stuck canvas can never
-      // strand the customer on "Sending you to checkout…".
-      let proof: NamedImage | null = pendingProofRef.current;
-      if (!proof) {
-        const proofUrl = await withTimeout(composeFrameImage(2000), 8000, null);
-        proof = proofUrl ? { name: "frame-proof", dataUrl: proofUrl } : null;
-      }
-
-      // The remaining production artifacts (banners + the full-res eufyMake print
-      // sheet) are heavy canvas renders. On mobile they can THROW (iOS caps the
-      // canvas size — see eufy-print.ts) or hang, and historically that froze the
-      // whole order on "Sending you to checkout…". They are OPTIONAL for the
-      // redirect: the design JSON we POST below lets Bill regenerate every one of
-      // them on his desktop. So we render them under a hard timeout and a catch —
-      // whatever succeeds gets shipped, a mobile failure ships nothing extra, and
-      // EITHER WAY we always fall through to the Stripe redirect.
-      let banners: NamedImage[] = [];
-      let printSheets: NamedImage[] = [];
-      try {
-        const heavyArtifacts = (async () => {
-          // Banner files (one per text bar).
-          const b: NamedImage[] = [];
-          for (const bar of s.textBars) {
-            const url = await composeBarImage(bar.id);
-            if (url) b.push({ name: `banner-${bar.row}-${bar.startIndex}`, dataUrl: url });
-          }
-          // eufyMake print sheet(s). Desktop-only — throws on phones (canvas too
-          // large). On mobile we ship without it; Bill regenerates on desktop.
-          let p: NamedImage[] = [];
-          try {
-            const { sheets } = await composeEufyPrintSheets(EUFY_JIG_3X12);
-            p = sheets.map((dataUrl, i) => ({ name: `eufy-print-sheet-${i + 1}`, dataUrl }));
-          } catch {
-            p = [];
-          }
-          return { banners: b, printSheets: p };
-        })();
-        const heavy = await withTimeout(heavyArtifacts, 12000, { banners: [], printSheets: [] });
-        banners = heavy.banners;
-        printSheets = heavy.printSheets;
-      } catch {
-        // Any unexpected failure → ship without the heavy artifacts; the design
-        // JSON still regenerates them. Never block the redirect.
-        banners = [];
-        printSheets = [];
-      }
-
-      const parts = buildPartsList({
-        slots: s.slots,
-        textBars: s.textBars,
-        qrCode: s.qrCode,
-        plateState: s.plateState,
-        designName: s.designName,
-        tileSizeInches: s.frameConfig.tileSizeInches,
-        dieCut: s.dieCut,
-      });
-
-      const artifacts = { proof, printSheets, banners };
-
-      // Stash for fulfillment: server draft (webhook backup) + localStorage
-      // (the /thanks relay, resilient across the Stripe redirect / restart).
-      try {
-        await fetch("/api/order/draft", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ orderId, parts, artifacts, design: { slots: s.slots, textBars: s.textBars, qrCode: s.qrCode, plateState: s.plateState, frameConfig: s.frameConfig, designName: s.designName } }),
-        });
-      } catch {
-        /* non-fatal: localStorage relay below is the backup */
-      }
-      try {
-        localStorage.setItem("ff:pending-order", JSON.stringify({ orderId, parts, artifacts }));
-      } catch {
-        // Quota: drop the heavy print sheets from the local copy (the server
-        // draft still has them); founders still get parts + proof + banners.
+      const heavyArtifacts = (async () => {
+        const b: NamedImage[] = [];
+        for (const bar of s.textBars) {
+          const url = await composeBarImage(bar.id);
+          if (url) b.push({ name: `banner-${bar.row}-${bar.startIndex}`, dataUrl: url });
+        }
+        let p: NamedImage[] = [];
         try {
-          localStorage.setItem("ff:pending-order", JSON.stringify({ orderId, parts, artifacts: { ...artifacts, printSheets: [] } }));
-        } catch { /* give up on the local relay; server draft remains */ }
-      }
+          const { sheets } = await composeEufyPrintSheets(EUFY_JIG_3X12);
+          p = sheets.map((dataUrl, i) => ({ name: `eufy-print-sheet-${i + 1}`, dataUrl }));
+        } catch {
+          p = [];
+        }
+        return { banners: b, printSheets: p };
+      })();
+      const heavy = await withTimeout(heavyArtifacts, 12000, { banners: [], printSheets: [] });
+      banners = heavy.banners;
+      printSheets = heavy.printSheets;
+    } catch {
+      banners = [];
+      printSheets = [];
+    }
 
-      // Create the Stripe checkout session and go.
-      const res = await fetch("/api/checkout", {
+    const parts = buildPartsList({
+      slots: s.slots,
+      textBars: s.textBars,
+      qrCode: s.qrCode,
+      plateState: s.plateState,
+      designName: s.designName,
+      tileSizeInches: s.frameConfig.tileSizeInches,
+      dieCut: s.dieCut,
+    });
+
+    const artifacts = { proof, printSheets, banners };
+
+    // Save the SERVER draft — the cart's durable carrier. This MUST succeed; if
+    // it doesn't, we return null so the design isn't added to a cart we can't
+    // fulfill. (Print sheets are dropped on a retry if the body is too large.)
+    const saveDraft = (withSheets: boolean) =>
+      fetch("/api/order/draft", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ kind: "custom-frame", orderId, designName: s.designName }),
+        body: JSON.stringify({
+          orderId,
+          parts,
+          artifacts: withSheets ? artifacts : { ...artifacts, printSheets: [] },
+          design: { slots: s.slots, textBars: s.textBars, qrCode: s.qrCode, plateState: s.plateState, frameConfig: s.frameConfig, designName: s.designName },
+        }),
       });
-      const data = await res.json();
-      if (data?.url) {
-        window.location.href = data.url;
-      } else {
+    try {
+      let res = await saveDraft(true);
+      if (!res.ok && printSheets.length) res = await saveDraft(false); // payload too large → retry lean
+      if (!res.ok) return null;
+    } catch {
+      return null;
+    }
+
+    return { orderId, designName: s.designName || "Custom frame", thumbDataUrl };
+  }, []);
+
+  // Step 2: the customer confirmed the proof — prepare the design draft and add
+  // it to the cart, then take them to the cart to add more or check out. The
+  // cart is the order (a single frame is a cart of one), so EVERY purchase flows
+  // through it.
+  const addToCart = useCallback(async () => {
+    if (ordering) return;
+    setOrdering(true);
+    setOrderError(null);
+    if (soundEnabled) playSound("chime");
+    try {
+      const prepared = await prepareDesignDraft();
+      if (!prepared) {
         setOrdering(false);
+        setOrderError("We couldn't save your design just now. Please check your connection and try again.");
         if (soundEnabled) playSound("sad");
+        return;
       }
+      useCartStore.getState().addLine({
+        orderId: prepared.orderId,
+        designName: prepared.designName,
+        thumbDataUrl: prepared.thumbDataUrl,
+        quantity: 1,
+      });
+      window.location.href = "/cart";
     } catch {
       setOrdering(false);
+      setOrderError("Something went wrong adding your design to the cart. Please try again.");
       if (soundEnabled) playSound("sad");
     }
-  }, [ordering, soundEnabled]);
+  }, [ordering, soundEnabled, prepareDesignDraft]);
 
   return (
     <div className="workbench-bg min-h-screen flex flex-col">
@@ -342,8 +351,9 @@ export function Designer() {
           proof={reviewProof}
           designName={designName}
           ordering={ordering}
-          onConfirm={confirmOrder}
-          onClose={() => { if (!ordering) setReviewOpen(false); }}
+          error={orderError}
+          onConfirm={addToCart}
+          onClose={() => { if (!ordering) { setReviewOpen(false); setOrderError(null); } }}
         />
       )}
 
@@ -415,12 +425,14 @@ function ReviewOrderModal({
   proof,
   designName,
   ordering,
+  error,
   onConfirm,
   onClose,
 }: {
   proof: string | null;
   designName: string;
   ordering: boolean;
+  error?: string | null;
   onConfirm: () => void;
   onClose: () => void;
 }) {
@@ -549,7 +561,7 @@ function ReviewOrderModal({
               className="flex-1 rounded-full border-2 border-[#1e1b17] bg-[#f8c53b] px-5 py-3 text-sm font-extrabold uppercase tracking-wide text-[#1e1b17]
                 shadow-[0_3px_0_#1e1b17] transition-all hover:brightness-105 active:translate-y-0.5 active:shadow-none disabled:cursor-not-allowed disabled:opacity-40"
             >
-              {ordering ? "Sending you to checkout…" : "Place order & pay · $39"}
+              {ordering ? "Adding…" : "Add to cart →"}
             </button>
             <button
               type="button"
@@ -560,6 +572,14 @@ function ReviewOrderModal({
               Keep editing
             </button>
           </div>
+          {error && (
+            <p role="alert" className="mt-3 text-center text-[13px] font-bold text-[#c8102e]">
+              {error}
+            </p>
+          )}
+          <p className="mt-3 text-center text-[12px] font-semibold text-[#1e1b17]/60">
+            Add more frames on the next screen — 2 for $69.
+          </p>
         </div>
       </div>
     </div>

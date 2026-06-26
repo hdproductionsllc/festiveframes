@@ -296,7 +296,7 @@ export const copy: Copy = {
         quote:
           "I design every tile to read from a block away: big, bold, and unmistakably American. Seeing my artwork snap onto someone's car, and knowing they can restyle it any time, is the whole dream.",
         name: "Becky Newman",
-        role: "Tile artist, Festive Frames",
+        role: "Tile artist and designer, Festive Frames",
       },
       {
         quote:

@@ -7,8 +7,8 @@
 
 import type Stripe from "stripe";
 
-import { getDraft, markFulfilled, unmarkFulfilled, type OrderArtifacts } from "@/lib/order/store";
-import { sendProductionEmails, sendFulfillmentFailureAlert, type ProductionOrderInput } from "@/lib/email-production";
+import { getDraft, getCartDraft, markFulfilled, unmarkFulfilled, type OrderArtifacts } from "@/lib/order/store";
+import { sendProductionEmails, sendCartCustomerEmail, sendFulfillmentFailureAlert, type ProductionOrderInput } from "@/lib/email-production";
 import type { PartsList } from "@/lib/order/parts-list";
 
 export type FulfillResult = "sent" | "already" | "no-payload" | "failed";
@@ -88,4 +88,95 @@ export async function fulfillOrder(
     await sendFulfillmentFailureAlert(orderId, session.id, customerEmail, reason);
     return "failed";
   }
+}
+
+/**
+ * Idempotently fulfill a paid multi-design CART. Reuses the proven single-order
+ * machinery per design: one PRODUCTION email per design to the founders (each
+ * with that design's files + its make-quantity, customer email suppressed), then
+ * ONE combined customer confirmation for the whole order. The idempotency claim
+ * is keyed by cartId, so the webhook and the /thanks relay converge exactly once.
+ */
+export async function fulfillCart(
+  cartId: string,
+  session: Stripe.Checkout.Session,
+): Promise<FulfillResult> {
+  const customerEmail = session.customer_details?.email ?? null;
+
+  const cart = await getCartDraft(cartId);
+  if (!cart || cart.lines.length === 0) {
+    console.error(`[fulfill] no cart draft for paid cart ${cartId} (session ${session.id}).`);
+    await sendFulfillmentFailureAlert(cartId, session.id, customerEmail, "Paid, but the cart's designs were not found to generate production files.");
+    return "no-payload";
+  }
+
+  // Load every design draft up front. If NONE resolve, don't burn the claim.
+  const designs = await Promise.all(
+    cart.lines.map(async (line) => {
+      const d = await getDraft(line.orderId);
+      return d ? { line, draft: d } : null;
+    }),
+  );
+  const present = designs.filter((d): d is NonNullable<typeof d> => d !== null);
+  if (present.length === 0) {
+    console.error(`[fulfill] cart ${cartId} paid but no design drafts resolved.`);
+    await sendFulfillmentFailureAlert(cartId, session.id, customerEmail, "Paid, but none of the cart's design drafts could be loaded.");
+    return "no-payload";
+  }
+
+  // Claim fulfillment for the whole cart — only the first caller proceeds.
+  if (!(await markFulfilled(cartId))) return "already";
+
+  const shipping = shippingLines(session);
+  const customerName = session.customer_details?.name ?? null;
+  const orderTotal = session.amount_total ?? 0;
+
+  try {
+    // One production email per design (founders only; combined customer email below).
+    for (let i = 0; i < present.length; i++) {
+      const { line, draft } = present[i];
+      const input: ProductionOrderInput = {
+        orderId: line.orderId,
+        sessionId: session.id,
+        customerEmail,
+        customerName,
+        amountTotalCents: orderTotal,
+        shippingLines: shipping,
+        parts: draft.parts,
+        proof: draft.artifacts.proof,
+        printSheets: draft.artifacts.printSheets,
+        banners: draft.artifacts.banners,
+        quantity: line.quantity,
+        cartNote: `Design ${i + 1} of ${present.length} · cart ${cartId} · order total ${(orderTotal / 100).toFixed(2)}`,
+      };
+      await sendProductionEmails(input, { skipCustomer: true });
+    }
+    console.log(`[fulfill] ${present.length} production email(s) sent for cart ${cartId}.`);
+  } catch (err) {
+    // Any founders-email failure → release the claim so a retry can re-send, alert.
+    await unmarkFulfilled(cartId);
+    const reason = err instanceof Error ? err.message : "unknown error";
+    console.error(`[fulfill] cart ${cartId} production send failed:`, err);
+    await sendFulfillmentFailureAlert(cartId, session.id, customerEmail, reason);
+    return "failed";
+  }
+
+  // ONE combined customer confirmation (non-throwing; alerts on its own failure).
+  if (customerEmail) {
+    await sendCartCustomerEmail({
+      cartId,
+      sessionId: session.id,
+      customerEmail,
+      customerName,
+      amountTotalCents: orderTotal,
+      shippingLines: shipping,
+      designs: present.map(({ line, draft }) => ({
+        designName: draft.parts.designName ?? "Custom frame",
+        quantity: line.quantity,
+        proof: draft.artifacts.proof,
+      })),
+    });
+  }
+
+  return "sent";
 }

@@ -45,6 +45,27 @@ export function priceFor(selection: OfferSelection): number {
   return selection === "bundle" ? offer.bundlePrice : offer.singlePrice;
 }
 
+/** Hard ceiling on frames in one cart, so production can't be swamped. */
+export const MAX_CART_FRAMES = 10;
+
+/**
+ * Authoritative bulk price for N total frames, in cents — PAIRS pricing:
+ * every two frames is the $69 bundle, any leftover frame is $39.
+ *   1 -> 3900   2 -> 6900   3 -> 10800   4 -> 13800 …
+ * Used for display AND re-derived server-side at cart checkout. Never trust a
+ * client-supplied amount.
+ */
+export function priceForFramesCents(frames: number): number {
+  const n = Math.max(0, Math.floor(frames));
+  return Math.floor(n / 2) * offer.bundlePrice + (n % 2) * offer.singlePrice;
+}
+
+/** Savings vs. paying the flat single price for every frame (>= 0). */
+export function bulkSavingsCents(frames: number): number {
+  const n = Math.max(0, Math.floor(frames));
+  return Math.max(0, n * offer.singlePrice - priceForFramesCents(n));
+}
+
 /**
  * Formats a cents amount as a display price string. Whole-dollar amounts drop
  * the ".00" (3900 -> "$39"); otherwise two decimals (500 -> "$5"). Use this

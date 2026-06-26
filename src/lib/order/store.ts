@@ -37,7 +37,28 @@ export interface OrderDraft {
   savedAt: number;
 }
 
-const TTL_MS = 2 * 60 * 60 * 1000; // 2 hours
+/** One line of a multi-design cart: which stored design, and how many of it. */
+export interface CartLineRef {
+  orderId: string;
+  quantity: number;
+}
+
+/**
+ * A cart draft groups several design drafts under one checkout. Only the
+ * lightweight {orderId, quantity} refs live here — each design's heavy parts +
+ * artifacts stay in its own order_drafts row, looked up at fulfillment.
+ */
+export interface CartDraft {
+  cartId: string;
+  lines: CartLineRef[];
+  savedAt: number;
+}
+
+// 24 hours: long enough that a multi-frame cart assembled across a session (design
+// one frame, come back, design another) never finds an earlier design's draft
+// already swept. Drafts are tiny refs + artifacts; holding them a day is cheap.
+const TTL_MS = 24 * 60 * 60 * 1000;
+const TTL_SQL = "24 hours";
 const USE_DB = !!process.env.DATABASE_URL;
 
 // ── Postgres path ────────────────────────────────────────────────────────────
@@ -79,6 +100,13 @@ function ensureSchema(): Promise<void> {
           fulfilled_at timestamptz NOT NULL DEFAULT now()
         )
       `);
+      await p.query(`
+        CREATE TABLE IF NOT EXISTS order_carts (
+          cart_id  text PRIMARY KEY,
+          lines    jsonb NOT NULL,
+          saved_at timestamptz NOT NULL DEFAULT now()
+        )
+      `);
     })().catch((err) => {
       // Reset so a later call can retry schema init.
       initPromise = null;
@@ -92,11 +120,13 @@ function ensureSchema(): Promise<void> {
 // ── In-memory fallback path ──────────────────────────────────────────────────
 
 const memDrafts = new Map<string, OrderDraft>();
+const memCarts = new Map<string, CartDraft>();
 const memFulfilled = new Set<string>();
 
 function memSweep(): void {
   const cutoff = Date.now() - TTL_MS;
   for (const [id, d] of memDrafts) if (d.savedAt < cutoff) memDrafts.delete(id);
+  for (const [id, c] of memCarts) if (c.savedAt < cutoff) memCarts.delete(id);
 }
 
 // ── Public API (async; DB-backed when DATABASE_URL is set) ────────────────────
@@ -133,9 +163,64 @@ export async function saveDraft(draft: Omit<OrderDraft, "savedAt">): Promise<voi
 
   // Opportunistic TTL cleanup — best-effort, never break a save.
   try {
-    await p.query(`DELETE FROM order_drafts WHERE saved_at < now() - interval '2 hours'`);
+    await p.query(`DELETE FROM order_drafts WHERE saved_at < now() - interval '${TTL_SQL}'`);
   } catch (err) {
     console.error("[order/store] TTL cleanup failed:", err instanceof Error ? err.message : err);
+  }
+}
+
+/** Stash a cart (its design refs + quantities) before sending the buyer to Stripe. */
+export async function saveCartDraft(cartId: string, lines: CartLineRef[]): Promise<void> {
+  if (!USE_DB) {
+    memSweep();
+    memCarts.set(cartId, { cartId, lines, savedAt: Date.now() });
+    return;
+  }
+
+  await ensureSchema();
+  const p = getPool();
+  try {
+    await p.query(
+      `INSERT INTO order_carts (cart_id, lines, saved_at)
+       VALUES ($1, $2, now())
+       ON CONFLICT (cart_id) DO UPDATE
+         SET lines = EXCLUDED.lines, saved_at = now()`,
+      [cartId, JSON.stringify(lines)],
+    );
+  } catch (err) {
+    console.error("[order/store] saveCartDraft failed:", err instanceof Error ? err.message : err);
+    throw err;
+  }
+
+  try {
+    await p.query(`DELETE FROM order_carts WHERE saved_at < now() - interval '${TTL_SQL}'`);
+  } catch (err) {
+    console.error("[order/store] cart TTL cleanup failed:", err instanceof Error ? err.message : err);
+  }
+}
+
+export async function getCartDraft(cartId: string): Promise<CartDraft | undefined> {
+  if (!USE_DB) {
+    return memCarts.get(cartId);
+  }
+
+  await ensureSchema();
+  const p = getPool();
+  try {
+    const { rows } = await p.query(
+      `SELECT cart_id, lines, saved_at FROM order_carts WHERE cart_id = $1`,
+      [cartId],
+    );
+    if (rows.length === 0) return undefined;
+    const r = rows[0];
+    return {
+      cartId: r.cart_id,
+      lines: r.lines as CartLineRef[],
+      savedAt: r.saved_at instanceof Date ? r.saved_at.getTime() : new Date(r.saved_at).getTime(),
+    };
+  } catch (err) {
+    console.error("[order/store] getCartDraft failed:", err instanceof Error ? err.message : err);
+    throw err;
   }
 }
 

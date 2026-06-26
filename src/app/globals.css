@@ -297,7 +297,64 @@ body {
     width 110ms cubic-bezier(0.22, 1, 0.36, 1),
     height 110ms cubic-bezier(0.22, 1, 0.36, 1),
     opacity 110ms ease-out;
+  /* Gentle "breathing" glow so the live target reads as alive, not a static box.
+     Pulses the glow + outline only (no transform — transform carries position). */
+  animation: ff-drop-breathe 1.5s ease-in-out infinite;
   will-change: transform, opacity;
+}
+@keyframes ff-drop-breathe {
+  0%, 100% {
+    outline-color: rgba(248, 197, 59, 0.8);
+    box-shadow: 0 0 12px 1px rgba(248, 197, 59, 0.45);
+  }
+  50% {
+    outline-color: rgba(248, 197, 59, 1);
+    box-shadow: 0 0 22px 5px rgba(248, 197, 59, 0.8);
+  }
+}
+
+/* ── Banner landing preview ───────────────────────────────────────────────────
+   The banner-shaped ghost (in FrameCanvas) showing the EXACT run a dragged banner
+   will land on. It GLIDES between landing spots (left/top/width transition) the
+   same way the tile indicator glides, and breathes a soft brightness pulse so it
+   feels live. When the row can't fit it, `--invalid` shakes it side to side as a
+   clear "won't go here". Position/colors are set inline; this only animates. */
+.ff-banner-preview {
+  transition:
+    left 140ms cubic-bezier(0.22, 1, 0.36, 1),
+    top 140ms cubic-bezier(0.22, 1, 0.36, 1),
+    width 140ms cubic-bezier(0.22, 1, 0.36, 1),
+    height 140ms cubic-bezier(0.22, 1, 0.36, 1);
+  animation: ff-banner-breathe 1.5s ease-in-out infinite;
+  will-change: left, top, width;
+}
+@keyframes ff-banner-breathe {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.09); }
+}
+.ff-banner-preview--invalid {
+  animation: ff-banner-shake 0.42s ease-in-out infinite;
+}
+@keyframes ff-banner-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-3px); }
+  75% { transform: translateX(3px); }
+}
+
+/* ── Drag "lift" ──────────────────────────────────────────────────────────────
+   The thing under your finger (the DragOverlay ghost — a placed tile or a banner)
+   pops up with a tactile little tilt + a deeper drop shadow, so grabbing reads as
+   physically lifting it off the workbench. The scale/rotate live on the ghost's
+   own transform; dnd-kit's cursor-follow transform sits on the wrapper above it,
+   so the two never fight. */
+.ff-drag-lift {
+  animation: ff-drag-lift-in 150ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  filter: drop-shadow(0 10px 14px rgba(0, 0, 0, 0.38));
+}
+@keyframes ff-drag-lift-in {
+  0% { transform: scale(0.94) rotate(0deg); }
+  60% { transform: scale(1.11) rotate(-2.5deg); }
+  100% { transform: scale(1.06) rotate(-1.5deg); }
 }
 
 /* ── Empty cell separation ───────────────────────────────────────────────────

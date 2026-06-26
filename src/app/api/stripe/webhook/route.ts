@@ -14,7 +14,7 @@ import type Stripe from "stripe";
 
 import { getStripe } from "@/lib/stripe";
 import { sendOrderEmails } from "@/lib/email";
-import { fulfillOrder } from "@/lib/order/fulfill";
+import { fulfillOrder, fulfillCart } from "@/lib/order/fulfill";
 
 export const runtime = "nodejs";
 
@@ -73,6 +73,22 @@ export async function POST(request: Request): Promise<NextResponse> {
         console.log(`[stripe-webhook] custom order ${metadata.orderId} fulfill via webhook: ${result}`);
       } catch (err) {
         console.error("[stripe-webhook] custom order fulfillment failed:", err);
+      }
+      return NextResponse.json({ received: true }, { status: 200 });
+    }
+
+    // ── Multi-design cart order: fulfill from the server-side cart draft
+    // (backup to the /thanks relay). fulfillCart is idempotent (claim keyed by
+    // cartId), so whichever trigger fires second is a no-op.
+    if (metadata.kind === "cart" && metadata.cartId) {
+      try {
+        const full = await stripe.checkout.sessions.retrieve(session.id, {
+          expand: ["collected_information.shipping_details"],
+        });
+        const result = await fulfillCart(metadata.cartId, full);
+        console.log(`[stripe-webhook] cart ${metadata.cartId} fulfill via webhook: ${result}`);
+      } catch (err) {
+        console.error("[stripe-webhook] cart fulfillment failed:", err);
       }
       return NextResponse.json({ received: true }, { status: 200 });
     }

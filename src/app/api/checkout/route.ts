@@ -1,39 +1,27 @@
 // ─────────────────────────────────────────────────────────────
-// POST /api/checkout  —  the only buying path.
+// POST /api/checkout  —  the checkout entry point.
 //
-// The SERVER is the sole pricing authority. The client sends only a
-// selection ("single" | "bundle"), the chosen kit ids, and a quantity.
-// The amount charged is re-derived here from @/config/offers and is
-// NEVER read from the request body. Every kit id is validated against
-// the live catalog (getActiveKits) before any Stripe call.
+// Festive Frames is DESIGN-FIRST. The only live checkout is the
+// design-backed custom frame: the builder renders a real design + artifacts,
+// stashes them (server draft + localStorage relay), then calls this with
+// `kind: "custom-frame"` and an orderId. The amount is ALWAYS re-derived here
+// from @/config/offers — never read from the request body.
 //
-// Flat pricing (enforced in code, not via dashboard price IDs):
-//   single -> 3900 cents x quantity
-//   bundle -> 6900 cents x quantity (ANY two active kits)
-//
-// Inline price_data is used (not pre-made Stripe price IDs) so the flat
-// pricing rule lives in source and works in test mode immediately.
+// The legacy "buy a kit" path (selection/kitIds → instant Stripe checkout for a
+// pre-made kit) is RETIRED: it could charge for a frame that was never designed.
+// Any request that isn't `kind: "custom-frame"` now returns 410 Gone. The
+// multi-design cart (`kind: "cart"`) lands in a follow-up phase.
 // ─────────────────────────────────────────────────────────────
 
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 
 import { getStripe } from "@/lib/stripe";
-import { offer, ALPHABET_ADDON, type OfferSelection } from "@/config/offers";
-import { getActiveKits, getKit } from "@/config/kits";
+import { offer, priceForFramesCents, bulkSavingsCents, MAX_CART_FRAMES } from "@/config/offers";
 import { SITE_URL, season } from "@/config/season";
+import { getDraft, saveCartDraft, type CartLineRef } from "@/lib/order/store";
 
 export const runtime = "nodejs";
-
-const MIN_QUANTITY = 1;
-const MAX_QUANTITY = 5;
-
-interface CheckoutRequest {
-  selection: OfferSelection;
-  kitIds: string[];
-  quantity: number;
-  alphabetQty: number;
-}
 
 /**
  * Base origin for success/cancel URLs. The live request origin wins so
@@ -46,124 +34,6 @@ function getBaseUrl(request: Request): string {
 
 function badRequest(error: string): NextResponse {
   return NextResponse.json({ error }, { status: 400 });
-}
-
-/**
- * Parses and fully validates the request body. Returns either a typed,
- * trusted payload or an error message. The amount is intentionally NOT
- * part of the payload: the server alone decides what to charge.
- */
-function parseBody(body: unknown):
-  | { ok: true; data: CheckoutRequest }
-  | { ok: false; error: string } {
-  if (typeof body !== "object" || body === null) {
-    return { ok: false, error: "Invalid request body." };
-  }
-
-  const { selection, kitIds, quantity, alphabetQty } = body as Record<string, unknown>;
-
-  // selection
-  if (selection !== "single" && selection !== "bundle") {
-    return { ok: false, error: "Invalid selection." };
-  }
-
-  // quantity: integer 1-5
-  if (
-    typeof quantity !== "number" ||
-    !Number.isInteger(quantity) ||
-    quantity < MIN_QUANTITY ||
-    quantity > MAX_QUANTITY
-  ) {
-    return { ok: false, error: "Quantity must be a whole number from 1 to 5." };
-  }
-
-  // kitIds: array of the right length for the selection
-  if (!Array.isArray(kitIds) || kitIds.some((id) => typeof id !== "string")) {
-    return { ok: false, error: "Invalid kit selection." };
-  }
-  const ids = kitIds as string[];
-
-  const expectedLength = selection === "bundle" ? 2 : 1;
-  if (ids.length !== expectedLength) {
-    return {
-      ok: false,
-      error:
-        selection === "bundle"
-          ? "A bundle requires exactly two kits."
-          : "A single order requires exactly one kit.",
-    };
-  }
-
-  // Every id must be an ACTIVE kit.
-  const activeIds = new Set(getActiveKits().map((kit) => kit.id));
-  if (ids.some((id) => !activeIds.has(id))) {
-    return { ok: false, error: "One or more kits are unavailable." };
-  }
-
-  // alphabetQty: optional letter-set add-on count (0..max). Anything invalid -> 0.
-  // While the add-on is parked (ALPHABET_ADDON.enabled = false), always 0 so a
-  // crafted request can't order one.
-  const addonQty =
-    ALPHABET_ADDON.enabled &&
-    typeof alphabetQty === "number" &&
-    Number.isInteger(alphabetQty) &&
-    alphabetQty >= 0 &&
-    alphabetQty <= ALPHABET_ADDON.maxQty
-      ? alphabetQty
-      : 0;
-
-  return {
-    ok: true,
-    data: { selection, kitIds: ids, quantity, alphabetQty: addonQty },
-  };
-}
-
-/**
- * Builds the Stripe line items from trusted server data. Amounts come
- * ONLY from offers.ts; product names come from the kit catalog.
- */
-function buildLineItems(
-  data: CheckoutRequest,
-): Stripe.Checkout.SessionCreateParams.LineItem[] {
-  const items: Stripe.Checkout.SessionCreateParams.LineItem[] = [];
-
-  if (data.selection === "single") {
-    const kit = getKit(data.kitIds[0]);
-    items.push({
-      quantity: data.quantity,
-      price_data: {
-        currency: offer.currency,
-        unit_amount: offer.singlePrice,
-        product_data: { name: kit?.name ?? "Festive Frames Kit" },
-      },
-    });
-  } else {
-    // bundle: ALWAYS 6900 for the pair, regardless of which two kits.
-    const nameA = getKit(data.kitIds[0])?.name ?? "Festive Frames Kit";
-    const nameB = getKit(data.kitIds[1])?.name ?? "Festive Frames Kit";
-    items.push({
-      quantity: data.quantity,
-      price_data: {
-        currency: offer.currency,
-        unit_amount: offer.bundlePrice,
-        product_data: { name: `Two-Kit Bundle: ${nameA} + ${nameB}` },
-      },
-    });
-  }
-
-  // Optional add-on: N A-Z & 0-9 letter sets, server-priced from config.
-  if (data.alphabetQty > 0) {
-    items.push({
-      quantity: data.alphabetQty,
-      price_data: {
-        currency: offer.currency,
-        unit_amount: ALPHABET_ADDON.priceCents,
-        product_data: { name: ALPHABET_ADDON.productName },
-      },
-    });
-  }
-
-  return items;
 }
 
 export async function POST(request: Request): Promise<NextResponse> {
@@ -180,24 +50,13 @@ export async function POST(request: Request): Promise<NextResponse> {
   try {
     stripe = getStripe();
   } catch {
-    return NextResponse.json(
-      { error: "Stripe not configured" },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Stripe not configured" }, { status: 500 });
   }
 
   const baseUrl = getBaseUrl(request);
 
-  const flatShipping = {
-    shipping_rate_data: {
-      type: "fixed_amount" as const,
-      display_name: season.shippingLabel,
-      fixed_amount: { amount: season.flatShippingCents, currency: offer.currency },
-    },
-  };
-
   // ── Custom builder order: one made-to-order frame at the flat single price.
-  // Pricing is still server-authoritative (offer.singlePrice). allow_promotion_codes
+  // Pricing is server-authoritative (offer.singlePrice). allow_promotion_codes
   // exposes the "Add promotion code" field so a 100%-off code can test at $0,
   // while a real customer simply pays. The small orderId rides in metadata; the
   // full design + artifacts are stashed via /api/order/draft + localStorage relay.
@@ -248,43 +107,123 @@ export async function POST(request: Request): Promise<NextResponse> {
     }
   }
 
-  const parsed = parseBody(rawBody);
-  if (!parsed.ok) {
-    return badRequest(parsed.error);
-  }
-  const data = parsed.data;
+  // ── Cart order: one or more designed frames, PAIRS pricing (2-for-$69),
+  // checked out in a single Stripe session. The cart *is* the order; a single
+  // frame is just a cart of length 1. Pricing is server-authoritative: we
+  // re-derive the subtotal from the frame count and apply the bulk savings as a
+  // one-off Stripe coupon, so the receipt itemizes each design and the discount.
+  if ((rawBody as Record<string, unknown>)?.kind === "cart") {
+    const rawLines = (rawBody as Record<string, unknown>).lines;
+    if (!Array.isArray(rawLines) || rawLines.length === 0) {
+      return badRequest("Your cart is empty.");
+    }
 
-  try {
-    const session = await stripe.checkout.sessions.create({
-      mode: "payment",
-      line_items: buildLineItems(data),
-      shipping_address_collection: { allowed_countries: ["US"] },
-      shipping_options: [flatShipping],
-      success_url: `${baseUrl}/thanks?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${baseUrl}/buy`,
-      metadata: {
-        selection: data.selection,
-        kitIds: data.kitIds.join(","),
-        quantity: String(data.quantity),
-        alphabetQty: String(data.alphabetQty),
-        // Kits in this order (bundle = 2 per unit), for the Founding-Edition counter.
-        founding_kits: String(data.selection === "bundle" ? data.quantity * 2 : data.quantity),
+    // Validate every line and confirm its design draft still exists server-side.
+    const resolved: { orderId: string; quantity: number; name: string }[] = [];
+    let frames = 0;
+    for (const raw of rawLines) {
+      const orderId = (raw as Record<string, unknown>)?.orderId;
+      const qtyRaw = (raw as Record<string, unknown>)?.quantity;
+      const quantity = typeof qtyRaw === "number" ? Math.floor(qtyRaw) : NaN;
+      if (typeof orderId !== "string" || !orderId || !Number.isInteger(quantity) || quantity < 1) {
+        return badRequest("Invalid cart line.");
+      }
+      const draft = await getDraft(orderId);
+      if (!draft) {
+        // A design draft expired or was never saved — fail loud so the buyer
+        // re-adds it rather than paying for a design we can't produce.
+        return NextResponse.json(
+          { error: "One of your designs is no longer available. Please re-open it in the builder and add it again." },
+          { status: 409 },
+        );
+      }
+      const clientName = (raw as Record<string, unknown>)?.designName;
+      const name =
+        (typeof draft.parts?.designName === "string" && draft.parts.designName.trim()) ||
+        (typeof clientName === "string" && clientName.trim()) ||
+        "Custom License Plate Frame";
+      resolved.push({ orderId, quantity, name: String(name).slice(0, 80) });
+      frames += quantity;
+    }
+
+    if (frames < 1 || frames > MAX_CART_FRAMES) {
+      return badRequest(`Orders are limited to ${MAX_CART_FRAMES} frames. Please adjust your cart.`);
+    }
+
+    const cartId = `cart_${(crypto.randomUUID?.() ?? `${Date.now()}-${Math.floor(Math.random() * 1e6)}`)}`;
+    const lineRefs: CartLineRef[] = resolved.map(({ orderId, quantity }) => ({ orderId, quantity }));
+
+    // Stash the cart (design refs + quantities) so fulfillment can rebuild it.
+    try {
+      await saveCartDraft(cartId, lineRefs);
+    } catch (err) {
+      console.error("[checkout] saveCartDraft failed:", err);
+      return NextResponse.json({ error: "Could not start checkout. Please try again." }, { status: 502 });
+    }
+
+    // One line item per design (named, so the receipt is legible) + shipping once.
+    const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = resolved.map((r) => ({
+      quantity: r.quantity,
+      price_data: {
+        currency: offer.currency,
+        unit_amount: offer.singlePrice,
+        product_data: { name: r.name, description: "Made-to-order custom license plate frame" },
+      },
+    }));
+    lineItems.push({
+      quantity: 1,
+      price_data: {
+        currency: offer.currency,
+        unit_amount: season.flatShippingCents,
+        product_data: { name: season.shippingLabel },
       },
     });
 
-    if (!session.url) {
-      return NextResponse.json(
-        { error: "Could not start checkout. Please try again." },
-        { status: 502 },
-      );
-    }
+    const savings = bulkSavingsCents(frames);
 
-    return NextResponse.json({ url: session.url }, { status: 200 });
-  } catch (err) {
-    console.error("[checkout] Stripe session creation failed:", err);
-    return NextResponse.json(
-      { error: "Could not start checkout. Please try again." },
-      { status: 502 },
-    );
+    try {
+      // The multi-frame discount as a one-off coupon (Stripe forbids combining
+      // `discounts` with `allow_promotion_codes`). When there's no discount
+      // (a single frame), expose promo codes instead so $0 testing still works.
+      let discounts: Stripe.Checkout.SessionCreateParams.Discount[] | undefined;
+      if (savings > 0) {
+        const coupon = await stripe.coupons.create({
+          amount_off: savings,
+          currency: offer.currency,
+          duration: "once",
+          name: `Multi-frame discount (${frames} frames)`,
+        });
+        discounts = [{ coupon: coupon.id }];
+      }
+
+      const session = await stripe.checkout.sessions.create({
+        mode: "payment",
+        line_items: lineItems,
+        ...(discounts ? { discounts } : { allow_promotion_codes: true }),
+        shipping_address_collection: { allowed_countries: ["US"] },
+        success_url: `${baseUrl}/thanks?session_id={CHECKOUT_SESSION_ID}&cart=${encodeURIComponent(cartId)}`,
+        cancel_url: `${baseUrl}/cart`,
+        metadata: {
+          kind: "cart",
+          cartId,
+          frames: String(frames),
+          // Sanity check against the server's authoritative pairs price.
+          expectedTotalCents: String(priceForFramesCents(frames) + season.flatShippingCents),
+        },
+      });
+      if (!session.url) {
+        return NextResponse.json({ error: "Could not start checkout. Please try again." }, { status: 502 });
+      }
+      return NextResponse.json({ url: session.url }, { status: 200 });
+    } catch (err) {
+      console.error("[checkout] cart session creation failed:", err);
+      return NextResponse.json({ error: "Could not start checkout. Please try again." }, { status: 502 });
+    }
   }
+
+  // Retired legacy kit checkout (and any unrecognized kind): design-first only.
+  return NextResponse.json(
+    { error: "This checkout path is no longer available. Design your frame at /build." },
+    { status: 410 },
+  );
 }

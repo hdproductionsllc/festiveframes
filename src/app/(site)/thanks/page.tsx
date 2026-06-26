@@ -31,7 +31,7 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 interface ThanksPageProps {
-  searchParams: Promise<{ session_id?: string | string[]; order?: string | string[] }>;
+  searchParams: Promise<{ session_id?: string | string[]; order?: string | string[]; cart?: string | string[] }>;
 }
 
 interface OrderView {
@@ -119,6 +119,8 @@ export default async function ThanksPage({ searchParams }: ThanksPageProps) {
   const sessionId = Array.isArray(rawSessionId) ? rawSessionId[0] : rawSessionId;
   const rawOrderId = params.order;
   const orderId = Array.isArray(rawOrderId) ? rawOrderId[0] : rawOrderId;
+  const rawCartId = params.cart;
+  const cartId = Array.isArray(rawCartId) ? rawCartId[0] : rawCartId;
 
   const order = sessionId ? await getOrderView(sessionId) : null;
   const shareUrl = process.env.SITE_URL || SITE_URL;
@@ -138,9 +140,14 @@ export default async function ThanksPage({ searchParams }: ThanksPageProps) {
           {order ? copy.thanks.headline : copy.thanks.genericHeadline}
         </h1>
 
-        {/* Custom builder order: relay the design + artifacts to fulfillment
-            (verifies payment server-side, then emails the proof + production files). */}
-        {orderId && sessionId && <OrderFulfiller orderId={orderId} sessionId={sessionId} />}
+        {/* Builder order: relay to fulfillment (verifies payment server-side,
+            then emails the proof + production files). A cart carries its cartId;
+            a single custom frame carries its orderId + localStorage backup. */}
+        {cartId && sessionId ? (
+          <OrderFulfiller cartId={cartId} sessionId={sessionId} />
+        ) : (
+          orderId && sessionId && <OrderFulfiller orderId={orderId} sessionId={sessionId} />
+        )}
 
         {/* Fire the funnel `purchase` event once when a real order rendered. */}
         {order && (
