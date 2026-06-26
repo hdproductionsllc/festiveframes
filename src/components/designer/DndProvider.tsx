@@ -149,14 +149,13 @@ export function DndProvider({ children, onOverSlotChange, onBannerPreviewChange 
         const maxUnits = rowLength(frameConfig, row);
 
         if (kind === "textbar") {
-          // New banner: width from the draft, centered free start — mirrors
-          // `placeTextBar` (qr rides the FIRST bar only; the drop column chose the
-          // row, the column resolves to the centered free run).
+          // New banner: width from the draft; snap to the nearest free run at the
+          // DROP column — mirrors `placeTextBar`, so the footprint preview shows
+          // exactly where the bar will land (qr rides the FIRST bar only).
           const isFirst = textBars.length === 0;
           const qr = isFirst ? qrCode.enabled : false;
           const widthUnits = measureTextBarUnits(bottomBar, qr, maxUnits);
-          const preferred = Math.round((maxUnits - widthUnits) / 2);
-          const start = findFreeStart(textBars, row, widthUnits, maxUnits, preferred);
+          const start = findFreeStart(textBars, row, widthUnits, maxUnits, dropIndex);
           setCue(
             null,
             start === null

@@ -27,28 +27,42 @@ import type { BottomBarConfig, PlacedTextBar } from "@/lib/types";
    Shows a live preview of the bar so it clearly reads "grab me and drop me in." */
 function DragToPlace() {
   const bottomBar = useDesignStore((s) => s.bottomBar);
+  const addTextBar = useDesignStore((s) => s.addTextBar);
   const { setNodeRef, attributes, listeners, isDragging } = useDraggable({
     id: "textbar",
     data: { type: "textbar" },
   });
 
   return (
-    <div className="space-y-1.5">
-      <span className="text-[11px] font-semibold text-[#1e1b17]/55">Or grab the bar and drop it exactly where you want:</span>
+    <div className="space-y-2">
+      {/* PRIMARY action — tap to add a CENTERED banner. No dragging, no aiming;
+          works the same on phone and desktop. This is the reliable path. */}
+      <button
+        type="button"
+        onClick={() => addTextBar()}
+        className="flex w-full items-center justify-center gap-2 rounded-xl border-[3px] border-[#1e1b17]
+          bg-[#ed5aa0] px-4 py-2.5 text-sm font-extrabold uppercase tracking-wide text-white
+          shadow-[3px_3px_0_#1e1b17] transition-all hover:brightness-105 active:translate-y-0.5
+          active:translate-x-0.5 active:shadow-[1px_1px_0_#1e1b17] focus:outline-none
+          focus-visible:ring-2 focus-visible:ring-[#1e1b17]"
+      >
+        + Add a banner
+      </button>
+
+      {/* SECONDARY — drag the pill onto a precise spot (it lands where you drop). */}
+      <span className="block text-center text-[11px] font-semibold text-[#1e1b17]/45">
+        …or drag it exactly where you want
+      </span>
       <button
         type="button"
         ref={setNodeRef}
         {...attributes}
         {...listeners}
-        title="Grab and drag this bar onto the top or bottom of your frame"
+        title="Drag this bar onto the top or bottom of your frame — it lands where you drop it"
         className={`flex w-full flex-col items-center gap-1.5 rounded-xl border-2 border-dashed border-[#1e1b17]/40
           bg-white/70 p-2.5 cursor-grab active:cursor-grabbing transition-all hover:bg-white active:scale-[0.99]
           focus:outline-none focus-visible:ring-2 focus-visible:ring-[#ed5aa0] ${isDragging ? "opacity-50" : ""}`}
       >
-        {/* A representative banner pill: one tile tall and only as wide as its
-            text needs — a long, short bar (not the full panel width), so the
-            handle reads as "this is the shape that lands on your frame." The grip
-            sits inside the pill on the left; the bar auto-sizes to the text. */}
         <div
           className="inline-flex max-w-full items-center gap-1.5 overflow-hidden rounded-[4px] px-2.5 py-1"
           style={{ background: bottomBar.backgroundColor }}
@@ -62,7 +76,7 @@ function DragToPlace() {
           </span>
         </div>
         <span className="rounded-full bg-[#1e1b17]/10 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-[#1e1b17]/60">
-          Drag &amp; drop
+          Drag onto the frame
         </span>
       </button>
     </div>

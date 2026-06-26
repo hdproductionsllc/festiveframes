@@ -467,12 +467,11 @@ export const useDesignStore = create<DesignState>()(
             const isFirst = state.textBars.length === 0;
             const qr = isFirst ? state.qrCode.enabled : false;
             const widthUnits = measureTextBarUnits(config, qr, maxUnits);
-            // New bars prefer the row center, but must land on a FREE run — never
-            // on top of an existing bar. `startIndex` (the drop point) only chose
-            // top vs bottom; the exact column is resolved against current bars.
-            void startIndex;
-            const preferred = Math.round((maxUnits - widthUnits) / 2);
-            const start = findFreeStart(state.textBars, row, widthUnits, maxUnits, preferred);
+            // HONOR the drop column: snap to the nearest FREE run to `startIndex`
+            // so a DRAGGED bar lands where you dropped it (never overlapping a
+            // neighbor — findFreeStart clamps + searches outward from there).
+            // Tap-to-add (addTextBar) passes a centered index for a no-drag add.
+            const start = findFreeStart(state.textBars, row, widthUnits, maxUnits, startIndex);
             // Row is full — reject the placement rather than overlap a neighbor.
             if (start === null) return state;
             const bar: PlacedTextBar = {
@@ -497,14 +496,22 @@ export const useDesignStore = create<DesignState>()(
         },
 
         addTextBar: () => {
-          // Try the bottom row first, then the top — placeTextBar centers the
-          // bar and only adds it when a free, non-overlapping run exists (it
-          // no-ops otherwise). Compare the bar count to learn which row took.
-          const before = get().textBars.length;
-          get().placeTextBar("bottom", 0);
-          if (get().textBars.length > before) return true;
-          get().placeTextBar("top", 0);
-          return get().textBars.length > before;
+          // Tap-to-add: drop a CENTERED bar with no drag (the reliable path,
+          // especially on mobile). Try the bottom row first, then the top; compute
+          // the centered free column and hand it to placeTextBar (which honors the
+          // index). No-ops if both rows are full.
+          const placeCentered = (row: TextBarRow): boolean => {
+            const state = get();
+            const maxUnits = rowLength(state.frameConfig, row);
+            const isFirst = state.textBars.length === 0;
+            const qr = isFirst ? state.qrCode.enabled : false;
+            const widthUnits = measureTextBarUnits(state.bottomBar, qr, maxUnits);
+            const centered = Math.round((maxUnits - widthUnits) / 2);
+            const before = state.textBars.length;
+            get().placeTextBar(row, centered);
+            return get().textBars.length > before;
+          };
+          return placeCentered("bottom") || placeCentered("top");
         },
 
         moveTextBar: (id, row, startIndex) => {
