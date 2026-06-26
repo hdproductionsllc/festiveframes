@@ -131,8 +131,7 @@ export const RailSlot = memo(RailSlotInner);
 
 /**
  * A placed tile: draggable to move it to another cell, or drag it OFF the frame
- * to poof it away (handled in DndProvider via `type: "placed-tile"`). Mirrors
- * the placed-textbar drag model so the whole builder is one interaction.
+ * to poof it away (handled in DndProvider via `type: "placed-tile"`).
  *
  * Touch fallback: with no armed palette tile, tapping reveals a ✕ to remove
  * (drag-off is awkward on a phone). The ✕ state lives here so it auto-clears

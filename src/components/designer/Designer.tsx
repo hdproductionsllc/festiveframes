@@ -16,7 +16,6 @@ import { composeEufyPrintSheets } from "@/lib/utils/eufy-print";
 import { EUFY_JIG_3X12 } from "@/config/eufy-jig";
 import { buildPartsList } from "@/lib/order/parts-list";
 import type { NamedImage } from "@/lib/email-production";
-import type { BannerPreview } from "@/lib/types";
 import { playSound } from "@/lib/utils/sound";
 import { getSet } from "@/data/sets/index";
 import { LOOK_PRESETS } from "@/data/look-presets";
@@ -56,7 +55,6 @@ export function Designer() {
   const randomFill = useDesignStore((s) => s.randomFill);
 
   const [overSlotId, setOverSlotId] = useState<string | null>(null);
-  const [bannerPreview, setBannerPreview] = useState<BannerPreview | null>(null);
   const [frameImage, setFrameImage] = useState<string | null>(null);
   const [showParts, setShowParts] = useState(false);
   const [ordering, setOrdering] = useState(false);
@@ -347,7 +345,7 @@ export function Designer() {
         />
       )}
 
-      <DndProvider onOverSlotChange={setOverSlotId} onBannerPreviewChange={setBannerPreview}>
+      <DndProvider onOverSlotChange={setOverSlotId}>
         {/* A license-plate frame is a WIDE, SHORT landscape shape. So the canvas
             is the hero across the FULL WIDTH up top, and the two working panels
             (tile palette + text-bar editor) sit in a row beneath it. */}
@@ -383,7 +381,6 @@ export function Designer() {
                 qrCode={qrCode}
                 plateState={plateState}
                 overSlotId={overSlotId}
-                bannerPreview={bannerPreview}
               />
             </div>
           </div>

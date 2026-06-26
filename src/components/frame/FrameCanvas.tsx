@@ -1,8 +1,7 @@
 "use client";
 
 import { forwardRef, useImperativeHandle, useRef } from "react";
-import { useDraggable } from "@dnd-kit/core";
-import type { FrameConfig, PlacedTile, BottomBarConfig, QRCodeConfig, PlacedTextBar, TextBarPlacement, BannerPreview } from "@/lib/types";
+import type { FrameConfig, PlacedTile, BottomBarConfig, QRCodeConfig, PlacedTextBar, TextBarPlacement } from "@/lib/types";
 import { getTotalWidthInches } from "@/lib/constants/frame";
 import { useFrameLayout } from "@/hooks/useFrameLayout";
 import { useDesignStore } from "@/stores/design-store";
@@ -17,8 +16,6 @@ interface FrameCanvasProps {
   qrCode: QRCodeConfig;
   plateState: string;
   overSlotId?: string | null;
-  /** Live drag-time footprint of where a dragged banner will land (or null). */
-  bannerPreview?: BannerPreview | null;
 }
 
 export interface FrameCanvasHandle {
@@ -32,7 +29,8 @@ const GROOVE_V_RTL = "linear-gradient(90deg, rgba(0,0,0,0.3) 0%, rgba(255,255,25
 const GROOVE_BORDER_DARK = "1px solid rgba(0,0,0,0.5)";
 const GROOVE_BORDER_LIGHT = "1px solid rgba(255,255,255,0.03)";
 
-/** A placed text bar — draggable to move, or drag off the frame to remove. */
+/** A placed text bar — click to select it for editing in the panel. Placement is
+    drag-free: move it with the Position controls in the text-bar editor. */
 function PlacedBar({
   bar,
   rect,
@@ -46,24 +44,16 @@ function PlacedBar({
   selected: boolean;
   onSelect: () => void;
 }) {
-  const { setNodeRef, attributes, listeners, isDragging } = useDraggable({
-    id: `placed-textbar:${bar.id}`,
-    data: { type: "placed-textbar", id: bar.id },
-  });
   return (
     <div
-      ref={setNodeRef}
-      {...attributes}
-      {...listeners}
       onClick={onSelect}
-      title="Click to edit · drag to move · drag off the frame to remove"
-      className={`absolute cursor-grab active:cursor-grabbing ${isDragging ? "opacity-40" : ""}`}
+      title="Click to edit — reposition with the Position controls in the panel"
+      className="absolute cursor-pointer"
       style={{
         left: rect.x,
         top: rect.y,
         width: rect.width,
         height: rect.height,
-        touchAction: "none",
         zIndex: selected ? 2 : 1,
         // Selected bar gets a bold gold ring + glow so the on-frame bar and the
         // editor panel below read as the same object.
@@ -86,7 +76,7 @@ function PlacedBar({
 }
 
 export const FrameCanvas = forwardRef<FrameCanvasHandle, FrameCanvasProps>(
-  function FrameCanvas({ frameConfig, slots, bottomBar, qrCode, plateState, overSlotId, bannerPreview }, ref) {
+  function FrameCanvas({ frameConfig, slots, bottomBar, qrCode, plateState, overSlotId }, ref) {
     const frameRef = useRef<HTMLDivElement>(null);
     const textBars = useDesignStore((s) => s.textBars);
     const selectedBarId = useDesignStore((s) => s.selectedBarId);
@@ -340,7 +330,8 @@ export const FrameCanvas = forwardRef<FrameCanvasHandle, FrameCanvasProps>(
             />
           )}
 
-          {/* Text bars — draggable; drag off the frame to remove */}
+          {/* Text bars — click to select for editing; drag-free (move via the
+              Position controls in the text-bar editor panel). */}
           {containerWidth > 0 &&
             textBars.map((bar) => (
               <PlacedBar
@@ -352,32 +343,6 @@ export const FrameCanvas = forwardRef<FrameCanvasHandle, FrameCanvasProps>(
                 onSelect={() => selectBar(bar.id)}
               />
             ))}
-
-          {/* Banner landing preview — a translucent, banner-shaped ghost over the
-              EXACT run of slots the dragged banner will occupy on drop (computed
-              in DndProvider with the same placement math the store commits, and
-              positioned with the same `barRect` geometry as a real placed bar, so
-              there's no drift). Valid → the banner's color + a dashed ink outline
-              reading "it lands HERE"; invalid (row can't fit it) → a red tint. */}
-          {containerWidth > 0 && bannerPreview && (
-            <div
-              aria-hidden
-              className="pointer-events-none absolute z-[3] rounded-[3px]"
-              style={{
-                ...barRect(bannerPreview),
-                background: bannerPreview.valid
-                  ? bannerPreview.backgroundColor
-                  : "rgba(214,69,69,0.18)",
-                opacity: bannerPreview.valid ? 0.55 : 1,
-                border: bannerPreview.valid
-                  ? "2px dashed #1e1b17"
-                  : "2px dashed #d64545",
-                boxShadow: bannerPreview.valid
-                  ? "0 0 14px 2px rgba(248,197,59,0.45)"
-                  : "0 0 12px 2px rgba(214,69,69,0.4)",
-              }}
-            />
-          )}
 
           {/* Frame edge highlight */}
           <div

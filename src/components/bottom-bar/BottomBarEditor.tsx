@@ -1,7 +1,6 @@
 "use client";
 
 import { useRef } from "react";
-import { useDraggable } from "@dnd-kit/core";
 import { useDesignStore } from "@/stores/design-store";
 import { BOTTOM_BAR_MAX_CHARS } from "@/lib/constants/frame";
 import { JULY4_SLOGANS } from "@/data/slogans";
@@ -19,69 +18,12 @@ import type { BottomBarConfig, PlacedTextBar } from "@/lib/types";
  * tapping a slogan creates the bar on the frame instantly and starts editing it
  * live — no separate "add" step, no invisible draft. The text input is ALWAYS
  * mounted in the same spot, so creating the bar never steals your focus mid-type.
- * Styling (font / colors / size) reveals once you've started. Drag-to-place stays
- * as a clearly-secondary way to drop a bar on an exact top/bottom run.
+ * Styling (font / colors / size) reveals once you've started.
+ *
+ * Placement is DRAG-FREE and deterministic: a bar lands centered when you add it,
+ * and the Position controls (rail toggle + left/right nudge) move it via explicit
+ * taps — no aiming, identical on phone and desktop. (Tiles still drag.)
  */
-
-/* ── The draggable bar itself: grab it and drop it on a precise top/bottom run.
-   Shows a live preview of the bar so it clearly reads "grab me and drop me in." */
-function DragToPlace() {
-  const bottomBar = useDesignStore((s) => s.bottomBar);
-  const addTextBar = useDesignStore((s) => s.addTextBar);
-  const { setNodeRef, attributes, listeners, isDragging } = useDraggable({
-    id: "textbar",
-    data: { type: "textbar" },
-  });
-
-  return (
-    <div className="space-y-2">
-      {/* PRIMARY action — tap to add a CENTERED banner. No dragging, no aiming;
-          works the same on phone and desktop. This is the reliable path. */}
-      <button
-        type="button"
-        onClick={() => addTextBar()}
-        className="flex w-full items-center justify-center gap-2 rounded-xl border-[3px] border-[#1e1b17]
-          bg-[#ed5aa0] px-4 py-2.5 text-sm font-extrabold uppercase tracking-wide text-white
-          shadow-[3px_3px_0_#1e1b17] transition-all hover:brightness-105 active:translate-y-0.5
-          active:translate-x-0.5 active:shadow-[1px_1px_0_#1e1b17] focus:outline-none
-          focus-visible:ring-2 focus-visible:ring-[#1e1b17]"
-      >
-        + Add a banner
-      </button>
-
-      {/* SECONDARY — drag the pill onto a precise spot (it lands where you drop). */}
-      <span className="block text-center text-[11px] font-semibold text-[#1e1b17]/45">
-        …or drag it exactly where you want
-      </span>
-      <button
-        type="button"
-        ref={setNodeRef}
-        {...attributes}
-        {...listeners}
-        title="Drag this bar onto the top or bottom of your frame — it lands where you drop it"
-        className={`flex w-full flex-col items-center gap-1.5 rounded-xl border-2 border-dashed border-[#1e1b17]/40
-          bg-white/70 p-2.5 cursor-grab active:cursor-grabbing transition-all hover:bg-white active:scale-[0.99]
-          focus:outline-none focus-visible:ring-2 focus-visible:ring-[#ed5aa0] ${isDragging ? "opacity-50" : ""}`}
-      >
-        <div
-          className="inline-flex max-w-full items-center gap-1.5 overflow-hidden rounded-[4px] px-2.5 py-1"
-          style={{ background: bottomBar.backgroundColor }}
-        >
-          <span className="select-none text-sm leading-none opacity-50" style={{ color: bottomBar.textColor }} aria-hidden>⠿</span>
-          <span
-            className="block truncate text-sm font-extrabold leading-tight"
-            style={{ fontFamily: bottomBar.fontFamily, color: bottomBar.textColor, letterSpacing: bottomBar.letterSpacing }}
-          >
-            {bottomBar.text || "YOUR TEXT"}
-          </span>
-        </div>
-        <span className="rounded-full bg-[#1e1b17]/10 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-[#1e1b17]/60">
-          Drag onto the frame
-        </span>
-      </button>
-    </div>
-  );
-}
 
 /* ── One row in the placed-bars list ──────────────────────────────────────── */
 function BarRow({
@@ -161,6 +103,7 @@ export function BottomBarEditor() {
   const selectBar = useDesignStore((s) => s.selectBar);
   const updateTextBar = useDesignStore((s) => s.updateTextBar);
   const addTextBar = useDesignStore((s) => s.addTextBar);
+  const moveTextBar = useDesignStore((s) => s.moveTextBar);
   const qrCode = useDesignStore((s) => s.qrCode);
   const setQrEnabled = useDesignStore((s) => s.setQrEnabled);
   const updateQRCode = useDesignStore((s) => s.updateQRCode);
@@ -236,6 +179,21 @@ export function BottomBarEditor() {
           </span>
         )}
       </div>
+
+      {/* PRIMARY action, FIRST in the section (mobile + desktop): tap to add a
+          CENTERED banner. No dragging, no aiming — bottom row first, then top.
+          Reposition it afterward with the Position controls in the editor card. */}
+      <button
+        type="button"
+        onClick={() => addTextBar()}
+        className="flex w-full items-center justify-center gap-2 rounded-xl border-[3px] border-[#1e1b17]
+          bg-[#ed5aa0] px-4 py-2.5 text-sm font-extrabold uppercase tracking-wide text-white
+          shadow-[3px_3px_0_#1e1b17] transition-all hover:brightness-105 active:translate-y-0.5
+          active:translate-x-0.5 active:shadow-[1px_1px_0_#1e1b17] focus:outline-none
+          focus-visible:ring-2 focus-visible:ring-[#1e1b17]"
+      >
+        + Add a banner
+      </button>
 
       {/* Placed-bars list + "add another" (only once bars exist). Kept as a single
           child slot so the editor card below stays put and never remounts. */}
@@ -372,6 +330,11 @@ export function BottomBarEditor() {
               max={12}
               onChange={(letterSpacing) => setCfg({ letterSpacing })}
             />
+
+            {/* Position — drag-free, deterministic placement. The rail toggle and
+                the nudge arrows both route through the store's moveTextBar, which
+                snaps to the nearest free run and clamps to the row edges. */}
+            {selected && <PositionControls bar={selected} onMove={moveTextBar} />}
           </>
         )}
       </div>
@@ -385,9 +348,6 @@ export function BottomBarEditor() {
           onUrlChange={(url) => updateQRCode({ url })}
         />
       )}
-
-      {/* Secondary: grab the bar and drop it on an exact top/bottom run. */}
-      <DragToPlace />
     </div>
   );
 }
@@ -459,6 +419,78 @@ function QrSection({
           />
         </div>
       )}
+    </div>
+  );
+}
+
+/* ── Position controls — DRAG-FREE, deterministic placement ───────────────────
+   A banner only needs a rail (top/bottom) + a horizontal column, so we expose
+   exactly that as taps. Everything routes through the store's `moveTextBar`,
+   which snaps to the nearest free run and clamps to the row edges — so a tap can
+   never land a bar off-row or on top of another bar. The arrows disable at the
+   true edges of the bar's own row so it reads "this is as far as it goes." */
+function PositionControls({
+  bar,
+  onMove,
+}: {
+  bar: PlacedTextBar;
+  onMove: (id: string, row: TextBarRow, startIndex: number) => void;
+}) {
+  const frameConfig = useDesignStore((s) => s.frameConfig);
+  const maxStart = Math.max(0, rowLength(frameConfig, bar.row) - bar.widthUnits);
+  const atLeft = bar.startIndex <= 0;
+  const atRight = bar.startIndex >= maxStart;
+
+  const railBtn = (row: TextBarRow, label: string) => {
+    const active = bar.row === row;
+    return (
+      <button
+        type="button"
+        onClick={() => onMove(bar.id, row, bar.startIndex)}
+        aria-pressed={active}
+        className={`flex-1 rounded-full border-2 px-3 py-2 text-sm font-extrabold uppercase tracking-wide transition-all active:scale-95
+          ${active
+            ? "border-[#1e1b17] bg-[#f8c53b] text-[#1e1b17] shadow-[2px_2px_0_#1e1b17]"
+            : "border-[#1e1b17]/15 bg-white text-[#1e1b17] hover:border-[#ed5aa0] hover:bg-[#ed5aa0]/10"}`}
+      >
+        {label}
+      </button>
+    );
+  };
+
+  const nudgeBtn = (dir: -1 | 1, disabled: boolean, label: string) => (
+    <button
+      type="button"
+      onClick={() => onMove(bar.id, bar.row, bar.startIndex + dir)}
+      disabled={disabled}
+      aria-label={dir < 0 ? "Move banner left" : "Move banner right"}
+      className="flex h-11 flex-1 items-center justify-center rounded-full border-2 border-[#1e1b17] bg-[#ed5aa0]
+        text-lg font-extrabold text-white shadow-[2px_2px_0_#1e1b17] transition-all hover:brightness-105
+        active:translate-y-0.5 active:shadow-[1px_1px_0_#1e1b17] disabled:cursor-not-allowed
+        disabled:border-[#1e1b17]/15 disabled:bg-[#1e1b17]/10 disabled:text-[#1e1b17]/30 disabled:shadow-none"
+    >
+      {label}
+    </button>
+  );
+
+  return (
+    <div className="space-y-2">
+      <span className="text-xs font-bold uppercase tracking-wide text-[#1e1b17]/70">Position</span>
+
+      {/* Rail toggle: Top / Bottom */}
+      <div className="flex gap-2">
+        {railBtn("top", "Top")}
+        {railBtn("bottom", "Bottom")}
+      </div>
+
+      {/* Nudge ◀ / ▶ — one column at a time, clamped at the row edges. */}
+      <div className="flex items-center gap-2">
+        {nudgeBtn(-1, atLeft, "◀")}
+        <span className="shrink-0 px-1 text-[11px] font-semibold uppercase tracking-wide text-[#1e1b17]/45">
+          Move
+        </span>
+        {nudgeBtn(1, atRight, "▶")}
+      </div>
     </div>
   );
 }
