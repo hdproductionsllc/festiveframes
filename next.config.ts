@@ -2,10 +2,14 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   images: {
-    // Serve modern formats first; Next falls back to the original for older
-    // browsers. AVIF then WebP gives the smallest payloads for our photos.
-    // (This is Next's default ordering, set explicitly for clarity.)
-    formats: ["image/avif", "image/webp"],
+    // WebP ONLY (no AVIF). AVIF gives slightly smaller files but its encoder is
+    // MUCH slower/CPU-heavier; on our small host a fresh-deploy first load fires
+    // every image at once and the AVIF encode queue backed up enough that some
+    // optimizer requests (notably the hero) TIMED OUT — images failed to appear.
+    // WebP encodes fast enough that the cold first-load burst clears cleanly.
+    formats: ["image/webp"],
+    // Once optimized, keep the result cached a long time so re-optimization is rare.
+    minimumCacheTTL: 31536000,
   },
   // The business is now custom-first: the interactive builder at /build is the
   // single purchase path. The old kit-purchase page /buy is retired. Permanently
