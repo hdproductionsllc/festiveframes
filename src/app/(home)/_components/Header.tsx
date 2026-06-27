@@ -16,8 +16,8 @@ export function Header() {
             <Image
               src="/redesign/logo.png"
               alt="Festive Frames"
-              width={1408}
-              height={1425}
+              width={420}
+              height={425}
               priority
               className="h-[84px] w-auto sm:h-[116px]"
             />

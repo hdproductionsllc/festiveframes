@@ -54,8 +54,8 @@ export function DesignerHeader({ onExport, onExportParts, onOrder, ordering }: D
           <Image
             src="/redesign/logo.png"
             alt="Festive Frames"
-            width={1408}
-            height={1425}
+            width={420}
+            height={425}
             priority
             className="h-20 w-auto sm:h-28"
           />

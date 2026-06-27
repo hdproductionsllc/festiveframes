@@ -25,8 +25,8 @@ export function SiteFooter() {
           <Image
             src="/redesign/logo.png"
             alt="Festive Frames"
-            width={1408}
-            height={1425}
+            width={420}
+            height={425}
             className="mb-3.5 h-[132px] w-auto"
           />
           <p className="m-0 max-w-[340px] text-[15px] font-semibold leading-[1.5] text-[#c8c1ad]">

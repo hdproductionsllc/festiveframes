@@ -71,7 +71,7 @@ export default function CartPage() {
       {/* Top bar */}
       <header className="flex items-center justify-between border-b-[3px] border-[#1e1b17] bg-[#1e1b17] px-4 py-2">
         <a href="/" aria-label="Festive Frames home" className="flex items-center">
-          <Image src="/redesign/logo.png" alt="Festive Frames" width={1408} height={1425} priority className="h-16 w-auto sm:h-20" />
+          <Image src="/redesign/logo.png" alt="Festive Frames" width={420} height={425} priority className="h-16 w-auto sm:h-20" />
         </a>
         <Link
           href="/build"

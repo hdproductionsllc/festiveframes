@@ -100,6 +100,9 @@ export function Hero() {
               width={1600}
               height={862}
               priority
+              // LCP image: it sits in a 480px card (full-width on small screens),
+              // so tell next/image to serve a candidate near that — not a 1600px one.
+              sizes="(max-width: 520px) 92vw, 480px"
               className="block h-auto w-full"
             />
           </div>
