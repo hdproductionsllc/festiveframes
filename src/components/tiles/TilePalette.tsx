@@ -4,7 +4,7 @@ import { useState } from "react";
 import { TileGrid } from "./TileGrid";
 import { ArmedBanner } from "./ArmedBanner";
 import { QuickActions } from "@/components/designer/QuickActions";
-import { PresetGallery } from "@/components/designer/PresetGallery";
+import { LooksPicker } from "@/components/designer/LooksPicker";
 
 /**
  * The tile palette is now an in-flow PANEL in the tools row beneath the canvas
@@ -38,7 +38,7 @@ function DesktopPaletteContent() {
       {/* Tools + instruction sit ABOVE the tiles so the actions are the first
           thing reached, then the picker, then the armed-tile cue beside it. */}
       <QuickActions />
-      <PresetGallery />
+      <LooksPicker />
       <p className="rounded-full border-2 border-brand-gold/60 bg-brand-gold/15 px-3 py-2
         text-center text-sm font-extrabold leading-snug text-[#1e1b17]">
         Tap a tile, then tap your frame to drop it. Or drag a tile on (drag one off to remove).
@@ -88,7 +88,7 @@ function MobileTileTray() {
       {optionsOpen && (
         <div className="max-h-[42vh] space-y-2 overflow-y-auto border-b border-surface-700/60 px-3 pb-3 pt-1">
           <QuickActions />
-          <PresetGallery />
+          <LooksPicker />
         </div>
       )}
 

@@ -10,6 +10,7 @@ import type {
   TextBarRow,
   PlacedTextBar,
 } from "@/lib/types";
+import type { LookPreset, LookBanner } from "@/data/look-presets";
 import { DEFAULT_FRAME_CONFIG, getWingFrameConfig, getStandardConfig } from "@/lib/constants/frame";
 import { DEFAULT_BOTTOM_BAR, DEFAULT_QR_CODE } from "@/lib/constants/defaults";
 import { getAllSlotIds } from "@/lib/utils/slot-generator";
@@ -144,6 +145,9 @@ interface DesignState {
   ) => void;
   clearAll: () => void;
   applyPreset: (preset: DesignPreset) => void;
+  /** Apply a marketing "look" (LOOK_PRESETS) as a single, undoable replace:
+   *  its tiles + themed filler + centered banner(s). One history step. */
+  applyLook: (look: LookPreset, setId: string) => void;
 
   // Actions — bottom bar (the draft)
   updateBottomBar: (updates: Partial<BottomBarConfig>) => void;
@@ -452,6 +456,57 @@ export const useDesignStore = create<DesignState>()(
               updatedAt: Date.now(),
             })
           );
+        },
+
+        applyLook: (look, setId) => {
+          set((state) => {
+            // Full-canvas replace, recreating the look's marketing preview, all in
+            // ONE history entry so a single Undo reverts the whole look.
+            // 1) Tiles: the look's exact placements, then themed filler in any
+            //    still-empty perimeter slot.
+            const slots: Record<string, PlacedTile> = {};
+            for (const [slotId, pieceId] of Object.entries(look.slots)) {
+              slots[slotId] = { pieceId, setId };
+            }
+            if (look.filler.length) {
+              for (const id of getAllSlotIds(state.frameConfig)) {
+                if (slots[id]) continue;
+                const pieceId = look.filler[Math.floor(Math.random() * look.filler.length)];
+                slots[id] = { pieceId, setId };
+              }
+            }
+
+            // 2) Banner(s): bottom first so the optional QR rides it, then top.
+            //    Each is CENTERED on its row (matching the preview; a left-aligned
+            //    bar would sit on — and delete — the flanking tiles).
+            const bars: PlacedTextBar[] = [];
+            const addBanner = (row: TextBarRow, banner: LookBanner) => {
+              const maxUnits = rowLength(state.frameConfig, row);
+              const qr = bars.length === 0 ? state.qrCode.enabled : false;
+              const config: BottomBarConfig = {
+                ...state.bottomBar,
+                text: banner.text,
+                ...(banner.backgroundColor ? { backgroundColor: banner.backgroundColor } : {}),
+                ...(banner.textColor ? { textColor: banner.textColor } : {}),
+              };
+              const widthUnits = measureTextBarUnits(config, qr, maxUnits);
+              const startIndex = Math.max(0, Math.round((maxUnits - widthUnits) / 2));
+              bars.push({ id: makeTextBarId(bars), row, startIndex, widthUnits, config, qr });
+            };
+            if (look.bottomBar) addBanner("bottom", look.bottomBar);
+            if (look.topBar) addBanner("top", look.topBar);
+            const textBars = syncFirstBarQr(bars, state.qrCode.enabled);
+
+            return withHistory(state, {
+              // Bars replace the tiles they cover (no hidden layers).
+              slots: clearCoveredTiles(slots, textBars),
+              textBars,
+              selectedBarId: null,
+              bottomBar: textBars.length ? { ...textBars[0].config } : state.bottomBar,
+              designName: look.name ?? state.designName,
+              updatedAt: Date.now(),
+            });
+          });
         },
 
         updateBottomBar: (updates) => {
