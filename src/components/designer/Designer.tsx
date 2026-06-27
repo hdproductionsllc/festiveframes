@@ -13,8 +13,6 @@ import { TilePalette } from "@/components/tiles/TilePalette";
 import { ArmedBanner } from "@/components/tiles/ArmedBanner";
 import { BottomBarEditor } from "@/components/bottom-bar/BottomBarEditor";
 import { composeFrameImage, composeBarImage } from "@/lib/utils/compose-frame";
-import { composeEufyPrintSheets } from "@/lib/utils/eufy-print";
-import { EUFY_JIG_3X12 } from "@/config/eufy-jig";
 import { buildPartsList } from "@/lib/order/parts-list";
 import type { NamedImage } from "@/lib/email-production";
 import type { BannerPreview } from "@/lib/types";
@@ -53,6 +51,7 @@ export function Designer() {
   const qrCode = useDesignStore((s) => s.qrCode);
   const plateState = useDesignStore((s) => s.plateState);
   const designName = useDesignStore((s) => s.designName);
+  const setDesignName = useDesignStore((s) => s.setDesignName);
   const setExportState = useUIStore((s) => s.setExportState);
   const soundEnabled = useUIStore((s) => s.soundEnabled);
   const randomFill = useDesignStore((s) => s.randomFill);
@@ -255,35 +254,31 @@ export function Designer() {
     // well under the localStorage quota). Optional — the cart works without it.
     const thumbDataUrl = await withTimeout(composeFrameImage(360), 5000, null);
 
-    // Heavy artifacts (banner files + full-res eufyMake print sheet) are OPTIONAL
-    // for checkout — Bill can regenerate them from the design JSON on his desktop.
-    // They can THROW or hang on mobile (iOS caps the canvas), so they're rendered
-    // under a hard timeout + catch; whatever succeeds gets shipped.
+    // Banner files (one per text bar) — light to render. The full-res eufyMake
+    // print sheet is intentionally NOT rendered here: it's a heavy, multi-second
+    // canvas that used to block "Add to cart" (and bloated the draft upload). It's
+    // only needed at FULFILLMENT, where Bill regenerates it from the saved design
+    // JSON (already the documented desktop path). Skipping it keeps add-to-cart
+    // snappy. Banners stay (they're cheap) under a short timeout so a stuck canvas
+    // can never strand the flow.
     let banners: NamedImage[] = [];
-    let printSheets: NamedImage[] = [];
     try {
-      const heavyArtifacts = (async () => {
-        const b: NamedImage[] = [];
-        for (const bar of s.textBars) {
-          const url = await composeBarImage(bar.id);
-          if (url) b.push({ name: `banner-${bar.row}-${bar.startIndex}`, dataUrl: url });
-        }
-        let p: NamedImage[] = [];
-        try {
-          const { sheets } = await composeEufyPrintSheets(EUFY_JIG_3X12);
-          p = sheets.map((dataUrl, i) => ({ name: `eufy-print-sheet-${i + 1}`, dataUrl }));
-        } catch {
-          p = [];
-        }
-        return { banners: b, printSheets: p };
-      })();
-      const heavy = await withTimeout(heavyArtifacts, 12000, { banners: [], printSheets: [] });
-      banners = heavy.banners;
-      printSheets = heavy.printSheets;
+      banners = await withTimeout(
+        (async () => {
+          const b: NamedImage[] = [];
+          for (const bar of s.textBars) {
+            const url = await composeBarImage(bar.id);
+            if (url) b.push({ name: `banner-${bar.row}-${bar.startIndex}`, dataUrl: url });
+          }
+          return b;
+        })(),
+        4000,
+        []
+      );
     } catch {
       banners = [];
-      printSheets = [];
     }
+    const printSheets: NamedImage[] = []; // regenerated from design JSON at fulfillment
 
     const parts = buildPartsList({
       slots: s.slots,
@@ -362,6 +357,7 @@ export function Designer() {
           proof={reviewProof}
           proofRendering={proofRendering}
           designName={designName}
+          onNameChange={setDesignName}
           ordering={ordering}
           error={orderError}
           onRetryProof={renderProof}
@@ -440,6 +436,7 @@ function ReviewOrderModal({
   proof,
   proofRendering,
   designName,
+  onNameChange,
   ordering,
   error,
   onRetryProof,
@@ -449,6 +446,7 @@ function ReviewOrderModal({
   proof: string | null;
   proofRendering: boolean;
   designName: string;
+  onNameChange: (name: string) => void;
   ordering: boolean;
   error?: string | null;
   onRetryProof: () => void;
@@ -456,6 +454,7 @@ function ReviewOrderModal({
   onClose: () => void;
 }) {
   const [confirmed, setConfirmed] = useState(false);
+  const named = designName.trim().length > 0;
 
   // Save the proof image — mobile share sheet / desktop download via the shared
   // saveImage util (handles iOS, which ignores `<a download>`).
@@ -531,6 +530,24 @@ function ReviewOrderModal({
             ⬇ Download my proof
           </button>
 
+          {/* Name this design — captured here so EVERY frame (incl. each extra one
+              added via "Design another") gets a title that flows to the cart and
+              the production/customer emails. Required before adding to the cart. */}
+          <div className="mt-4">
+            <label htmlFor="review-design-name" className="mb-1.5 block text-[13px] font-extrabold tracking-[0.5px] text-[#1e1b17]">
+              Name this design
+            </label>
+            <input
+              id="review-design-name"
+              type="text"
+              value={designName}
+              onChange={(e) => onNameChange(e.target.value)}
+              placeholder="e.g. Dad's truck, Liberty bell build…"
+              maxLength={80}
+              className="w-full rounded-[10px] border-[3px] border-[#1e1b17] bg-[#fff9ec] px-3 py-2.5 text-sm font-semibold text-[#1e1b17] placeholder:text-[#9a917c] focus:outline-none focus:ring-2 focus:ring-[#f8c53b]"
+            />
+          </div>
+
           <label className="mt-4 flex cursor-pointer items-start gap-2.5 rounded-lg bg-[#1e1b17]/[0.05] p-3">
             <input
               type="checkbox"
@@ -547,7 +564,7 @@ function ReviewOrderModal({
             <button
               type="button"
               onClick={onConfirm}
-              disabled={!confirmed || ordering || proofRendering}
+              disabled={!confirmed || !named || ordering || proofRendering}
               className="flex-1 rounded-full border-2 border-[#1e1b17] bg-[#f8c53b] px-5 py-3 text-sm font-extrabold uppercase tracking-wide text-[#1e1b17]
                 shadow-[0_3px_0_#1e1b17] transition-all hover:brightness-105 active:translate-y-0.5 active:shadow-none disabled:cursor-not-allowed disabled:opacity-40"
             >
@@ -567,9 +584,15 @@ function ReviewOrderModal({
               {error}
             </p>
           )}
-          <p className="mt-3 text-center text-[12px] font-semibold text-[#1e1b17]/60">
-            Add more frames on the next screen — 2 for $69.
-          </p>
+          {!named ? (
+            <p className="mt-3 text-center text-[12px] font-semibold text-[#c8102e]">
+              Name your design above to add it to the cart.
+            </p>
+          ) : (
+            <p className="mt-3 text-center text-[12px] font-semibold text-[#1e1b17]/60">
+              Add more frames on the next screen — 2 for $69.
+            </p>
+          )}
         </div>
       </div>
     </div>

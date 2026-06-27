@@ -1,7 +1,7 @@
 "use client";
 
-import { forwardRef, useImperativeHandle, useRef } from "react";
-import { useDraggable } from "@dnd-kit/core";
+import { forwardRef, useImperativeHandle, useRef, useEffect } from "react";
+import { useDraggable, useDndContext } from "@dnd-kit/core";
 import type { FrameConfig, PlacedTile, BottomBarConfig, QRCodeConfig, PlacedTextBar, TextBarPlacement, BannerPreview } from "@/lib/types";
 import { getTotalWidthInches } from "@/lib/constants/frame";
 import { useFrameLayout } from "@/hooks/useFrameLayout";
@@ -105,6 +105,26 @@ export const FrameCanvas = forwardRef<FrameCanvasHandle, FrameCanvasProps>(
     useImperativeHandle(ref, () => ({
       getElement: () => frameRef.current,
     }));
+
+    // Keep dnd-kit's droppable-rect cache in sync with the frame's responsive
+    // layout. The slots are absolutely positioned from `containerWidth`, so every
+    // width change repositions/resizes every cell. dnd-kit measures droppables on
+    // drag start and otherwise caches them; while idle its per-droppable
+    // ResizeObserver is disabled and the "optimized" measuring frequency never
+    // polls, so a layout shift AFTER the initial measure (the responsive width
+    // settling, a scrollbar appearing, web fonts loading) leaves the cache stale
+    // and right-shifted. The very first drag's first collision reads that stale
+    // cache before the drag-start re-measure commits — so the drop cue doesn't
+    // switch until you overdrag past the stale boundary; every later drag is tight
+    // because the cache is fresh by then. Re-measuring on each `containerWidth`
+    // change keeps the cache correct up to drag start, so drag #1 is as tight as
+    // drag #2. (A mid-drag layout shift re-measures here too, never reintroducing
+    // stale rects.) measureDroppableContainers is a no-op until droppables exist.
+    const { measureDroppableContainers } = useDndContext();
+    useEffect(() => {
+      // Empty list ⇒ re-measure ALL registered droppables (the frame's cells).
+      if (containerWidth > 0) measureDroppableContainers([]);
+    }, [containerWidth, measureDroppableContainers]);
 
     const totalWidthInches = getTotalWidthInches(frameConfig);
     const scale = containerWidth > 0 ? containerWidth / totalWidthInches : 0;

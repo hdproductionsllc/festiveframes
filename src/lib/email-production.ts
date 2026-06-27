@@ -56,8 +56,9 @@ export interface ProductionOrderInput {
   banners: NamedImage[];
   /** How many of THIS exact design to make (cart line quantity). Default 1. */
   quantity?: number;
-  /** Context line for one design within a multi-design cart, e.g. "Design 2 of 3". */
-  cartNote?: string | null;
+  /** Position of this design within a multi-design cart order (1-based). When set,
+   *  the email loudly flags it as one frame of a shared order to ship together. */
+  cartContext?: { index: number; total: number; cartId: string } | null;
 }
 
 function esc(s: unknown): string {
@@ -141,15 +142,25 @@ function productionHtml(o: ProductionOrderInput, droppedNote?: string | null): s
 
   const qty = Math.max(1, Math.floor(o.quantity ?? 1));
   const makeBadge = `<p style="margin:0 0 14px;display:inline-block;padding:6px 14px;background:${GOLD};color:${INK};font-size:14px;font-weight:bold;text-transform:uppercase;border:3px solid ${INK};border-radius:99px;">Make &times;${qty}</p>`;
-  const cartLine = o.cartNote ? `<strong>Cart:</strong> ${esc(o.cartNote)}<br/>` : "";
+
+  // LOUD multi-frame banner: this design is one frame of a larger order that must
+  // ship together to one customer. Impossible to miss at the top of the email.
+  const c = o.cartContext;
+  const multiBanner = c && c.total > 1
+    ? `<div style="margin:0 0 16px;padding:14px 16px;background:${BLUE};border:3px solid ${INK};border-radius:14px;box-shadow:${SHADOW};">
+         <p style="margin:0 0 4px;color:${INK};font-size:18px;font-weight:bold;font-family:${DISPLAY_FONT};">📦 Frame ${c.index} of ${c.total} · SAME ORDER</p>
+         <p style="margin:0;color:${INK};font-size:14px;font-weight:bold;">All ${c.total} frames are ONE order for ${esc(o.customerName ?? o.customerEmail ?? "this customer")} — make them all and SHIP TOGETHER in one package. You'll get ${c.total} of these emails (one per design); order ref <strong>${esc(c.cartId)}</strong>.</p>
+       </div>`
+    : "";
 
   return shell(
     `Production order — ${esc(o.parts.designName || "Custom frame")}`,
     `
+    ${multiBanner}
     <p style="margin:0 0 14px;display:inline-block;padding:6px 14px;background:${RED};color:${PAGE};font-size:13px;font-weight:bold;text-transform:uppercase;border:3px solid ${INK};border-radius:99px;">New paid order · ${usd(o.amountTotalCents)}</p>
-    ${qty > 1 || o.cartNote ? makeBadge : ""}
+    ${qty > 1 || (c && c.total > 1) ? makeBadge : ""}
     <p style="margin:0 0 8px;color:${INK};font-size:13px;">
-      ${cartLine}<strong>Order:</strong> ${esc(o.orderId)}<br/>
+      ${c && c.total > 1 ? `<strong>Order ref:</strong> ${esc(c.cartId)} (frame ${c.index} of ${c.total})<br/>` : ""}<strong>This design:</strong> ${esc(o.orderId)}<br/>
       <strong>Stripe:</strong> ${esc(o.sessionId)}<br/>
       <strong>Customer:</strong> ${esc(o.customerName ?? "—")} &lt;${esc(o.customerEmail ?? "—")}&gt;<br/>
       <strong>Plate:</strong> ${esc(o.parts.plateState)}${o.parts.qr.enabled ? ` · <strong>QR:</strong> ${esc(o.parts.qr.url)}` : ""}
@@ -171,11 +182,14 @@ function productionText(o: ProductionOrderInput, droppedNote?: string | null): s
   ].filter(Boolean).join(", ");
   const ship = o.shippingLines.filter(Boolean).join("\n") || "Address on file";
   const qty = Math.max(1, Math.floor(o.quantity ?? 1));
+  const c = o.cartContext;
   return [
     `PRODUCTION ORDER — ${o.parts.designName || "Custom frame"}`,
     `New paid order · ${usd(o.amountTotalCents)}`,
     `MAKE x${qty}`,
-    o.cartNote ? `Cart: ${o.cartNote}` : null,
+    c && c.total > 1
+      ? `*** FRAME ${c.index} OF ${c.total} — SAME ORDER (ref ${c.cartId}). Make all ${c.total} and SHIP TOGETHER to ${o.customerName ?? o.customerEmail ?? "this customer"}. ***`
+      : null,
     ``,
     `Order: ${o.orderId}`,
     `Stripe: ${o.sessionId}`,
@@ -295,12 +309,19 @@ export async function sendProductionEmails(
     console.warn(`[email-production] print sheets (${total(sheetAttachments)} bytes) exceed cap; dropping from founders email for order ${o.orderId}.`);
   }
 
+  // Subject groups multi-frame orders in the inbox: same customer + "[1/2]" + a
+  // short order ref so the founders instantly see the frames belong together.
+  const c = o.cartContext;
+  const subject =
+    c && c.total > 1
+      ? `PRODUCTION [${c.index}/${c.total}] — ${o.customerName ?? o.customerEmail ?? o.orderId} — ${o.parts.designName || "Custom frame"} (order ${c.cartId})`
+      : `PRODUCTION — ${o.parts.designName || "Custom frame"} — ${o.customerName ?? o.customerEmail ?? o.orderId}`;
   const sendFounders = () =>
     resend.emails.send({
       from,
       to: founderList,
       replyTo: o.customerEmail ?? undefined,
-      subject: `PRODUCTION — ${o.parts.designName || "Custom frame"} — ${o.customerName ?? o.customerEmail ?? o.orderId}`,
+      subject,
       html: productionHtml(o, droppedNote),
       text: productionText(o, droppedNote),
       attachments,

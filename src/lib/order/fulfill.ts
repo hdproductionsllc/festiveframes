@@ -147,7 +147,7 @@ export async function fulfillCart(
         printSheets: draft.artifacts.printSheets,
         banners: draft.artifacts.banners,
         quantity: line.quantity,
-        cartNote: `Design ${i + 1} of ${present.length} · cart ${cartId} · order total ${(orderTotal / 100).toFixed(2)}`,
+        cartContext: { index: i + 1, total: present.length, cartId },
       };
       await sendProductionEmails(input, { skipCustomer: true });
     }

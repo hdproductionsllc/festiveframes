@@ -1,11 +1,14 @@
 import { ImageResponse } from "next/og";
 import { copy } from "@/content/copy";
 
-// Code-rendered default Open Graph image for the whole site, served by Next's
-// file convention at /opengraph-image. 1200x630, no external assets or fonts
-// (ImageResponse only supports a subset of CSS, so the layout is flexbox-only).
-// Vintage Americana: deep navy field, a restrained gold star motif, the brand
-// wordmark in a bold condensed display weight, and the tagline beneath.
+// Code-rendered default Open Graph / social-share image for the whole site,
+// served by Next's file convention at /opengraph-image. 1200x630, no external
+// assets or fonts (ImageResponse/Satori supports a flexbox-only subset of CSS).
+//
+// Matches the LIVE "sticker" brand: a bright blue field with a cream sticker
+// card — thick ink border + the signature hard offset shadow — the bold wordmark,
+// a gold "Custom License Plate Frames" pill, and the tagline. (The previous
+// navy/cream "Vintage Americana" version was the retired /classic look.)
 
 export const runtime = "edge";
 
@@ -13,22 +16,22 @@ export const alt = `${copy.site.brandName} — ${copy.site.tagline}`;
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-// Brand palette (see project DESIGN notes).
-const NAVY_DEEP = "#0F1B33";
-const NAVY = "#1B2A4A";
-const CREAM = "#F4ECD8";
-const GOLD = "#FFD700";
+// Sticker palette (matches the homepage + transactional emails).
+const PAGE = "#fff9ec"; // warm cream card
+const INK = "#1e1b17"; // text + borders + hard shadow
+const GOLD = "#f8c53b";
+const PINK = "#ed5aa0";
+const BLUE = "#3fb0e6";
 const RED = "#C8102E";
 
 // A single five-point star drawn with clip-path (supported by Satori/next-og).
-function Star({ size: s, opacity }: { size: number; opacity: number }) {
+function Star({ size: s, color }: { size: number; color: string }) {
   return (
     <div
       style={{
         width: s,
         height: s,
-        backgroundColor: GOLD,
-        opacity,
+        backgroundColor: color,
         clipPath:
           "polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)",
       }}
@@ -44,84 +47,80 @@ export default function OpengraphImage() {
           width: "100%",
           height: "100%",
           display: "flex",
-          flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          backgroundColor: NAVY_DEEP,
-          // Subtle radial lift toward the center so the field is not flat.
-          backgroundImage: `radial-gradient(circle at 50% 42%, ${NAVY} 0%, ${NAVY_DEEP} 70%)`,
-          position: "relative",
+          backgroundColor: BLUE,
+          padding: 56,
           fontFamily: "sans-serif",
         }}
       >
-        {/* Star motif: a restrained row of stars along the top. */}
+        {/* Cream sticker card with the signature thick ink border + hard offset shadow. */}
         <div
           style={{
             display: "flex",
-            gap: 28,
-            position: "absolute",
-            top: 70,
-            opacity: 0.9,
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            width: "100%",
+            height: "100%",
+            backgroundColor: PAGE,
+            border: `8px solid ${INK}`,
+            borderRadius: 36,
+            boxShadow: `20px 20px 0 ${INK}`,
+            padding: "56px 72px",
           }}
         >
-          {[0.35, 0.55, 0.85, 0.55, 0.35].map((o, i) => (
-            <Star key={i} size={i === 2 ? 40 : 30} opacity={o} />
-          ))}
-        </div>
+          {/* Festive star row. */}
+          <div style={{ display: "flex", gap: 22, marginBottom: 30 }}>
+            {[PINK, GOLD, RED, GOLD, PINK].map((c, i) => (
+              <Star key={i} size={i === 2 ? 46 : 34} color={c} />
+            ))}
+          </div>
 
-        {/* Gold hairline framing the composition like a plate frame edge. */}
-        <div
-          style={{
-            position: "absolute",
-            top: 36,
-            left: 36,
-            right: 36,
-            bottom: 36,
-            border: `2px solid ${GOLD}`,
-            opacity: 0.55,
-            borderRadius: 12,
-          }}
-        />
+          {/* Wordmark. */}
+          <div
+            style={{
+              display: "flex",
+              fontSize: 132,
+              fontWeight: 800,
+              letterSpacing: "-3px",
+              lineHeight: 1,
+              color: INK,
+            }}
+          >
+            {copy.site.brandName}
+          </div>
 
-        {/* Wordmark. */}
-        <div
-          style={{
-            display: "flex",
-            fontSize: 128,
-            fontWeight: 800,
-            letterSpacing: "-2px",
-            lineHeight: 1,
-            color: CREAM,
-            textTransform: "uppercase",
-            marginTop: 24,
-          }}
-        >
-          {copy.site.brandName}
-        </div>
+          {/* Gold pill: the descriptive product, with the brand-entity wording. */}
+          <div
+            style={{
+              display: "flex",
+              marginTop: 34,
+              backgroundColor: GOLD,
+              border: `5px solid ${INK}`,
+              borderRadius: 999,
+              padding: "12px 34px",
+              fontSize: 38,
+              fontWeight: 800,
+              color: INK,
+            }}
+          >
+            Custom License Plate Frames
+          </div>
 
-        {/* Red divider rule. */}
-        <div
-          style={{
-            width: 220,
-            height: 6,
-            backgroundColor: RED,
-            marginTop: 36,
-            marginBottom: 36,
-            borderRadius: 3,
-          }}
-        />
-
-        {/* Tagline. */}
-        <div
-          style={{
-            display: "flex",
-            fontSize: 40,
-            fontWeight: 500,
-            color: GOLD,
-            letterSpacing: "1px",
-          }}
-        >
-          {copy.site.tagline}
+          {/* Tagline. */}
+          <div
+            style={{
+              display: "flex",
+              marginTop: 30,
+              fontSize: 36,
+              fontWeight: 600,
+              color: INK,
+              opacity: 0.78,
+            }}
+          >
+            {copy.site.tagline}
+          </div>
         </div>
       </div>
     ),
