@@ -4,7 +4,6 @@ import { getKit, getActiveKits } from "@/config/kits";
 import { offer } from "@/config/offers";
 import { SITE_URL } from "@/config/season";
 import { Header } from "./_components/Header";
-import { Countdown } from "./_components/Countdown";
 import { Hero } from "./_components/Hero";
 import { Marquee } from "./_components/Marquee";
 import { Looks } from "./_components/Looks";
@@ -165,7 +164,6 @@ export default async function HomePage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       <Header />
-      <Countdown />
       <main id="main" tabIndex={-1} className="flex-1">
         <Hero />
         <Marquee />
