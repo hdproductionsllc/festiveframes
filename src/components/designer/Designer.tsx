@@ -19,6 +19,7 @@ import { buildPartsList } from "@/lib/order/parts-list";
 import type { NamedImage } from "@/lib/email-production";
 import type { BannerPreview } from "@/lib/types";
 import { playSound } from "@/lib/utils/sound";
+import { saveImage } from "@/lib/utils/save-image";
 import { getSet } from "@/data/sets/index";
 import { LOOK_PRESETS } from "@/data/look-presets";
 
@@ -180,10 +181,7 @@ export function Designer() {
       const safe =
         (designName || "frame-design").replace(/[^a-zA-Z0-9 -]/g, "").trim().replace(/ /g, "-").toLowerCase() ||
         "frame-design";
-      const a = document.createElement("a");
-      a.href = dataUrl;
-      a.download = `${safe}.png`;
-      a.click();
+      await saveImage(dataUrl, `${safe}.png`);
       setExportState("done");
       if (soundEnabled) playSound("chime");
       setTimeout(() => setExportState("idle"), 2000);
@@ -459,56 +457,12 @@ function ReviewOrderModal({
 }) {
   const [confirmed, setConfirmed] = useState(false);
 
-  // Save the proof image. iOS Safari does NOT honor `<a download>` for data URLs
-  // (the tap just does nothing), so we route the bytes through a Blob + object
-  // URL, which the download attribute DOES respect on every desktop browser.
-  // iOS Safari still ignores `download` even for blob URLs, so there we fall back
-  // to opening the image in a new tab where the user can long-press → "Save to
-  // Photos". Object URLs are revoked after use to avoid leaking memory.
+  // Save the proof image — mobile share sheet / desktop download via the shared
+  // saveImage util (handles iOS, which ignores `<a download>`).
   const download = () => {
     if (!proof) return;
     const safe = (designName || "festive-frame").replace(/[^a-zA-Z0-9 -]/g, "").trim().replace(/ /g, "-").toLowerCase() || "festive-frame";
-
-    // Data URL → Blob → object URL.
-    let blobUrl: string | null = null;
-    try {
-      const [meta, b64] = proof.split(",");
-      const mime = /:(.*?);/.exec(meta)?.[1] ?? "image/png";
-      const bin = atob(b64);
-      const bytes = new Uint8Array(bin.length);
-      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-      blobUrl = URL.createObjectURL(new Blob([bytes], { type: mime }));
-    } catch {
-      blobUrl = null;
-    }
-
-    const isIOS =
-      typeof navigator !== "undefined" &&
-      (/iP(hone|ad|od)/.test(navigator.userAgent) ||
-        // iPadOS 13+ reports as Mac; disambiguate by touch support.
-        (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1));
-
-    // iOS ignores the download attribute entirely → open the image so the user
-    // can long-press and save it. Fall back to the data URL if the Blob failed.
-    if (isIOS) {
-      const opened = window.open(blobUrl ?? proof, "_blank");
-      if (opened && blobUrl) {
-        // Give the new tab time to load the bytes before revoking.
-        window.setTimeout(() => URL.revokeObjectURL(blobUrl!), 60000);
-      } else if (blobUrl) {
-        URL.revokeObjectURL(blobUrl);
-      }
-      return;
-    }
-
-    // Desktop: trigger a real download via the object URL (preferred) or data URL.
-    const a = document.createElement("a");
-    a.href = blobUrl ?? proof;
-    a.download = `${safe}-proof.png`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    if (blobUrl) window.setTimeout(() => URL.revokeObjectURL(blobUrl!), 1000);
+    void saveImage(proof, `${safe}-proof.png`);
   };
 
   return (
