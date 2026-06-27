@@ -17,7 +17,7 @@ import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 
 import { getStripe } from "@/lib/stripe";
-import { offer, priceForFramesCents, bulkSavingsCents, MAX_CART_FRAMES } from "@/config/offers";
+import { offer, priceForFramesCents, MAX_CART_FRAMES } from "@/config/offers";
 import { SITE_URL, season } from "@/config/season";
 import { getDraft, saveCartDraft, type CartLineRef } from "@/lib/order/store";
 
@@ -162,44 +162,47 @@ export async function POST(request: Request): Promise<NextResponse> {
     }
 
     // One line item per design (named, so the receipt is legible) + shipping once.
-    const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = resolved.map((r) => ({
-      quantity: r.quantity,
-      price_data: {
-        currency: offer.currency,
-        unit_amount: offer.singlePrice,
-        product_data: { name: r.name, description: "Made-to-order custom license plate frame" },
+    // Bake the pairs price (2-for-$69) DIRECTLY into a single consolidated frames
+    // line item — do NOT use a Stripe coupon for the bulk discount. Stripe forbids
+    // combining `discounts` with `allow_promotion_codes`, so a coupon would HIDE
+    // the "Add promotion code" field — meaning a customer (or a $0 founder test)
+    // couldn't enter their own code on a multi-frame order. With the discount
+    // already in the price, we keep promo codes enabled on every cart. Per-design
+    // names live in the line description + the production/customer emails.
+    const designsSummary = resolved
+      .map((r) => (r.quantity > 1 ? `${r.name} ×${r.quantity}` : r.name))
+      .join(", ");
+    const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [
+      {
+        quantity: 1,
+        price_data: {
+          currency: offer.currency,
+          unit_amount: priceForFramesCents(frames), // authoritative pairs total
+          product_data: {
+            name: frames > 1 ? `${frames} custom license plate frames` : "Custom license plate frame",
+            description: designsSummary,
+          },
+        },
       },
-    }));
-    lineItems.push({
-      quantity: 1,
-      price_data: {
-        currency: offer.currency,
-        unit_amount: season.flatShippingCents,
-        product_data: { name: season.shippingLabel },
+      // Shipping as a LINE ITEM (not a shipping_option) so a 100%-off promo code
+      // zeroes the WHOLE order — frames + shipping — for true $0 founder testing.
+      {
+        quantity: 1,
+        price_data: {
+          currency: offer.currency,
+          unit_amount: season.flatShippingCents,
+          product_data: { name: season.shippingLabel },
+        },
       },
-    });
-
-    const savings = bulkSavingsCents(frames);
+    ];
 
     try {
-      // The multi-frame discount as a one-off coupon (Stripe forbids combining
-      // `discounts` with `allow_promotion_codes`). When there's no discount
-      // (a single frame), expose promo codes instead so $0 testing still works.
-      let discounts: Stripe.Checkout.SessionCreateParams.Discount[] | undefined;
-      if (savings > 0) {
-        const coupon = await stripe.coupons.create({
-          amount_off: savings,
-          currency: offer.currency,
-          duration: "once",
-          name: `Multi-frame discount (${frames} frames)`,
-        });
-        discounts = [{ coupon: coupon.id }];
-      }
-
       const session = await stripe.checkout.sessions.create({
         mode: "payment",
         line_items: lineItems,
-        ...(discounts ? { discounts } : { allow_promotion_codes: true }),
+        // Always on — the bulk discount is in the price, so the promo-code field
+        // stays available for founder/marketing codes (incl. 100%-off testing).
+        allow_promotion_codes: true,
         shipping_address_collection: { allowed_countries: ["US"] },
         success_url: `${baseUrl}/thanks?session_id={CHECKOUT_SESSION_ID}&cart=${encodeURIComponent(cartId)}`,
         cancel_url: `${baseUrl}/cart`,
