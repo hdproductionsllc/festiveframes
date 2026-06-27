@@ -394,7 +394,7 @@ export const copy: Copy = {
       "Design your own custom license plate frame: pick a theme, snap on the tiles you want, and add your phrase. Made by hand to order in the USA, with a goodie bag of surprise extra tiles. Ships nationwide, $5 flat rate.",
     h1: "Make your license plate the most fun part of your car.",
     subhead: "Design it. We hand-make it.",
-    ctaSubline: "$5 flat US shipping. Order by June 28 to get it before the Fourth.",
+    ctaSubline: "$5 flat US shipping. Order by June 28 for the best chance to arrive before the Fourth.",
     guarantee: "30-day guarantee. If you do not love it, send it back.",
 
     whatsInKit: {
@@ -474,7 +474,7 @@ export const copy: Copy = {
       {
         question: "How does shipping work?",
         answer:
-          "We ship anywhere in the US for a $5 flat rate. Order by June 28 to get yours before the Fourth.",
+          "We ship anywhere in the US for a $5 flat rate. Order by June 28 for the best chance to arrive before the Fourth.",
       },
     ],
 

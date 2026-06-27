@@ -1,9 +1,13 @@
 const INK = "#1e1b17";
 
-const REVIEWS = [
-  { quote: "The frame feels solid and the tiles fit together really well. Several people have asked where I got it.", name: "Melissa C.", meta: "St. Charles, MO", initial: "M", accent: "#ed5aa0" },
-  { quote: "I'm one of those people who puts up lights for every holiday. Now my truck gets decorated too.", name: "Jacob S.", meta: "Wentzville, MO", initial: "J", accent: "#3fb0e6" },
-  { quote: "Spent twenty minutes trying different layouts before settling on one. Way more combinations than I expected.", name: "Nicole A.", meta: "Jefferson City, MO", initial: "N", accent: "#9b5fd0" },
+// The three makers behind Festive Frames, in their own words. These are REAL,
+// attributed founder voices (mirrors copy.home.testimonials) — used instead of
+// customer reviews until we have genuine verified-buyer feedback to show, so we
+// never publish invented customer quotes (FTC).
+const VOICES = [
+  { quote: "I design every tile to read from a block away: big, bold, and unmistakably American. Seeing my artwork snap onto someone's car, and knowing they can restyle it any time, is the whole dream.", name: "Becky Newman", meta: "Tile artist & designer", initial: "B", accent: "#ed5aa0" },
+  { quote: "I obsess over the fit and the snap. The frame installs once with your existing screws, and every tile locks in clean and pops off in seconds. We build and test these in St. Louis, and we stand behind every one for 30 days.", name: "Bill Laupan", meta: "Engineer & product designer", initial: "B", accent: "#3fb0e6" },
+  { quote: "Your car becomes a little canvas you can restyle whenever you want. I love seeing what people come up with.", name: "Henry David", meta: "Photographer & product designer", initial: "H", accent: "#9b5fd0" },
 ];
 
 export function Reviews() {
@@ -11,17 +15,17 @@ export function Reviews() {
     <section className="mx-auto max-w-[1240px] px-5 pb-[72px] sm:px-7">
       <div className="mb-9 text-center">
         <div className="mb-1.5 text-[15px] font-extrabold tracking-[1.5px] text-[#ed5aa0]">
-          EARLY FEEDBACK
+          MADE BY HAND IN ST. LOUIS
         </div>
         <h2 className="m-0 text-[clamp(30px,5vw,40px)] font-bold leading-none tracking-[-1px]">
-          What our early testers say
+          Meet the makers
         </h2>
         <p className="mx-auto mt-3 max-w-[520px] text-sm font-bold text-[#6a6354]">
-          Early feedback from our first testers. Verified buyer reviews coming soon.
+          The three of us design, build, and ship every frame ourselves. Verified buyer reviews coming soon.
         </p>
       </div>
       <div className="grid gap-6 md:grid-cols-3">
-        {REVIEWS.map((r) => (
+        {VOICES.map((r) => (
           <div
             key={r.name}
             className="rounded-[18px] border-[3px] border-[#1e1b17] bg-[#fff9ec] p-[26px]"

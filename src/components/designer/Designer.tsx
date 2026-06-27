@@ -64,6 +64,10 @@ export function Designer() {
   const [orderError, setOrderError] = useState<string | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [reviewProof, setReviewProof] = useState<string | null>(null);
+  // True while the proof image is rendering. Lets the modal show a "rendering"
+  // vs. "couldn't render — continue or retry" state instead of hanging forever
+  // (iOS Safari can fail/cap the canvas — see compose-frame.ts).
+  const [proofRendering, setProofRendering] = useState(false);
   const pendingProofRef = useRef<NamedImage | null>(null);
   const canvasRef = useRef<FrameCanvasHandle>(null);
   const seededRef = useRef(false);
@@ -201,26 +205,32 @@ export function Designer() {
     setShowParts(true);
   }, []);
 
-  // Step 1 of ordering: render a high-res PROOF and show it for confirmation
-  // BEFORE taking payment, so the customer sees exactly what we'll make and has
-  // confidence their design is captured with the order. The proof is reused for
-  // production (no double render).
+  // Render the high-res proof into the review modal. TIME-BOXED: composeFrameImage
+  // can hang or throw on iOS Safari's capped canvas, which used to strand the
+  // modal on "Rendering your proof…" forever (and a proof-gated button greyed for
+  // good). withTimeout resolves to null on a hang OR a throw, so the modal always
+  // settles into either a proof or the "couldn't render — continue/retry" state.
+  // The proof is OPTIONAL for ordering: production regenerates it from the design
+  // JSON, so a failed render must never block checkout.
+  const renderProof = useCallback(async () => {
+    setReviewProof(null);
+    pendingProofRef.current = null;
+    setProofRendering(true);
+    const proofUrl = await withTimeout(composeFrameImage(2000), 8000, null);
+    pendingProofRef.current = proofUrl ? { name: "frame-proof", dataUrl: proofUrl } : null;
+    setReviewProof(proofUrl ?? null);
+    setProofRendering(false);
+  }, []);
+
+  // Step 1 of ordering: open the review modal and render the proof so the customer
+  // sees exactly what we'll make before paying. The proof is reused for production.
   const handleReview = useCallback(async () => {
     if (ordering) return;
     const s = useDesignStore.getState();
     if (Object.keys(s.slots).length === 0) return;
-    setReviewProof(null);
-    pendingProofRef.current = null;
     setReviewOpen(true);
-    try {
-      const proofUrl = await composeFrameImage(2000);
-      pendingProofRef.current = proofUrl ? { name: "frame-proof", dataUrl: proofUrl } : null;
-      setReviewProof(proofUrl ?? null);
-    } catch {
-      pendingProofRef.current = null;
-      setReviewProof(null);
-    }
-  }, [ordering]);
+    await renderProof();
+  }, [ordering, renderProof]);
 
   // Render every production artifact client-side (reusing the review proof) and
   // stash the design to the SERVER draft keyed by a fresh orderId. The server
@@ -352,9 +362,11 @@ export function Designer() {
       {reviewOpen && (
         <ReviewOrderModal
           proof={reviewProof}
+          proofRendering={proofRendering}
           designName={designName}
           ordering={ordering}
           error={orderError}
+          onRetryProof={renderProof}
           onConfirm={addToCart}
           onClose={() => { if (!ordering) { setReviewOpen(false); setOrderError(null); } }}
         />
@@ -428,16 +440,20 @@ export function Designer() {
  */
 function ReviewOrderModal({
   proof,
+  proofRendering,
   designName,
   ordering,
   error,
+  onRetryProof,
   onConfirm,
   onClose,
 }: {
   proof: string | null;
+  proofRendering: boolean;
   designName: string;
   ordering: boolean;
   error?: string | null;
+  onRetryProof: () => void;
   onConfirm: () => void;
   onClose: () => void;
 }) {
@@ -529,9 +545,24 @@ function ReviewOrderModal({
             {proof ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={proof} alt="Proof of your custom license plate frame" className="max-h-56 w-full object-contain" />
-            ) : (
+            ) : proofRendering ? (
               <div className="flex h-40 w-full items-center justify-center text-sm font-semibold text-[#1e1b17]/50">
                 Rendering your proof…
+              </div>
+            ) : (
+              // Render failed/timed out (e.g. iOS Safari canvas cap). The design is
+              // still captured with the order, so let them retry or continue.
+              <div className="flex h-40 w-full flex-col items-center justify-center gap-2 px-4 text-center">
+                <p className="text-sm font-semibold text-[#1e1b17]/70">
+                  We couldn&apos;t render a preview here, but your exact design is still saved with your order.
+                </p>
+                <button
+                  type="button"
+                  onClick={onRetryProof}
+                  className="rounded-full border-2 border-[#1e1b17] bg-white px-4 py-1.5 text-sm font-bold text-[#1e1b17] transition-all hover:bg-[#f1e4c6] active:scale-95"
+                >
+                  ↻ Retry preview
+                </button>
               </div>
             )}
           </div>
@@ -562,11 +593,11 @@ function ReviewOrderModal({
             <button
               type="button"
               onClick={onConfirm}
-              disabled={!confirmed || !proof || ordering}
+              disabled={!confirmed || ordering || proofRendering}
               className="flex-1 rounded-full border-2 border-[#1e1b17] bg-[#f8c53b] px-5 py-3 text-sm font-extrabold uppercase tracking-wide text-[#1e1b17]
                 shadow-[0_3px_0_#1e1b17] transition-all hover:brightness-105 active:translate-y-0.5 active:shadow-none disabled:cursor-not-allowed disabled:opacity-40"
             >
-              {ordering ? "Adding…" : "Add to cart →"}
+              {ordering ? "Adding…" : proofRendering ? "Rendering…" : "Add to cart →"}
             </button>
             <button
               type="button"

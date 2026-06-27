@@ -28,15 +28,22 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: "Please add a short message." }, { status: 400 });
   }
 
+  let sent = false;
   try {
-    await sendContactEmail({
+    sent = await sendContactEmail({
       name: name.trim(),
       email: email.trim(),
       message: message.trim(),
     });
   } catch (err) {
     console.error("[contact] failed:", err);
-    // Don't fail the user; we logged it.
+    sent = false;
+  }
+
+  // If the inquiry didn't actually send, tell the client so the form shows its
+  // "email us directly at hello@festiveframes.co" fallback — never a false "GOT IT".
+  if (!sent) {
+    return NextResponse.json({ error: "Could not send your message right now." }, { status: 502 });
   }
 
   return NextResponse.json({ ok: true }, { status: 200 });

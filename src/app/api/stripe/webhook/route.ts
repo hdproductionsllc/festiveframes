@@ -58,6 +58,14 @@ export async function POST(request: Request): Promise<NextResponse> {
     const session = event.data.object as Stripe.Checkout.Session;
     const metadata = session.metadata ?? {};
 
+    // Only fulfill PAID sessions. `completed` ≈ paid for US card checkout, but an
+    // async/delayed or failed payment can emit `completed` while unpaid — never
+    // produce a free order. (The /thanks relay enforces the same gate.)
+    if (session.payment_status === "unpaid") {
+      console.warn(`[stripe-webhook] session ${session.id} completed but UNPAID; skipping fulfillment.`);
+      return NextResponse.json({ received: true }, { status: 200 });
+    }
+
     // ── Custom builder order: fulfill from the in-memory draft (backup to the
     // /thanks relay). fulfillOrder is idempotent, so whichever trigger fires
     // second is a no-op. Production/customer emails are handled there.

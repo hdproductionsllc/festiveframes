@@ -70,7 +70,7 @@ export function Countdown() {
     <section aria-label="Shipping cutoff countdown" className="bg-brand-navy text-brand-cream">
       <div className="mx-auto flex max-w-6xl flex-col items-center justify-center gap-2 px-4 py-4 text-center sm:flex-row sm:gap-4 sm:px-6">
         <p className="text-sm font-semibold uppercase tracking-wide">
-          Order by June 28 to get it before the Fourth
+          Order by June 28 for the best chance to arrive before the Fourth
         </p>
         <p
           className="font-mkt-display text-base font-bold tabular-nums tracking-wide text-brand-gold"

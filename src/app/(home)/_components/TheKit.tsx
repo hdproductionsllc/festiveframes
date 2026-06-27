@@ -123,7 +123,7 @@ export function TheKit() {
             </div>
           ))}
           <div className="text-center text-sm font-bold text-[#6a6354] sm:col-span-2">
-            $5 flat shipping · 30-day guarantee · order by June 28 to get it before the Fourth
+            $5 flat shipping · 30-day guarantee · order by June 28 for the best chance to arrive before the Fourth
             <br />
             <Link href="/build" className="font-bold text-[#ed5aa0] underline underline-offset-2">
               Start designing in the builder →

@@ -247,12 +247,14 @@ export interface ContactSubmission {
  * Sets replyTo to the customer so the team can reply straight from their inbox.
  * No-ops gracefully when Resend isn't configured. Never throws.
  */
-export async function sendContactEmail(c: ContactSubmission): Promise<void> {
+export async function sendContactEmail(c: ContactSubmission): Promise<boolean> {
   const apiKey = process.env.RESEND_API_KEY;
   const adminTo = process.env.ADMIN_ORDER_EMAIL;
   if (!apiKey || !adminTo) {
+    // Not configured → report FAILURE so the caller can tell the customer to
+    // email us directly, instead of falsely confirming a delivered inquiry.
     console.warn("[email] contact inquiry (not sent, missing config):", c);
-    return;
+    return false;
   }
   const from = process.env.EMAIL_FROM || "Festive Frames <onboarding@resend.dev>";
   const resend = new Resend(apiKey);
@@ -273,7 +275,9 @@ export async function sendContactEmail(c: ContactSubmission): Promise<void> {
          </div>`,
       ),
     });
+    return true;
   } catch (err) {
     console.error("[email] contact email failed:", err);
+    return false;
   }
 }

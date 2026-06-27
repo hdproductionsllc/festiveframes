@@ -64,7 +64,7 @@ export function Countdown() {
       className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 border-b-[3px] border-[#1e1b17] bg-[#f8c53b] px-4 py-2.5 text-center text-sm font-extrabold tracking-[0.3px] text-[#1e1b17]"
       aria-label="Shipping cutoff countdown"
     >
-      <span>★ Order by June 28 to get it before the Fourth</span>
+      <span>★ Order by June 28 for the best chance to arrive before the Fourth</span>
       <span className="s-display rounded-full border-2 border-[#1e1b17] bg-[#fff9ec] px-3 py-0.5 tabular-nums" aria-live="off">
         {days}d {pad(hours)}:{pad(minutes)}:{pad(seconds)}
       </span>
