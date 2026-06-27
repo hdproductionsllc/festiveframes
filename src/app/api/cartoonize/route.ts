@@ -21,11 +21,20 @@ export const maxDuration = 60; // cartoonizing can take 10-30s
 
 // The locked "house style" — every pet comes out looking like the same product
 // line (matches the die-cut wing render the owner approved).
+//
+// PROMPT NOTES (image-to-image / Remix):
+//  • Do NOT force a pose ("sitting/facing forward") — Remix keeps the INPUT pose,
+//    so pose instructions fight the photo and hurt results. Let the photo drive
+//    the pose; spend the prompt on STYLE + LIKENESS + CLEAN BACKGROUND.
+//  • Lead with "turn this photo into…" so it reads as a transform, not a new image.
+//  • Push hard on "isolate on a plain white background" (closest we get to die-cut
+//    without a separate background-removal pass — that's the real fix later).
 const HOUSE_STYLE_PROMPT =
-  "A cute cartoon illustration of this exact pet, full body, sitting upright and " +
-  "facing forward, bold clean thick black outlines, flat cel shading, vibrant " +
-  "saturated colors, die-cut sticker style. Preserve the pet's breed, fur color, " +
-  "and markings faithfully. Plain solid white background, centered, no text.";
+  "Turn this photo into a clean cartoon mascot illustration of the SAME pet — keep " +
+  "its exact breed, fur colors, markings, face, expression, and pose. Bold thick " +
+  "black outlines, smooth flat cel shading, bright saturated colors, simple " +
+  "professional cartoon sticker style. Isolate the pet on a plain solid white " +
+  "background (remove the original background). One subject, centered, no text, no border.";
 
 function parseDataUrl(dataUrl: string): { buffer: Buffer; mime: string } | null {
   const m = /^data:(image\/[a-zA-Z+]+);base64,(.+)$/.exec(dataUrl);
@@ -66,8 +75,12 @@ export async function POST(request: Request): Promise<NextResponse> {
       "image_request",
       JSON.stringify({
         prompt: HOUSE_STYLE_PROMPT,
-        // How much of the original photo to keep (likeness vs. stylization).
-        image_weight: 60,
+        // image_weight = how closely the output sticks to the PHOTO (1–100).
+        // HIGHER → more like the photo (less cartoon); LOWER → more stylized
+        // (more cartoon, but too low loses the pet's likeness). 50 is a good
+        // start; dial 45 (more cartoon) ↔ 65 (more like the photo) after testing
+        // with real pet photos.
+        image_weight: 50,
         model: "V_2",
         magic_prompt_option: "OFF",
         aspect_ratio: "ASPECT_1_1",
