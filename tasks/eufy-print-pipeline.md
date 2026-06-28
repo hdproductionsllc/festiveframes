@@ -100,6 +100,30 @@ render was never built, so from 2026-06-26 onward NO order shipped with a print 
 - The desktop "eufyMake print sheet" button (ExportPartsList) still works for manual
   regeneration — same shared core, identical output.
 
+## CONSOLIDATED sheet: tiles + banners on ONE sheet (2026-06-28)
+Banners now print on the SAME eufy sheet as the tiles → one print job per design
+(no more separate banner PNG attachments). Geometry (Henry's spec):
+- Banner height = 1 tile face (1.02"); width = widthUnits × 1.02" (same scale as tiles).
+- ALL banners sit bottom-right, right edge FLUSH with the sheet's right edge.
+- Multiple banners stack upward from the bottom; BIGGEST (widest) on the bottom.
+- Leftover (banner length ≠ pocket pitch) is the gap to the LEFT of each banner.
+- Tiles fill pockets in reading order, SKIPPING pockets a banner covers; excess
+  tiles paginate onto plain pocket-grid sheets after sheet 1.
+
+Implementation:
+- `planEufySheets(queue, bannerWidthUnits, jig)` in eufy-print-core.ts is the single
+  source of truth for the geometry (shared by both renderers).
+- Banner artwork = the FONT-PERFECT PNG the customer saw (client-rendered at checkout,
+  stored in `artifacts.banners`), composited onto the sheet — so we DON'T have to
+  vendor the ~25 banner Google fonts server-side. The server matches each text bar to
+  its banner PNG by name (`banner-${row}-${startIndex}`).
+- fulfill.ts drops the separate banner attachments only when every banner landed on
+  the sheet (`bannerCount === banners.length`); otherwise keeps them as a fallback.
+- NOTE: if a banner PNG is missing from the draft (rare client render timeout at
+  checkout), that banner can't be composited → it's kept as a separate attachment
+  fallback. A v2 robustness option is server-side banner text rendering (needs the
+  fonts vendored).
+
 ## Scope (v1 vs later)
 - v1: square tiles only -> jig sheets.
 - Later: text bars (1xN custom parts, longer than a pocket) get their own print layout;

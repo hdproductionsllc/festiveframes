@@ -15,23 +15,33 @@ import type { PartsList } from "@/lib/order/parts-list";
 export type FulfillResult = "sent" | "already" | "no-payload" | "failed";
 
 /**
- * Render the eufyMake print sheet(s) server-side from the order's SAVED design
- * JSON, named for the production email's attachments. NEVER throws — a render
- * failure (bad design, art fetch error) returns [] so the paid order's emails
- * still go out (the email then shows the "regenerate on desktop" fallback note).
+ * Render the consolidated eufyMake print sheet(s) server-side from the order's
+ * SAVED design JSON — tiles AND the design's banners on one sheet (the banners
+ * are the client-rendered PNGs from the draft). Named for the production email's
+ * attachments. NEVER throws — a render failure (bad design, art fetch error)
+ * returns no sheets so the paid order's emails still go out (the email then shows
+ * the "regenerate on desktop" fallback note + keeps the separate banner files).
+ *
+ * `bannersIncluded` is true only when every banner landed on the sheet, so the
+ * caller can safely drop the now-redundant separate banner attachments.
  */
-async function renderEufyPrintSheets(design: unknown, designName: string): Promise<NamedImage[]> {
+async function renderEufyPrintSheets(
+  design: unknown,
+  banners: NamedImage[],
+  designName: string,
+): Promise<{ sheets: NamedImage[]; bannersIncluded: boolean }> {
   try {
-    const { sheets } = await composeEufyPrintSheetsServer(design as Parameters<typeof composeEufyPrintSheetsServer>[0]);
-    if (sheets.length === 0) return [];
+    const res = await composeEufyPrintSheetsServer(design as Parameters<typeof composeEufyPrintSheetsServer>[0], banners);
+    if (res.sheets.length === 0) return { sheets: [], bannersIncluded: false };
     const slug = (designName || "frame").replace(/[^a-z0-9]+/gi, "-").toLowerCase() || "frame";
-    return sheets.map((dataUrl, i) => ({
-      name: `${slug}-eufy-3x12-sheet-${i + 1}-of-${sheets.length}`,
+    const sheets = res.sheets.map((dataUrl, i) => ({
+      name: `${slug}-eufy-3x12-sheet-${i + 1}-of-${res.sheets.length}`,
       dataUrl,
     }));
+    return { sheets, bannersIncluded: res.bannerCount === banners.length };
   } catch (err) {
     console.error("[fulfill] eufy print-sheet render failed:", err instanceof Error ? err.message : err);
-    return [];
+    return { sheets: [], bannersIncluded: false };
   }
 }
 
@@ -86,9 +96,10 @@ export async function fulfillOrder(
   // Claim fulfillment — only the first caller proceeds.
   if (!(await markFulfilled(orderId))) return "already";
 
-  // Auto-render the eufy print sheet from the saved design (falls back to any
-  // artifact sheets, then to none → the email shows the regenerate note).
-  const printSheets = await renderEufyPrintSheets(draft?.design, data.parts.designName ?? "");
+  // Auto-render the consolidated eufy sheet (tiles + banners) from the saved
+  // design. When the banners all land on the sheet, drop the now-redundant
+  // separate banner attachments so the founders get ONE file to print.
+  const eufy = await renderEufyPrintSheets(draft?.design, data.artifacts.banners, data.parts.designName ?? "");
 
   const input: ProductionOrderInput = {
     orderId,
@@ -99,8 +110,8 @@ export async function fulfillOrder(
     shippingLines: shippingLines(session),
     parts: data.parts,
     proof: data.artifacts.proof,
-    printSheets: printSheets.length ? printSheets : data.artifacts.printSheets,
-    banners: data.artifacts.banners,
+    printSheets: eufy.sheets.length ? eufy.sheets : data.artifacts.printSheets,
+    banners: eufy.bannersIncluded ? [] : data.artifacts.banners,
   };
 
   try {
@@ -162,7 +173,7 @@ export async function fulfillCart(
     // One production email per design (founders only; combined customer email below).
     for (let i = 0; i < present.length; i++) {
       const { line, draft } = present[i];
-      const printSheets = await renderEufyPrintSheets(draft.design, draft.parts.designName ?? "");
+      const eufy = await renderEufyPrintSheets(draft.design, draft.artifacts.banners, draft.parts.designName ?? "");
       const input: ProductionOrderInput = {
         orderId: line.orderId,
         sessionId: session.id,
@@ -172,8 +183,8 @@ export async function fulfillCart(
         shippingLines: shipping,
         parts: draft.parts,
         proof: draft.artifacts.proof,
-        printSheets: printSheets.length ? printSheets : draft.artifacts.printSheets,
-        banners: draft.artifacts.banners,
+        printSheets: eufy.sheets.length ? eufy.sheets : draft.artifacts.printSheets,
+        banners: eufy.bannersIncluded ? [] : draft.artifacts.banners,
         quantity: line.quantity,
         cartContext: { index: i + 1, total: present.length, cartId },
       };

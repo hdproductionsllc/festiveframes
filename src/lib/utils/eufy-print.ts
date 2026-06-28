@@ -1,6 +1,7 @@
 import { useDesignStore } from "@/stores/design-store";
-import { jigPocketCenters, jigPocketCount, EUFY_JIG, type EufyJigConfig } from "@/config/eufy-jig";
-import { buildPrintQueue, setPngDpi, type EufyPrintResult } from "@/lib/utils/eufy-print-core";
+import { jigPocketCount, EUFY_JIG, type EufyJigConfig } from "@/config/eufy-jig";
+import { buildPrintQueue, planEufySheets, setPngDpi, type EufyPrintResult } from "@/lib/utils/eufy-print-core";
+import { composeBarImage } from "@/lib/utils/compose-frame";
 
 // ─── eufyMake E1 print-sheet renderer (BROWSER) ─────────────
 //
@@ -61,25 +62,34 @@ function canvasSupportsSize(w: number, h: number): boolean {
 }
 
 /**
- * Render the current design into eufyMake E1 print sheets. Tiles are batched by
- * SET + QUANTITY (pocket position carries no meaning — sort by hand after print),
- * filling pockets in reading order and paginating onto extra sheets past one jig.
+ * Render the current design into ONE consolidated eufyMake sheet: tiles on the
+ * jig pockets (batched by set+quantity — pocket position is meaningless, sort by
+ * hand) PLUS the design's banners in the bottom-right (see planEufySheets).
+ * Excess tiles paginate onto plain pocket-grid sheets after sheet 1.
  */
 export async function composeEufyPrintSheets(jig: EufyJigConfig = EUFY_JIG): Promise<EufyPrintResult> {
-  const empty: EufyPrintResult = { sheets: [], pocketsPerSheet: jigPocketCount(jig), printedTiles: 0, skippedBlankTiles: 0 };
+  const empty: EufyPrintResult = { sheets: [], pocketsPerSheet: jigPocketCount(jig), printedTiles: 0, skippedBlankTiles: 0, bannerCount: 0 };
   if (typeof document === "undefined") return empty;
 
   const { slots, textBars } = useDesignStore.getState();
   const { queue, skippedBlankTiles } = buildPrintQueue(slots, textBars);
-  if (queue.length === 0) return { ...empty, skippedBlankTiles };
 
-  // Preload each distinct artwork once (fills need no image).
+  // Render each banner to a font-perfect PNG (the same renderer the proof uses),
+  // in bar order, so the layout planner and the draw loop agree on banner index.
+  const bannerEntries: Array<{ widthUnits: number; img: HTMLImageElement | null }> = [];
+  for (const bar of textBars) {
+    const dataUrl = await composeBarImage(bar.id);
+    bannerEntries.push({ widthUnits: bar.widthUnits, img: dataUrl ? await loadImage(dataUrl) : null });
+  }
+
+  if (queue.length === 0 && bannerEntries.length === 0) return { ...empty, skippedBlankTiles };
+
+  const planned = planEufySheets(queue, bannerEntries.map((e) => e.widthUnits), jig);
+
+  // Preload each distinct tile artwork once (fills need no image).
   const loaded = new Map<string, HTMLImageElement | null>();
   const artUrls = [...new Set(queue.flatMap((q) => (q.kind === "art" ? [q.url] : [])))];
   await Promise.all(artUrls.map(async (u) => loaded.set(u, await loadImage(u))));
-
-  const centers = jigPocketCenters(jig);
-  const perSheet = centers.length;
 
   const W = Math.round(jig.sheetWidthInches * jig.dpi);
   const H = Math.round(jig.sheetHeightInches * jig.dpi);
@@ -88,39 +98,44 @@ export async function composeEufyPrintSheets(jig: EufyJigConfig = EUFY_JIG): Pro
   // print lower-res. The UI hides this button on mobile; the caller turns this
   // into a "use a desktop" message for the tablet case that slips through.
   if (!canvasSupportsSize(W, H)) throw new Error("DEVICE_TOO_SMALL");
-  const face = jig.tileFaceInches * jig.dpi;
 
   const sheets: string[] = [];
-  for (let start = 0; start < queue.length; start += perSheet) {
-    const chunk = queue.slice(start, start + perSheet);
+  for (const sheet of planned) {
     const canvas = document.createElement("canvas");
     canvas.width = W;
     canvas.height = H;
     const ctx = canvas.getContext("2d");
     if (!ctx) continue;
     // No background fill — transparency drives the white underbase.
-    chunk.forEach((item, i) => {
-      const { xIn, yIn } = centers[i];
-      const x = xIn * jig.dpi - face / 2;
-      const y = yIn * jig.dpi - face / 2;
-      // Clip to the pure square face so overflow can't bleed into a neighbouring
-      // pocket. No corner radius — the full square gets printed.
+    for (const t of sheet.tiles) {
+      // Clip to the pure square face so overflow can't bleed into a neighbour.
       ctx.save();
       ctx.beginPath();
-      ctx.rect(x, y, face, face);
+      ctx.rect(t.x, t.y, t.size, t.size);
       ctx.clip();
-      if (item.kind === "art") {
-        const img = loaded.get(item.url);
-        if (img) drawCover(ctx, img, x, y, face, face);
+      if (t.item.kind === "art") {
+        const img = loaded.get(t.item.url);
+        if (img) drawCover(ctx, img, t.x, t.y, t.size, t.size);
       } else {
         // Solid-color tile: opaque fill → printer lays a white underbase under it.
-        ctx.fillStyle = item.color;
-        ctx.fillRect(x, y, face, face);
+        ctx.fillStyle = t.item.color;
+        ctx.fillRect(t.x, t.y, t.size, t.size);
       }
       ctx.restore();
-    });
+    }
+    // Banners: composite the rendered PNG into its planned rect (bottom-right).
+    for (const b of sheet.banners) {
+      const img = bannerEntries[b.bannerIndex]?.img;
+      if (img) ctx.drawImage(img, b.x, b.y, b.w, b.h);
+    }
     sheets.push(setPngDpi(canvas.toDataURL("image/png"), jig.dpi));
   }
 
-  return { sheets, pocketsPerSheet: perSheet, printedTiles: queue.length, skippedBlankTiles };
+  return {
+    sheets,
+    pocketsPerSheet: jigPocketCount(jig),
+    printedTiles: queue.length,
+    skippedBlankTiles,
+    bannerCount: bannerEntries.filter((e) => e.img).length,
+  };
 }

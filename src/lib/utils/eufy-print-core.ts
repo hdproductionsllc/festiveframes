@@ -12,6 +12,7 @@
 
 import { getPiece } from "@/data/sets";
 import { coveredSlotIds } from "@/lib/utils/text-bar";
+import { jigPocketCenters, type EufyJigConfig } from "@/config/eufy-jig";
 import type { PlacedTile, TextBarPlacement } from "@/lib/types";
 
 /** One tile to print: either artwork, or a solid-color fill. */
@@ -25,6 +26,9 @@ export interface EufyPrintResult {
   printedTiles: number;
   /** Solid-color tiles with no artwork — physical blanks, not UV-printed. */
   skippedBlankTiles: number;
+  /** Banners composited onto the sheet(s). Lets the caller drop the now-redundant
+   *  separate banner attachments only when they all made it onto the sheet. */
+  bannerCount: number;
 }
 
 /**
@@ -79,6 +83,96 @@ export function buildPrintQueue(
     }
   }
   return { queue, skippedBlankTiles };
+}
+
+// ─── Consolidated sheet LAYOUT (tiles + banners on one sheet) ───────────────
+//
+// One design = one eufy sheet. Tiles fill the jig pockets in reading order;
+// banners ride the SAME sheet, all in the bottom-right corner, right edge flush
+// with the sheet's right edge. Multiple banners stack upward from the bottom with
+// the BIGGEST (widest) on the bottom; a banner's leftover length (it won't land
+// on the pocket pitch) is the gap to its LEFT. Tiles skip any pocket a banner
+// covers. This planner is the single source of truth for that geometry, shared
+// by the browser and server renderers so they can never drift; each renderer
+// just draws to these px coordinates with its own canvas + image loading.
+
+/** A tile placed on a specific sheet (px coords are the face's top-left). */
+export interface PlannedTile {
+  item: PrintItem;
+  /** top-left of the square face, px */
+  x: number;
+  y: number;
+  /** face side length, px */
+  size: number;
+}
+
+/** A banner placed on a sheet (px coords are the strip's top-left). */
+export interface PlannedBanner {
+  /** index into the caller's banner list (its image + identity). */
+  bannerIndex: number;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+export interface PlannedSheet {
+  tiles: PlannedTile[];
+  banners: PlannedBanner[];
+}
+
+/**
+ * Plan the consolidated sheet(s) for a design. `bannerWidthUnits[i]` is how many
+ * tile-units wide banner `i` is (its image is supplied by the caller in the same
+ * order). Banner height = banner unit = one tile face (square tiles), at the
+ * jig's scale. Banners live on sheet 1 only; excess tiles paginate onto plain
+ * pocket-grid sheets after it.
+ */
+export function planEufySheets(
+  queue: PrintItem[],
+  bannerWidthUnits: number[],
+  jig: EufyJigConfig,
+): PlannedSheet[] {
+  const dpi = jig.dpi;
+  const W = Math.round(jig.sheetWidthInches * dpi);
+  const H = Math.round(jig.sheetHeightInches * dpi);
+  const facePx = jig.tileFaceInches * dpi;
+  const centers = jigPocketCenters(jig).map((c) => ({ x: c.xIn * dpi, y: c.yIn * dpi }));
+
+  // Banners: biggest first → bottom, stacking upward. Right edge flush to W.
+  const banners: PlannedBanner[] = bannerWidthUnits
+    .map((w, i) => ({ i, w }))
+    .sort((a, b) => b.w - a.w)
+    .map((b, stackPos) => {
+      const w = b.w * facePx;
+      const h = facePx;
+      return { bannerIndex: b.i, x: Math.max(0, W - w), y: H - (stackPos + 1) * h, w, h };
+    });
+
+  // A pocket is usable for a tile only if its face rect clears every banner rect.
+  const clearsBanners = (cx: number, cy: number): boolean => {
+    const left = cx - facePx / 2, top = cy - facePx / 2, right = cx + facePx / 2, bottom = cy + facePx / 2;
+    return !banners.some((b) => !(right <= b.x || left >= b.x + b.w || bottom <= b.y || top >= b.y + b.h));
+  };
+  const sheet1Centers = centers.filter((c) => clearsBanners(c.x, c.y));
+
+  const sheets: PlannedSheet[] = [];
+  let qi = 0;
+  let sheetIdx = 0;
+  do {
+    const avail = sheetIdx === 0 ? sheet1Centers : centers;
+    const tiles: PlannedTile[] = [];
+    for (const c of avail) {
+      if (qi >= queue.length) break;
+      tiles.push({ item: queue[qi++], x: c.x - facePx / 2, y: c.y - facePx / 2, size: facePx });
+    }
+    sheets.push({ tiles, banners: sheetIdx === 0 ? banners : [] });
+    sheetIdx++;
+    // Guard: if sheet 1's pockets were entirely banner-covered yet tiles remain,
+    // the loop continues onto full pocket-grid sheets (centers is never empty).
+  } while (qi < queue.length);
+
+  return sheets;
 }
 
 // ─── PNG physical-resolution (pHYs) tagging ─────────────────
