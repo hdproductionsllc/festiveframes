@@ -1,6 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // @napi-rs/canvas is a native module (.node binaries) used by the server-side
+  // eufyMake print-sheet renderer at fulfillment. Keep it external so the bundler
+  // never tries to inline the native binary.
+  serverExternalPackages: ["@napi-rs/canvas"],
   images: {
     // WebP ONLY (no AVIF). AVIF gives slightly smaller files but its encoder is
     // MUCH slower/CPU-heavier; on our small host a fresh-deploy first load fires

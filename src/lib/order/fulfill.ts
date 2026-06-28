@@ -8,10 +8,32 @@
 import type Stripe from "stripe";
 
 import { getDraft, getCartDraft, markFulfilled, unmarkFulfilled, type OrderArtifacts } from "@/lib/order/store";
-import { sendProductionEmails, sendCartCustomerEmail, sendFulfillmentFailureAlert, type ProductionOrderInput } from "@/lib/email-production";
+import { sendProductionEmails, sendCartCustomerEmail, sendFulfillmentFailureAlert, type ProductionOrderInput, type NamedImage } from "@/lib/email-production";
+import { composeEufyPrintSheetsServer } from "@/lib/utils/eufy-print-server";
 import type { PartsList } from "@/lib/order/parts-list";
 
 export type FulfillResult = "sent" | "already" | "no-payload" | "failed";
+
+/**
+ * Render the eufyMake print sheet(s) server-side from the order's SAVED design
+ * JSON, named for the production email's attachments. NEVER throws — a render
+ * failure (bad design, art fetch error) returns [] so the paid order's emails
+ * still go out (the email then shows the "regenerate on desktop" fallback note).
+ */
+async function renderEufyPrintSheets(design: unknown, designName: string): Promise<NamedImage[]> {
+  try {
+    const { sheets } = await composeEufyPrintSheetsServer(design as Parameters<typeof composeEufyPrintSheetsServer>[0]);
+    if (sheets.length === 0) return [];
+    const slug = (designName || "frame").replace(/[^a-z0-9]+/gi, "-").toLowerCase() || "frame";
+    return sheets.map((dataUrl, i) => ({
+      name: `${slug}-eufy-3x12-sheet-${i + 1}-of-${sheets.length}`,
+      dataUrl,
+    }));
+  } catch (err) {
+    console.error("[fulfill] eufy print-sheet render failed:", err instanceof Error ? err.message : err);
+    return [];
+  }
+}
 
 /** Pull a flat list of shipping address lines off a retrieved session. */
 export function shippingLines(session: Stripe.Checkout.Session): string[] {
@@ -46,10 +68,11 @@ export async function fulfillOrder(
   session: Stripe.Checkout.Session,
   payload?: { parts: PartsList; artifacts: OrderArtifacts },
 ): Promise<FulfillResult> {
-  const data = payload ?? (await (async () => {
-    const d = await getDraft(orderId);
-    return d ? { parts: d.parts, artifacts: d.artifacts } : undefined;
-  })());
+  // Always load the draft — even when the trusted client payload is present — so
+  // we have the SAVED design JSON to render the eufy print sheet from (the client
+  // payload carries parts + artifacts, but not the design).
+  const draft = await getDraft(orderId);
+  const data = payload ?? (draft ? { parts: draft.parts, artifacts: draft.artifacts } : undefined);
 
   const customerEmail = session.customer_details?.email ?? null;
 
@@ -63,6 +86,10 @@ export async function fulfillOrder(
   // Claim fulfillment — only the first caller proceeds.
   if (!(await markFulfilled(orderId))) return "already";
 
+  // Auto-render the eufy print sheet from the saved design (falls back to any
+  // artifact sheets, then to none → the email shows the regenerate note).
+  const printSheets = await renderEufyPrintSheets(draft?.design, data.parts.designName ?? "");
+
   const input: ProductionOrderInput = {
     orderId,
     sessionId: session.id,
@@ -72,7 +99,7 @@ export async function fulfillOrder(
     shippingLines: shippingLines(session),
     parts: data.parts,
     proof: data.artifacts.proof,
-    printSheets: data.artifacts.printSheets,
+    printSheets: printSheets.length ? printSheets : data.artifacts.printSheets,
     banners: data.artifacts.banners,
   };
 
@@ -135,6 +162,7 @@ export async function fulfillCart(
     // One production email per design (founders only; combined customer email below).
     for (let i = 0; i < present.length; i++) {
       const { line, draft } = present[i];
+      const printSheets = await renderEufyPrintSheets(draft.design, draft.parts.designName ?? "");
       const input: ProductionOrderInput = {
         orderId: line.orderId,
         sessionId: session.id,
@@ -144,7 +172,7 @@ export async function fulfillCart(
         shippingLines: shipping,
         parts: draft.parts,
         proof: draft.artifacts.proof,
-        printSheets: draft.artifacts.printSheets,
+        printSheets: printSheets.length ? printSheets : draft.artifacts.printSheets,
         banners: draft.artifacts.banners,
         quantity: line.quantity,
         cartContext: { index: i + 1, total: present.length, cartId },

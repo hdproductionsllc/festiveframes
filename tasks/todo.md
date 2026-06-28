@@ -1,34 +1,45 @@
-# Cart system + kill undesigned checkout
+# Fix: Eufy print sheet never sent + mobile drag overshoot
 
-Plan: C:\Users\david\.claude\plans\majestic-petting-gray.md
+## Issue 2 — mobile drag overshoot (DONE)
+- [x] Root cause: palette tile was the only drag source missing `touch-action: none`
+      (frame, placed tiles, banner button all have it). Mobile browser ate the
+      first slice of the finger gesture as a scroll → drag + pointer-driven drop
+      shadow started offset → had to overshoot. Desktop (mouse) ignores
+      touch-action, so it was fine — matching the report.
+- [x] Fix in `src/hooks/useDragTile.ts`: always set `touchAction: "none"`.
+- [x] tsc clean.
 
-## Phase 0 — SHIP TODAY: every purchase goes through the designer ✅ DONE
-- [x] #1 TheKit.tsx: both CTAs now <Link href="/build">; honest $69 card copy ("Build one, then add a second in your cart — 2 for $69")
-- [x] #2 Deleted BuyButton.tsx (only TheKit used it)
-- [x] #3 /buy page: server redirect("/build") — legacy kit funnel retired
-- [x] #4 Hardened /api/checkout: legacy kit branch removed → 410 Gone; only kind:"custom-frame" lives
-- [x] #5 Designer path untouched (Order disabled until hasDesign; single-frame $39 works)
-- [x] npx next build exit 0 + npm run lint exit 0 (no new warnings)
+## Issue 1 — Eufy print sheet never attached (server-side auto-attach)
+Decision (Henry): auto-attach via server-side render. The PNG must arrive on the
+production email with zero clicks.
 
-## Phase 1 — Cart system ✅ BUILT (pending live Stripe test)
-- [x] offers.ts: priceForFramesCents(n) + bulkSavingsCents(n) + MAX_CART_FRAMES (pairs: floor(n/2)*6900 + (n%2)*3900)
-- [x] stores/cart-store.ts: zustand+persist (ff:cart), light line metadata, cartTotals helper
-- [x] Designer.tsx: extracted prepareDesignDraft(); proof modal CTA → "Add to cart →" → /cart; addToCart fails loud if draft save fails
-- [x] app/cart/page.tsx: lines + qty stepper (multiples of same design) + bulk total/savings + Design another / Checkout
-- [x] /api/checkout kind:"cart": validate each draft exists, re-derive pairs total, per-design line items + one-off Stripe coupon for savings + shipping; cartId in metadata; allow_promotion_codes only when no coupon ($0 testing)
-- [x] lib/order/store.ts: saveCartDraft/getCartDraft (order_carts table); draft TTL bumped 2h→24h
-- [x] fulfill.ts + email-production.ts: fulfillCart() — one production email per design (qty + cart note) + ONE combined customer email, idempotent (claim keyed by cartId)
-- [x] /api/order/fulfill + webhook + OrderFulfiller + thanks page: handle cart param; cart cleared on success
-- [x] tsc --noEmit exit 0; eslint exit 0 (warnings only); npx next build exit 0 (/cart static)
+Root cause: `printSheets` is hardcoded `[]` at checkout (Designer.tsx:281) for
+EVERYONE; fulfillment reads `artifacts.printSheets` (always empty) → email always
+says "NO print sheet." The design JSON IS saved in the DB draft, just never used.
 
-## Drag-and-drop banner preview ✅ FIXED (agent, browser-verified)
-- [x] ROOT CAUSE: FrameCanvas preview ghost spread barRect {x,y} raw into style — x/y aren't CSS box props, so ghost had no left/top and froze at top-left. (My pointer-collision fix was sound but not the cause.)
-- [x] Fix: map x→left, y→top like a real PlacedBar. Verified via headless browser repro: ghost lands under cursor on correct rail. build + lint clean.
+- [x] 1. Added `@napi-rs/canvas` + `serverExternalPackages` in next.config.ts.
+- [x] 2. Extracted `src/lib/utils/eufy-print-core.ts` (isWhiteSnappet,
+        buildPrintQueue, setPngDpi/crc32, shared types); client eufy-print.ts now
+        imports them — behavior unchanged.
+- [x] 3. Created `src/lib/utils/eufy-print-server.ts` —
+        `composeEufyPrintSheetsServer(design, jig)` (@napi-rs/canvas; artwork from
+        public/ on disk, remote via fetch, data: via base64).
+- [x] 4. Wired into fulfill.ts (fulfillOrder + fulfillCart) — renders from
+        `draft.design`, attaches sheets, wrapped so a render failure never blocks
+        the order. fulfillOrder now always loads the draft for its design JSON.
+- [x] 5. Updated stale "ordered on mobile" copy in email-production.ts.
+- [x] 6. Verified: tsc 0, eslint clean, `next build` 0. Runtime render test PASSED
+        — 3796×934 PNG @ 300 DPI (pHYs embedded), 4 printed tiles + 1 blank-white
+        skipped, real July4 artwork loaded from disk, registers to the jig grid.
 
-## SHIPPED 2026-06-26 (commit ce6352f → master → Railway auto-deploy; CI green)
+## RESULT: shipped-ready. Eufy sheet now auto-attaches to EVERY production email
+(mobile + desktop), completing the half-finished 2026-06-26 migration (commit
+0ef695f removed client render for speed but never built the fulfillment render).
 
-## Post-deploy verification (on www.festiveframes.co)
-- [ ] LIVE order test (use the 100%-off promo on a single frame for $0): cart → checkout → /thanks fires production + customer emails; webhook idempotent
-- [ ] Multi-frame: cart of 2 → $69, cart of 3 → $108; receipt shows each design + discount; founders get one production email PER design w/ make-qty; customer gets ONE combined confirmation
-- [ ] Drag a banner on the live site — ghost lands under cursor on correct rail
-- [ ] Confirm Railway env vars are live (STRIPE_SECRET_KEY live, STRIPE_WEBHOOK_SECRET for live endpoint, RESEND_API_KEY, EMAIL_FROM, PRODUCTION_EMAILS, ADMIN_ORDER_EMAIL, SITE_URL)
+## Notes / constraints
+- `PlacedTile = { pieceId, setId }` — no inline artwork; everything resolves via
+  `getPiece` (pure, server-safe). Custom uploads are a PLAN, not shipped.
+- Eufy sheet renders TILE artwork + solid fills only — NO text. Banners (text
+  bars) are separate files, still rendered client-side at checkout. No server fonts.
+- Use `EUFY_JIG_3X12` (production tray). 720 DPI. Transparent bg drives the
+  white underbase.

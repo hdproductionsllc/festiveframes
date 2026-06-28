@@ -131,7 +131,7 @@ const FOUNDERS_THANK_YOU = `
 function productionHtml(o: ProductionOrderInput, droppedNote?: string | null): string {
   const fileList = [
     o.proof ? "the full composite proof" : null,
-    o.printSheets.length ? `${o.printSheets.length} eufyMake print sheet(s)` : "⚠ NO print sheet (ordered on mobile — regenerate on desktop from /build)",
+    o.printSheets.length ? `${o.printSheets.length} eufyMake print sheet(s)` : "⚠ NO print sheet auto-generated — open this design in the builder on the eufy desktop and use the eufyMake print button to regenerate",
     o.banners.length ? `${o.banners.length} banner file(s)` : null,
     "the parts-list CSV",
   ].filter(Boolean).join(", ");
@@ -176,7 +176,7 @@ function productionHtml(o: ProductionOrderInput, droppedNote?: string | null): s
 function productionText(o: ProductionOrderInput, droppedNote?: string | null): string {
   const fileList = [
     o.proof ? "the full composite proof" : null,
-    o.printSheets.length ? `${o.printSheets.length} eufyMake print sheet(s)` : "NO print sheet (ordered on mobile — regenerate on desktop from /build)",
+    o.printSheets.length ? `${o.printSheets.length} eufyMake print sheet(s)` : "NO print sheet auto-generated — open this design in the builder on the eufy desktop and regenerate it",
     o.banners.length ? `${o.banners.length} banner file(s)` : null,
     "the parts-list CSV",
   ].filter(Boolean).join(", ");

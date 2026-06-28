@@ -80,6 +80,26 @@ blank, so it's **printed as a solid opaque fill** onto a white snappet (the prin
 white underbase). Earlier code skipped *all* no-artwork tiles — that silently dropped colored
 tiles from the sheet. `skippedBlankTiles` now means white-only.
 
+## Server-side AUTO-ATTACH at fulfillment (2026-06-28)
+The print sheet now generates **automatically on the server at fulfillment** and is
+**attached to the production email** — zero clicks, on both mobile and desktop orders.
+This closes a gap: commit `0ef695f` (2026-06-26) removed the client-side render from
+add-to-cart "to keep checkout snappy / regenerate at fulfillment" but the fulfillment
+render was never built, so from 2026-06-26 onward NO order shipped with a print sheet.
+
+- `@napi-rs/canvas` (prebuilt native canvas, no system deps; Railway linux-x64) +
+  `serverExternalPackages` in next.config.ts.
+- `src/lib/utils/eufy-print-core.ts` — pure shared logic (queue build, white-snappet
+  skip, pHYs DPI tag) so the browser + server renderers can never drift.
+- `src/lib/utils/eufy-print-server.ts` — `composeEufyPrintSheetsServer(design, jig)`;
+  artwork loads from `public/` on disk (local `/tiles/...`), HTTP (remote CDN), or
+  base64 (`data:`). Defaults to `EUFY_JIG_3X12`.
+- `src/lib/order/fulfill.ts` — renders from the SAVED `draft.design` for both single
+  orders and carts; wrapped so a render failure NEVER blocks the paid order (email
+  then shows the regenerate-on-desktop fallback note).
+- The desktop "eufyMake print sheet" button (ExportPartsList) still works for manual
+  regeneration — same shared core, identical output.
+
 ## Scope (v1 vs later)
 - v1: square tiles only -> jig sheets.
 - Later: text bars (1xN custom parts, longer than a pocket) get their own print layout;
