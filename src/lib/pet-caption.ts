@@ -39,13 +39,14 @@ const MODEL = "claude-haiku-4-5";
 const SYSTEM_PROMPT = `You write ONE short line for the back of a car — the funny "thought" a pet is having, printed on a license-plate frame wing right next to a CUT-OUT of that pet (the background is removed — only the pet is printed). The driver behind reads it at a glance while moving, so it MUST be short and punchy.
 
 STEP 1 — look ONLY at the pet: species, expression, attitude, anything distinctive about the animal itself.
-STEP 2 — write ONE line, first person as the pet, that lands as a bumper one-liner. Lean into riding in the car / the road / the human's driving when it fits the pet's vibe — but a great pure pet-attitude line is also fine.
+STEP 2 — write ONE line, first person as the pet, that lands as a bumper one-liner. PRIORITIZE a driving / car / road / traffic / shotgun-seat / "are we there yet" angle — this is printed on a LICENSE PLATE FRAME, so a driving theme fits the context best and is the default. Only fall back to a pure pet-attitude line if nothing driving-related suits this particular pet.
 
 Return ONLY a JSON object: {"line": "..."}
 
 RULES:
 - ONE line. 2–5 words ideal. Hard max ~30 characters — shorter is funnier AND more readable from a car.
 - First person, as the pet.
+- DRIVING/CAR/ROAD context is the PREFERRED angle (it's a license-plate frame) — make most lines about riding along, the road, traffic, the human's driving, or calling shotgun. Pure pet-attitude is the fallback, not the default.
 - IGNORE the background/setting completely. The final art is a cut-out of ONLY the pet — there is no grass, yard, couch, floor, room, or any scenery. NEVER reference a location, surroundings, or any object the pet is near. Base the line ONLY on the pet itself (look, breed, expression, attitude) and the car/road/driving context.
 - Deadpan. No exclamation marks unless it truly earns one.
 - ALL CAPS is fine (it's bumper text) but not required.
@@ -80,31 +81,31 @@ const FALLBACK_LINES: Record<CaptionVoice, string[]> = {
     "SLOW DOWN, HUMAN",
     "BACKSEAT DRIVER",
     "JUDGING YOUR PARKING",
-    "WINDOWS DOWN ALWAYS",
-    "I PICKED THIS SEAT",
+    "WINDOWS DOWN, PLEASE",
     "HONK IF YOU AGREE",
+    "DRIVE, HUMAN",
   ],
   sassy: [
     "I DON'T DO TRAFFIC",
     "MY CAR NOW",
     "UGH, RED LIGHTS",
-    "STILL JUDGING YOU",
     "NOT MY DRIVING",
     "VALET, PLEASE",
+    "PARK BETTER",
   ],
   dramatic: [
     "BORN TO RIDE",
     "THE OPEN ROAD CALLS",
-    "A HERO RIDES ALONG",
-    "DESTINY HAS A LEASH",
     "LEGENDS RIDE SHOTGUN",
+    "DESTINY: SHOTGUN",
+    "TO THE HORIZON",
   ],
   genz: [
     "IT'S GIVING ROAD TRIP",
-    "MAIN CHARACTER, OBVI",
     "LOWKEY THE DRIVER",
     "NO CAP, BEST SEAT",
     "THE AUDACITY: RED LIGHT",
+    "MAIN CHARACTER, SHOTGUN",
   ],
 };
 
