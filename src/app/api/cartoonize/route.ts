@@ -91,7 +91,7 @@ export async function POST(request: Request): Promise<NextResponse> {
               ],
             },
           ],
-          generationConfig: { responseModalities: ["IMAGE"] },
+          generationConfig: { responseModalities: ["TEXT", "IMAGE"] },
         }),
       },
     );
@@ -99,13 +99,21 @@ export async function POST(request: Request): Promise<NextResponse> {
     if (!res.ok) {
       const detail = await res.text().catch(() => "");
       console.error("[cartoonize] Gemini error", res.status, detail.slice(0, 400));
-      return NextResponse.json({ error: "Cartoonizer failed. Please try again." }, { status: 502 });
+      // Lab diagnostic: surface the upstream reason so we can see it in the UI.
+      let msg = `Gemini ${res.status}`;
+      try {
+        const j = JSON.parse(detail) as { error?: { message?: string } };
+        if (j.error?.message) msg += `: ${j.error.message}`;
+      } catch {
+        if (detail) msg += `: ${detail.slice(0, 160)}`;
+      }
+      return NextResponse.json({ error: msg }, { status: 502 });
     }
 
     // Find the image part. REST responses may be camelCase (inlineData/mimeType)
     // or snake_case (inline_data/mime_type) — handle both.
     const json = (await res.json()) as {
-      candidates?: { content?: { parts?: Record<string, unknown>[] } }[];
+      candidates?: { content?: { parts?: Record<string, unknown>[] }; finishReason?: string }[];
     };
     const parts = json.candidates?.[0]?.content?.parts ?? [];
     let outB64: string | undefined;
@@ -119,8 +127,15 @@ export async function POST(request: Request): Promise<NextResponse> {
       }
     }
     if (!outB64) {
-      console.error("[cartoonize] Gemini returned no image part");
-      return NextResponse.json({ error: "Cartoonizer returned no image. Try another photo." }, { status: 502 });
+      // Capture any text the model returned instead of an image (e.g. a refusal).
+      let why = "";
+      for (const p of parts) if (typeof p.text === "string") why += p.text;
+      const finish = json.candidates?.[0]?.finishReason;
+      console.error("[cartoonize] Gemini returned no image part", finish, why.slice(0, 200));
+      return NextResponse.json(
+        { error: `No image returned${finish ? ` (${finish})` : ""}${why ? `: ${why.slice(0, 160)}` : ""}` },
+        { status: 502 },
+      );
     }
 
     const generated = `data:${outMime};base64,${outB64}`;
