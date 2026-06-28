@@ -135,18 +135,27 @@ export function planEufySheets(
 ): PlannedSheet[] {
   const dpi = jig.dpi;
   const W = Math.round(jig.sheetWidthInches * dpi);
-  const H = Math.round(jig.sheetHeightInches * dpi);
   const facePx = jig.tileFaceInches * dpi;
   const centers = jigPocketCenters(jig).map((c) => ({ x: c.xIn * dpi, y: c.yIn * dpi }));
 
-  // Banners: biggest first → bottom, stacking upward. Right edge flush to W.
+  // Banners: biggest first → bottom row, stacking upward onto the rows ABOVE.
+  // Each banner is centered on a pocket ROW center (bottom row, then middle, then
+  // top), so it sits FLUSH with the tiles in that row — same inter-row gap, not
+  // banners jammed edge-to-edge. Right edge flush to the sheet's right edge.
+  const rowCentersDescPx = [...jig.rowCentersInches].sort((a, z) => z - a).map((r) => r * dpi); // bottom → top
   const banners: PlannedBanner[] = bannerWidthUnits
     .map((w, i) => ({ i, w }))
     .sort((a, b) => b.w - a.w)
     .map((b, stackPos) => {
       const w = b.w * facePx;
       const h = facePx;
-      return { bannerIndex: b.i, x: Math.max(0, W - w), y: H - (stackPos + 1) * h, w, h };
+      // On a row center while rows remain; beyond that (rare >3 banners) keep
+      // stacking flush above the top row so nothing is lost.
+      const yCenter =
+        stackPos < rowCentersDescPx.length
+          ? rowCentersDescPx[stackPos]
+          : rowCentersDescPx[rowCentersDescPx.length - 1] - (stackPos - rowCentersDescPx.length + 1) * h;
+      return { bannerIndex: b.i, x: Math.max(0, W - w), y: yCenter - h / 2, w, h };
     });
 
   // A pocket is usable for a tile only if its face rect clears every banner rect.
