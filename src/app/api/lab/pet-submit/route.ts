@@ -11,8 +11,10 @@ import { Resend } from "resend";
 export const runtime = "nodejs";
 
 interface PetOrder {
-  mode: "one" | "two";
+  mode: "one" | "two" | "thought";
   pets: { name: string; image: string }[]; // image = cartoon data URL
+  caption?: string; // thought-mode: the "what my pet thinks" bumper line
+  voice?: string; // thought-mode: which voice produced it
 }
 
 function toAttachment(dataUrl: string, filename: string) {
@@ -48,12 +50,15 @@ export async function POST(request: Request): Promise<NextResponse> {
     .filter(Boolean) as { filename: string; content: string; contentType: string }[];
 
   const names = body.pets.map((p) => p.name || "(unnamed)").join(", ");
+  const thought = body.mode === "thought" && body.caption
+    ? `\nThought line: "${body.caption}"${body.voice ? ` (voice: ${body.voice})` : ""}`
+    : "";
   try {
     await new Resend(apiKey).emails.send({
       from,
       to,
-      subject: `LAB — Pet frame order (${body.mode}-pet): ${names}`,
-      text: `Prototype pet-frame order.\nLayout: ${body.mode}-pet\nPets: ${names}\nCartoon art attached (one PNG per pet).`,
+      subject: `LAB — Pet frame order (${body.mode}): ${names}`,
+      text: `Prototype pet-frame order.\nLayout: ${body.mode}\nPets: ${names}${thought}\nCartoon art attached (one PNG per pet).`,
       attachments,
     });
     return NextResponse.json({ ok: true, emailed: true }, { status: 200 });
