@@ -58,7 +58,7 @@ export function PetBuilder() {
         setSlot(side, {
           ...base,
           status: "error",
-          error: data.needsKey ? "Cartoonizer needs IDEOGRAM_API_KEY set on the server." : data.error || "Couldn't cartoonize. Try another photo.",
+          error: data.needsKey ? "Cartoonizer not configured yet — set GEMINI_API_KEY on the server." : data.error || "Couldn't cartoonize. Try another photo.",
         });
       }
     } catch {
