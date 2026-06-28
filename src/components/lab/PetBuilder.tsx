@@ -62,7 +62,9 @@ export function PetBuilder() {
   const getSlot = (side: "left" | "right") => (side === "left" ? left : right);
 
   async function regenCaption(v?: CaptionVoice) {
-    const photo = left.original;
+    // Caption from the CARTOON cut-out (no background) so the line never
+    // references scenery the print removed; fall back to the photo if needed.
+    const photo = left.cartoon || left.original;
     if (!photo) return;
     const useVoice = v ?? voice;
     setCaptionStatus("loading");

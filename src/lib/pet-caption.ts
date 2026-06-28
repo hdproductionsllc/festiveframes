@@ -36,9 +36,9 @@ const MAX_LINE = 34;
 // (User-named model, mirroring the working Pet Subtitles app.)
 const MODEL = "claude-haiku-4-5";
 
-const SYSTEM_PROMPT = `You write ONE short line for the back of a car — the funny "thought" a pet is having, printed on a license-plate frame wing right next to a cartoon of that pet. The driver behind reads it at a glance while moving, so it MUST be short and punchy.
+const SYSTEM_PROMPT = `You write ONE short line for the back of a car — the funny "thought" a pet is having, printed on a license-plate frame wing right next to a CUT-OUT of that pet (the background is removed — only the pet is printed). The driver behind reads it at a glance while moving, so it MUST be short and punchy.
 
-STEP 1 — look at the photo: what species, what expression, what attitude?
+STEP 1 — look ONLY at the pet: species, expression, attitude, anything distinctive about the animal itself.
 STEP 2 — write ONE line, first person as the pet, that lands as a bumper one-liner. Lean into riding in the car / the road / the human's driving when it fits the pet's vibe — but a great pure pet-attitude line is also fine.
 
 Return ONLY a JSON object: {"line": "..."}
@@ -46,6 +46,7 @@ Return ONLY a JSON object: {"line": "..."}
 RULES:
 - ONE line. 2–5 words ideal. Hard max ~30 characters — shorter is funnier AND more readable from a car.
 - First person, as the pet.
+- IGNORE the background/setting completely. The final art is a cut-out of ONLY the pet — there is no grass, yard, couch, floor, room, or any scenery. NEVER reference a location, surroundings, or any object the pet is near. Base the line ONLY on the pet itself (look, breed, expression, attitude) and the car/road/driving context.
 - Deadpan. No exclamation marks unless it truly earns one.
 - ALL CAPS is fine (it's bumper text) but not required.
 - No emojis, no hashtags, no surrounding quotes, no trailing period.
