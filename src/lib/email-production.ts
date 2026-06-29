@@ -404,28 +404,34 @@ function framesLabel(n: number): string {
 function cartCustomerHtml(o: CartCustomerInput): string {
   const first = o.customerName ? `, ${esc(o.customerName.split(" ")[0])}` : "";
   const totalFrames = o.designs.reduce((s, d) => s + d.quantity, 0);
+  // Natural lead-in: avoid the awkward "Here are the 1 frame" when it's a single
+  // frame; only number it when there's more than one.
+  const lead =
+    totalFrames === 1
+      ? "Here's the frame you designed:"
+      : `Here are the ${totalFrames} frames you designed:`;
+  // Show each proof large and centered (matching the single-frame email) — the
+  // proof is the thing the buyer is excited to see, not a cramped thumbnail.
   const rows = o.designs
     .map((d, i) => {
       const img = d.proof
-        ? `<img src="cid:proof-${i}" alt="Proof of ${esc(d.designName)}" style="width:120px;max-width:40%;border:3px solid ${INK};border-radius:10px;box-shadow:${SHADOW};"/>`
+        ? `<div style="text-align:center;margin:0 0 10px;"><img src="cid:proof-${i}" alt="Proof of ${esc(d.designName)}" style="width:100%;max-width:360px;border:3px solid ${INK};border-radius:12px;box-shadow:${SHADOW};"/></div>`
         : "";
+      const divider = i < o.designs.length - 1 ? `border-bottom:2px solid ${INK};` : "";
       return `
-      <tr>
-        <td style="padding:8px 0;border-bottom:2px solid ${INK};vertical-align:middle;">${img}</td>
-        <td style="padding:8px 0 8px 12px;border-bottom:2px solid ${INK};color:${INK};font-size:14px;vertical-align:middle;">
-          <strong>${esc(d.designName || "Custom frame")}</strong><br/>Make &times;${d.quantity}
-        </td>
-      </tr>`;
+      <div style="margin:0 0 16px;padding:0 0 16px;${divider}">
+        ${img}
+        <p style="margin:0;color:${INK};font-size:15px;text-align:center;"><strong>${esc(d.designName || "Custom frame")}</strong> &middot; Make &times;${d.quantity}</p>
+      </div>`;
     })
     .join("");
   return shell(
     `You're in${first}! 🎆`,
     `
-    <p style="margin:0 0 12px;color:${INK};font-size:14px;line-height:1.6;">
-      Thanks for your order — it's confirmed and headed into production. Here are the
-      ${esc(framesLabel(totalFrames))} you designed:
+    <p style="margin:0 0 16px;color:${INK};font-size:14px;line-height:1.6;">
+      Thanks for your order — it's confirmed and headed into production. ${lead}
     </p>
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">${rows}</table>
+    ${rows}
     <p style="margin:14px 0 4px;padding-left:12px;border-left:5px solid ${BLUE};color:${INK};font-size:14px;"><strong>Order:</strong> ${esc(o.cartId)} · <strong>Total:</strong> ${usd(o.amountTotalCents)}</p>
     <div style="margin:16px 0 0;padding:14px 16px;background:${PAGE};border:3px solid ${INK};border-radius:14px;box-shadow:${SHADOW};">${shippingBlock(o.shippingLines)}</div>
     ${FOUNDERS_THANK_YOU}`,
