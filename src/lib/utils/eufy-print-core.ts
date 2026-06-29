@@ -95,6 +95,14 @@ export function buildPrintQueue(
 // covers. This planner is the single source of truth for that geometry, shared
 // by the browser and server renderers so they can never drift; each renderer
 // just draws to these px coordinates with its own canvas + image loading.
+//
+// WIDE-BANNER RULE: a banner WIDER than FULL_ROW_BANNER_UNITS tiles takes its
+// pocket row to ITSELF — no tiles share that row, even in the gap to its left.
+// (A narrow banner still shares its row, with tiles filling the leftover pockets.)
+
+/** A banner WIDER than this many tile-units takes its whole pocket row (no tiles
+ *  beside it). At/under it, the banner shares its row and tiles fill the leftover. */
+export const FULL_ROW_BANNER_UNITS = 6;
 
 /** A tile placed on a specific sheet (px coords are the face's top-left). */
 export interface PlannedTile {
@@ -143,23 +151,33 @@ export function planEufySheets(
   // top), so it sits FLUSH with the tiles in that row — same inter-row gap, not
   // banners jammed edge-to-edge. Right edge flush to the sheet's right edge.
   const rowCentersDescPx = [...jig.rowCentersInches].sort((a, z) => z - a).map((r) => r * dpi); // bottom → top
-  const banners: PlannedBanner[] = bannerWidthUnits
+  const placed = bannerWidthUnits
     .map((w, i) => ({ i, w }))
     .sort((a, b) => b.w - a.w)
     .map((b, stackPos) => {
       const w = b.w * facePx;
       const h = facePx;
-      // On a row center while rows remain; beyond that (rare >3 banners) keep
-      // stacking flush above the top row so nothing is lost.
-      const yCenter =
-        stackPos < rowCentersDescPx.length
-          ? rowCentersDescPx[stackPos]
-          : rowCentersDescPx[rowCentersDescPx.length - 1] - (stackPos - rowCentersDescPx.length + 1) * h;
-      return { bannerIndex: b.i, x: Math.max(0, W - w), y: yCenter - h / 2, w, h };
+      // On a row center while rows remain; beyond that (more banners than rows)
+      // keep stacking flush above the top row so nothing is lost.
+      const onRow = stackPos < rowCentersDescPx.length;
+      const yCenter = onRow
+        ? rowCentersDescPx[stackPos]
+        : rowCentersDescPx[rowCentersDescPx.length - 1] - (stackPos - rowCentersDescPx.length + 1) * h;
+      return {
+        banner: { bannerIndex: b.i, x: Math.max(0, W - w), y: yCenter - h / 2, w, h } as PlannedBanner,
+        // A banner wider than the threshold reserves its WHOLE pocket row (no
+        // tiles beside it) — but only when it actually sits on a row.
+        exclusiveRowY: onRow && b.w > FULL_ROW_BANNER_UNITS ? yCenter : null,
+      };
     });
+  const banners: PlannedBanner[] = placed.map((p) => p.banner);
+  const exclusiveRowYs = placed.map((p) => p.exclusiveRowY).filter((y): y is number => y !== null);
 
-  // A pocket is usable for a tile only if its face rect clears every banner rect.
+  // A pocket is usable for a tile only if it clears every banner rect AND isn't in
+  // a row a wide banner has claimed for itself (a pocket belongs to a row when its
+  // center is within half a face of that row's center — rows are a full pitch apart).
   const clearsBanners = (cx: number, cy: number): boolean => {
+    if (exclusiveRowYs.some((ry) => Math.abs(cy - ry) <= facePx / 2)) return false;
     const left = cx - facePx / 2, top = cy - facePx / 2, right = cx + facePx / 2, bottom = cy + facePx / 2;
     return !banners.some((b) => !(right <= b.x || left >= b.x + b.w || bottom <= b.y || top >= b.y + b.h));
   };

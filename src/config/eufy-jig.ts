@@ -49,18 +49,20 @@ export const EUFY_JIG: EufyJigConfig = {
 // ─── 3×12 jig (Bill's Snappet UV Printer Organizer Tray, 2026-06-20) ─────────
 //
 // Bill rebuilt the tray as a 3 x 12 set to fill more of the printer bed per pass
-// and tightened the snappet pockets. His specs (email 2026-06-20):
-//   • pocket pitch  1.06" center-to-center (both axes)
+// and tightened the snappet pockets. Current spec (pitch + face bumped 2026-06-29):
+//   • pocket pitch  1.1" center-to-center (both axes)
 //   • pocket face   0.992" square (the physical tile top)
-//   • PRINT image   1.02" square — intentionally larger than the pocket so a little
-//     overspray hides the unprinted snappet edge. 1.02" < 1.06" pitch, so the
+//   • PRINT image   1.03" square — intentionally larger than the pocket so a little
+//     overspray hides the unprinted snappet edge. 1.03" < 1.1" pitch, so the
 //     renderer's per-pocket clip still keeps art out of the neighbouring pocket.
+// (Bill's original 2026-06-20 tray measured 1.06" pitch / 1.02" face.)
 //
-// The sheet equals the TRAY FOOTPRINT (pocket-face margins, like the 3x9), so it
-// imports corner-to-corner and every pocket registers. A consequence: the outer
-// edge of the edge tiles' 1.02" overspray runs ~0.014" past the sheet and is
-// clipped at the canvas boundary — intended (don't overspray off the tray onto
-// the bed; enlarging the sheet would mis-register all 36 pockets instead).
+// The sheet equals the TRAY FOOTPRINT (half-pocket margins, like the 3x9), so it
+// imports corner-to-corner and every pocket registers. The edge margin is set by
+// the pocket face (0.992"/2 = 0.496"), NOT the pitch — so the outer tiles' 1.03"
+// print face (half-face 0.515") still runs ~0.019" past the sheet and is clipped
+// at the canvas boundary — intended (don't overspray off the tray onto the bed;
+// enlarging the sheet would mis-register all 36 pockets instead).
 //
 // The tray file (`LPF FF Snappet UV Printer Organizer Tray 062026.AI`) is a
 // page-fit bitmap, not a real-scale vector, so it can't be measured for true
@@ -101,12 +103,27 @@ export function makeGridJig(opts: {
   };
 }
 
-/** Bill's 3×12 tray: 36 pockets, 1.06" pitch, 1.02" print face → 12.652" × 3.112". */
+/** Bill's 3×12 tray: 36 pockets, 1.1" pitch, 1.03" print face → 13.092" × 3.192". */
 export const EUFY_JIG_3X12: EufyJigConfig = makeGridJig({
   rows: 3,
   cols: 12,
-  pitchInches: 1.06,
-  faceInches: 1.02,
+  pitchInches: 1.1,
+  faceInches: 1.03,
+  pocketFaceInches: 0.992,
+  dpi: 300,
+});
+
+/**
+ * 7×12 tray: 84 pockets — the 3×12 scaled to 7 rows to fill more of the printer
+ * bed per pass. Identical geometry to EUFY_JIG_3X12 (1.1" pitch, 1.03" print
+ * face, 0.992" pocket), just more rows → 13.092" × 7.592". Defined and ready;
+ * production still defaults to the 3×12 until the everyday tray is the 7×12.
+ */
+export const EUFY_JIG_7X12: EufyJigConfig = makeGridJig({
+  rows: 7,
+  cols: 12,
+  pitchInches: 1.1,
+  faceInches: 1.03,
   pocketFaceInches: 0.992,
   dpi: 300,
 });
@@ -114,6 +131,22 @@ export const EUFY_JIG_3X12: EufyJigConfig = makeGridJig({
 /** Total tile pockets on one jig sheet (reading order: row-major, top row first). */
 export function jigPocketCount(jig: EufyJigConfig = EUFY_JIG): number {
   return jig.colCentersInches.length * jig.rowCentersInches.length;
+}
+
+/**
+ * A filename-safe tag describing a jig's grid + key geometry, e.g.
+ * "3x12-1.1in-pitch-1.03in-face". DERIVED FROM THE JIG ITSELF — so a print
+ * sheet's filename always reflects the exact geometry it was rendered at, and
+ * updates automatically when the pitch/face change. Lets the operator confirm
+ * at a glance that a file came from the current tray spec.
+ */
+export function jigGeometryTag(jig: EufyJigConfig): string {
+  const cols = jig.colCentersInches.length;
+  const rows = jig.rowCentersInches.length;
+  const round = (n: number) => Math.round(n * 1e3) / 1e3;
+  // Pitch = spacing between adjacent column centers (square grids match rows).
+  const pitch = cols > 1 ? round(jig.colCentersInches[1] - jig.colCentersInches[0]) : 0;
+  return `${rows}x${cols}-${pitch}in-pitch-${round(jig.tileFaceInches)}in-face`;
 }
 
 /** Pocket centers in reading order, as inches from the sheet's top-left. */

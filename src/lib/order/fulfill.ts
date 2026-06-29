@@ -10,6 +10,7 @@ import type Stripe from "stripe";
 import { getDraft, getCartDraft, markFulfilled, unmarkFulfilled, type OrderArtifacts } from "@/lib/order/store";
 import { sendProductionEmails, sendCartCustomerEmail, sendFulfillmentFailureAlert, type ProductionOrderInput, type NamedImage } from "@/lib/email-production";
 import { composeEufyPrintSheetsServer } from "@/lib/utils/eufy-print-server";
+import { EUFY_JIG_3X12, jigGeometryTag } from "@/config/eufy-jig";
 import type { PartsList } from "@/lib/order/parts-list";
 
 export type FulfillResult = "sent" | "already" | "no-payload" | "failed";
@@ -31,11 +32,15 @@ async function renderEufyPrintSheets(
   designName: string,
 ): Promise<{ sheets: NamedImage[]; bannersIncluded: boolean }> {
   try {
-    const res = await composeEufyPrintSheetsServer(design as Parameters<typeof composeEufyPrintSheetsServer>[0], banners);
+    // The jig used to render AND to tag the filename — one source, so the name
+    // always reflects the geometry the sheet was actually printed at.
+    const jig = EUFY_JIG_3X12;
+    const res = await composeEufyPrintSheetsServer(design as Parameters<typeof composeEufyPrintSheetsServer>[0], banners, jig);
     if (res.sheets.length === 0) return { sheets: [], bannersIncluded: false };
     const slug = (designName || "frame").replace(/[^a-z0-9]+/gi, "-").toLowerCase() || "frame";
+    const geo = jigGeometryTag(jig); // e.g. "3x12-1.1in-pitch-1.03in-face"
     const sheets = res.sheets.map((dataUrl, i) => ({
-      name: `${slug}-eufy-3x12-sheet-${i + 1}-of-${res.sheets.length}`,
+      name: `${slug}-eufy-${geo}-sheet-${i + 1}-of-${res.sheets.length}`,
       dataUrl,
     }));
     return { sheets, bannersIncluded: res.bannerCount === banners.length };
