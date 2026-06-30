@@ -8,7 +8,6 @@ import {
   TouchSensor,
   useSensor,
   useSensors,
-  closestCenter,
   MeasuringStrategy,
   type CollisionDetection,
   type DragStartEvent,
@@ -73,7 +72,14 @@ const pointToRectDistanceSq = (
 
 const collisionStrategy: CollisionDetection = (args) => {
   const pointer = args.pointerCoordinates;
-  if (!pointer) return closestCenter(args); // keyboard drag: no pointer
+  // No pointer yet → no target. This only happens on the first collision frame at
+  // drag-start (pointerCoordinates is briefly null before the first move). There is
+  // no KeyboardSensor registered, so a real keyboard drag never reaches here. A
+  // `closestCenter` fallback would resolve to whichever cell is nearest the dragged
+  // SOURCE element (a palette/panel button below-right of the frame) and flash the
+  // drop cue into the top-right corner for one frame — the "shadow jumps to the
+  // corner on pickup" bug. Returning [] keeps the cue hidden until the pointer is known.
+  if (!pointer) return [];
 
   // The cell whose RECTANGLE is nearest the pointer (0 when the pointer is inside
   // it). A pointer inside a cell yields distance 0, so a cell that contains the

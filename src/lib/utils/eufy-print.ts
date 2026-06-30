@@ -62,13 +62,14 @@ function canvasSupportsSize(w: number, h: number): boolean {
 }
 
 /**
- * Render the current design into ONE consolidated eufyMake sheet: tiles on the
- * jig pockets (batched by set+quantity — pocket position is meaningless, sort by
- * hand) PLUS the design's banners in the bottom-right (see planEufySheets).
- * Excess tiles paginate onto plain pocket-grid sheets after sheet 1.
+ * Render the current design into eufyMake sheets, split into TWO independent print
+ * runs: `tileSheets` (each placed tile's artwork on the jig pockets, batched by
+ * set+quantity — pocket position is meaningless, sort by hand) and `bannerSheets`
+ * (the design's banners on their own load, bottom-right; see planEufySheets).
+ * Tiles paginate across full pocket sheets; banners never share a tile sheet.
  */
 export async function composeEufyPrintSheets(jig: EufyJigConfig = EUFY_JIG): Promise<EufyPrintResult> {
-  const empty: EufyPrintResult = { sheets: [], pocketsPerSheet: jigPocketCount(jig), printedTiles: 0, skippedBlankTiles: 0, bannerCount: 0 };
+  const empty: EufyPrintResult = { tileSheets: [], bannerSheets: [], pocketsPerSheet: jigPocketCount(jig), printedTiles: 0, skippedBlankTiles: 0, bannerCount: 0 };
   if (typeof document === "undefined") return empty;
 
   const { slots, textBars } = useDesignStore.getState();
@@ -99,40 +100,46 @@ export async function composeEufyPrintSheets(jig: EufyJigConfig = EUFY_JIG): Pro
   // into a "use a desktop" message for the tablet case that slips through.
   if (!canvasSupportsSize(W, H)) throw new Error("DEVICE_TOO_SMALL");
 
-  const sheets: string[] = [];
-  for (const sheet of planned) {
-    const canvas = document.createElement("canvas");
-    canvas.width = W;
-    canvas.height = H;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) continue;
-    // No background fill — transparency drives the white underbase.
-    for (const t of sheet.tiles) {
-      // Clip to the pure square face so overflow can't bleed into a neighbour.
-      ctx.save();
-      ctx.beginPath();
-      ctx.rect(t.x, t.y, t.size, t.size);
-      ctx.clip();
-      if (t.item.kind === "art") {
-        const img = loaded.get(t.item.url);
-        if (img) drawCover(ctx, img, t.x, t.y, t.size, t.size);
-      } else {
-        // Solid-color tile: opaque fill → printer lays a white underbase under it.
-        ctx.fillStyle = t.item.color;
-        ctx.fillRect(t.x, t.y, t.size, t.size);
+  // One draw routine, run over both the tile run and the banner run so they can
+  // never drift. Tile sheets carry no banners and vice-versa (see planEufySheets).
+  const renderSheets = (sheetsToDraw: typeof planned.tileSheets): string[] => {
+    const out: string[] = [];
+    for (const sheet of sheetsToDraw) {
+      const canvas = document.createElement("canvas");
+      canvas.width = W;
+      canvas.height = H;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) continue;
+      // No background fill — transparency drives the white underbase.
+      for (const t of sheet.tiles) {
+        // Clip to the pure square face so overflow can't bleed into a neighbour.
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(t.x, t.y, t.size, t.size);
+        ctx.clip();
+        if (t.item.kind === "art") {
+          const img = loaded.get(t.item.url);
+          if (img) drawCover(ctx, img, t.x, t.y, t.size, t.size);
+        } else {
+          // Solid-color tile: opaque fill → printer lays a white underbase under it.
+          ctx.fillStyle = t.item.color;
+          ctx.fillRect(t.x, t.y, t.size, t.size);
+        }
+        ctx.restore();
       }
-      ctx.restore();
+      // Banners: composite the rendered PNG into its planned rect (bottom-right).
+      for (const b of sheet.banners) {
+        const img = bannerEntries[b.bannerIndex]?.img;
+        if (img) ctx.drawImage(img, b.x, b.y, b.w, b.h);
+      }
+      out.push(setPngDpi(canvas.toDataURL("image/png"), jig.dpi));
     }
-    // Banners: composite the rendered PNG into its planned rect (bottom-right).
-    for (const b of sheet.banners) {
-      const img = bannerEntries[b.bannerIndex]?.img;
-      if (img) ctx.drawImage(img, b.x, b.y, b.w, b.h);
-    }
-    sheets.push(setPngDpi(canvas.toDataURL("image/png"), jig.dpi));
-  }
+    return out;
+  };
 
   return {
-    sheets,
+    tileSheets: renderSheets(planned.tileSheets),
+    bannerSheets: renderSheets(planned.bannerSheets),
     pocketsPerSheet: jigPocketCount(jig),
     printedTiles: queue.length,
     skippedBlankTiles,

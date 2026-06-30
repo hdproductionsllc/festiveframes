@@ -2,14 +2,15 @@
 //
 // The auto-attach path: at fulfillment we render the eufyMake print sheet(s)
 // server-side from the order's SAVED design JSON and attach the PNG(s) to the
-// production email — so Bill gets ONE print-ready file (tiles + banners) with
-// zero clicks, on both mobile and desktop orders.
+// production email — so Bill gets print-ready files with zero clicks, on both
+// mobile and desktop orders.
 //
-// CONSOLIDATED sheet: tiles laid on the jig pockets PLUS the design's banners in
-// the bottom-right corner (see planEufySheets in eufy-print-core.ts for the
-// geometry). Banner artwork is the SAME font-perfect PNG the customer saw —
-// rendered client-side at checkout and stored in the order draft — so we just
-// composite it here (no need to vendor the ~25 banner fonts server-side).
+// TWO SEPARATE RUNS: tiles laid on the jig pockets on their own sheet(s), and the
+// design's banners on their OWN sheet(s) — a different jig load, same geometry
+// (see planEufySheets in eufy-print-core.ts). Banner artwork is the SAME
+// font-perfect PNG the customer saw — rendered client-side at checkout and stored
+// in the order draft — so we just composite it here (no need to vendor the ~25
+// banner fonts server-side).
 //
 // Mirrors the browser renderer (eufy-print.ts): same jig geometry, same shared
 // layout/queue/pHYs logic, transparent background (alpha drives the white
@@ -93,7 +94,7 @@ export async function composeEufyPrintSheetsServer(
   banners: NamedImage[] = [],
   jig: EufyJigConfig = EUFY_JIG_3X12,
 ): Promise<EufyPrintResult> {
-  const empty: EufyPrintResult = { sheets: [], pocketsPerSheet: jigPocketCount(jig), printedTiles: 0, skippedBlankTiles: 0, bannerCount: 0 };
+  const empty: EufyPrintResult = { tileSheets: [], bannerSheets: [], pocketsPerSheet: jigPocketCount(jig), printedTiles: 0, skippedBlankTiles: 0, bannerCount: 0 };
   const slots = design?.slots ?? {};
   const textBars = design?.textBars ?? [];
 
@@ -125,37 +126,43 @@ export async function composeEufyPrintSheetsServer(
   const W = Math.round(jig.sheetWidthInches * jig.dpi);
   const H = Math.round(jig.sheetHeightInches * jig.dpi);
 
-  const sheets: string[] = [];
-  for (const sheet of planned) {
-    const canvas = createCanvas(W, H);
-    const ctx = canvas.getContext("2d");
-    // No background fill — transparency drives the white underbase.
-    for (const t of sheet.tiles) {
-      ctx.save();
-      ctx.beginPath();
-      ctx.rect(t.x, t.y, t.size, t.size); // clip to the square face
-      ctx.clip();
-      if (t.item.kind === "art") {
-        const img = loadedArt.get(t.item.url);
-        if (img) drawCover(ctx, img, t.x, t.y, t.size, t.size);
-      } else {
-        ctx.fillStyle = t.item.color;
-        ctx.fillRect(t.x, t.y, t.size, t.size);
+  // One draw routine, run over both the tile run and the banner run so they can
+  // never drift. Tile sheets carry no banners and vice-versa (see planEufySheets).
+  const renderSheets = (sheetsToDraw: typeof planned.tileSheets): string[] => {
+    const out: string[] = [];
+    for (const sheet of sheetsToDraw) {
+      const canvas = createCanvas(W, H);
+      const ctx = canvas.getContext("2d");
+      // No background fill — transparency drives the white underbase.
+      for (const t of sheet.tiles) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(t.x, t.y, t.size, t.size); // clip to the square face
+        ctx.clip();
+        if (t.item.kind === "art") {
+          const img = loadedArt.get(t.item.url);
+          if (img) drawCover(ctx, img, t.x, t.y, t.size, t.size);
+        } else {
+          ctx.fillStyle = t.item.color;
+          ctx.fillRect(t.x, t.y, t.size, t.size);
+        }
+        ctx.restore();
       }
-      ctx.restore();
+      // Banners: composite the client-rendered PNG into its planned rect (its
+      // widthUnits:1 aspect matches the rect, so no distortion).
+      for (const b of sheet.banners) {
+        const img = bannerImgs[b.bannerIndex];
+        if (img) ctx.drawImage(img, b.x, b.y, b.w, b.h);
+      }
+      const dataUrl = "data:image/png;base64," + canvas.toBuffer("image/png").toString("base64");
+      out.push(setPngDpi(dataUrl, jig.dpi));
     }
-    // Banners: composite the client-rendered PNG into its planned rect (its
-    // widthUnits:1 aspect matches the rect, so no distortion).
-    for (const b of sheet.banners) {
-      const img = bannerImgs[b.bannerIndex];
-      if (img) ctx.drawImage(img, b.x, b.y, b.w, b.h);
-    }
-    const dataUrl = "data:image/png;base64," + canvas.toBuffer("image/png").toString("base64");
-    sheets.push(setPngDpi(dataUrl, jig.dpi));
-  }
+    return out;
+  };
 
   return {
-    sheets,
+    tileSheets: renderSheets(planned.tileSheets),
+    bannerSheets: renderSheets(planned.bannerSheets),
     pocketsPerSheet: jigPocketCount(jig),
     printedTiles: queue.length,
     skippedBlankTiles,

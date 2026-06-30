@@ -128,8 +128,8 @@ export function ExportPartsList({
     setEufyBusy(true);
     setEufyStatus(null);
     try {
-      const { sheets, pocketsPerSheet, printedTiles, skippedBlankTiles } = await composeEufyPrintSheets(jig);
-      if (sheets.length === 0) {
+      const { tileSheets, bannerSheets, pocketsPerSheet, printedTiles, skippedBlankTiles } = await composeEufyPrintSheets(jig);
+      if (tileSheets.length === 0 && bannerSheets.length === 0) {
         setEufyStatus(
           skippedBlankTiles > 0
             ? `Nothing to print — ${skippedBlankTiles} white tile(s) use blank snappets (no UV print).`
@@ -137,15 +137,22 @@ export function ExportPartsList({
         );
         return;
       }
-      sheets.forEach((dataUrl, i) => {
-        const a = document.createElement("a");
-        a.href = dataUrl;
-        a.download = `${slug}${orderNumber ? `-${orderNumber}` : ""}-eufy-${fileTag}sheet-${i + 1}-of-${sheets.length}.png`;
-        a.click();
-      });
+      // Tiles and banners are SEPARATE print runs (different jig loads) — download
+      // each set under its own filename token so the operator never mixes them.
+      const downloadSet = (set: string[], kind: "tiles" | "banners") => {
+        set.forEach((dataUrl, i) => {
+          const a = document.createElement("a");
+          a.href = dataUrl;
+          a.download = `${slug}${orderNumber ? `-${orderNumber}` : ""}-eufy-${fileTag}${kind}-sheet-${i + 1}-of-${set.length}.png`;
+          a.click();
+        });
+      };
+      downloadSet(tileSheets, "tiles");
+      downloadSet(bannerSheets, "banners");
       const blanks = skippedBlankTiles > 0 ? ` · ${skippedBlankTiles} white tile(s) use blank snappets` : "";
+      const bannerNote = bannerSheets.length > 0 ? ` + ${bannerSheets.length} banner sheet${bannerSheets.length > 1 ? "s" : ""}` : "";
       setEufyStatus(
-        `${sheets.length} sheet${sheets.length > 1 ? "s" : ""} · ${printedTiles} tile face${printedTiles > 1 ? "s" : ""} · ${pocketsPerSheet} pockets/jig${blanks}`
+        `${tileSheets.length} tile sheet${tileSheets.length > 1 ? "s" : ""}${bannerNote} · ${printedTiles} tile face${printedTiles > 1 ? "s" : ""} · ${pocketsPerSheet} pockets/jig${blanks}`
       );
     } catch {
       setEufyStatus("This export needs a desktop — open festiveframes.co/build on the computer connected to your eufyMake.");
