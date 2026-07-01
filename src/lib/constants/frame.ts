@@ -65,6 +65,18 @@ export function getStandardConfig(config: FrameConfig): FrameConfig {
 }
 
 /**
+ * SCHOOL / fundraising frame — the live builder's geometry with WIDE 3-tile side
+ * panels (wings) flanking the plate. The school builder (`/lab/school`) seeds this
+ * so the real drag-drop + text-bar editor + plate all work, just with big side
+ * rails for the school's direct-print art. Everything else (the plate, the top/
+ * bottom rails, text bars) is the standard frame.
+ */
+export const SCHOOL_FRAME_CONFIG: FrameConfig = getWingFrameConfig(
+  DEFAULT_FRAME_CONFIG,
+  3 * DEFAULT_FRAME_CONFIG.tileSizeInches,
+);
+
+/**
  * Total rendered width in inches (inner frame + both wings).
  */
 export function getTotalWidthInches(config: FrameConfig): number {
