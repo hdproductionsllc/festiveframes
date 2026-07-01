@@ -1,102 +1,133 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { LicensePlateArea } from "@/components/frame/LicensePlateArea";
 
-// ─── SCHOOL / FUNDRAISING FRAME — direct-print prototype ─────────────────────
+// ─── SCHOOL / FUNDRAISING FRAME — a FORK of the real license-plate builder ───
 //
-// A DIFFERENT product from the live tile builder: bigger, ALL direct-to-print
-// (every zone is a printed PNG snappet — no snap-in tiles). Geometry, per Henry:
-//   • 11 units wide × 8 units tall rectangle.
-//   • Left + right SIDE PANELS: 3 wide × 8 tall each (full height), large snappets.
-//   • TOP BAR: 11 wide × 1 tall (thin), spans the full width — the school name.
-//   • BOTTOM BANNER: 11 wide × 2 tall — mascot / slogan / logo.
-//   • PHOTO / plate: the 5 × 5 middle.
-// The top bar + bottom banner overlay the side panels at the corners (separate
-// physical print pieces). Jig placement is TBD.
+// Same product as the live builder: a frame AROUND a real 12"x6" license plate.
+// The only change is the frame geometry — instead of the 1-tile-wide tile ring,
+// the school frame has big DIRECT-PRINT pieces:
+//   • Left + right SIDE PANELS — 3 tile-units wide, full height (school color).
+//   • TOP BAR — 1 unit tall, full width (school name).
+//   • BOTTOM BANNER — 2 units tall, full width (mascot / slogan / logo).
+//   • The real LICENSE PLATE (reused <LicensePlateArea/>) sits in the middle,
+//     filling exactly the gap between the bars, flanked by the panels.
 //
-// THIS ITERATION: editable school name + slogan and school colors, so we can review
-// the customization feel. NEXT: standardized mascot/logo art into the panels/banner,
-// wire to a design store, and per-piece PNG export for the eufy.
+// All dimensions are in inches (tile unit = 0.991", plate = 12"x6"), scaled off a
+// measured container width — the same approach as the live FrameCanvas. NEXT:
+// standardized mascot/logo art in the panels/banner, store wiring, PNG export.
 
-const UNITS_W = 11;
-const UNITS_H = 8;
+const UNIT = 0.991; // one tile unit, inches (matches DEFAULT_FRAME_CONFIG)
+const PLATE_W = 12;
+const PLATE_H = 6;
+const PANEL_W = 3 * UNIT; // 2.973" side panels
+const TOP_H = 1 * UNIT; //   0.991" top bar
+const BOT_H = 2 * UNIT; //   1.982" bottom banner
+const TOTAL_W = PLATE_W + 2 * PANEL_W; // 17.946"
+const TOTAL_H = TOP_H + PLATE_H + BOT_H; // 8.973"
+
+const STATES = ["MO", "IL", "KS", "IA", "AR", "TX", "CA", "FL", "NY", "CO", "TN", "OH", "GA", "MI"];
 
 interface School {
   name: string;
   slogan: string;
-  /** School colors — primary drives the bars, secondary the side panels. */
-  primary: string;
-  secondary: string;
-  ink: string;
+  primary: string; // bars
+  secondary: string; // side panels
+  ink: string; // bar text
+  plateState: string;
 }
 
 const DEFAULT_SCHOOL: School = {
   name: "MARQUETTE MUSTANGS",
   slogan: "GO MUSTANGS · CLASS OF 2026",
-  primary: "#a3132b",
-  secondary: "#1f3a5f",
+  primary: "#0e2f6e",
+  secondary: "#8a1a2b",
   ink: "#ffffff",
+  plateState: "MO",
 };
 
 export function SchoolFrameLab() {
   const [s, setS] = useState<School>(DEFAULT_SCHOOL);
   const set = (patch: Partial<School>) => setS((prev) => ({ ...prev, ...patch }));
 
+  // Measure the frame's container width so every inch dimension can scale to px
+  // (mirrors useFrameLayout's ResizeObserver).
+  const ref = useRef<HTMLDivElement>(null);
+  const [w, setW] = useState(0);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const ro = new ResizeObserver((entries) => {
+      for (const e of entries) setW(e.contentRect.width);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const scale = w > 0 ? w / TOTAL_W : 0;
+  const px = (inches: number) => inches * scale;
+
   return (
     <main className="min-h-screen bg-[#12100e] px-4 py-8 text-[#faf0d6]">
       <div className="mx-auto w-full max-w-5xl">
         <header className="mb-6">
           <p className="text-xs font-bold uppercase tracking-widest text-[#f8c53b]">
-            Internal prototype · direct-print
+            Internal prototype · direct-print · fork of the live builder
           </p>
           <h1 className="mt-1 text-2xl font-extrabold">School / Fundraising Frame</h1>
           <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[#faf0d6]/70">
-            An 11 × 8 all-direct-print layout: tall 3 × 8 side panels, an 11-wide top
-            bar (school name), an 11 × 2 bottom banner (mascot / slogan / logo), and a
-            5 × 5 photo. Editable text + school colors below. Next: mascot/logo art,
-            store wiring, and per-piece PNG export.
+            A real license-plate frame with big direct-print pieces: 3-unit side
+            panels, a top bar (school name) and a 2-unit bottom banner (mascot /
+            slogan), around the actual {PLATE_W}&Prime;&times;{PLATE_H}&Prime; plate.
+            {" "}Next: standardized mascot/logo art, store wiring, per-piece PNG export.
           </p>
         </header>
 
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_260px] lg:items-start">
-          {/* ── The 11×8 frame ──────────────────────────────────────────── */}
+          {/* ── The school frame (17.946" × 8.973", ≈2:1) ─────────────────── */}
           <div
-            className="grid w-full overflow-hidden rounded-lg border-2 border-[#0e1c2e] shadow-[8px_8px_0_rgba(30,27,23,0.5)]"
-            style={{
-              aspectRatio: `${UNITS_W} / ${UNITS_H}`,
-              gridTemplateColumns: `repeat(${UNITS_W}, minmax(0, 1fr))`,
-              gridTemplateRows: `repeat(${UNITS_H}, minmax(0, 1fr))`,
-              background: s.secondary,
-            }}
+            ref={ref}
+            className="relative w-full overflow-hidden rounded-md border-2 border-[#0e1c2e] shadow-[8px_8px_0_rgba(30,27,23,0.5)]"
+            style={{ aspectRatio: `${TOTAL_W} / ${TOTAL_H}`, background: "#111111" }}
           >
-            {/* Left panel (3×8) */}
-            <Zone col="1 / span 3" row="1 / span 8" bg={s.secondary} z={0} />
-            {/* Right panel (3×8) */}
-            <Zone col="9 / span 3" row="1 / span 8" bg={s.secondary} z={0} />
-            {/* Photo (5×5) */}
-            <Zone col="4 / span 5" row="2 / span 5" bg="#e9edf2" z={0}>
-              <span className="text-[10px] font-semibold uppercase tracking-wide text-[#1e1b17]/45 sm:text-xs">
-                Photo · 5 × 5
-              </span>
-            </Zone>
-            {/* Top bar (11×1) — school name */}
-            <Zone col="1 / span 11" row="1 / span 1" bg={s.primary} z={10}>
-              <span
-                className="truncate px-2 text-sm font-extrabold uppercase tracking-wide sm:text-lg"
-                style={{ color: s.ink }}
-              >
-                {s.name || "School name"}
-              </span>
-            </Zone>
-            {/* Bottom banner (11×2) — mascot / slogan / logo */}
-            <Zone col="1 / span 11" row="7 / span 2" bg={s.primary} z={10}>
-              <span
-                className="px-3 text-center text-sm font-extrabold uppercase tracking-wide sm:text-2xl"
-                style={{ color: s.ink }}
-              >
-                {s.slogan || "Mascot · slogan · logo"}
-              </span>
-            </Zone>
+            {w > 0 && (
+              <>
+                {/* Side panels — 3 units wide, full height (school color). */}
+                <div style={panel(0, 0, PANEL_W, TOTAL_H, s.secondary, scale)} />
+                <div style={panel(PANEL_W + PLATE_W, 0, PANEL_W, TOTAL_H, s.secondary, scale)} />
+
+                {/* The REAL license plate — reused from the live builder. Sits in
+                    the gap between the bars, flanked by the panels. */}
+                <LicensePlateArea
+                  x={px(PANEL_W)}
+                  y={px(TOP_H)}
+                  width={px(PLATE_W)}
+                  height={px(PLATE_H)}
+                  plateState={s.plateState}
+                />
+
+                {/* Top bar — 1 unit tall, full width (school name). */}
+                <div style={bar(0, 0, TOTAL_W, TOP_H, s.primary, scale)}>
+                  <span
+                    className="truncate px-2 font-extrabold uppercase tracking-wide"
+                    style={{ color: s.ink, fontSize: px(TOP_H) * 0.5 }}
+                  >
+                    {s.name || "School name"}
+                  </span>
+                </div>
+
+                {/* Bottom banner — 2 units tall, full width (mascot / slogan). */}
+                <div style={bar(0, TOP_H + PLATE_H, TOTAL_W, BOT_H, s.primary, scale)}>
+                  <span
+                    className="px-3 text-center font-extrabold uppercase tracking-wide"
+                    style={{ color: s.ink, fontSize: px(BOT_H) * 0.42 }}
+                  >
+                    {s.slogan || "Mascot · slogan · logo"}
+                  </span>
+                </div>
+              </>
+            )}
           </div>
 
           {/* ── Controls ────────────────────────────────────────────────── */}
@@ -115,14 +146,28 @@ export function SchoolFrameLab() {
                 className="w-full rounded-lg border border-[#faf0d6]/20 bg-[#12100e] px-3 py-2 text-sm font-semibold text-[#faf0d6] focus:border-[#f8c53b] focus:outline-none"
               />
             </Field>
+            <Field label="License plate state">
+              <select
+                value={s.plateState}
+                onChange={(e) => set({ plateState: e.target.value })}
+                className="w-full rounded-lg border border-[#faf0d6]/20 bg-[#12100e] px-3 py-2 text-sm font-semibold text-[#faf0d6] focus:border-[#f8c53b] focus:outline-none"
+              >
+                {STATES.map((st) => (
+                  <option key={st} value={st}>
+                    {st}
+                  </option>
+                ))}
+              </select>
+            </Field>
             <div className="grid grid-cols-3 gap-3">
-              <Swatch label="Primary" value={s.primary} onChange={(primary) => set({ primary })} />
+              <Swatch label="Bars" value={s.primary} onChange={(primary) => set({ primary })} />
               <Swatch label="Panels" value={s.secondary} onChange={(secondary) => set({ secondary })} />
               <Swatch label="Text" value={s.ink} onChange={(ink) => set({ ink })} />
             </div>
             <p className="text-[11px] leading-relaxed text-[#faf0d6]/45">
-              Grid: 11 × 8 · sides 3 × 8 · top 11 × 1 · bottom 11 × 2 · photo 5 × 5.
-              Bars overlay the panel corners (separate print pieces).
+              {TOTAL_W.toFixed(2)}&Prime; &times; {TOTAL_H.toFixed(2)}&Prime; · plate
+              12&times;6 · side panels 3 units · top 1 · bottom 2. Bars overlay the
+              panel corners (separate print pieces).
             </p>
           </aside>
         </div>
@@ -131,28 +176,49 @@ export function SchoolFrameLab() {
   );
 }
 
-/* A placed print zone on the 11×8 grid. */
-function Zone({
-  col,
-  row,
-  bg,
-  z,
-  children,
-}: {
-  col: string;
-  row: string;
-  bg: string;
-  z: number;
-  children?: React.ReactNode;
-}) {
-  return (
-    <div
-      className="flex items-center justify-center border-2 border-black/25 text-center"
-      style={{ gridColumn: col, gridRow: row, zIndex: z, background: bg }}
-    >
-      {children}
-    </div>
-  );
+/* A full-height solid side panel (behind the bars). */
+function panel(
+  xIn: number,
+  yIn: number,
+  wIn: number,
+  hIn: number,
+  bg: string,
+  scale: number,
+): React.CSSProperties {
+  return {
+    position: "absolute",
+    left: xIn * scale,
+    top: yIn * scale,
+    width: wIn * scale,
+    height: hIn * scale,
+    background: bg,
+    zIndex: 0,
+  };
+}
+
+/* A full-width bar/banner, centered content, above the panels. */
+function bar(
+  xIn: number,
+  yIn: number,
+  wIn: number,
+  hIn: number,
+  bg: string,
+  scale: number,
+): React.CSSProperties {
+  return {
+    position: "absolute",
+    left: xIn * scale,
+    top: yIn * scale,
+    width: wIn * scale,
+    height: hIn * scale,
+    background: bg,
+    zIndex: 10,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    borderTop: "2px solid rgba(0,0,0,0.25)",
+    borderBottom: "2px solid rgba(0,0,0,0.25)",
+  };
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
