@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { SchoolDesigner } from "@/components/designer/SchoolDesigner";
+import { SchoolBuilder } from "@/components/designer/SchoolDesigner";
 
 // Internal prototype of the SCHOOL / fundraising builder — a FORK of the real
 // license-plate builder (real drag-drop + text editor + plate), seeded with a
@@ -10,5 +10,5 @@ export const metadata: Metadata = {
 };
 
 export default function SchoolFrameLabPage() {
-  return <SchoolDesigner />;
+  return <SchoolBuilder />;
 }

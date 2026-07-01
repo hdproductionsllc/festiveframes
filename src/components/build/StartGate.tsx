@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useDesignStore } from "@/stores/design-store";
+import { useDesignStore, defaultDesignStore } from "@/stores/design-store";
 import { StateSelector } from "@/components/frame/StateSelector";
 import { LOOK_PRESETS } from "@/data/look-presets";
 import { track } from "@/lib/analytics";
@@ -74,7 +74,7 @@ function shouldGate(): boolean {
  * a single keystroke replaces it.
  */
 function initialName(): string {
-  const current = useDesignStore.getState().designName;
+  const current = defaultDesignStore.getState().designName;
   if (typeof window === "undefined") return current;
   const look = new URLSearchParams(window.location.search).get("look");
   const preset = look ? LOOK_PRESETS[look] : undefined;
@@ -137,7 +137,7 @@ export function StartGate({ onComplete }: { onComplete: () => void }) {
     setDesignName(trimmed);
     // plateState is already written live by StateSelector; re-assert the current
     // value so the flow reads as an explicit confirmation.
-    setPlateState(useDesignStore.getState().plateState);
+    setPlateState(defaultDesignStore.getState().plateState);
     try {
       window.localStorage.setItem(STARTED_KEY, "1");
     } catch {

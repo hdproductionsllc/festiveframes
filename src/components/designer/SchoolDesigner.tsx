@@ -14,7 +14,12 @@
 // factory is the v2 move once school becomes a real SKU.
 
 import { useEffect, useRef, useState } from "react";
-import { useDesignStore } from "@/stores/design-store";
+import {
+  useDesignStore,
+  useDesignStoreApi,
+  DesignStoreProvider,
+  createDesignStore,
+} from "@/stores/design-store";
 import { DndProvider } from "./DndProvider";
 import { FrameCanvas, type FrameCanvasHandle } from "@/components/frame/FrameCanvas";
 import { TilePalette } from "@/components/tiles/TilePalette";
@@ -25,6 +30,7 @@ import { SCHOOL_FRAME_CONFIG } from "@/lib/constants/frame";
 import type { BannerPreview } from "@/lib/types";
 
 export function SchoolDesigner() {
+  const api = useDesignStoreApi(); // the SCHOOL store (provided by page.tsx)
   const frameConfig = useDesignStore((s) => s.frameConfig);
   const slots = useDesignStore((s) => s.slots);
   const bottomBar = useDesignStore((s) => s.bottomBar);
@@ -41,12 +47,12 @@ export function SchoolDesigner() {
   useEffect(() => {
     if (seededRef.current) return;
     seededRef.current = true;
-    useDesignStore.getState().loadDesign({
+    api.getState().loadDesign({
       frameConfig: SCHOOL_FRAME_CONFIG,
       slots: {},
       textBars: [],
     });
-  }, []);
+  }, [api]);
 
   return (
     <div className="build-skin workbench-bg min-h-screen flex flex-col">
@@ -96,5 +102,18 @@ export function SchoolDesigner() {
         </main>
       </DndProvider>
     </div>
+  );
+}
+
+// Wrapper that owns the ISOLATED school store and provides it to the builder. It
+// MUST sit above SchoolDesigner so that component's top-level store hooks read the
+// school store (not /build's). The store is created once on the client (lazy
+// useState init) with its OWN persist key, so it never touches /build's design.
+export function SchoolBuilder() {
+  const [store] = useState(() => createDesignStore("festive-frames-school-v1"));
+  return (
+    <DesignStoreProvider store={store}>
+      <SchoolDesigner />
+    </DesignStoreProvider>
   );
 }

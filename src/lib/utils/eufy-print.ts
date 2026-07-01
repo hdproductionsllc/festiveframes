@@ -1,4 +1,4 @@
-import { useDesignStore } from "@/stores/design-store";
+import { defaultDesignStore } from "@/stores/design-store";
 import { jigPocketCount, EUFY_JIG, type EufyJigConfig } from "@/config/eufy-jig";
 import { buildPrintQueue, planEufySheets, setPngDpi, type EufyPrintResult } from "@/lib/utils/eufy-print-core";
 import { composeBarImage } from "@/lib/utils/compose-frame";
@@ -72,7 +72,7 @@ export async function composeEufyPrintSheets(jig: EufyJigConfig = EUFY_JIG): Pro
   const empty: EufyPrintResult = { tileSheets: [], bannerSheets: [], pocketsPerSheet: jigPocketCount(jig), printedTiles: 0, skippedBlankTiles: 0, bannerCount: 0 };
   if (typeof document === "undefined") return empty;
 
-  const { slots, textBars } = useDesignStore.getState();
+  const { slots, textBars } = defaultDesignStore.getState();
   const { queue, skippedBlankTiles } = buildPrintQueue(slots, textBars);
 
   // Render each banner to a font-perfect PNG (the same renderer the proof uses),

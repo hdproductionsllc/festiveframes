@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useDesignStore } from "@/stores/design-store";
+import { useDesignStore, useDesignStoreApi } from "@/stores/design-store";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -12,6 +12,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
  * click the backdrop or Cancel to close.
  */
 export function SaveDesignModal({ onClose, onSaved }: { onClose: () => void; onSaved?: () => void }) {
+  const api = useDesignStoreApi();
   const designName = useDesignStore((s) => s.designName);
   const [name, setName] = useState(designName && designName !== "My Frame Design" ? designName : "");
   const [email, setEmail] = useState("");
@@ -27,7 +28,7 @@ export function SaveDesignModal({ onClose, onSaved }: { onClose: () => void; onS
     }
     setStatus("saving");
     setMessage(null);
-    const s = useDesignStore.getState();
+    const s = api.getState();
     const design = {
       designName: s.designName,
       plateState: s.plateState,
