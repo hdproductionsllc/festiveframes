@@ -40,12 +40,11 @@ function DesktopPaletteContent() {
       <p className="text-center text-xs font-semibold leading-snug text-surface-300">
         Tap a tile then tap the frame — or drag it on. Drag a tile off to remove.
       </p>
-      {/* The tile grid scrolls INSIDE its own panel (capped to the viewport) so the
-          whole studio fits on screen and the frame preview stays in view without a
-          long page scroll. */}
-      <div className="min-h-0 lg:max-h-[calc(100vh-20rem)] lg:overflow-y-auto lg:pr-1">
-        <TileGrid />
-      </div>
+      {/* Tile grid at natural height — no overflow clip here. (An overflow-y scroll
+          would clip the "● Placing" badge that pops ABOVE the top row of tiles when
+          one is armed. The rail's height is fine unclamped since the right column —
+          frame + editor — is the taller side.) */}
+      <TileGrid />
       {/* Armed-tile callout — surfaces here too, so the "now tap the frame" cue is
           visible no matter where you look. */}
       <ArmedBanner placement="tray" />
