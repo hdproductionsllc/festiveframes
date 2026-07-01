@@ -367,20 +367,23 @@ export function Designer() {
       )}
 
       <DndProvider onOverSlotChange={setOverSlotId} onBannerPreviewChange={setBannerPreview}>
-        {/* Desktop is a two-column STUDIO: the frame canvas lives in the left
-            column and is pinned in place (lg:sticky) so it stays in view while you
-            scroll the tools; the tile palette + text-bar editor stack in the right
-            column as the scroll track. The canvas spans both rows of the right
-            stack (lg:row-span-2) so it has room to stay stuck for the whole scroll.
-            On MOBILE it collapses to a single column and the order-* classes
-            reorder it to palette (1) -> canvas (2) -> editor (3); explicit grid
-            placement is lg-only, so the mobile stack is byte-identical to before. */}
-        <main className="flex-1 grid grid-cols-1 lg:grid-cols-[1.1fr_0.9fr] gap-4 p-4 mx-auto w-full max-w-7xl items-start">
-          {/* Frame canvas — left column on desktop, pinned (sticky) so it floats in
-              view while the right-hand tools scroll. On MOBILE the tile palette is
-              reordered ABOVE the frame (order-1) so you see the tiles you can place
-              before the license plate; the canvas sits in the middle. */}
-          <div className="order-2 lg:order-none lg:col-start-1 lg:row-start-1 lg:row-span-2 lg:sticky lg:top-4 lg:self-start w-full flex flex-col gap-3">
+        {/* Desktop STUDIO — left-to-right PROGRESSION: the controls (tiles on top,
+            banner editor below) live in the LEFT column; the frame preview is the
+            larger RIGHT column, nearest the order button, so the flow reads
+            "pick tiles -> watch your frame fill in -> order". The frame spans both
+            control rows (lg:row-span-2) and takes the bigger share of a wider studio
+            so the plate reads large; the left controls stay compact (the tile grid
+            scrolls inside its own panel), so the whole studio fits the viewport and
+            the frame stays in view WITHOUT sticky (sticky offset the drop cells and
+            forced over-dragging). On MOBILE it collapses to one column, order-*
+            reorders to palette (1) -> canvas (2) -> editor (3); grid placement is
+            lg-only, so the mobile stack is unchanged. */}
+        <main className="flex-1 grid grid-cols-1 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] gap-4 p-4 mx-auto w-full max-w-[1500px] items-start">
+          {/* Frame canvas — RIGHT column on desktop (beside the order button), the
+              hero of the studio. On MOBILE the tile palette is reordered ABOVE the
+              frame (order-1) so you see the tiles you can place before the license
+              plate; the canvas sits in the middle (order-2). */}
+          <div className="order-2 lg:order-none lg:col-start-2 lg:row-start-1 lg:row-span-2 w-full flex flex-col gap-3">
             {/* Armed-tile callout — appears right above the frame the moment a
                 tile is armed, telling you in plain words to tap the frame. */}
             <ArmedBanner placement="frame" />
@@ -415,14 +418,14 @@ export function Designer() {
           </div>
 
           {/* Tile palette — ABOVE the frame on mobile (order-1) so the tiles read
-              first; right column, top of the scroll stack on desktop. */}
-          <div className="order-1 lg:order-none lg:col-start-2 lg:row-start-1 min-w-0">
+              first; LEFT column, top of the controls stack on desktop. */}
+          <div className="order-1 lg:order-none lg:col-start-1 lg:row-start-1 min-w-0">
             <TilePalette />
           </div>
 
-          {/* Text-bar editor — below the frame on mobile (order-3); right column,
+          {/* Text-bar editor — below the frame on mobile (order-3); LEFT column,
               beneath the palette on desktop. */}
-          <div className="order-3 lg:order-none lg:col-start-2 lg:row-start-2 min-w-0">
+          <div className="order-3 lg:order-none lg:col-start-1 lg:row-start-2 min-w-0">
             <BottomBarEditor />
           </div>
         </main>

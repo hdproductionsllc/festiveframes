@@ -67,7 +67,7 @@ export function LooksPicker() {
               sizes="104px"
               className="block h-auto w-full"
             />
-            <span className="block truncate px-1.5 py-1 text-center text-[11px] font-semibold text-surface-200">
+            <span className="block whitespace-normal px-1.5 py-1 text-center text-[11px] font-semibold leading-tight text-surface-200">
               {look.name}
             </span>
           </button>

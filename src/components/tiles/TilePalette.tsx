@@ -34,18 +34,22 @@ export function TilePalette() {
 
 function DesktopPaletteContent() {
   return (
-    <div className="flex flex-col gap-2">
-      {/* Tools + instruction sit ABOVE the tiles so the actions are the first
-          thing reached, then the picker, then the armed-tile cue beside it. */}
+    <div className="flex min-h-0 flex-col gap-2">
+      {/* Tools + a COMPACT one-line hint sit ABOVE the tiles so the actions are the
+          first thing reached, then the picker, then the tile grid. */}
       <QuickActions />
       <LooksPicker />
-      <p className="rounded-full border-2 border-brand-gold/60 bg-brand-gold/15 px-3 py-2
-        text-center text-sm font-extrabold leading-snug text-[#1e1b17]">
-        Tap a tile, then tap your frame to drop it. Or drag a tile on (drag one off to remove).
+      <p className="text-center text-xs font-semibold leading-snug text-surface-300">
+        Tap a tile then tap the frame — or drag it on. Drag a tile off to remove.
       </p>
-      <TileGrid />
-      {/* Armed-tile callout — also surfaces here, next to the picker, so the
-          "now tap the frame" instruction is visible no matter where you look. */}
+      {/* The tile grid scrolls INSIDE its own panel (capped to the viewport) so the
+          whole studio fits on screen and the frame preview stays in view without a
+          long page scroll. */}
+      <div className="min-h-0 lg:max-h-[calc(100vh-20rem)] lg:overflow-y-auto lg:pr-1">
+        <TileGrid />
+      </div>
+      {/* Armed-tile callout — surfaces here too, so the "now tap the frame" cue is
+          visible no matter where you look. */}
       <ArmedBanner placement="tray" />
     </div>
   );
