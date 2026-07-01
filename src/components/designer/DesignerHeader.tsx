@@ -112,6 +112,13 @@ export function DesignerHeader({ onExport, onExportParts, onOrder, ordering }: D
         </div>
       </div>
 
+      {/* "Start from a Look" — lives in the logo row's middle space (bigger, out of
+          the tile rail). Takes the remaining width and scrolls horizontally; on
+          narrow screens flex-wrap drops it to its own line under the logo. */}
+      <div className="order-last w-full min-w-0 lg:order-none lg:w-auto lg:flex-1 lg:px-2">
+        <LooksPicker />
+      </div>
+
       {/* Actions */}
       <div className="flex items-center gap-2">
         {lastSaved && (

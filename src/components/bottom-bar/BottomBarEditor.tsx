@@ -278,6 +278,12 @@ export function BottomBarEditor() {
               </button>
             </div>
           )}
+
+          {/* Position lives in this MANAGEMENT column — it's placement (same family
+              as add / drag / the list). Styling + the QR stay in the editing column. */}
+          {hasBars && selected && (
+            <PositionControls bar={selected} onMove={moveTextBar} />
+          )}
         </div>
 
         {/* ════ COLUMN 2 — edit the selected banner (text + styling) ════
@@ -322,7 +328,8 @@ export function BottomBarEditor() {
                 text-[#1e1b17] placeholder:text-[#1e1b17]/35 focus:border-[#ed5aa0] focus:outline-none"
             />
 
-            {/* Slogan chips — one tap fills (and creates) the bar. */}
+            {/* Slogan chips — one tap fills (and creates) the bar. The list is kept
+                short (~3 rows) so it never needs to scroll. */}
             <div>
               <span className="text-[11px] font-semibold text-[#1e1b17]/55">Or tap a ready-made one:</span>
               <div className="mt-1.5 flex flex-wrap gap-1.5">
@@ -346,13 +353,16 @@ export function BottomBarEditor() {
             </div>
           </div>
 
-          {/* Style controls appear once there's a bar to style. Colors + Size share
-              a row so the editing column stays short. */}
+          {/* Style controls appear once there's a bar to style. Font / Colors /
+              Text Size / Letter Spacing pack into a 2×2 half-width grid so the
+              editing column stays short; the QR add-on spans full width below. */}
           {hasBars && (
             <>
-              <FontSelector value={cfg.fontFamily} onChange={(fontFamily) => setCfg({ fontFamily })} />
-
               <div className="grid gap-x-5 gap-y-4 sm:grid-cols-2">
+                {/* Font — half width */}
+                <FontSelector value={cfg.fontFamily} onChange={(fontFamily) => setCfg({ fontFamily })} />
+
+                {/* Colors — half width */}
                 <div className="space-y-1.5">
                   <span className="text-xs font-bold uppercase tracking-wide text-[#1e1b17]/70">Colors</span>
                   <div className="flex gap-4">
@@ -361,40 +371,27 @@ export function BottomBarEditor() {
                   </div>
                 </div>
 
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold uppercase tracking-wide text-[#1e1b17]/70">Text Size</span>
-                    <span className="text-xs font-semibold tabular-nums text-[#1e1b17]/70">
-                      {Math.round((cfg.fontSize ?? 1) * 100)}%
-                    </span>
-                  </div>
-                  <input
-                    type="range"
-                    min={40}
-                    max={100}
-                    step={1}
-                    value={Math.round((cfg.fontSize ?? 1) * 100)}
-                    onChange={(e) => setCfg({ fontSize: Number(e.target.value) / 100 })}
-                    className="w-full h-1.5 cursor-pointer appearance-none rounded-full bg-[#1e1b17]/15
-                      [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:appearance-none
-                      [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#ed5aa0]
-                      [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white"
-                  />
-                </div>
+                {/* Text Size + Letter Spacing — same PinkSlider markup so the two
+                    sliders line up exactly. */}
+                <PinkSlider
+                  label="Text Size"
+                  unit="%"
+                  value={Math.round((cfg.fontSize ?? 1) * 100)}
+                  min={40}
+                  max={100}
+                  onChange={(v) => setCfg({ fontSize: v / 100 })}
+                />
+
+                <PinkSlider
+                  label="Letter Spacing"
+                  value={cfg.letterSpacing}
+                  min={0}
+                  max={12}
+                  onChange={(letterSpacing) => setCfg({ letterSpacing })}
+                />
               </div>
 
-              <PinkSlider
-                label="Letter Spacing"
-                value={cfg.letterSpacing}
-                min={0}
-                max={12}
-                onChange={(letterSpacing) => setCfg({ letterSpacing })}
-              />
-
-              {/* Position — drag-free, deterministic placement. */}
-              {selected && <PositionControls bar={selected} onMove={moveTextBar} />}
-
-              {/* Add a QR code — one optional QR rides the FIRST banner. */}
+              {/* Add a QR code — part of editing the bar, off by default. */}
               <QrSection
                 enabled={qrCode.enabled}
                 url={qrCode.url}
@@ -559,18 +556,20 @@ function PinkSlider({
   min,
   max,
   onChange,
+  unit = "px",
 }: {
   label: string;
   value: number;
   min: number;
   max: number;
   onChange: (v: number) => void;
+  unit?: string;
 }) {
   return (
     <label className="flex flex-col gap-1.5">
       <div className="flex items-center justify-between">
         <span className="text-xs font-bold uppercase tracking-wide text-[#1e1b17]/70">{label}</span>
-        <span className="text-xs font-semibold tabular-nums text-[#1e1b17]/70">{value}px</span>
+        <span className="text-xs font-semibold tabular-nums text-[#1e1b17]/70">{value}{unit}</span>
       </div>
       <input
         type="range"

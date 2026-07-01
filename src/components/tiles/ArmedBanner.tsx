@@ -50,13 +50,21 @@ export function ArmedBanner({ placement = "frame" }: { placement?: "frame" | "tr
 
   if (!selectedPieceId) return null;
 
+  // The frame-side cue OVERLAYS the center of the plate (absolute, floating) so it
+  // never pushes the canvas/editor down when it appears. The tray cue stays inline.
+  const overlay = placement === "frame";
+
   return (
     <div
       ref={bannerRef}
       role="status"
       aria-live="polite"
-      className="relative flex items-center gap-2 rounded-xl border-2 border-[#1e1b17] bg-brand-gold
-        px-3 py-2 text-center shadow-[3px_3px_0_#1e1b17] motion-safe:animate-tile-snap"
+      className={`flex items-center gap-2 rounded-xl border-2 border-[#1e1b17] bg-brand-gold
+        px-3 py-2 text-center shadow-[3px_3px_0_#1e1b17] motion-safe:animate-tile-snap ${
+          overlay
+            ? "pointer-events-auto absolute left-1/2 top-1/2 z-20 w-[86%] max-w-md -translate-x-1/2 -translate-y-1/2"
+            : "relative"
+        }`}
     >
       {showFinger && (
         <span

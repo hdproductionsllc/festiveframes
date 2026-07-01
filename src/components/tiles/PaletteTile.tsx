@@ -12,9 +12,12 @@ interface PaletteTileProps {
   piece: TilePiece;
   /** "md" — desktop palette grid. "lg" — bigger thumb target for the mobile tray. */
   size?: "md" | "lg";
+  /** One-time onboarding: mime a pick-up-and-drag so it's obvious tiles are
+   *  draggable. Set on the first tile, first visit only (see TileGrid). */
+  demo?: boolean;
 }
 
-export function PaletteTile({ piece, size = "md" }: PaletteTileProps) {
+export function PaletteTile({ piece, size = "md", demo = false }: PaletteTileProps) {
   const { setNodeRef, attributes, listeners, style, isDragging } = useDragTile(piece.id);
   const selectedPieceId = usePaletteStore((s) => s.selectedPieceId);
   const selectPiece = usePaletteStore((s) => s.selectPiece);
@@ -54,7 +57,7 @@ export function PaletteTile({ piece, size = "md" }: PaletteTileProps) {
       {...listeners}
       onClick={handleClick}
       style={style}
-      className={`relative cursor-grab active:cursor-grabbing ${size === "lg" ? "shrink-0" : ""} ${isDragging ? "opacity-50" : ""}`}
+      className={`group relative cursor-grab active:cursor-grabbing ${size === "lg" ? "shrink-0" : ""} ${isDragging ? "opacity-50" : ""}`}
       title={
         isSelected
           ? `“${piece.name}” is ready — tap a spot on your frame to drop it`
@@ -74,10 +77,26 @@ export function PaletteTile({ piece, size = "md" }: PaletteTileProps) {
           ● Placing
         </span>
       )}
+      {/* Drag-grip affordance — the universal "pick me up" signal. Faintly present
+          on every tile, brighter on hover, so it's obvious the tiles are draggable
+          (not just tappable). Hidden while armed (the Placing badge takes over). */}
+      {size !== "lg" && !isSelected && (
+        <span
+          aria-hidden
+          className="pointer-events-none absolute left-1 top-1 z-10 text-[#1e1b17]/25 opacity-70 transition-all group-hover:text-[#1e1b17]/55 group-hover:opacity-100"
+        >
+          <svg width="7" height="11" viewBox="0 0 8 12" fill="currentColor">
+            <circle cx="2" cy="2" r="1" /><circle cx="6" cy="2" r="1" />
+            <circle cx="2" cy="6" r="1" /><circle cx="6" cy="6" r="1" />
+            <circle cx="2" cy="10" r="1" /><circle cx="6" cy="10" r="1" />
+          </svg>
+        </span>
+      )}
       <div
         className={`
           flex flex-col items-center gap-1 rounded-lg transition-all duration-150
           motion-safe:hover:-translate-y-0.5 active:scale-95
+          ${demo ? "ff-drag-demo" : ""}
           ${size === "lg" ? "p-2" : "p-1.5"}
           ${isSelected
             ? "ring-[3px] ring-brand-gold bg-brand-gold/20 scale-110 shadow-[0_0_14px_2px_rgba(248,197,59,0.6)] motion-safe:animate-armed-pulse"
