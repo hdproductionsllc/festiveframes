@@ -4,7 +4,6 @@ import { useState } from "react";
 import { TileGrid } from "./TileGrid";
 import { ArmedBanner } from "./ArmedBanner";
 import { QuickActions } from "@/components/designer/QuickActions";
-import { LooksPicker } from "@/components/designer/LooksPicker";
 
 /**
  * The tile palette is now an in-flow PANEL in the tools row beneath the canvas
@@ -35,10 +34,9 @@ export function TilePalette() {
 function DesktopPaletteContent() {
   return (
     <div className="flex min-h-0 flex-col gap-2">
-      {/* Tools + a COMPACT one-line hint sit ABOVE the tiles so the actions are the
-          first thing reached, then the picker, then the tile grid. */}
+      {/* Tools + a COMPACT one-line hint sit ABOVE the tiles. ("Start from a Look"
+          now lives in the header, freeing the rail for tiles.) */}
       <QuickActions />
-      <LooksPicker />
       <p className="text-center text-xs font-semibold leading-snug text-surface-300">
         Tap a tile then tap the frame — or drag it on. Drag a tile off to remove.
       </p>
@@ -88,11 +86,11 @@ function MobileTileTray() {
         </div>
       </div>
 
-      {/* Optional design tools — open by default; collapsible via the gear. */}
+      {/* Optional design tools — open by default; collapsible via the gear.
+          ("Start from a Look" now lives in the header for all viewports.) */}
       {optionsOpen && (
         <div className="max-h-[42vh] space-y-2 overflow-y-auto border-b border-surface-700/60 px-3 pb-3 pt-1">
           <QuickActions />
-          <LooksPicker />
         </div>
       )}
 

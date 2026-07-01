@@ -38,7 +38,7 @@ export function TileGrid({ variant = "grid" }: TileGridProps) {
   }
 
   return (
-    <div className="grid grid-cols-5 gap-0.5">
+    <div className="grid grid-cols-4 gap-1.5">
       {pieces.map((piece) => (
         <PaletteTile key={piece.id} piece={piece} />
       ))}

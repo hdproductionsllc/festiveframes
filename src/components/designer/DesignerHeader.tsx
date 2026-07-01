@@ -8,6 +8,7 @@ import { celebrateOrder } from "@/lib/utils/celebrate";
 import { StateSelector } from "@/components/frame/StateSelector";
 import { surfacedSets } from "@/data/sets";
 import { usePaletteStore } from "@/stores/palette-store";
+import { LooksPicker } from "./LooksPicker";
 
 interface DesignerHeaderProps {
   onExport: () => void;
@@ -47,7 +48,8 @@ export function DesignerHeader({ onExport, onExportParts, onOrder, ordering }: D
   };
 
   return (
-    <header className="flex flex-wrap items-center justify-between gap-3 border-b-[3px] border-[#1e1b17] bg-[#1e1b17] px-4 py-2">
+    <header className="border-b-[3px] border-[#1e1b17] bg-[#1e1b17]">
+      <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2">
       {/* Logo + name */}
       <div className="flex items-center gap-3">
         <a href="/" aria-label="Festive Frames home" className="flex items-center">
@@ -163,6 +165,7 @@ export function DesignerHeader({ onExport, onExportParts, onOrder, ordering }: D
             </span>
           )}
         </div>
+      </div>
       </div>
     </header>
   );

@@ -24,7 +24,7 @@ export function PaletteTile({ piece, size = "md" }: PaletteTileProps) {
   const isSelected = selectedPieceId === piece.id;
   const hasArt = hasCustomArtwork(piece.id);
   const isDieCut = dieCut && canDieCut(piece.id);
-  const art = size === "lg" ? 56 : 44;
+  const art = size === "lg" ? 56 : 52;
 
   // Tapping a palette tile ARMS it (selects it for placement) — it does NOT
   // auto-place. Placement happens when the user then taps a cell on the frame
@@ -106,13 +106,14 @@ export function PaletteTile({ piece, size = "md" }: PaletteTileProps) {
           <TileArtwork pieceId={piece.id} size={art - 4} />
         ) : null}
       </div>
-      <span
-        className={`truncate text-center text-surface-300 ${
-          size === "lg" ? "w-16 text-[11px]" : "w-full text-[10px]"
-        }`}
-      >
-        {piece.name}
-      </span>
+      {/* Tile name — only on the mobile tray (lg). On the desktop grid the art is
+          self-explanatory and the labels just bloated the rail, so they're dropped
+          (the full name still shows in the title tooltip on hover). */}
+      {size === "lg" && (
+        <span className="w-16 truncate text-center text-[11px] text-surface-300">
+          {piece.name}
+        </span>
+      )}
       </div>
     </div>
   );

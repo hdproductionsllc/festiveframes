@@ -220,190 +220,191 @@ export function BottomBarEditor() {
   };
 
   return (
-    <div className="bsk-panel-pink space-y-4 rounded-xl border border-surface-700/50 bg-surface-800/50 p-4">
-      {/* Header */}
-      <div className="flex items-center gap-2">
-        <span className="text-lg leading-none" aria-hidden>🪧</span>
-        <h3 className="text-sm font-extrabold uppercase tracking-wide text-[#1e1b17]">Text Bars</h3>
-        {hasBars && (
-          <span className="ml-auto rounded-full bg-[#1e1b17]/10 px-2 py-0.5 text-[11px] font-bold text-[#1e1b17]/70">
-            {textBars.length} on frame
-          </span>
-        )}
-      </div>
+    <div className="bsk-panel-pink rounded-xl border border-surface-700/50 bg-surface-800/50 p-4">
+      <div className="grid gap-x-6 gap-y-4 lg:grid-cols-2 lg:items-start">
+        {/* ════ COLUMN 1 — manage your banners (add / place / the list) ════ */}
+        <div className="space-y-4">
+          {/* Header */}
+          <div className="flex items-center gap-2">
+            <span className="text-lg leading-none" aria-hidden>🪧</span>
+            <h3 className="text-sm font-extrabold uppercase tracking-wide text-[#1e1b17]">Text Bars</h3>
+            {hasBars && (
+              <span className="ml-auto rounded-full bg-[#1e1b17]/10 px-2 py-0.5 text-[11px] font-bold text-[#1e1b17]/70">
+                {textBars.length} on frame
+              </span>
+            )}
+          </div>
 
-      {/* PRIMARY action, FIRST in the section (mobile + desktop): tap to add a
-          CENTERED banner. No dragging, no aiming — bottom row first, then top.
-          Reposition it afterward with the Position controls in the editor card. */}
-      <button
-        type="button"
-        onClick={() => addTextBar()}
-        className="flex w-full items-center justify-center gap-2 rounded-xl border-[3px] border-[#1e1b17]
-          bg-[#ed5aa0] px-4 py-2.5 text-sm font-extrabold uppercase tracking-wide text-white
-          shadow-[3px_3px_0_#1e1b17] transition-all hover:brightness-105 active:translate-y-0.5
-          active:translate-x-0.5 active:shadow-[1px_1px_0_#1e1b17] focus:outline-none
-          focus-visible:ring-2 focus-visible:ring-[#1e1b17]"
-      >
-        + Add a banner
-      </button>
-
-      {/* Secondary placement path: drag the handle to drop a bar on an exact run.
-          The tap button above stays the reliable primary; this is for precision. */}
-      <DragToPlace />
-
-      {/* Placed-bars list + "add another" (only once bars exist). Kept as a single
-          child slot so the editor card below stays put and never remounts. */}
-      {hasBars && (
-        <div className="space-y-2">
-          <ul className="space-y-1.5">
-            {textBars.map((b, i) => (
-              <BarRow
-                key={b.id}
-                bar={b}
-                index={i}
-                selected={b.id === (selected?.id ?? null)}
-                onSelect={() => selectBar(b.id)}
-                onRemove={() => removeTextBar(b.id)}
-              />
-            ))}
-          </ul>
+          {/* PRIMARY action: tap to add a CENTERED banner (bottom row first, then
+              top). Reposition afterward with the Position controls. */}
           <button
             type="button"
-            onClick={startAnotherBar}
-            className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-[#1e1b17]/15
-              bg-white/55 px-3 py-2 text-sm font-bold text-[#1e1b17] transition-all hover:bg-white
-              focus:outline-none focus-visible:ring-2 focus-visible:ring-[#ed5aa0]"
+            onClick={() => addTextBar()}
+            className="flex w-full items-center justify-center gap-2 rounded-xl border-[3px] border-[#1e1b17]
+              bg-[#ed5aa0] px-4 py-2.5 text-sm font-extrabold uppercase tracking-wide text-white
+              shadow-[3px_3px_0_#1e1b17] transition-all hover:brightness-105 active:translate-y-0.5
+              active:translate-x-0.5 active:shadow-[1px_1px_0_#1e1b17] focus:outline-none
+              focus-visible:ring-2 focus-visible:ring-[#1e1b17]"
           >
-            <span aria-hidden>＋</span> Add another bar
+            + Add a banner
           </button>
+
+          {/* Secondary placement path: drag the handle to drop a bar on an exact run. */}
+          <DragToPlace />
+
+          {/* Placed-bars list + "add another" (only once bars exist). */}
+          {hasBars && (
+            <div className="space-y-2">
+              <ul className="space-y-1.5">
+                {textBars.map((b, i) => (
+                  <BarRow
+                    key={b.id}
+                    bar={b}
+                    index={i}
+                    selected={b.id === (selected?.id ?? null)}
+                    onSelect={() => selectBar(b.id)}
+                    onRemove={() => removeTextBar(b.id)}
+                  />
+                ))}
+              </ul>
+              <button
+                type="button"
+                onClick={startAnotherBar}
+                className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-[#1e1b17]/15
+                  bg-white/55 px-3 py-2 text-sm font-bold text-[#1e1b17] transition-all hover:bg-white
+                  focus:outline-none focus-visible:ring-2 focus-visible:ring-[#ed5aa0]"
+              >
+                <span aria-hidden>＋</span> Add another bar
+              </button>
+            </div>
+          )}
         </div>
-      )}
 
-      {/* Editor card — ALWAYS rendered. When there are no bars this IS the entry
-          point: type or tap a slogan and the bar appears on your frame. */}
-      <div className="space-y-4 rounded-2xl border-2 border-[#1e1b17] bg-white/70 p-3.5 shadow-[3px_3px_0_#1e1b17]">
-        <p className="text-[12px] font-bold uppercase tracking-wide text-[#ed5aa0]">
-          {hasBars ? `Editing the ${selected?.row === "top" ? "top" : "bottom"} bar` : "Add a phrase to your frame"}
-        </p>
-
-        {/* Heads-up before the first keystroke creates the bar: a bar REPLACES the
-            tiles it covers, so warn how many placed tiles will be replaced (undo
-            brings them back). Only shown when adding the first bar would bury tiles. */}
-        {!hasBars && tilesCoveredByFirstBar > 0 && (
-          <p
-            role="status"
-            className="flex items-start gap-1.5 rounded-lg bg-[#fdecec] px-2.5 py-2 text-[11px] font-semibold leading-snug text-[#b3261e]"
-          >
-            <span aria-hidden>⚠️</span>
-            <span>
-              Adding a bar here will replace {tilesCoveredByFirstBar} tile{tilesCoveredByFirstBar === 1 ? "" : "s"} under
-              it. You can undo to bring {tilesCoveredByFirstBar === 1 ? "it" : "them"} back.
-            </span>
+        {/* ════ COLUMN 2 — edit the selected banner (text + styling) ════
+            ALWAYS rendered. With no bars this IS the entry point: type or tap a
+            slogan and the bar appears on your frame. */}
+        <div className="space-y-4 rounded-2xl border-2 border-[#1e1b17] bg-white/70 p-3.5 shadow-[3px_3px_0_#1e1b17]">
+          <p className="text-[12px] font-bold uppercase tracking-wide text-[#ed5aa0]">
+            {hasBars ? `Editing the ${selected?.row === "top" ? "top" : "bottom"} bar` : "Add a phrase to your frame"}
           </p>
-        )}
 
-        {/* 1 · Type your phrase */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wide text-[#1e1b17]/70">Your text</span>
-            <span className="text-[10px] font-semibold text-[#1e1b17]/45">
-              {cfg.text.length}/{BOTTOM_BAR_MAX_CHARS}
-            </span>
-          </div>
-          <input
-            ref={inputRef}
-            type="text"
-            value={cfg.text}
-            onChange={(e) => setCfg({ text: e.target.value.slice(0, BOTTOM_BAR_MAX_CHARS) })}
-            maxLength={BOTTOM_BAR_MAX_CHARS}
-            placeholder="Type your phrase…"
-            className="w-full rounded-lg border-2 border-[#1e1b17]/15 bg-white px-3 py-2.5 text-base font-bold
-              text-[#1e1b17] placeholder:text-[#1e1b17]/35 focus:border-[#ed5aa0] focus:outline-none"
-          />
+          {/* Heads-up before the first keystroke creates the bar: a bar REPLACES the
+              tiles it covers, so warn how many placed tiles will be replaced. */}
+          {!hasBars && tilesCoveredByFirstBar > 0 && (
+            <p
+              role="status"
+              className="flex items-start gap-1.5 rounded-lg bg-[#fdecec] px-2.5 py-2 text-[11px] font-semibold leading-snug text-[#b3261e]"
+            >
+              <span aria-hidden>⚠️</span>
+              <span>
+                Adding a bar here will replace {tilesCoveredByFirstBar} tile{tilesCoveredByFirstBar === 1 ? "" : "s"} under
+                it. You can undo to bring {tilesCoveredByFirstBar === 1 ? "it" : "them"} back.
+              </span>
+            </p>
+          )}
 
-          {/* Slogan chips — one tap fills (and creates) the bar. */}
-          <div>
-            <span className="text-[11px] font-semibold text-[#1e1b17]/55">Or tap a ready-made one:</span>
-            <div className="mt-1.5 flex flex-wrap gap-1.5">
-              {JULY4_SLOGANS.map((s) => {
-                const active = cfg.text === s;
-                return (
-                  <button
-                    key={s}
-                    type="button"
-                    onClick={() => setCfg({ text: s })}
-                    className={`rounded-full border-2 px-2.5 py-1 text-[12px] font-bold transition-all active:scale-95 motion-safe:hover:-translate-y-0.5
-                      ${active
-                        ? "border-[#1e1b17] bg-[#ed5aa0] text-white shadow-[2px_2px_0_#1e1b17]"
-                        : "border-[#1e1b17]/15 bg-white text-[#1e1b17] hover:border-[#ed5aa0] hover:bg-[#ed5aa0]/10"}`}
-                  >
-                    {s}
-                  </button>
-                );
-              })}
+          {/* 1 · Type your phrase */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold uppercase tracking-wide text-[#1e1b17]/70">Your text</span>
+              <span className="text-[10px] font-semibold text-[#1e1b17]/45">
+                {cfg.text.length}/{BOTTOM_BAR_MAX_CHARS}
+              </span>
             </div>
-          </div>
-        </div>
-
-        {/* Style controls appear once there's a bar to style. */}
-        {hasBars && (
-          <>
-            <FontSelector value={cfg.fontFamily} onChange={(fontFamily) => setCfg({ fontFamily })} />
-
-            <div className="space-y-1.5">
-              <span className="text-xs font-bold uppercase tracking-wide text-[#1e1b17]/70">Colors</span>
-              <div className="flex gap-4">
-                <ColorPicker label="Text" value={cfg.textColor} onChange={(textColor) => setCfg({ textColor })} />
-                <ColorPicker label="Background" value={cfg.backgroundColor} onChange={(backgroundColor) => setCfg({ backgroundColor })} />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wide text-[#1e1b17]/70">Text Size</span>
-                <span className="text-xs font-semibold tabular-nums text-[#1e1b17]/70">
-                  {Math.round((cfg.fontSize ?? 1) * 100)}%
-                </span>
-              </div>
-              <input
-                type="range"
-                min={40}
-                max={100}
-                step={1}
-                value={Math.round((cfg.fontSize ?? 1) * 100)}
-                onChange={(e) => setCfg({ fontSize: Number(e.target.value) / 100 })}
-                className="w-full h-1.5 cursor-pointer appearance-none rounded-full bg-[#1e1b17]/15
-                  [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:appearance-none
-                  [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#ed5aa0]
-                  [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white"
-              />
-            </div>
-
-            <PinkSlider
-              label="Letter Spacing"
-              value={cfg.letterSpacing}
-              min={0}
-              max={12}
-              onChange={(letterSpacing) => setCfg({ letterSpacing })}
+            <input
+              ref={inputRef}
+              type="text"
+              value={cfg.text}
+              onChange={(e) => setCfg({ text: e.target.value.slice(0, BOTTOM_BAR_MAX_CHARS) })}
+              maxLength={BOTTOM_BAR_MAX_CHARS}
+              placeholder="Type your phrase…"
+              className="w-full rounded-lg border-2 border-[#1e1b17]/15 bg-white px-3 py-2.5 text-base font-bold
+                text-[#1e1b17] placeholder:text-[#1e1b17]/35 focus:border-[#ed5aa0] focus:outline-none"
             />
 
-            {/* Position — drag-free, deterministic placement. The rail toggle and
-                the nudge arrows both route through the store's moveTextBar, which
-                snaps to the nearest free run and clamps to the row edges. */}
-            {selected && <PositionControls bar={selected} onMove={moveTextBar} />}
-          </>
-        )}
-      </div>
+            {/* Slogan chips — one tap fills (and creates) the bar. */}
+            <div>
+              <span className="text-[11px] font-semibold text-[#1e1b17]/55">Or tap a ready-made one:</span>
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                {JULY4_SLOGANS.map((s) => {
+                  const active = cfg.text === s;
+                  return (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => setCfg({ text: s })}
+                      className={`rounded-full border-2 px-2.5 py-1 text-[12px] font-bold transition-all active:scale-95 motion-safe:hover:-translate-y-0.5
+                        ${active
+                          ? "border-[#1e1b17] bg-[#ed5aa0] text-white shadow-[2px_2px_0_#1e1b17]"
+                          : "border-[#1e1b17]/15 bg-white text-[#1e1b17] hover:border-[#ed5aa0] hover:bg-[#ed5aa0]/10"}`}
+                    >
+                      {s}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
 
-      {/* Add a QR code — one optional QR rides the FIRST banner. */}
-      {hasBars && (
-        <QrSection
-          enabled={qrCode.enabled}
-          url={qrCode.url}
-          onToggle={setQrEnabled}
-          onUrlChange={(url) => updateQRCode({ url })}
-        />
-      )}
+          {/* Style controls appear once there's a bar to style. Colors + Size share
+              a row so the editing column stays short. */}
+          {hasBars && (
+            <>
+              <FontSelector value={cfg.fontFamily} onChange={(fontFamily) => setCfg({ fontFamily })} />
+
+              <div className="grid gap-x-5 gap-y-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <span className="text-xs font-bold uppercase tracking-wide text-[#1e1b17]/70">Colors</span>
+                  <div className="flex gap-4">
+                    <ColorPicker label="Text" value={cfg.textColor} onChange={(textColor) => setCfg({ textColor })} />
+                    <ColorPicker label="Background" value={cfg.backgroundColor} onChange={(backgroundColor) => setCfg({ backgroundColor })} />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold uppercase tracking-wide text-[#1e1b17]/70">Text Size</span>
+                    <span className="text-xs font-semibold tabular-nums text-[#1e1b17]/70">
+                      {Math.round((cfg.fontSize ?? 1) * 100)}%
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min={40}
+                    max={100}
+                    step={1}
+                    value={Math.round((cfg.fontSize ?? 1) * 100)}
+                    onChange={(e) => setCfg({ fontSize: Number(e.target.value) / 100 })}
+                    className="w-full h-1.5 cursor-pointer appearance-none rounded-full bg-[#1e1b17]/15
+                      [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:appearance-none
+                      [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#ed5aa0]
+                      [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white"
+                  />
+                </div>
+              </div>
+
+              <PinkSlider
+                label="Letter Spacing"
+                value={cfg.letterSpacing}
+                min={0}
+                max={12}
+                onChange={(letterSpacing) => setCfg({ letterSpacing })}
+              />
+
+              {/* Position — drag-free, deterministic placement. */}
+              {selected && <PositionControls bar={selected} onMove={moveTextBar} />}
+
+              {/* Add a QR code — one optional QR rides the FIRST banner. */}
+              <QrSection
+                enabled={qrCode.enabled}
+                url={qrCode.url}
+                onToggle={setQrEnabled}
+                onUrlChange={(url) => updateQRCode({ url })}
+              />
+            </>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
