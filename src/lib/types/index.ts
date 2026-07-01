@@ -95,6 +95,10 @@ export interface PlacedTextBar extends TextBarPlacement {
   id: string;
   config: BottomBarConfig;
   qr: boolean; // whether the QR rides inside this bar
+  /** True once the user sets the bar width by hand (the "Bar width" control). While
+   *  set, text/font/QR edits keep this width instead of auto-remeasuring, and the
+   *  font auto-fits to it. Absent = auto width (default, backward compatible). */
+  manualWidth?: boolean;
 }
 
 /**
