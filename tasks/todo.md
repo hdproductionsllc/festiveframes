@@ -1,70 +1,78 @@
-# Fix: Eufy print sheet never sent + mobile drag overshoot
+# Builder Overhaul — Plan (2026-06-30)
 
-## Issue 2 — mobile drag overshoot (DONE)
-- [x] Root cause: palette tile was the only drag source missing `touch-action: none`
-      (frame, placed tiles, banner button all have it). Mobile browser ate the
-      first slice of the finger gesture as a scroll → drag + pointer-driven drop
-      shadow started offset → had to overshoot. Desktop (mouse) ignores
-      touch-action, so it was fine — matching the report.
-- [x] Fix in `src/hooks/useDragTile.ts`: always set `touchAction: "none"`.
-- [x] tsc clean.
+Five workstreams, ordered safest-first. All work on a feature branch → PR → CI green →
+manual verify → merge (master auto-deploys to the LIVE store, no staging).
 
-## Issue 1 — Eufy print sheet never attached (server-side auto-attach)
-Decision (Henry): auto-attach via server-side render. The PNG must arrive on the
-production email with zero clicks.
+Branch: `feat/builder-overhaul-float-print-split`
 
-Root cause: `printSheets` is hardcoded `[]` at checkout (Designer.tsx:281) for
-EVERYONE; fulfillment reads `artifacts.printSheets` (always empty) → email always
-says "NO print sheet." The design JSON IS saved in the DB draft, just never used.
+---
 
-- [x] 1. Added `@napi-rs/canvas` + `serverExternalPackages` in next.config.ts.
-- [x] 2. Extracted `src/lib/utils/eufy-print-core.ts` (isWhiteSnappet,
-        buildPrintQueue, setPngDpi/crc32, shared types); client eufy-print.ts now
-        imports them — behavior unchanged.
-- [x] 3. Created `src/lib/utils/eufy-print-server.ts` —
-        `composeEufyPrintSheetsServer(design, jig)` (@napi-rs/canvas; artwork from
-        public/ on disk, remote via fetch, data: via base64).
-- [x] 4. Wired into fulfill.ts (fulfillOrder + fulfillCart) — renders from
-        `draft.design`, attaches sheets, wrapped so a render failure never blocks
-        the order. fulfillOrder now always loads the draft for its design JSON.
-- [x] 5. Updated stale "ordered on mobile" copy in email-production.ts.
-- [x] 6. Verified: tsc 0, eslint clean, `next build` 0. Runtime render test PASSED
-        — 3796×934 PNG @ 300 DPI (pHYs embedded), 4 printed tiles + 1 blank-white
-        skipped, real July4 artwork loaded from disk, registers to the jig grid.
+## 1. Drag-and-drop corner-jump fix  — smallest, highest-confidence  ✅ DONE
+The drop-cue flashes to the top-right corner the instant you pick up a tile, before you move.
 
-## RESULT: shipped-ready. Eufy sheet now auto-attaches to EVERY production email
-(mobile + desktop), completing the half-finished 2026-06-26 migration (commit
-0ef695f removed client render for speed but never built the fulfillment render).
+Root cause: `src/components/designer/DndProvider.tsx:74-76` — on the first collision
+frame, `pointerCoordinates` is briefly `null`, so it falls back to `closestCenter`,
+which snaps to a corner cell. The `// keyboard drag` justification is stale (no
+KeyboardSensor is registered).
 
-## Issue 3 — consolidate banners onto ONE eufy sheet (in progress)
-Decision (Henry): banners print on the SAME eufy sheet as tiles → one print job.
-- Banner height = 1 tile face (1.02"); width = widthUnits × 1.02" (same scale).
-- ALL banners go bottom-right, right edge FLUSH with the sheet's right edge.
-- Multiple banners stack upward from the bottom; BIGGEST (widest) on the bottom.
-- Leftover (banner length ≠ pocket pitch) sits to the LEFT of each banner.
-- Tiles fill pockets in reading order, SKIPPING pockets the banners cover.
-- NO more separate banner PNG attachments — one consolidated sheet only.
+- [x] Changed `if (!pointer) return closestCenter(args)` → `if (!pointer) return []`
+      (no target until the real pointer arrives; cue stays hidden, no corner flash).
+- [x] Removed now-unused `closestCenter` import; left `useDragTile.ts` untouched.
+- [ ] Verify in browser: cue appears only under the cursor, never in a corner; mobile OK.
 
-Approach: composite the ALREADY-rendered client banner PNGs (artifacts.banners,
-font-perfect) onto the sheet — avoids vendoring ~25 Google fonts server-side.
+## 2. eufy print split — tiles on one run, banners on another (same geometry)  ✅ DONE (pending render test)
+Today `planEufySheets` merges banners onto the tile sheet. Split them; geometry/jig/DPI unchanged.
 
-- [x] A. core: `planEufySheets` — banners stacked bottom-right, biggest bottom,
-        flush right edge; tiles skip covered pockets; paginate. Shared.
-- [x] B. server renderer: accepts `banners: NamedImage[]`, matches textBars by
-        name, composites onto sheet; returns `bannerCount`.
-- [x] C. client desktop renderer: renders banners via composeBarImage, same plan.
-- [x] D. fulfill.ts: passes artifacts.banners to renderer; drops the separate
-        banner attachments when ALL banners landed (else keeps as fallback).
-- [x] E. Verified: tsc 0, eslint clean, next build 0. Render tests PASS:
-        • tiles+2 banners → 1 sheet, biggest(6U) bottom + 4U above, both flush
-          right edge, leftover left, tiles-under-banners skipped (eyeballed PNG)
-        • 12U full-width banner → spans bottom row flush
-        • tiles-only (no banners) regression intact · empty design → 0 sheets
+- [x] `eufy-print-core.ts` — `planEufySheets` returns `{ tileSheets, bannerSheets }`.
+      Tiles paginate across the FULL pocket set on every sheet (delete `sheet1Centers`,
+      `clearsBanners`, `exclusiveRowYs`, `sheetIdx===0` special-casing). Keep banner
+      placement geometry verbatim but emit as `bannerSheets` (tiles: []).
+- [x] Removed now-dead `FULL_ROW_BANNER_UNITS` + `exclusiveRowY` + `clearsBanners`.
+- [x] `EufyPrintResult`: `sheets` → `tileSheets`/`bannerSheets` (kept `bannerCount`).
+- [x] `eufy-print.ts` + `eufy-print-server.ts` — single `renderSheets` helper run over both.
+- [x] `ExportPartsList.tsx` `downloadEufySheets` — both sets, `-tiles-`/`-banners-` filename tags.
+- [x] `fulfill.ts` `renderEufyPrintSheets` — names + combines both into `printSheets`.
+- [ ] Verify (render test): tiles+banner → separate tiles sheet AND banner sheet; tile
+      sheet fills every pocket (no gaps where the banner used to sit).
 
-## Notes / constraints
-- `PlacedTile = { pieceId, setId }` — no inline artwork; everything resolves via
-  `getPiece` (pure, server-safe). Custom uploads are a PLAN, not shipped.
-- Eufy sheet renders TILE artwork + solid fills only — NO text. Banners (text
-  bars) are separate files, still rendered client-side at checkout. No server fonts.
-- Use `EUFY_JIG_3X12` (production tray). 720 DPI. Transparent bg drives the
-  white underbase.
+## 3. Desktop floating frame — two-column studio  ✅ DONE (pending browser check)
+Today desktop stacks canvas (full-width band) on top, palette+editor below → scrolling the
+frame off-screen. Make canvas a left column pinned in place; tools scroll on the right.
+
+- [x] `Designer.tsx` `<main>` only — desktop two-column via explicit grid placement:
+      canvas `lg:col-start-1 lg:row-start-1 lg:row-span-2 lg:sticky lg:top-4 lg:self-start`;
+      palette `lg:col-start-2 lg:row-start-1`; editor `lg:col-start-2 lg:row-start-2`.
+- [x] All changes `lg:`-gated; mobile `order-1/2/3` stack preserved; DOM order unchanged.
+- [x] `build-skin.css` and `BuildChrome` untouched.
+- [ ] Verify in browser: desktop >=1024px — frame floats while tools scroll; mobile unchanged.
+
+## 4. Taller bottom bar — optional full-width 2-row banner  — CONFIRM GEOMETRY
+Default unchanged. Add a button; when on, the bottom becomes a 2-row full-width banner.
+
+**Proposed geometry (NEEDS YOUR OK):** turning the extension ON grows the frame downward by
+one tile row (7 -> 8 rows tall, height 6.937" -> ~7.928"); the bottom **2 rows x full 13-unit
+width** become a single banner; no tiles allowed in that region. At 1 row (default) the bottom
+stays "tiles or a normal banner" exactly as today.
+
+- [ ] Add an "Extend bottom banner (full width)" toggle in `BottomBarEditor`.
+- [ ] Design store: a `bottomBarRows: 1 | 2` (or `extendedBanner: boolean`) flag, persisted.
+- [ ] When extended: force a full-width banner (`widthUnits` = row length, `startIndex` = 0,
+      height = 2 tiles), clear tiles under it, block tile placement there.
+- [ ] `FrameCanvas.barRect` + frame height/aspect: support a 2-tile-tall banner and the
+      added row when extended.
+- [ ] Print (banner sheet from #2): render the 2-tall full-width banner at `h = 2*facePx`.
+- [ ] Verify: toggle on -> frame grows a row, bottom is one full-width 2-tall banner, no tiles
+      there; toggle off -> reverts to today's behavior; banner prints correctly on its own sheet.
+
+## 5. Deploy / safety
+- [ ] Feature branch; PR into master; let CI (`lint` + `build`) go green.
+- [ ] Manually verify print output (tiles sheet + banner sheet) before merge — fulfillment
+      uses `@napi-rs/canvas` server-side and only fails at order time, not at build.
+- [ ] Merge -> Railway auto-deploys to www.festiveframes.co.
+
+---
+
+## Sequencing
+Do #1 (drag) and #3 (float) first — independent, low-risk, instantly verifiable UX wins.
+Then #2 (print split). Then #4 (taller bar) — it depends on #2's banner-sheet path.
+Open the PR after #1-#3; fold in #2 and #4 once geometry is confirmed.

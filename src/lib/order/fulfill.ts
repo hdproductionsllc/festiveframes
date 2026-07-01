@@ -17,14 +17,16 @@ export type FulfillResult = "sent" | "already" | "no-payload" | "failed";
 
 /**
  * Render the consolidated eufyMake print sheet(s) server-side from the order's
- * SAVED design JSON — tiles AND the design's banners on one sheet (the banners
- * are the client-rendered PNGs from the draft). Named for the production email's
- * attachments. NEVER throws — a render failure (bad design, art fetch error)
- * returns no sheets so the paid order's emails still go out (the email then shows
- * the "regenerate on desktop" fallback note + keeps the separate banner files).
+ * SAVED design JSON — as TWO separate print runs: a tiles run and a banners run
+ * (banners are the client-rendered PNGs from the draft, on their own jig load).
+ * Named for the production email's attachments, with a tiles/banners token so the
+ * operator never mixes the runs. NEVER throws — a render failure (bad design, art
+ * fetch error) returns no sheets so the paid order's emails still go out (the
+ * email then shows the "regenerate on desktop" fallback note + keeps the separate
+ * banner files).
  *
- * `bannersIncluded` is true only when every banner landed on the sheet, so the
- * caller can safely drop the now-redundant separate banner attachments.
+ * `bannersIncluded` is true only when every banner landed on a banner sheet, so
+ * the caller can safely drop the now-redundant separate banner attachments.
  */
 async function renderEufyPrintSheets(
   design: unknown,
@@ -36,13 +38,16 @@ async function renderEufyPrintSheets(
     // always reflects the geometry the sheet was actually printed at.
     const jig = EUFY_JIG_3X12;
     const res = await composeEufyPrintSheetsServer(design as Parameters<typeof composeEufyPrintSheetsServer>[0], banners, jig);
-    if (res.sheets.length === 0) return { sheets: [], bannersIncluded: false };
+    if (res.tileSheets.length === 0 && res.bannerSheets.length === 0) return { sheets: [], bannersIncluded: false };
     const slug = (designName || "frame").replace(/[^a-z0-9]+/gi, "-").toLowerCase() || "frame";
     const geo = jigGeometryTag(jig); // e.g. "3x12-1.1in-pitch-1.03in-face"
-    const sheets = res.sheets.map((dataUrl, i) => ({
-      name: `${slug}-eufy-${geo}-sheet-${i + 1}-of-${res.sheets.length}`,
-      dataUrl,
-    }));
+    const nameSet = (set: string[], kind: "tiles" | "banners"): NamedImage[] =>
+      set.map((dataUrl, i) => ({
+        name: `${slug}-eufy-${geo}-${kind}-sheet-${i + 1}-of-${set.length}`,
+        dataUrl,
+      }));
+    // Both runs are eufy print sheets → both go in printSheets, tiles first.
+    const sheets = [...nameSet(res.tileSheets, "tiles"), ...nameSet(res.bannerSheets, "banners")];
     return { sheets, bannersIncluded: res.bannerCount === banners.length };
   } catch (err) {
     console.error("[fulfill] eufy print-sheet render failed:", err instanceof Error ? err.message : err);
