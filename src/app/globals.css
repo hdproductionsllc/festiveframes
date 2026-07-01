@@ -264,6 +264,24 @@ body {
   50% { transform: translateY(10px) rotate(-8deg); }
 }
 
+/* ── One-time "tiles are draggable" demo ─────────────────────────────────────
+   The first time a visitor opens the builder, the first palette tile mimes being
+   picked up and dragged (lift → slide right → settle), teaching that tiles are
+   drag-and-droppable, not just tappable. Plays twice, once ever (localStorage).
+   Applied to the tile's inner wrapper (never the drag node). Reduced-motion off. */
+.ff-drag-demo {
+  animation: ff-drag-demo 1.5s ease-in-out 2;
+}
+@keyframes ff-drag-demo {
+  0%, 100% { transform: translateY(0) scale(1) rotate(0deg); }
+  15% { transform: translateY(-7px) scale(1.1) rotate(-4deg); }
+  50% { transform: translate(16px, -7px) scale(1.1) rotate(-4deg); }
+  85% { transform: translateY(-7px) scale(1.1) rotate(-4deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ff-drag-demo { animation: none; }
+}
+
 /* Rail groove inset shadow */
 .rail-groove {
   box-shadow:
@@ -292,8 +310,11 @@ body {
   outline-offset: -2px;
   background: rgba(248, 197, 59, 0.12);
   box-shadow: 0 0 14px 2px rgba(248, 197, 59, 0.5);
+  /* Position (transform) tracks the cursor TIGHTLY — a slow transform here made
+     the cue visibly trail the pointer during fast moves ("it lags, I must drag
+     past"). Keep size/opacity eased for a soft feel, but snap position quickly. */
   transition:
-    transform 110ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 45ms linear,
     width 110ms cubic-bezier(0.22, 1, 0.36, 1),
     height 110ms cubic-bezier(0.22, 1, 0.36, 1),
     opacity 110ms ease-out;

@@ -71,14 +71,29 @@ const pointToRectDistanceSq = (
 };
 
 const collisionStrategy: CollisionDetection = (args) => {
-  const pointer = args.pointerCoordinates;
-  // No pointer yet → no target. This only happens on the first collision frame at
-  // drag-start (pointerCoordinates is briefly null before the first move). There is
-  // no KeyboardSensor registered, so a real keyboard drag never reaches here. A
-  // `closestCenter` fallback would resolve to whichever cell is nearest the dragged
-  // SOURCE element (a palette/panel button below-right of the frame) and flash the
-  // drop cue into the top-right corner for one frame — the "shadow jumps to the
-  // corner on pickup" bug. Returning [] keeps the cue hidden until the pointer is known.
+  // WHERE the user is aiming depends on the drag source:
+  //  • Repositioning a PLACED tile/banner: it drags via the DragOverlay, whose
+  //    floating ghost is pinned to the GRAB POINT + delta — NOT the cursor. The
+  //    user lines up the ghost, so the cursor trails the ghost by the grab offset.
+  //    Querying the raw cursor makes you OVER-DRAG (push the ghost past the cell
+  //    until the trailing cursor catches up). So aim from the ghost's CENTER
+  //    (args.collisionRect = the ghost's translated rect) → what you see is where
+  //    it drops.
+  //  • Palette tiles / NEW banners drag from a panel far below-right of the frame;
+  //    there the ghost/source center resolves to a corner, so those keep the
+  //    CURSOR (which is what stops the "cue flashes to a corner on pickup" bug).
+  const activeId = String(args.active?.id ?? "");
+  const aimsGhost = activeId.startsWith("placed-tile:") || activeId.startsWith("placed-textbar:");
+  const pointer = aimsGhost && args.collisionRect
+    ? {
+        x: args.collisionRect.left + args.collisionRect.width / 2,
+        y: args.collisionRect.top + args.collisionRect.height / 2,
+      }
+    : args.pointerCoordinates;
+  // No aim point yet → no target. Only happens on the first collision frame at
+  // drag-start (pointer/collisionRect briefly null before the first move). There is
+  // no KeyboardSensor registered, so a real keyboard drag never reaches here.
+  // Returning [] keeps the cue hidden until the aim point is known (no corner flash).
   if (!pointer) return [];
 
   // The cell whose RECTANGLE is nearest the pointer (0 when the pointer is inside

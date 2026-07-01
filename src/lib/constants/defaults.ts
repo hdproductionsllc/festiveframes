@@ -11,7 +11,7 @@ export const DEFAULT_BOTTOM_BAR: BottomBarConfig = {
 };
 
 export const DEFAULT_QR_CODE: QRCodeConfig = {
-  enabled: true, // first text bar gets the QR by default
+  enabled: false, // QR is opt-in — off by default; toggle it on per design
   url: "https://festiveframes.co",
   size: 40,
 };

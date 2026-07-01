@@ -367,62 +367,64 @@ export function Designer() {
       )}
 
       <DndProvider onOverSlotChange={setOverSlotId} onBannerPreviewChange={setBannerPreview}>
-        {/* Desktop is a two-column STUDIO: the frame canvas lives in the left
-            column and is pinned in place (lg:sticky) so it stays in view while you
-            scroll the tools; the tile palette + text-bar editor stack in the right
-            column as the scroll track. The canvas spans both rows of the right
-            stack (lg:row-span-2) so it has room to stay stuck for the whole scroll.
-            On MOBILE it collapses to a single column and the order-* classes
-            reorder it to palette (1) -> canvas (2) -> editor (3); explicit grid
-            placement is lg-only, so the mobile stack is byte-identical to before. */}
-        <main className="flex-1 grid grid-cols-1 lg:grid-cols-[1.1fr_0.9fr] gap-4 p-4 mx-auto w-full max-w-7xl items-start">
-          {/* Frame canvas — left column on desktop, pinned (sticky) so it floats in
-              view while the right-hand tools scroll. On MOBILE the tile palette is
-              reordered ABOVE the frame (order-1) so you see the tiles you can place
-              before the license plate; the canvas sits in the middle. */}
-          <div className="order-2 lg:order-none lg:col-start-1 lg:row-start-1 lg:row-span-2 lg:sticky lg:top-4 lg:self-start w-full flex flex-col gap-3">
-            {/* Armed-tile callout — appears right above the frame the moment a
-                tile is armed, telling you in plain words to tap the frame. */}
-            <ArmedBanner placement="frame" />
-
-            <div className="relative">
-              {/* Ambient festivity: two faint, slow twinkles drifting near the
-                  frame's corners — decorative UI chrome only (aria-hidden,
-                  pointer-events off), deliberately subtle and offset in time so
-                  they never compete with the design canvas. Hidden entirely under
-                  reduced motion (the global block freezes the keyframes). */}
-              <span
-                aria-hidden="true"
-                className="ff-twinkle motion-reduce:hidden"
-                style={{ top: "-6px", left: "8%", animationDelay: "1.2s" }}
-              />
-              <span
-                aria-hidden="true"
-                className="ff-twinkle motion-reduce:hidden"
-                style={{ bottom: "-6px", right: "12%", animationDelay: "3.6s", color: "rgba(63,176,230,0.5)" }}
-              />
-              <FrameCanvas
-                ref={canvasRef}
-                frameConfig={frameConfig}
-                slots={slots}
-                bottomBar={bottomBar}
-                qrCode={qrCode}
-                plateState={plateState}
-                overSlotId={overSlotId}
-                bannerPreview={bannerPreview}
-              />
-            </div>
-          </div>
-
-          {/* Tile palette — ABOVE the frame on mobile (order-1) so the tiles read
-              first; right column, top of the scroll stack on desktop. */}
-          <div className="order-1 lg:order-none lg:col-start-2 lg:row-start-1 min-w-0">
+        {/* Desktop STUDIO — a THIN tile rail on the left (its own internal scroll)
+            and the RIGHT column stacking the frame preview on top of a COMPACT,
+            wide banner editor beneath it. Because the tiles scroll inside their own
+            rail and the editor is short-and-wide (not a tall stack), the frame +
+            editor both fit the viewport — the design stays visible while you edit
+            the banner, with NO float/sticky needed. On MOBILE it collapses to one
+            column; order-* reorders to palette (1) -> canvas (2) -> editor (3). */}
+        <main className="flex-1 grid grid-cols-1 lg:grid-cols-[340px_minmax(0,1fr)] gap-4 p-4 mx-auto w-full max-w-[1560px] items-start">
+          {/* Tile palette — LEFT rail. Its height is independent of the right column,
+              so a tall rail never pushes the frame and editor apart. ABOVE the frame
+              on mobile (order-1). */}
+          <div className="order-1 lg:order-none min-w-0">
             <TilePalette />
           </div>
 
-          {/* Text-bar editor — below the frame on mobile (order-3); right column,
-              beneath the palette on desktop. */}
-          <div className="order-3 lg:order-none lg:col-start-2 lg:row-start-2 min-w-0">
+          {/* RIGHT column — the frame preview and the banner editor STACKED in ONE
+              cell, so the editor always sits directly under the frame with a fixed
+              gap regardless of how tall the tile rail is (this is what fixes the big
+              gap when the design is cleared). On mobile this cell follows the palette,
+              giving palette → frame → editor. */}
+          <div className="order-2 lg:order-none flex flex-col gap-4 min-w-0">
+            {/* Frame block */}
+            <div className="w-full flex flex-col gap-3">
+              <div className="relative">
+                {/* Armed-tile callout — floats over the CENTER of the plate the
+                    moment a tile is armed (absolute overlay), so it never pushes the
+                    canvas/editor down. Plain-language "now tap the frame" next step. */}
+                <ArmedBanner placement="frame" />
+
+                {/* Ambient festivity: two faint, slow twinkles drifting near the
+                    frame's corners — decorative UI chrome only (aria-hidden,
+                    pointer-events off), deliberately subtle and offset in time so
+                    they never compete with the design canvas. Hidden entirely under
+                    reduced motion (the global block freezes the keyframes). */}
+                <span
+                  aria-hidden="true"
+                  className="ff-twinkle motion-reduce:hidden"
+                  style={{ top: "-6px", left: "8%", animationDelay: "1.2s" }}
+                />
+                <span
+                  aria-hidden="true"
+                  className="ff-twinkle motion-reduce:hidden"
+                  style={{ bottom: "-6px", right: "12%", animationDelay: "3.6s", color: "rgba(63,176,230,0.5)" }}
+                />
+                <FrameCanvas
+                  ref={canvasRef}
+                  frameConfig={frameConfig}
+                  slots={slots}
+                  bottomBar={bottomBar}
+                  qrCode={qrCode}
+                  plateState={plateState}
+                  overSlotId={overSlotId}
+                  bannerPreview={bannerPreview}
+                />
+              </div>
+            </div>
+
+            {/* Banner editor — directly under the frame. */}
             <BottomBarEditor />
           </div>
         </main>

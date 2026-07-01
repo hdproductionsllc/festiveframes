@@ -57,17 +57,17 @@ export function LooksPicker() {
             title={`Start from “${look.name}” — replaces your current design (undoable)`}
             className="group shrink-0 overflow-hidden rounded-lg border-2 border-surface-700
               bg-surface-800 transition-all hover:border-brand-gold/70 active:scale-95"
-            style={{ width: 104 }}
+            style={{ width: 132 }}
           >
             <Image
               src={`/redesign/looks/${id}.png`}
               alt={`${look.name} look`}
-              width={208}
-              height={112}
-              sizes="104px"
+              width={264}
+              height={142}
+              sizes="132px"
               className="block h-auto w-full"
             />
-            <span className="block truncate px-1.5 py-1 text-center text-[11px] font-semibold text-surface-200">
+            <span className="block whitespace-normal px-1.5 py-1 text-center text-[11px] font-semibold leading-tight text-surface-200">
               {look.name}
             </span>
           </button>

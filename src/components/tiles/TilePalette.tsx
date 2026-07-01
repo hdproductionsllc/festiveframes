@@ -4,7 +4,6 @@ import { useState } from "react";
 import { TileGrid } from "./TileGrid";
 import { ArmedBanner } from "./ArmedBanner";
 import { QuickActions } from "@/components/designer/QuickActions";
-import { LooksPicker } from "@/components/designer/LooksPicker";
 
 /**
  * The tile palette is now an in-flow PANEL in the tools row beneath the canvas
@@ -34,18 +33,20 @@ export function TilePalette() {
 
 function DesktopPaletteContent() {
   return (
-    <div className="flex flex-col gap-2">
-      {/* Tools + instruction sit ABOVE the tiles so the actions are the first
-          thing reached, then the picker, then the armed-tile cue beside it. */}
+    <div className="flex min-h-0 flex-col gap-2">
+      {/* Tools + a COMPACT one-line hint sit ABOVE the tiles. ("Start from a Look"
+          now lives in the header, freeing the rail for tiles.) */}
       <QuickActions />
-      <LooksPicker />
-      <p className="rounded-full border-2 border-brand-gold/60 bg-brand-gold/15 px-3 py-2
-        text-center text-sm font-extrabold leading-snug text-[#1e1b17]">
-        Tap a tile, then tap your frame to drop it. Or drag a tile on (drag one off to remove).
+      <p className="text-center text-xs font-semibold leading-snug text-surface-300">
+        Tap a tile then tap the frame — or drag it on. Drag a tile off to remove.
       </p>
+      {/* Tile grid at natural height — no overflow clip here. (An overflow-y scroll
+          would clip the "● Placing" badge that pops ABOVE the top row of tiles when
+          one is armed. The rail's height is fine unclamped since the right column —
+          frame + editor — is the taller side.) */}
       <TileGrid />
-      {/* Armed-tile callout — also surfaces here, next to the picker, so the
-          "now tap the frame" instruction is visible no matter where you look. */}
+      {/* Armed-tile callout — surfaces here too, so the "now tap the frame" cue is
+          visible no matter where you look. */}
       <ArmedBanner placement="tray" />
     </div>
   );
@@ -84,11 +85,11 @@ function MobileTileTray() {
         </div>
       </div>
 
-      {/* Optional design tools — open by default; collapsible via the gear. */}
+      {/* Optional design tools — open by default; collapsible via the gear.
+          ("Start from a Look" now lives in the header for all viewports.) */}
       {optionsOpen && (
         <div className="max-h-[42vh] space-y-2 overflow-y-auto border-b border-surface-700/60 px-3 pb-3 pt-1">
           <QuickActions />
-          <LooksPicker />
         </div>
       )}
 
