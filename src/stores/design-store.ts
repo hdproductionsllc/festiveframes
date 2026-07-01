@@ -166,6 +166,8 @@ interface DesignState {
    */
   addTextBar: () => boolean;
   moveTextBar: (id: string, row: TextBarRow, startIndex: number) => void;
+  setTextBarWidth: (id: string, widthUnits: number) => void;
+  resetTextBarWidth: (id: string) => void;
   removeTextBar: (id: string) => void;
   selectBar: (id: string | null) => void;
   updateTextBar: (id: string, updates: Partial<BottomBarConfig>) => void;
@@ -608,6 +610,48 @@ export const useDesignStore = create<DesignState>()(
           });
         },
 
+        // Manually set a bar's width in tile units. Clamps to the free span at its
+        // position (fitWidth) and marks the width MANUAL so text/font/QR edits keep
+        // it — the font auto-fits to whatever width the bar carries (see the
+        // renderers' fitTextBarFont). Undoable.
+        setTextBarWidth: (id, widthUnits) => {
+          set((state) => {
+            const bar = state.textBars.find((b) => b.id === id);
+            if (!bar) return state;
+            const maxUnits = rowLength(state.frameConfig, bar.row);
+            const fit = fitWidth(state.textBars, bar, widthUnits, maxUnits);
+            if (fit.widthUnits === bar.widthUnits && fit.startIndex === bar.startIndex && bar.manualWidth) {
+              return state;
+            }
+            const updated: PlacedTextBar = { ...bar, widthUnits: fit.widthUnits, startIndex: fit.startIndex, manualWidth: true };
+            const newBars = state.textBars.map((b) => (b.id === id ? updated : b));
+            return withHistory(state, {
+              textBars: newBars,
+              slots: clearCoveredTiles(state.slots, newBars),
+              updatedAt: Date.now(),
+            });
+          });
+        },
+
+        // Hand the bar back to AUTO width — re-measure from its text/font and drop
+        // the manual flag (the "Auto" reset beside the width control).
+        resetTextBarWidth: (id) => {
+          set((state) => {
+            const bar = state.textBars.find((b) => b.id === id);
+            if (!bar || !bar.manualWidth) return state;
+            const maxUnits = rowLength(state.frameConfig, bar.row);
+            const desired = measureTextBarUnits(bar.config, bar.qr, maxUnits);
+            const fit = fitWidth(state.textBars, bar, desired, maxUnits);
+            const updated: PlacedTextBar = { ...bar, widthUnits: fit.widthUnits, startIndex: fit.startIndex, manualWidth: false };
+            const newBars = state.textBars.map((b) => (b.id === id ? updated : b));
+            return withHistory(state, {
+              textBars: newBars,
+              slots: clearCoveredTiles(state.slots, newBars),
+              updatedAt: Date.now(),
+            });
+          });
+        },
+
         removeTextBar: (id) => {
           set((state) => {
             const remaining = state.textBars.filter((b) => b.id !== id);
@@ -617,14 +661,13 @@ export const useDesignStore = create<DesignState>()(
             let synced = syncFirstBarQr(remaining, state.qrCode.enabled);
             const first = synced[0];
             if (first && first !== remaining[0]) {
-              // The first bar's qr flag actually changed during promotion — re-fit.
+              // The first bar's qr flag actually changed during promotion — re-fit
+              // (a hand-set width is preserved; only auto-width bars re-measure).
               const maxUnits = rowLength(state.frameConfig, first.row);
-              const { widthUnits, startIndex } = fitWidth(
-                synced,
-                first,
-                measureTextBarUnits(first.config, first.qr, maxUnits),
-                maxUnits
-              );
+              const desired = first.manualWidth
+                ? first.widthUnits
+                : measureTextBarUnits(first.config, first.qr, maxUnits);
+              const { widthUnits, startIndex } = fitWidth(synced, first, desired, maxUnits);
               synced = synced.map((b, i) => (i === 0 ? { ...b, widthUnits, startIndex } : b));
             }
             return withHistory(state, {
@@ -646,12 +689,12 @@ export const useDesignStore = create<DesignState>()(
             if (!bar) return state;
             const config = { ...bar.config, ...updates };
             const maxUnits = rowLength(state.frameConfig, bar.row);
-            const { widthUnits, startIndex } = fitWidth(
-              state.textBars,
-              bar,
-              measureTextBarUnits(config, bar.qr, maxUnits),
-              maxUnits
-            );
+            // A hand-set width sticks: keep it and let the font refit; otherwise
+            // auto-measure from the new text/font.
+            const desired = bar.manualWidth
+              ? bar.widthUnits
+              : measureTextBarUnits(config, bar.qr, maxUnits);
+            const { widthUnits, startIndex } = fitWidth(state.textBars, bar, desired, maxUnits);
             const updated: PlacedTextBar = { ...bar, config, widthUnits, startIndex };
             const newBars = state.textBars.map((b) => (b.id === id ? updated : b));
             return withHistory(state, {
@@ -673,12 +716,10 @@ export const useDesignStore = create<DesignState>()(
             const first = textBars[0];
             if (first) {
               const maxUnits = rowLength(state.frameConfig, first.row);
-              const { widthUnits, startIndex } = fitWidth(
-                textBars,
-                first,
-                measureTextBarUnits(first.config, first.qr, maxUnits),
-                maxUnits
-              );
+              const desired = first.manualWidth
+                ? first.widthUnits
+                : measureTextBarUnits(first.config, first.qr, maxUnits);
+              const { widthUnits, startIndex } = fitWidth(textBars, first, desired, maxUnits);
               textBars = textBars.map((b, i) => (i === 0 ? { ...b, widthUnits, startIndex } : b));
             }
             return withHistory(state, {

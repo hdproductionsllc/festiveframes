@@ -156,6 +156,8 @@ export function BottomBarEditor() {
   const updateTextBar = useDesignStore((s) => s.updateTextBar);
   const addTextBar = useDesignStore((s) => s.addTextBar);
   const moveTextBar = useDesignStore((s) => s.moveTextBar);
+  const setTextBarWidth = useDesignStore((s) => s.setTextBarWidth);
+  const resetTextBarWidth = useDesignStore((s) => s.resetTextBarWidth);
   const qrCode = useDesignStore((s) => s.qrCode);
   const setQrEnabled = useDesignStore((s) => s.setQrEnabled);
   const updateQRCode = useDesignStore((s) => s.updateQRCode);
@@ -389,6 +391,42 @@ export function BottomBarEditor() {
                   max={12}
                   onChange={(letterSpacing) => setCfg({ letterSpacing })}
                 />
+
+                {/* Bar Width — set the banner width in tile units by hand; the font
+                    auto-resizes to fill it. "Auto" hands sizing back to the text. */}
+                {selected && (
+                  <label className="flex flex-col gap-1.5 sm:col-span-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold uppercase tracking-wide text-[#1e1b17]/70">Bar Width</span>
+                      <span className="flex items-center gap-2 text-xs font-semibold tabular-nums text-[#1e1b17]/70">
+                        {selected.widthUnits} tiles
+                        {selected.manualWidth ? (
+                          <button
+                            type="button"
+                            onClick={() => resetTextBarWidth(selected.id)}
+                            className="rounded-full border border-[#ed5aa0]/50 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide text-[#ed5aa0] transition-colors hover:bg-[#ed5aa0]/10"
+                          >
+                            Auto
+                          </button>
+                        ) : (
+                          <span className="text-[9px] font-bold uppercase tracking-wide text-[#1e1b17]/35">auto</span>
+                        )}
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min={3}
+                      max={rowLength(frameConfig, selected.row)}
+                      step={1}
+                      value={selected.widthUnits}
+                      onChange={(e) => setTextBarWidth(selected.id, Number(e.target.value))}
+                      className="w-full h-1.5 cursor-pointer appearance-none rounded-full bg-[#1e1b17]/15
+                        [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:appearance-none
+                        [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#ed5aa0]
+                        [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white"
+                    />
+                  </label>
+                )}
               </div>
 
               {/* Add a QR code — part of editing the bar, off by default. */}
