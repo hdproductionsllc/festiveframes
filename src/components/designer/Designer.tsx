@@ -1,12 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useDesignStore } from "@/stores/design-store";
+import { useDesignStore, type LoadableDesign } from "@/stores/design-store";
 import { useUIStore } from "@/stores/ui-store";
 import { useCartStore } from "@/stores/cart-store";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { DndProvider } from "./DndProvider";
 import { DesignerHeader } from "./DesignerHeader";
+import { SaveDesignModal } from "./SaveDesignModal";
 import { ExportPartsList } from "./ExportPartsList";
 import { FrameCanvas, type FrameCanvasHandle } from "@/components/frame/FrameCanvas";
 import { TilePalette } from "@/components/tiles/TilePalette";
@@ -63,6 +64,25 @@ export function Designer() {
   const [ordering, setOrdering] = useState(false);
   const [orderError, setOrderError] = useState<string | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
+  const [saveOpen, setSaveOpen] = useState(false);
+  // Once the visitor saves this session, stop nagging them on close.
+  const [savedThisSession, setSavedThisSession] = useState(false);
+
+  // Save-on-close: if there's an unsaved design, the browser's native
+  // "leave site?" prompt gives them a beat to hit "Save design" first. Skipped
+  // once they've saved. (The design also persists to localStorage regardless.)
+  useEffect(() => {
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (savedThisSession) return;
+      const st = useDesignStore.getState();
+      const hasContent = Object.keys(st.slots).length > 0 || st.textBars.length > 0;
+      if (!hasContent) return;
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [savedThisSession]);
   const [reviewProof, setReviewProof] = useState<string | null>(null);
   // True while the proof image is rendering. Lets the modal show a "rendering"
   // vs. "couldn't render — continue or retry" state instead of hanging forever
@@ -101,6 +121,37 @@ export function Designer() {
   useEffect(() => {
     if (seededRef.current) return;
     seededRef.current = true;
+
+    // Restore a SAVED design from `?restore=<token>`. Checked BEFORE the has-design
+    // guard below, so the emailed "continue your design" link works even for a
+    // returning visitor who already has a local design. Fetch is async (fire and
+    // forget); on success it fully replaces the design via loadDesign, then strips
+    // the token from the URL so a refresh/share doesn't re-restore.
+    const restore =
+      typeof window !== "undefined"
+        ? new URLSearchParams(window.location.search).get("restore")
+        : null;
+    if (restore) {
+      void (async () => {
+        try {
+          const res = await fetch(`/api/save-design?token=${encodeURIComponent(restore)}`);
+          if (res.ok) {
+            const data = (await res.json()) as { design?: LoadableDesign };
+            if (data?.design) useDesignStore.getState().loadDesign(data.design);
+          }
+        } catch {
+          /* network error — fall through to a normal empty builder */
+        } finally {
+          if (typeof window !== "undefined") {
+            const u = new URL(window.location.href);
+            u.searchParams.delete("restore");
+            window.history.replaceState({}, "", u.toString());
+          }
+        }
+      })();
+      return;
+    }
+
     const set = getSet("july4th");
     if (!set) return;
     const pieces = set.pieces.map((p) => ({ pieceId: p.id, setId: set.id }));
@@ -350,7 +401,11 @@ export function Designer() {
 
   return (
     <div className="workbench-bg min-h-screen flex flex-col">
-      <DesignerHeader onExport={handleExport} onExportParts={handleExportParts} onOrder={handleReview} ordering={ordering} />
+      <DesignerHeader onExport={handleExport} onExportParts={handleExportParts} onOrder={handleReview} onSaveDesign={() => setSaveOpen(true)} ordering={ordering} />
+
+      {saveOpen && (
+        <SaveDesignModal onClose={() => setSaveOpen(false)} onSaved={() => setSavedThisSession(true)} />
+      )}
       <ExportPartsList open={showParts} onClose={() => setShowParts(false)} frameImage={frameImage} />
       {reviewOpen && (
         <ReviewOrderModal

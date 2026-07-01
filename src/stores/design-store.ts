@@ -186,6 +186,9 @@ interface DesignState {
   // Actions — meta
   setDesignName: (name: string) => void;
   setPlateState: (abbr: string) => void;
+  /** Replace the ENTIRE design in one shot (restoring a saved design). Resets
+   *  history so undo doesn't cross the load boundary. */
+  loadDesign: (design: LoadableDesign) => void;
 
   // Actions — history
   undo: () => void;
@@ -193,6 +196,15 @@ interface DesignState {
   canUndo: () => boolean;
   canRedo: () => boolean;
 }
+
+/** The serializable design payload — the fields that fully define a design (the
+ *  same set `partialize` persists). Used to save a design and to restore one. */
+export type LoadableDesign = Partial<
+  Pick<
+    DesignState,
+    "designName" | "plateState" | "slots" | "textBars" | "bottomBar" | "qrCode" | "frameConfig" | "dieCut"
+  >
+>;
 
 function createSnapshot(state: {
   slots: Record<string, PlacedTile>;
@@ -745,6 +757,28 @@ export const useDesignStore = create<DesignState>()(
 
         setPlateState: (abbr) => {
           set({ plateState: abbr, updatedAt: Date.now() });
+        },
+
+        loadDesign: (design) => {
+          // Full replace (restoring a saved design). Deep-copy nested objects so
+          // the restored design can't share references with the saved payload, and
+          // reset history so undo/redo starts fresh from the loaded design.
+          set({
+            designName: design.designName ?? "My Frame Design",
+            plateState: design.plateState ?? "MO",
+            slots: design.slots ? { ...design.slots } : {},
+            textBars: Array.isArray(design.textBars)
+              ? design.textBars.map((b) => ({ ...b, config: { ...b.config } }))
+              : [],
+            bottomBar: design.bottomBar ? { ...design.bottomBar } : { ...DEFAULT_BOTTOM_BAR },
+            qrCode: design.qrCode ? { ...design.qrCode } : { ...DEFAULT_QR_CODE },
+            frameConfig: design.frameConfig ? { ...design.frameConfig } : { ...DEFAULT_FRAME_CONFIG },
+            dieCut: design.dieCut ?? false,
+            selectedBarId: null,
+            history: [],
+            historyIndex: -1,
+            updatedAt: Date.now(),
+          });
         },
 
         toggleDieCut: () => {
