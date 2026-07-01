@@ -14,10 +14,11 @@ interface DesignerHeaderProps {
   onExport: () => void;
   onExportParts: () => void;
   onOrder: () => void;
+  onSaveDesign: () => void;
   ordering?: boolean;
 }
 
-export function DesignerHeader({ onExport, onExportParts, onOrder, ordering }: DesignerHeaderProps) {
+export function DesignerHeader({ onExport, onExportParts, onOrder, onSaveDesign, ordering }: DesignerHeaderProps) {
   const designName = useDesignStore((s) => s.designName);
   const setDesignName = useDesignStore((s) => s.setDesignName);
   const updatedAt = useDesignStore((s) => s.updatedAt);
@@ -132,6 +133,17 @@ export function DesignerHeader({ onExport, onExportParts, onOrder, ordering }: D
           className="rounded-full p-2 text-base text-[#faf0d6]/80 transition-colors hover:bg-white/10"
         >
           {soundEnabled ? "🔊" : "🔇"}
+        </button>
+        {/* Save the DESIGN (email a restore link to continue later) — distinct from
+            "Save Image" which downloads a PNG. */}
+        <button
+          onClick={onSaveDesign}
+          disabled={!hasDesign}
+          title="Save your design and email yourself a link to continue later"
+          className="rounded-full border-2 border-[#faf0d6]/30 px-3 py-1.5 text-sm font-semibold text-[#faf0d6]/90
+            transition-colors hover:bg-white/10 disabled:opacity-40"
+        >
+          Save design
         </button>
         <button
           onClick={onExport}

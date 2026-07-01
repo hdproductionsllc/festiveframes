@@ -199,6 +199,44 @@ export async function sendOrderEmails(o: OrderEmailData): Promise<void> {
   }
 }
 
+/**
+ * Emails a visitor the link to CONTINUE a design they saved (the "Save my design"
+ * flow). No-ops gracefully when Resend isn't configured; returns whether it sent.
+ */
+export async function sendRestoreLinkEmail(p: {
+  to: string;
+  name: string | null;
+  url: string;
+}): Promise<boolean> {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    console.warn("[email] RESEND_API_KEY not set; skipping restore-link email.");
+    return false;
+  }
+  const from = process.env.EMAIL_FROM || "Festive Frames <onboarding@resend.dev>";
+  const resend = new Resend(apiKey);
+  const hi = p.name ? `, ${escapeHtml(p.name.split(" ")[0])}` : "";
+  try {
+    await resend.emails.send({
+      from,
+      to: p.to,
+      subject: "Your Festive Frames design — pick up where you left off",
+      html: shell(
+        `Your design is saved${hi}!`,
+        `<p style="margin:0 0 16px;color:${INK};font-size:14px;line-height:1.6;">Your custom license-plate frame is safe. Reopen the builder exactly where you left off — tweak it, then order when you're ready.</p>
+         <p style="margin:0 0 8px;text-align:center;">
+           <a href="${p.url}" style="display:inline-block;padding:12px 26px;background:${PINK};color:#fff;font-size:15px;font-weight:bold;text-decoration:none;border:3px solid ${INK};border-radius:99px;box-shadow:${SHADOW};font-family:${DISPLAY_FONT};">Continue your design &rarr;</a>
+         </p>
+         <p style="margin:18px 0 0;color:${INK};font-size:12px;line-height:1.5;word-break:break-all;">Or paste this link into your browser:<br/><a href="${p.url}" style="color:${BLUE};">${escapeHtml(p.url)}</a></p>`,
+      ),
+    });
+    return true;
+  } catch (err) {
+    console.error("[email] restore-link email failed:", err);
+    return false;
+  }
+}
+
 export interface ReviewSubmission {
   rating: number;
   body: string;

@@ -54,6 +54,19 @@ export interface CartDraft {
   savedAt: number;
 }
 
+/**
+ * A design a visitor saved to continue later (the "Save my design → email a
+ * restore link" flow). Keyed by an opaque token that rides in the emailed
+ * `/build?restore=<token>` link. `design` is the full serialized builder state.
+ */
+export interface SavedDesign {
+  token: string;
+  email: string;
+  name: string | null;
+  design: unknown;
+  savedAt: number;
+}
+
 // 24 hours: long enough that a multi-frame cart assembled across a session (design
 // one frame, come back, design another) never finds an earlier design's draft
 // already swept. Drafts are tiny refs + artifacts; holding them a day is cheap.
@@ -107,6 +120,15 @@ function ensureSchema(): Promise<void> {
           saved_at timestamptz NOT NULL DEFAULT now()
         )
       `);
+      await p.query(`
+        CREATE TABLE IF NOT EXISTS saved_designs (
+          token      text PRIMARY KEY,
+          email      text NOT NULL,
+          name       text,
+          design     jsonb NOT NULL,
+          created_at timestamptz NOT NULL DEFAULT now()
+        )
+      `);
     })().catch((err) => {
       // Reset so a later call can retry schema init.
       initPromise = null;
@@ -122,6 +144,7 @@ function ensureSchema(): Promise<void> {
 const memDrafts = new Map<string, OrderDraft>();
 const memCarts = new Map<string, CartDraft>();
 const memFulfilled = new Set<string>();
+const memSavedDesigns = new Map<string, SavedDesign>();
 
 function memSweep(): void {
   const cutoff = Date.now() - TTL_MS;
@@ -298,6 +321,56 @@ export async function unmarkFulfilled(orderId: string): Promise<void> {
     await p.query(`DELETE FROM order_fulfilled WHERE order_id = $1`, [orderId]);
   } catch (err) {
     console.error("[order/store] unmarkFulfilled failed:", err instanceof Error ? err.message : err);
+    throw err;
+  }
+}
+
+// ── Saved designs (the "continue your design" restore flow) ───────────────────
+
+/** Persist a saved design under its token (INSERT; tokens are freshly generated). */
+export async function saveSavedDesign(d: Omit<SavedDesign, "savedAt">): Promise<void> {
+  if (!USE_DB) {
+    memSavedDesigns.set(d.token, { ...d, savedAt: Date.now() });
+    return;
+  }
+  await ensureSchema();
+  const p = getPool();
+  try {
+    await p.query(
+      `INSERT INTO saved_designs (token, email, name, design, created_at)
+       VALUES ($1, $2, $3, $4, now())
+       ON CONFLICT (token) DO UPDATE
+         SET email = EXCLUDED.email, name = EXCLUDED.name,
+             design = EXCLUDED.design, created_at = now()`,
+      [d.token, d.email, d.name, JSON.stringify(d.design ?? null)],
+    );
+  } catch (err) {
+    console.error("[order/store] saveSavedDesign failed:", err instanceof Error ? err.message : err);
+    throw err;
+  }
+}
+
+/** Fetch a saved design by token (jsonb comes back pre-parsed). undefined if unknown. */
+export async function getSavedDesign(token: string): Promise<SavedDesign | undefined> {
+  if (!USE_DB) return memSavedDesigns.get(token);
+  await ensureSchema();
+  const p = getPool();
+  try {
+    const { rows } = await p.query(
+      `SELECT token, email, name, design, created_at FROM saved_designs WHERE token = $1`,
+      [token],
+    );
+    if (rows.length === 0) return undefined;
+    const r = rows[0];
+    return {
+      token: r.token,
+      email: r.email,
+      name: r.name ?? null,
+      design: r.design,
+      savedAt: r.created_at instanceof Date ? r.created_at.getTime() : new Date(r.created_at).getTime(),
+    };
+  } catch (err) {
+    console.error("[order/store] getSavedDesign failed:", err instanceof Error ? err.message : err);
     throw err;
   }
 }
