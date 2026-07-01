@@ -1,5 +1,6 @@
-import { create } from "zustand";
+import { createStore, useStore, type StoreApi } from "zustand";
 import { persist } from "zustand/middleware";
+import { createContext, useContext, createElement, type ReactNode } from "react";
 import type {
   PlacedTile,
   BottomBarConfig,
@@ -233,7 +234,11 @@ function reconcileSelectedBar(
   return null;
 }
 
-export const useDesignStore = create<DesignState>()(
+// The store is a FACTORY so more than one builder can each own an isolated design
+// (own state + own localStorage key). /build uses `defaultDesignStore`; the school
+// builder creates its own instance and provides it via `DesignStoreProvider`.
+function createDesignStore(persistName: string) {
+  return createStore<DesignState>()(
   persist(
     (set, get) => {
       /**
@@ -880,7 +885,7 @@ export const useDesignStore = create<DesignState>()(
       };
     },
     {
-      name: "festive-frames-design-v5",
+      name: persistName,
       // Persist the FULL design so a reload restores exactly what the "Saved"
       // indicator promises. History is intentionally NOT persisted (undo/redo is
       // a within-session affordance, not a saved part of the design).
@@ -962,4 +967,44 @@ export const useDesignStore = create<DesignState>()(
       },
     }
   )
-);
+  );
+}
+
+// ─── Store instances + React context ─────────────────────────────────────────
+//
+// `defaultDesignStore` is the ONE store /build (and every non-builder consumer:
+// cart, print utils, autosave) uses — same persist key as before, so /build is
+// byte-for-byte unchanged. A second builder (the school builder) creates its own
+// instance with a DIFFERENT key and hands it down via `DesignStoreProvider`.
+
+export { createDesignStore };
+
+export const defaultDesignStore = createDesignStore("festive-frames-design-v5");
+
+const DesignStoreContext = createContext<StoreApi<DesignState>>(defaultDesignStore);
+
+export function DesignStoreProvider({
+  store,
+  children,
+}: {
+  store: StoreApi<DesignState>;
+  children: ReactNode;
+}) {
+  return createElement(DesignStoreContext.Provider, { value: store }, children);
+}
+
+/** Subscribe to design state from the CONTEXT store (defaults to the /build store
+ *  when no provider is present, so every existing call site is unchanged). Selector
+ *  is optional — `useDesignStore()` returns the whole state (old behavior). */
+export function useDesignStore(): DesignState;
+export function useDesignStore<T>(selector: (state: DesignState) => T): T;
+export function useDesignStore<T>(selector?: (state: DesignState) => T) {
+  const store = useContext(DesignStoreContext);
+  return useStore(store, selector ?? ((s: DesignState) => s as unknown as T));
+}
+
+/** The context store instance, for imperative access (`api.getState()`) inside a
+ *  component — resolves to the school store under a provider, else the default. */
+export function useDesignStoreApi(): StoreApi<DesignState> {
+  return useContext(DesignStoreContext);
+}

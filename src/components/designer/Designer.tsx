@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useDesignStore, type LoadableDesign } from "@/stores/design-store";
+import { useDesignStore, useDesignStoreApi, type LoadableDesign } from "@/stores/design-store";
 import { useUIStore } from "@/stores/ui-store";
 import { useCartStore } from "@/stores/cart-store";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
@@ -46,6 +46,7 @@ function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T
 }
 
 export function Designer() {
+  const api = useDesignStoreApi(); // the /build store (imperative getState in handlers)
   const frameConfig = useDesignStore((s) => s.frameConfig);
   const slots = useDesignStore((s) => s.slots);
   const bottomBar = useDesignStore((s) => s.bottomBar);
@@ -74,7 +75,7 @@ export function Designer() {
   useEffect(() => {
     const onBeforeUnload = (e: BeforeUnloadEvent) => {
       if (savedThisSession) return;
-      const st = useDesignStore.getState();
+      const st = api.getState();
       const hasContent = Object.keys(st.slots).length > 0 || st.textBars.length > 0;
       if (!hasContent) return;
       e.preventDefault();
@@ -82,7 +83,7 @@ export function Designer() {
     };
     window.addEventListener("beforeunload", onBeforeUnload);
     return () => window.removeEventListener("beforeunload", onBeforeUnload);
-  }, [savedThisSession]);
+  }, [savedThisSession, api]);
   const [reviewProof, setReviewProof] = useState<string | null>(null);
   // True while the proof image is rendering. Lets the modal show a "rendering"
   // vs. "couldn't render — continue or retry" state instead of hanging forever
@@ -137,7 +138,7 @@ export function Designer() {
           const res = await fetch(`/api/save-design?token=${encodeURIComponent(restore)}`);
           if (res.ok) {
             const data = (await res.json()) as { design?: LoadableDesign };
-            if (data?.design) useDesignStore.getState().loadDesign(data.design);
+            if (data?.design) api.getState().loadDesign(data.design);
           }
         } catch {
           /* network error — fall through to a normal empty builder */
@@ -156,7 +157,7 @@ export function Designer() {
     if (!set) return;
     const pieces = set.pieces.map((p) => ({ pieceId: p.id, setId: set.id }));
     if (!pieces.length) return;
-    const store = useDesignStore.getState();
+    const store = api.getState();
     const hasDesign =
       Object.keys(store.slots).length > 0 || store.textBars.length > 0;
 
@@ -177,20 +178,20 @@ export function Designer() {
       // look's themed filler, then drop the top and/or bottom banner(s) the
       // preview shows. (See src/data/look-presets.ts for the per-look layout.)
       const valid = new Set(pieces.map((p) => p.pieceId));
-      const store = useDesignStore.getState();
+      const store = api.getState();
       store.clearAll();
 
       // 1. Explicit tile placements (only real, in-set pieces).
       for (const [slotId, pieceId] of Object.entries(preset.slots)) {
         if (valid.has(pieceId)) {
-          useDesignStore.getState().placeTile(slotId, pieceId, set.id);
+          api.getState().placeTile(slotId, pieceId, set.id);
         }
       }
 
       // 2. Fill any remaining empty perimeter slot with the themed filler.
       const filler = preset.filler.filter((id) => valid.has(id));
       if (filler.length) {
-        useDesignStore.getState().fillEmpty(
+        api.getState().fillEmpty(
           filler.map((pieceId) => ({ pieceId, setId: set.id }))
         );
       }
@@ -206,13 +207,13 @@ export function Designer() {
         row: "top" | "bottom",
         banner: NonNullable<typeof preset.bottomBar>
       ) => {
-        const s = useDesignStore.getState();
+        const s = api.getState();
         s.updateBottomBar({
           text: banner.text,
           ...(banner.backgroundColor ? { backgroundColor: banner.backgroundColor } : {}),
           ...(banner.textColor ? { textColor: banner.textColor } : {}),
         });
-        useDesignStore.getState().placeTextBarCentered(row);
+        api.getState().placeTextBarCentered(row);
       };
       if (preset.bottomBar) placeBanner("bottom", preset.bottomBar);
       if (preset.topBar) placeBanner("top", preset.topBar);
@@ -221,8 +222,8 @@ export function Designer() {
 
     // No / unknown look → keep the original random behavior.
     randomFill(pieces);
-    useDesignStore.getState().mirrorTopSlots();
-  }, [randomFill]);
+    api.getState().mirrorTopSlots();
+  }, [randomFill, api]);
 
   const handleExport = useCallback(async () => {
     setExportState("exporting");
@@ -274,11 +275,11 @@ export function Designer() {
   // sees exactly what we'll make before paying. The proof is reused for production.
   const handleReview = useCallback(async () => {
     if (ordering) return;
-    const s = useDesignStore.getState();
+    const s = api.getState();
     if (Object.keys(s.slots).length === 0) return;
     setReviewOpen(true);
     await renderProof();
-  }, [ordering, renderProof]);
+  }, [ordering, renderProof, api]);
 
   // Render every production artifact client-side (reusing the review proof) and
   // stash the design to the SERVER draft keyed by a fresh orderId. The server
@@ -289,7 +290,7 @@ export function Designer() {
   const prepareDesignDraft = useCallback(async (): Promise<
     { orderId: string; designName: string; thumbDataUrl: string | null } | null
   > => {
-    const s = useDesignStore.getState();
+    const s = api.getState();
     if (Object.keys(s.slots).length === 0) return null;
     const orderId = (crypto.randomUUID?.() ?? `ord-${Date.now()}-${Math.floor(Math.random() * 1e6)}`);
 
@@ -366,7 +367,7 @@ export function Designer() {
     }
 
     return { orderId, designName: s.designName || "Custom frame", thumbDataUrl };
-  }, []);
+  }, [api]);
 
   // Step 2: the customer confirmed the proof — prepare the design draft and add
   // it to the cart, then take them to the cart to add more or check out. The

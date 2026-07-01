@@ -1,6 +1,6 @@
 import QRCode from "qrcode";
 import type { PlacedTextBar } from "@/lib/types";
-import { useDesignStore } from "@/stores/design-store";
+import { defaultDesignStore } from "@/stores/design-store";
 import { generateSlots } from "@/lib/utils/slot-generator";
 import {
   coveredSlotIds,
@@ -111,7 +111,7 @@ function drawTextBar(
 /** Render the current design to a PNG data URL. Works on iOS (unlike DOM screenshot). */
 export async function composeFrameImage(width = 1600): Promise<string> {
   if (typeof document === "undefined") return "";
-  const s = useDesignStore.getState();
+  const s = defaultDesignStore.getState();
   const { frameConfig, slots, textBars, qrCode, plateState, dieCut } = s;
 
   const fonts = (document as unknown as { fonts?: { ready?: Promise<unknown> } }).fonts;
@@ -214,7 +214,7 @@ export async function composeFrameImage(width = 1600): Promise<string> {
  */
 export async function composeBarImage(barId: string, unitPx = 357): Promise<string> {
   if (typeof document === "undefined") return "";
-  const s = useDesignStore.getState();
+  const s = defaultDesignStore.getState();
   const bar = s.textBars.find((b) => b.id === barId);
   if (!bar) return "";
 
