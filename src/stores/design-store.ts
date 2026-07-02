@@ -10,6 +10,9 @@ import type {
   TextBarPlacement,
   TextBarRow,
   PlacedTextBar,
+  SectionId,
+  SectionMode,
+  SectionState,
 } from "@/lib/types";
 import type { LookPreset, LookBanner } from "@/data/look-presets";
 import { DEFAULT_FRAME_CONFIG, getWingFrameConfig, getStandardConfig } from "@/lib/constants/frame";
@@ -122,6 +125,12 @@ interface DesignState {
   selectedBarId: string | null; // bar currently being edited in the panel
   updatedAt: number;
 
+  // Sections (school builder) — a zone in text/image mode is one direct-print
+  // piece; a missing key (or mode "tiles") = the normal tile grid. /build never
+  // populates this, so all section logic no-ops there.
+  sections: Partial<Record<SectionId, SectionState>>;
+  selectedSectionId: SectionId | null; // section being edited (UI only)
+
   // History
   history: HistorySnapshot[];
   historyIndex: number;
@@ -191,6 +200,14 @@ interface DesignState {
    *  history so undo doesn't cross the load boundary. */
   loadDesign: (design: LoadableDesign) => void;
 
+  // Actions — sections (school builder). Suppress-don't-destroy: flipping a section
+  // to text/image hides its tiles (via a covered-set), so flipping back is lossless.
+  setSectionMode: (id: SectionId, mode: SectionMode) => void;
+  setSectionText: (id: SectionId, updates: Partial<BottomBarConfig>) => void;
+  setSectionImage: (id: SectionId, image: { imageUrl: string; presetId?: string; fit?: "cover" | "contain" }) => void;
+  clearSection: (id: SectionId) => void;
+  selectSection: (id: SectionId | null) => void;
+
   // Actions — history
   undo: () => void;
   redo: () => void;
@@ -203,7 +220,7 @@ interface DesignState {
 export type LoadableDesign = Partial<
   Pick<
     DesignState,
-    "designName" | "plateState" | "slots" | "textBars" | "bottomBar" | "qrCode" | "frameConfig" | "dieCut"
+    "designName" | "plateState" | "slots" | "textBars" | "bottomBar" | "qrCode" | "frameConfig" | "dieCut" | "sections"
   >
 >;
 
@@ -276,6 +293,8 @@ function createDesignStore(persistName: string) {
         frameConfig: { ...DEFAULT_FRAME_CONFIG },
         textBars: [],
         selectedBarId: null,
+        sections: {},
+        selectedSectionId: null,
         dieCut: false,
         updatedAt: Date.now(),
         history: [],
@@ -779,11 +798,70 @@ function createDesignStore(persistName: string) {
             qrCode: design.qrCode ? { ...design.qrCode } : { ...DEFAULT_QR_CODE },
             frameConfig: design.frameConfig ? { ...design.frameConfig } : { ...DEFAULT_FRAME_CONFIG },
             dieCut: design.dieCut ?? false,
+            sections: design.sections ? { ...design.sections } : {},
             selectedBarId: null,
+            selectedSectionId: null,
             history: [],
             historyIndex: -1,
             updatedAt: Date.now(),
           });
+        },
+
+        // ── Sections (school builder) ────────────────────────────
+        setSectionMode: (id, mode) => {
+          set((state) => {
+            const cur = state.sections[id] ?? { mode: "tiles" };
+            const next: SectionState = { ...cur, mode };
+            // Seed a blank text config on first switch so the section renders + edits.
+            if (mode === "text" && !next.text) next.text = { ...DEFAULT_BOTTOM_BAR, text: "" };
+            return {
+              sections: { ...state.sections, [id]: next },
+              selectedSectionId: id,
+              updatedAt: Date.now(),
+            };
+          });
+        },
+
+        setSectionText: (id, updates) => {
+          set((state) => {
+            const cur = state.sections[id];
+            const text = { ...DEFAULT_BOTTOM_BAR, ...cur?.text, ...updates };
+            return {
+              sections: { ...state.sections, [id]: { ...cur, mode: "text", text } },
+              updatedAt: Date.now(),
+            };
+          });
+        },
+
+        setSectionImage: (id, image) => {
+          set((state) => {
+            const cur = state.sections[id];
+            return {
+              sections: {
+                ...state.sections,
+                [id]: {
+                  ...cur,
+                  mode: "image",
+                  imageUrl: image.imageUrl,
+                  presetId: image.presetId,
+                  imageFit: image.fit ?? cur?.imageFit ?? "cover",
+                },
+              },
+              updatedAt: Date.now(),
+            };
+          });
+        },
+
+        clearSection: (id) => {
+          // Back to TILES — suppression means the zone's tiles reappear (lossless).
+          set((state) => ({
+            sections: { ...state.sections, [id]: { mode: "tiles" } },
+            updatedAt: Date.now(),
+          }));
+        },
+
+        selectSection: (id) => {
+          set({ selectedSectionId: id });
         },
 
         toggleDieCut: () => {
@@ -900,6 +978,7 @@ function createDesignStore(persistName: string) {
         bottomBar: state.bottomBar,
         frameConfig: state.frameConfig,
         dieCut: state.dieCut,
+        sections: state.sections,
         updatedAt: state.updatedAt,
       }),
       // v6 is the first version to persist slots/textBars/qrCode/bottomBar. Any
@@ -963,6 +1042,8 @@ function createDesignStore(persistName: string) {
           );
         }
         delete (merged as unknown as { textBar?: unknown }).textBar;
+        // Sections are new — old persisted blobs won't have them.
+        if (!merged.sections) merged.sections = {};
         return merged;
       },
     }

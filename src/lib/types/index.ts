@@ -119,6 +119,28 @@ export interface BannerPreview extends TextBarPlacement {
   backgroundColor: string;
 }
 
+// ─── Sections (school builder) ──────────────────────────────
+// A "section" is a frame zone (a side panel, the top bar, the bottom banner) that
+// can be TILED (achievement tiles) or turned into ONE direct-to-print piece — TEXT
+// (school name / slogan) or an IMAGE (mascot / logo). School builder only; /build
+// never sets `sections`, so every section branch no-ops there.
+
+/** The four toggleable sections (map 1:1 to slot zones; `bottom` = all bottom rows). */
+export type SectionId = "wing-left" | "wing-right" | "top" | "bottom";
+
+export type SectionMode = "tiles" | "text" | "image";
+
+export interface SectionState {
+  mode: SectionMode;
+  /** TEXT mode — reuses the banner config so it gets fonts/colors/align for free. */
+  text?: BottomBarConfig;
+  /** IMAGE mode — a client data URL (uploaded) OR a preset asset path (`/school/...`). */
+  imageUrl?: string;
+  imageFit?: "cover" | "contain";
+  /** Set when the image came from a preset (vs an upload). */
+  presetId?: string;
+}
+
 export interface FrameDesign {
   id: string;
   name: string;

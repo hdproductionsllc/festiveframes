@@ -6,6 +6,7 @@ import type { FrameConfig, PlacedTile, BottomBarConfig, QRCodeConfig, PlacedText
 import { getTotalWidthInches } from "@/lib/constants/frame";
 import { useFrameLayout } from "@/hooks/useFrameLayout";
 import { useDesignStore } from "@/stores/design-store";
+import { SECTION_IDS, sectionBounds, slotSuppressed } from "@/lib/utils/sections";
 import { RailSlot } from "./RailSlot";
 import { LicensePlateArea } from "./LicensePlateArea";
 import { BottomTextBar } from "./BottomTextBar";
@@ -94,6 +95,10 @@ export const FrameCanvas = forwardRef<FrameCanvasHandle, FrameCanvasProps>(
     const textBars = useDesignStore((s) => s.textBars);
     const selectedBarId = useDesignStore((s) => s.selectedBarId);
     const selectBar = useDesignStore((s) => s.selectBar);
+    // Sections (school builder). Empty on /build, so all section logic below is inert.
+    const sections = useDesignStore((s) => s.sections);
+    const selectedSectionId = useDesignStore((s) => s.selectedSectionId);
+    const selectSection = useDesignStore((s) => s.selectSection);
     const {
       containerRef,
       containerWidth,
@@ -340,14 +345,71 @@ export const FrameCanvas = forwardRef<FrameCanvasHandle, FrameCanvasProps>(
 
           {/* All rail slots (standard + wing zones). The slots no longer carry an
               `isOver` flag — a single gliding indicator (below) renders the drop
-              cue instead, so a drag never re-renders every cell. */}
-          {frameSlots.map((slot) => (
-            <RailSlot
-              key={slot.id}
-              slot={slot}
-              placedTile={slots[slot.id]}
-            />
-          ))}
+              cue instead, so a drag never re-renders every cell. A slot in a section
+              that's been switched to text/image is SUPPRESSED (no tile, no drop) —
+              its section overlay below covers it. (Never triggers on /build.) */}
+          {frameSlots
+            .filter((slot) => !slotSuppressed(slot.zone, sections))
+            .map((slot) => (
+              <RailSlot
+                key={slot.id}
+                slot={slot}
+                placedTile={slots[slot.id]}
+              />
+            ))}
+
+          {/* Section overlays (school builder). Each section in text/image mode is
+              ONE element drawn over the whole zone's bounding box, hiding its tiles.
+              Renders nothing on /build (sections is empty). */}
+          {containerWidth > 0 &&
+            SECTION_IDS.map((id) => {
+              const sec = sections[id];
+              if (!sec || sec.mode === "tiles") return null;
+              const box = sectionBounds(id, frameSlots);
+              if (!box) return null;
+              const selected = selectedSectionId === id;
+              return (
+                <div
+                  key={`section-${id}`}
+                  onClick={() => selectSection(id)}
+                  className="absolute cursor-pointer overflow-hidden rounded-[3px]"
+                  style={{
+                    left: box.x,
+                    top: box.y,
+                    width: box.width,
+                    height: box.height,
+                    zIndex: selected ? 3 : 2,
+                    boxShadow: selected
+                      ? "0 0 0 3px #f8c53b, 0 0 14px 2px rgba(248,197,59,0.55)"
+                      : undefined,
+                  }}
+                >
+                  {sec.mode === "image" && sec.imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={sec.imageUrl}
+                      alt=""
+                      draggable={false}
+                      className="h-full w-full"
+                      style={{ objectFit: sec.imageFit ?? "cover" }}
+                    />
+                  ) : sec.mode === "text" && sec.text?.text ? (
+                    <BottomTextBar
+                      config={sec.text}
+                      qrConfig={{ ...qrCode, enabled: false }}
+                      x={0}
+                      y={0}
+                      width={box.width}
+                      height={box.height}
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center bg-[#1e1b17]/70 px-1 text-center text-[10px] font-bold uppercase tracking-wide text-[#faf0d6]/70">
+                      {sec.mode === "text" ? "Add a phrase" : "Add art"}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
 
           {/* Tile drop indicator — ONE element that glides to the target cell.
               It's always mounted (while the frame has size) and driven purely by

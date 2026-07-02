@@ -24,6 +24,8 @@ import { DndProvider } from "./DndProvider";
 import { FrameCanvas, type FrameCanvasHandle } from "@/components/frame/FrameCanvas";
 import { TilePalette } from "@/components/tiles/TilePalette";
 import { BottomBarEditor } from "@/components/bottom-bar/BottomBarEditor";
+import { SectionControls } from "./SectionControls";
+import { SectionEditor } from "./SectionEditor";
 import { ArmedBanner } from "@/components/tiles/ArmedBanner";
 import { StateSelector } from "@/components/frame/StateSelector";
 import { SCHOOL_FRAME_CONFIG } from "@/lib/constants/frame";
@@ -97,6 +99,8 @@ export function SchoolDesigner() {
                 />
               </div>
             </div>
+            <SectionControls />
+            <SectionEditor />
             <BottomBarEditor />
           </div>
         </main>
