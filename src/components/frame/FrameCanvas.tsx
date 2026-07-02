@@ -10,6 +10,7 @@ import { SECTION_IDS, sectionBounds, slotSuppressed } from "@/lib/utils/sections
 import { RailSlot } from "./RailSlot";
 import { LicensePlateArea } from "./LicensePlateArea";
 import { BottomTextBar } from "./BottomTextBar";
+import { SectionTextElement } from "./SectionTextElement";
 
 interface FrameCanvasProps {
   frameConfig: FrameConfig;
@@ -394,14 +395,7 @@ export const FrameCanvas = forwardRef<FrameCanvasHandle, FrameCanvasProps>(
                       style={{ objectFit: sec.imageFit ?? "cover" }}
                     />
                   ) : sec.mode === "text" && sec.text?.text ? (
-                    <BottomTextBar
-                      config={sec.text}
-                      qrConfig={{ ...qrCode, enabled: false }}
-                      x={0}
-                      y={0}
-                      width={box.width}
-                      height={box.height}
-                    />
+                    <SectionTextElement width={box.width} height={box.height} config={sec.text} />
                   ) : (
                     <div className="flex h-full w-full items-center justify-center bg-[#1e1b17]/70 px-1 text-center text-[10px] font-bold uppercase tracking-wide text-[#faf0d6]/70">
                       {sec.mode === "text" ? "Add a phrase" : "Add art"}

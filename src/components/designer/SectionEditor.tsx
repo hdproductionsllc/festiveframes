@@ -4,12 +4,13 @@ import { useRef } from "react";
 import { useDesignStore } from "@/stores/design-store";
 import { SECTION_LABELS } from "@/lib/utils/sections";
 import { BOTTOM_BAR_FONTS } from "@/lib/constants/frame";
+import { SCHOOL_PHRASES } from "@/data/school-phrases";
 
 // Editor for the SELECTED section (school builder). Text mode: phrase + font +
 // colors → setSectionText. Image mode: upload (downscaled) + fit → setSectionImage.
 // Presets are Phase 4. Shown only when a text/image section is selected.
 
-const MAX_CHARS = 40;
+const MAX_CHARS = 60; // room for multi-line school text
 
 /** Read a file, draw it to a canvas capped at `maxPx` on the long edge, and return
  *  a JPEG/PNG data URL — keeps an uploaded mascot small enough for localStorage. */
@@ -84,17 +85,38 @@ export function SectionEditor() {
         <div className="space-y-3 rounded-2xl border-2 border-[#1e1b17] bg-white/70 p-3.5 shadow-[3px_3px_0_#1e1b17]">
           <label className="block">
             <span className="mb-1 block text-xs font-bold uppercase tracking-wide text-[#1e1b17]/70">
-              Text
+              Text <span className="font-semibold normal-case text-[#1e1b17]/45">— press Enter for a new line</span>
             </span>
-            <input
-              type="text"
+            <textarea
               value={sec.text?.text ?? ""}
               maxLength={MAX_CHARS}
+              rows={3}
               onChange={(e) => setSectionText(selectedSectionId, { text: e.target.value.slice(0, MAX_CHARS) })}
-              placeholder="School name, slogan, year…"
-              className="w-full rounded-lg border-2 border-[#1e1b17]/15 bg-white px-3 py-2.5 text-base font-bold text-[#1e1b17] placeholder:text-[#1e1b17]/35 focus:border-[#ed5aa0] focus:outline-none"
+              placeholder={"School name,\nslogan,\nyear…"}
+              className="w-full resize-none rounded-lg border-2 border-[#1e1b17]/15 bg-white px-3 py-2.5 text-base font-bold leading-tight text-[#1e1b17] placeholder:text-[#1e1b17]/35 focus:border-[#ed5aa0] focus:outline-none"
             />
           </label>
+
+          {/* School phrases — one tap fills the section (line breaks come in too). */}
+          <div>
+            <span className="text-[11px] font-semibold text-[#1e1b17]/55">Or tap a school phrase:</span>
+            <div className="mt-1.5 flex max-h-[6.5rem] flex-wrap gap-1.5 overflow-y-auto pr-1">
+              {SCHOOL_PHRASES.map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => setSectionText(selectedSectionId, { text: p })}
+                  className={`rounded-full border-2 px-2.5 py-1 text-[12px] font-bold transition-all active:scale-95 ${
+                    sec.text?.text === p
+                      ? "border-[#1e1b17] bg-[#ed5aa0] text-white shadow-[2px_2px_0_#1e1b17]"
+                      : "border-[#1e1b17]/15 bg-white text-[#1e1b17] hover:border-[#ed5aa0] hover:bg-[#ed5aa0]/10"
+                  }`}
+                >
+                  {p.replace(/\n/g, " / ")}
+                </button>
+              ))}
+            </div>
+          </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="block">
@@ -119,6 +141,27 @@ export function SectionEditor() {
               </div>
             </div>
           </div>
+
+          <label className="block">
+            <div className="mb-1 flex items-center justify-between">
+              <span className="text-xs font-bold uppercase tracking-wide text-[#1e1b17]/70">Size</span>
+              <span className="text-xs font-semibold tabular-nums text-[#1e1b17]/70">
+                {Math.round((sec.text?.fontSize ?? 1) * 100)}%
+              </span>
+            </div>
+            <input
+              type="range"
+              min={20}
+              max={160}
+              step={1}
+              value={Math.round((sec.text?.fontSize ?? 1) * 100)}
+              onChange={(e) => setSectionText(selectedSectionId, { fontSize: Number(e.target.value) / 100 })}
+              className="w-full h-1.5 cursor-pointer appearance-none rounded-full bg-[#1e1b17]/15
+                [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:appearance-none
+                [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#ed5aa0]
+                [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white"
+            />
+          </label>
         </div>
       ) : (
         <div className="space-y-3 rounded-2xl border-2 border-[#1e1b17] bg-white/70 p-3.5 shadow-[3px_3px_0_#1e1b17]">
