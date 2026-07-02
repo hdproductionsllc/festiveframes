@@ -80,6 +80,10 @@ export const SCHOOL_FRAME_CONFIG: FrameConfig = getWingFrameConfig(
     topSlots: 12,
     bottomSlots: 12,
     widthInches: DEFAULT_FRAME_CONFIG.plateWidthInches, // 12" — flush to the plate
+    // School frame: top rail spans the full width (over the wings), and the bottom
+    // is 2 rows tall. Both are opt-in flags — /build never sets them.
+    fullWidthTopBar: true,
+    bottomRows: 2,
   },
   3 * DEFAULT_FRAME_CONFIG.tileSizeInches,
 );
@@ -89,6 +93,16 @@ export const SCHOOL_FRAME_CONFIG: FrameConfig = getWingFrameConfig(
  */
 export function getTotalWidthInches(config: FrameConfig): number {
   return config.widthInches + (config.wings ? config.wingWidthInches * 2 : 0);
+}
+
+/** Extra bottom rows beyond the base row (0 when `bottomRows` is unset/1). */
+export function getExtraBottomRows(config: FrameConfig): number {
+  return Math.max(0, (config.bottomRows ?? 1) - 1);
+}
+
+/** Rendered height in inches, INCLUDING any extra bottom rows (grows downward). */
+export function getRenderHeightInches(config: FrameConfig): number {
+  return config.heightInches + getExtraBottomRows(config) * config.tileSizeInches;
 }
 
 // Bottom bar fonts — system fonts first (instant), then web fonts. Each font is

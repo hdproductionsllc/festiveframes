@@ -35,7 +35,10 @@ export function getContainerHeight(
   containerWidth: number
 ): number {
   const totalWidth = getTotalWidthInches(config);
-  return (config.heightInches / totalWidth) * containerWidth;
+  // Extra bottom rows grow the frame DOWNWARD (flag-gated; 0 on /build). The plate
+  // stays put — getPlateArea centers off the BASE heightInches, not this render height.
+  const extra = Math.max(0, (config.bottomRows ?? 1) - 1) * config.tileSizeInches;
+  return ((config.heightInches + extra) / totalWidth) * containerWidth;
 }
 
 /**

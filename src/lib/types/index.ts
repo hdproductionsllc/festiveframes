@@ -50,6 +50,12 @@ export interface FrameConfig {
   wingColumns: number; // tile columns per wing (auto-calculated from wingWidthInches)
   plateWidthInches: number;
   plateHeightInches: number;
+  /** Extend the top row ACROSS the wings (fill the top corners). Absent/false =
+   *  inner-only top rail (the standard /build frame). School frame only. */
+  fullWidthTopBar?: boolean;
+  /** Total bottom rows (default 1). >1 adds full-width bottom rows BELOW the base
+   *  one, growing the frame taller. Absent = 1 (the standard /build frame). */
+  bottomRows?: number;
 }
 
 // ─── Design State ───────────────────────────────────────────

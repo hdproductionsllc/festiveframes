@@ -132,13 +132,18 @@ export const FrameCanvas = forwardRef<FrameCanvasHandle, FrameCanvasProps>(
     const hasWings = frameConfig.wings && frameConfig.wingColumns > 0;
     const wingPx = hasWings ? frameConfig.wingWidthInches * scale : 0;
     const innerWidthPx = frameConfig.widthInches * scale;
+    // The ORIGINAL frame height (ignores flag-gated extra bottom rows). Bottom bars
+    // and the side-rail grooves anchor to this so they never drag down to the new
+    // rows. Equals containerHeight on /build (no extra rows).
+    const extraBottomRows = Math.max(0, (frameConfig.bottomRows ?? 1) - 1);
+    const baseFrameHeight = frameConfig.heightInches * scale;
 
     // Each bar sits over a run of top/bottom slots (gapless: step == tile). The
     // drag-time ghost reuses this EXACT geometry so it lines up perfectly with
     // where the real bar will land.
     const barRect = (bar: TextBarPlacement) => ({
       x: wingPx + bar.startIndex * tileSize,
-      y: bar.row === "top" ? 0 : containerHeight - tileSize,
+      y: bar.row === "top" ? 0 : baseFrameHeight - tileSize,
       width: bar.widthUnits * tileSize,
       height: tileSize,
     });
@@ -156,7 +161,7 @@ export const FrameCanvas = forwardRef<FrameCanvasHandle, FrameCanvasProps>(
           className="relative w-full rounded-md overflow-hidden"
           style={{
             height: containerHeight || "auto",
-            aspectRatio: containerHeight ? undefined : `${totalWidthInches} / ${frameConfig.heightInches}`,
+            aspectRatio: containerHeight ? undefined : `${totalWidthInches} / ${frameConfig.heightInches + extraBottomRows * frameConfig.tileSizeInches}`,
             background: "#111111",
             // Signature sticker drop shadow at 50% opacity so the whole design
             // lifts off the workbench without being as heavy as a solid offset.
@@ -197,7 +202,7 @@ export const FrameCanvas = forwardRef<FrameCanvasHandle, FrameCanvasProps>(
                 left: wingPx + tileSize * 0.1,
                 width: tileSize * 0.8,
                 top: tileSize,
-                bottom: tileSize,
+                height: baseFrameHeight - 2 * tileSize,
                 background: GROOVE_V_LTR,
                 borderLeft: GROOVE_BORDER_DARK,
                 borderRight: GROOVE_BORDER_LIGHT,
@@ -213,7 +218,7 @@ export const FrameCanvas = forwardRef<FrameCanvasHandle, FrameCanvasProps>(
                 left: wingPx + innerWidthPx - tileSize + tileSize * 0.1,
                 width: tileSize * 0.8,
                 top: tileSize,
-                bottom: tileSize,
+                height: baseFrameHeight - 2 * tileSize,
                 background: GROOVE_V_RTL,
                 borderLeft: GROOVE_BORDER_LIGHT,
                 borderRight: GROOVE_BORDER_DARK,
