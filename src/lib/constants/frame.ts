@@ -72,7 +72,19 @@ export function getStandardConfig(config: FrameConfig): FrameConfig {
  * bottom rails, text bars) is the standard frame.
  */
 export const SCHOOL_FRAME_CONFIG: FrameConfig = getWingFrameConfig(
-  DEFAULT_FRAME_CONFIG,
+  {
+    ...DEFAULT_FRAME_CONFIG,
+    // One tile narrower than the standard ring: shrink the inner frame from 13 to
+    // 12 units so it's flush to the 12in plate (no extra ring column), which makes
+    // the school frame read one tile less wide.
+    topSlots: 12,
+    bottomSlots: 12,
+    widthInches: DEFAULT_FRAME_CONFIG.plateWidthInches, // 12" — flush to the plate
+    // School frame: top rail spans the full width (over the wings), and the bottom
+    // is 2 rows tall. Both are opt-in flags — /build never sets them.
+    fullWidthTopBar: true,
+    bottomRows: 2,
+  },
   3 * DEFAULT_FRAME_CONFIG.tileSizeInches,
 );
 
@@ -81,6 +93,16 @@ export const SCHOOL_FRAME_CONFIG: FrameConfig = getWingFrameConfig(
  */
 export function getTotalWidthInches(config: FrameConfig): number {
   return config.widthInches + (config.wings ? config.wingWidthInches * 2 : 0);
+}
+
+/** Extra bottom rows beyond the base row (0 when `bottomRows` is unset/1). */
+export function getExtraBottomRows(config: FrameConfig): number {
+  return Math.max(0, (config.bottomRows ?? 1) - 1);
+}
+
+/** Rendered height in inches, INCLUDING any extra bottom rows (grows downward). */
+export function getRenderHeightInches(config: FrameConfig): number {
+  return config.heightInches + getExtraBottomRows(config) * config.tileSizeInches;
 }
 
 // Bottom bar fonts — system fonts first (instant), then web fonts. Each font is
