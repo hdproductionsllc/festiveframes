@@ -72,7 +72,15 @@ export function getStandardConfig(config: FrameConfig): FrameConfig {
  * bottom rails, text bars) is the standard frame.
  */
 export const SCHOOL_FRAME_CONFIG: FrameConfig = getWingFrameConfig(
-  DEFAULT_FRAME_CONFIG,
+  {
+    ...DEFAULT_FRAME_CONFIG,
+    // One tile narrower than the standard ring: shrink the inner frame from 13 to
+    // 12 units so it's flush to the 12in plate (no extra ring column), which makes
+    // the school frame read one tile less wide.
+    topSlots: 12,
+    bottomSlots: 12,
+    widthInches: DEFAULT_FRAME_CONFIG.plateWidthInches, // 12" — flush to the plate
+  },
   3 * DEFAULT_FRAME_CONFIG.tileSizeInches,
 );
 
