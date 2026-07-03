@@ -52,6 +52,33 @@ The collision strategy SHOULD key off the pointer, not the dragged element's box
 remove"). This is the right design and is in place. BUT — see below — it was NOT the cause
 of the "ghost stuck top-left / snaps to top-right" bug, so changing it alone fixed nothing.
 
+## Never smoke-test an endpoint with REAL side effects against live credentials (2026-07-03)
+To prove the new rate limiter tripped at 12, I POSTed `{"email":"x@y.com"}` 15x to
+`/api/subscribe` on the LOCAL dev server — but dev loads `.env.local`, which holds the
+**live** `RESEND_API_KEY` and the **production** `DATABASE_URL`. So each of the 12 allowed
+requests sent a real admin email to the owner's inbox AND wrote a junk row to the prod DB.
+The owner asked "is this you or spam?" — bad look. **Before hitting an endpoint in a test,
+check what it DOES: if it sends mail / writes a real DB / charges money, either (a) target a
+route with no side effect, (b) disable the side effect for the run (`RESEND_API_KEY= npm run
+dev` — dotenv won't override an already-set shell var, so an empty string cleanly no-ops the
+sender), or (c) use throwaway data and clean it up after.** Assume local dev == production
+services on a solo project with no staging. Also: verifying behavior via the RESPONSE BODY
+(`{ok:true}` vs `{already:true}`) beats triggering the real side effect.
+
+## Fix the noise at the source, not just the symptom (2026-07-03)
+Rate limiting alone still let a bot fire up to 12 admin emails/window, and a returning fan
+signing up twice double-notified. Root-cause fix: make `/api/subscribe` IDEMPOTENT — a
+`subscribers` table (email PK) + `INSERT ... ON CONFLICT DO NOTHING RETURNING` (mirroring
+the proven `markFulfilled` pattern), normalize email to lowercase, notify ONLY when the row
+is genuinely new, and fail OPEN if the dedup store is unreachable (treat as new → never drop
+a real signup). The table also became a more durable capture than an inbox email. Layer the
+rate limit (caps distinct-email floods) ON TOP of dedup (kills repeat-address noise).
+
+## Next 16 renamed `middleware.ts` → `proxy.ts` (2026-07-03)
+Creating `src/middleware.ts` on Next 16.1 works but logs a deprecation warning. The
+convention is now `src/proxy.ts` exporting `export function proxy(req)` (same `config.matcher`
+shape). Build labels it `ƒ Proxy (Middleware)` either way.
+
 ## The REAL "preview ghost frozen top-left" bug: invalid CSS x/y on a div (2026-06-26)
 The banner landing-preview ghost in `FrameCanvas.tsx` did `style={{ ...barRect(preview) }}`.
 `barRect` returns `{x, y, width, height}` — but **`x`/`y` are SVG attributes, NOT CSS box

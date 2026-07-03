@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
+import { recordSubscriber } from "@/lib/order/store";
 
 // Email capture endpoint for the homepage / thanks-page capture form.
 //
@@ -59,8 +60,22 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false }, { status: 400 });
   }
 
-  const email = body.email;
+  const email = body.email.trim().toLowerCase();
   const endpoint = process.env.SUBSCRIBE_ENDPOINT;
+
+  // Idempotency gate: only act on a GENUINELY NEW email. A repeat signup (or a bot
+  // hammering the form) is already captured, so we short-circuit with no email/
+  // forward — that's what stops the inbox flood. Fail OPEN: if the dedup store is
+  // unreachable, treat the signup as new so we never silently drop a real one.
+  let isNew = true;
+  try {
+    isNew = await recordSubscriber(email);
+  } catch {
+    isNew = true;
+  }
+  if (!isNew) {
+    return NextResponse.json({ ok: true, already: true });
+  }
 
   // No external provider: capture by emailing the team via Resend.
   if (!endpoint) {
