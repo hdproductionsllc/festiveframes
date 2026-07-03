@@ -77,7 +77,9 @@ function escapeHtml(s: string): string {
   return s
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 function fulfillmentBlock(o: OrderEmailData): string {
@@ -225,9 +227,9 @@ export async function sendRestoreLinkEmail(p: {
         `Your design is saved${hi}!`,
         `<p style="margin:0 0 16px;color:${INK};font-size:14px;line-height:1.6;">Your custom license-plate frame is safe. Reopen the builder exactly where you left off — tweak it, then order when you're ready.</p>
          <p style="margin:0 0 8px;text-align:center;">
-           <a href="${p.url}" style="display:inline-block;padding:12px 26px;background:${PINK};color:#fff;font-size:15px;font-weight:bold;text-decoration:none;border:3px solid ${INK};border-radius:99px;box-shadow:${SHADOW};font-family:${DISPLAY_FONT};">Continue your design &rarr;</a>
+           <a href="${escapeHtml(p.url)}" style="display:inline-block;padding:12px 26px;background:${PINK};color:#fff;font-size:15px;font-weight:bold;text-decoration:none;border:3px solid ${INK};border-radius:99px;box-shadow:${SHADOW};font-family:${DISPLAY_FONT};">Continue your design &rarr;</a>
          </p>
-         <p style="margin:18px 0 0;color:${INK};font-size:12px;line-height:1.5;word-break:break-all;">Or paste this link into your browser:<br/><a href="${p.url}" style="color:${BLUE};">${escapeHtml(p.url)}</a></p>`,
+         <p style="margin:18px 0 0;color:${INK};font-size:12px;line-height:1.5;word-break:break-all;">Or paste this link into your browser:<br/><a href="${escapeHtml(p.url)}" style="color:${BLUE};">${escapeHtml(p.url)}</a></p>`,
       ),
     });
     return true;

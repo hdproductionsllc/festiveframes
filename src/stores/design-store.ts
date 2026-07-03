@@ -1,5 +1,5 @@
 import { createStore, useStore, type StoreApi } from "zustand";
-import { persist } from "zustand/middleware";
+import { persist, createJSONStorage, type StateStorage } from "zustand/middleware";
 import { createContext, useContext, createElement, type ReactNode } from "react";
 import type {
   PlacedTile,
@@ -250,6 +250,48 @@ function reconcileSelectedBar(
   if (selectedBarId && bars.some((b) => b.id === selectedBarId)) return selectedBarId;
   return null;
 }
+
+// Persist goes through a GUARDED localStorage wrapper. A full origin-quota blowout
+// (e.g. a large uploaded section image in the school builder) must never silently
+// drop the design — we catch the write failure and notify any registered listener
+// so the UI can warn the user instead of losing their work on the next reload. The
+// stored bytes are identical to zustand's default JSON storage, so /build is
+// unaffected (it holds only piece IDs + text and never overflows).
+let persistQuotaListener: (() => void) | null = null;
+
+/** Register a callback fired when a persist write is rejected (quota exceeded, or a
+ *  locked-down browser). Returns an unsubscribe fn. */
+export function onPersistQuotaExceeded(listener: () => void): () => void {
+  persistQuotaListener = listener;
+  return () => {
+    if (persistQuotaListener === listener) persistQuotaListener = null;
+  };
+}
+
+const guardedLocalStorage: StateStorage = {
+  getItem: (name) => {
+    try {
+      return localStorage.getItem(name);
+    } catch {
+      return null;
+    }
+  },
+  setItem: (name, value) => {
+    try {
+      localStorage.setItem(name, value);
+    } catch (err) {
+      console.warn("[design-store] could not save design (storage full?):", err);
+      persistQuotaListener?.();
+    }
+  },
+  removeItem: (name) => {
+    try {
+      localStorage.removeItem(name);
+    } catch {
+      /* ignore */
+    }
+  },
+};
 
 // The store is a FACTORY so more than one builder can each own an isolated design
 // (own state + own localStorage key). /build uses `defaultDesignStore`; the school
@@ -964,6 +1006,13 @@ function createDesignStore(persistName: string) {
     },
     {
       name: persistName,
+      // Guarded storage: a rejected write (quota exceeded) notifies a listener
+      // instead of silently discarding the design. Throwing on the server (no
+      // window) makes zustand skip persistence there, matching the default.
+      storage: createJSONStorage(() => {
+        if (typeof window === "undefined") throw new Error("no window");
+        return guardedLocalStorage;
+      }),
       // Persist the FULL design so a reload restores exactly what the "Saved"
       // indicator promises. History is intentionally NOT persisted (undo/redo is
       // a within-session affordance, not a saved part of the design).

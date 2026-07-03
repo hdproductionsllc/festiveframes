@@ -129,6 +129,12 @@ function ensureSchema(): Promise<void> {
           created_at timestamptz NOT NULL DEFAULT now()
         )
       `);
+      await p.query(`
+        CREATE TABLE IF NOT EXISTS subscribers (
+          email        text PRIMARY KEY,
+          subscribed_at timestamptz NOT NULL DEFAULT now()
+        )
+      `);
     })().catch((err) => {
       // Reset so a later call can retry schema init.
       initPromise = null;
@@ -145,6 +151,7 @@ const memDrafts = new Map<string, OrderDraft>();
 const memCarts = new Map<string, CartDraft>();
 const memFulfilled = new Set<string>();
 const memSavedDesigns = new Map<string, SavedDesign>();
+const memSubscribers = new Set<string>();
 
 function memSweep(): void {
   const cutoff = Date.now() - TTL_MS;
@@ -321,6 +328,40 @@ export async function unmarkFulfilled(orderId: string): Promise<void> {
     await p.query(`DELETE FROM order_fulfilled WHERE order_id = $1`, [orderId]);
   } catch (err) {
     console.error("[order/store] unmarkFulfilled failed:", err instanceof Error ? err.message : err);
+    throw err;
+  }
+}
+
+// ── Newsletter subscribers ────────────────────────────────────────────────────
+
+/**
+ * Records a signup and returns true ONLY the first time an email is seen — so the
+ * team is notified once per genuinely-new subscriber, never again for a repeat (or
+ * a bot hammering the form). The table itself is the durable capture; the email to
+ * the team is just a heads-up. Email is expected pre-normalized (trimmed/lowercased).
+ *
+ * Postgres: INSERT ... ON CONFLICT DO NOTHING RETURNING → one row to the first
+ * writer only, correct across instances. In memory: a single-process check-and-set.
+ */
+export async function recordSubscriber(email: string): Promise<boolean> {
+  if (!USE_DB) {
+    if (memSubscribers.has(email)) return false;
+    memSubscribers.add(email);
+    return true;
+  }
+
+  await ensureSchema();
+  const p = getPool();
+  try {
+    const { rows } = await p.query(
+      `INSERT INTO subscribers (email) VALUES ($1)
+       ON CONFLICT (email) DO NOTHING
+       RETURNING email`,
+      [email],
+    );
+    return rows.length > 0;
+  } catch (err) {
+    console.error("[order/store] recordSubscriber failed:", err instanceof Error ? err.message : err);
     throw err;
   }
 }

@@ -38,7 +38,10 @@ export async function POST(request: Request): Promise<NextResponse> {
     typeof body.name === "string" && body.name.trim() ? body.name.trim().slice(0, 120) : null;
 
   const token = randomUUID();
-  const base = request.headers.get("origin") || process.env.SITE_URL || SITE_URL;
+  // The link base is SERVER-controlled only. NEVER trust the request Origin here:
+  // this email is sent from our verified domain, so an attacker-supplied Origin
+  // would let them mint a Festive-Frames-branded email pointing anywhere (phishing).
+  const base = process.env.SITE_URL || SITE_URL;
   const url = `${base}/build?restore=${token}`;
 
   try {

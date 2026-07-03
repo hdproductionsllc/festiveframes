@@ -12,8 +12,24 @@ import { SCHOOL_PHRASES } from "@/data/school-phrases";
 
 const MAX_CHARS = 60; // room for multi-line school text
 
+/** True if any pixel is even slightly transparent — logos need PNG to keep their
+ *  cutout; photos are fully opaque and compress ~5-20x smaller as JPEG. Scans once
+ *  on a downscaled canvas and early-exits on the first transparent pixel. */
+function hasTransparency(ctx: CanvasRenderingContext2D, w: number, h: number): boolean {
+  try {
+    const { data } = ctx.getImageData(0, 0, w, h);
+    for (let i = 3; i < data.length; i += 4) {
+      if (data[i] < 255) return true;
+    }
+    return false;
+  } catch {
+    return true; // can't inspect (tainted canvas) → keep PNG to be safe
+  }
+}
+
 /** Read a file, draw it to a canvas capped at `maxPx` on the long edge, and return
- *  a JPEG/PNG data URL — keeps an uploaded mascot small enough for localStorage. */
+ *  a data URL small enough for localStorage: JPEG q0.85 for opaque photos, PNG only
+ *  when the source has real transparency (a logo/mascot cutout). */
 function downscaleToDataUrl(file: File, maxPx: number): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -31,9 +47,12 @@ function downscaleToDataUrl(file: File, maxPx: number): Promise<string> {
         const ctx = canvas.getContext("2d");
         if (!ctx) return reject(new Error("no ctx"));
         ctx.drawImage(img, 0, 0, w, h);
-        // PNG preserves transparency (logos); fall back to the original data URL.
         try {
-          resolve(canvas.toDataURL("image/png"));
+          resolve(
+            hasTransparency(ctx, w, h)
+              ? canvas.toDataURL("image/png")
+              : canvas.toDataURL("image/jpeg", 0.85),
+          );
         } catch {
           resolve(String(reader.result));
         }
@@ -68,7 +87,7 @@ export function SectionEditor() {
   const onFile = async (file?: File) => {
     if (!file) return;
     try {
-      const dataUrl = await downscaleToDataUrl(file, 1600);
+      const dataUrl = await downscaleToDataUrl(file, 1200);
       setSectionImage(selectedSectionId, { imageUrl: dataUrl, fit: sec.imageFit ?? "cover" });
     } catch {
       /* ignore a bad file */

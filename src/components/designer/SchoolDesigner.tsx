@@ -19,6 +19,7 @@ import {
   useDesignStoreApi,
   DesignStoreProvider,
   createDesignStore,
+  onPersistQuotaExceeded,
 } from "@/stores/design-store";
 import { DndProvider } from "./DndProvider";
 import { FrameCanvas, type FrameCanvasHandle } from "@/components/frame/FrameCanvas";
@@ -42,6 +43,11 @@ export function SchoolDesigner() {
   const canvasRef = useRef<FrameCanvasHandle>(null);
   const [overSlotId, setOverSlotId] = useState<string | null>(null);
   const [bannerPreview, setBannerPreview] = useState<BannerPreview | null>(null);
+  const [storageFull, setStorageFull] = useState(false);
+
+  // Uploaded mascot images can push this browser's storage over its limit. If a
+  // save is rejected we warn instead of losing the design silently on reload.
+  useEffect(() => onPersistQuotaExceeded(() => setStorageFull(true)), []);
 
   // Seed the school frame (wings = wide side panels) onto a blank canvas, once.
   // loadDesign replaces the whole design + resets history.
@@ -74,6 +80,22 @@ export function SchoolDesigner() {
           <StateSelector theme="header" />
         </div>
       </header>
+
+      {storageFull && (
+        <div className="flex items-start justify-between gap-3 border-b-[3px] border-[#1e1b17] bg-[#C8102E] px-4 py-2.5 text-[#fff9ec]">
+          <p className="text-xs font-bold leading-snug sm:text-sm">
+            Heads up — this browser&apos;s storage is full, so your latest change may not
+            be saved for next time. Try a smaller image, or finish and order this design now.
+          </p>
+          <button
+            type="button"
+            onClick={() => setStorageFull(false)}
+            className="shrink-0 rounded-full border-2 border-[#fff9ec] px-2.5 py-0.5 text-xs font-extrabold uppercase tracking-wide hover:bg-[#fff9ec]/15"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
 
       <DndProvider onOverSlotChange={setOverSlotId} onBannerPreviewChange={setBannerPreview}>
         <main className="flex-1 grid grid-cols-1 lg:grid-cols-[340px_minmax(0,1fr)] gap-4 p-4 mx-auto w-full max-w-[1560px] items-start">
