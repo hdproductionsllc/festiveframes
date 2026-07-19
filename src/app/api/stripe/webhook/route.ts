@@ -13,7 +13,6 @@ import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 
 import { getStripe } from "@/lib/stripe";
-import { sendOrderEmails } from "@/lib/email";
 import { fulfillOrder, fulfillCart } from "@/lib/order/fulfill";
 
 export const runtime = "nodejs";
@@ -58,6 +57,22 @@ export async function POST(request: Request): Promise<NextResponse> {
     const session = event.data.object as Stripe.Checkout.Session;
     const metadata = session.metadata ?? {};
 
+    // This Stripe account is SHARED with Still Beside Me (stillbesideme.com),
+    // and Stripe fans every checkout.session.completed out to BOTH sites'
+    // webhook endpoints. Every live Festive Frames session carries
+    // metadata.kind ("custom-frame" | "cart" — the kit path is retired), so a
+    // session without a recognized kind is another site's sale and must be
+    // ignored. Before this guard, a Still Beside Me pet-tribute order fell
+    // through to a generic branch here and sent bogus Festive Frames order
+    // emails (2026-07-19).
+    if (metadata.kind !== "custom-frame" && metadata.kind !== "cart") {
+      console.log(
+        `[stripe-webhook] ignoring session ${session.id}: no Festive Frames metadata.kind` +
+          (metadata.orderId ? " (has orderId — likely Still Beside Me)" : ""),
+      );
+      return NextResponse.json({ received: true }, { status: 200 });
+    }
+
     // Only fulfill PAID sessions. `completed` ≈ paid for US card checkout, but an
     // async/delayed or failed payment can emit `completed` while unpaid — never
     // produce a free order. (The /thanks relay enforces the same gate.)
@@ -101,55 +116,11 @@ export async function POST(request: Request): Promise<NextResponse> {
       return NextResponse.json({ received: true }, { status: 200 });
     }
 
-    // Structured order record (also visible in Railway logs).
-    console.log(
-      "[stripe-webhook] Order confirmed:",
-      JSON.stringify({
-        sessionId: session.id,
-        selection: metadata.selection ?? null,
-        kitIds: metadata.kitIds ?? null,
-        quantity: metadata.quantity ?? null,
-        alphabetQty: metadata.alphabetQty ?? null,
-        amountTotal: session.amount_total,
-        currency: session.currency,
-        customerEmail: session.customer_details?.email ?? null,
-        customerName: session.customer_details?.name ?? null,
-      }),
+    // A recognized kind with a missing id (orderId/cartId) is a malformed
+    // session from our own checkout — log loudly; nothing can be fulfilled.
+    console.error(
+      `[stripe-webhook] session ${session.id} has kind=${metadata.kind} but no order/cart id; nothing fulfilled.`,
     );
-
-    // Send the customer confirmation + admin order emails. Best-effort: a
-    // failure here must never fail the webhook (Stripe would otherwise retry).
-    try {
-      const full = await stripe.checkout.sessions.retrieve(session.id, {
-        expand: ["line_items", "collected_information.shipping_details"],
-      });
-      const items = (full.line_items?.data ?? []).map((li) => ({
-        name: li.description ?? "Festive Frames",
-        quantity: li.quantity ?? 1,
-        amountCents: li.amount_total ?? 0,
-      }));
-      // On the pinned API version the shipping address lives at
-      // collected_information.shipping_details (top-level shipping_details was
-      // removed). Read that first, with a legacy fallback for older sessions.
-      const collected =
-        full.collected_information?.shipping_details ??
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (full as any).shipping_details ??
-        null;
-
-      await sendOrderEmails({
-        sessionId: full.id,
-        customerEmail: full.customer_details?.email ?? null,
-        customerName: full.customer_details?.name ?? collected?.name ?? null,
-        items,
-        totalCents: full.amount_total ?? 0,
-        currency: full.currency ?? "usd",
-        shippingName: collected?.name ?? full.customer_details?.name ?? null,
-        shippingAddress: collected?.address ?? null,
-      });
-    } catch (err) {
-      console.error("[stripe-webhook] order email step failed:", err);
-    }
   }
 
   return NextResponse.json({ received: true }, { status: 200 });
