@@ -21,6 +21,13 @@ export const SECTION_LABELS: Record<SectionId, string> = {
   "wing-right": "Right panel",
 };
 
+/** Only the TOP and BOTTOM banners can become a text bar — the left/right side
+ *  panels are tiles/art only (a text banner reads across the top or bottom, not down
+ *  a narrow side). Used by the section UI and guarded in the store. */
+export function sectionSupportsText(id: SectionId): boolean {
+  return id === "top" || id === "bottom";
+}
+
 /** Bounding box (px) of a section = the union of the rects of every slot the PANEL
  *  owns (resolved by `panelOf` on each slot's grid coord — NOT by zone, so the box
  *  covers the panel's corners too). Null when the panel has no slots. */

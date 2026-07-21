@@ -39,6 +39,7 @@ import {
   UPLOAD_SET_ID,
 } from "@/lib/utils/snappet";
 import { deleteFullRes } from "@/lib/utils/image-store";
+import { sectionSupportsText } from "@/lib/utils/sections";
 import { MAX_HISTORY_DEPTH } from "@/lib/constants/frame";
 
 // ── Multi-cell snappets ──────────────────────────────────────────────────────
@@ -1209,10 +1210,12 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
         // ── Sections (school builder) ────────────────────────────
         setSectionMode: (id, mode) => {
           set((state) => {
+            // Side panels are tiles/art only — a text bar is a top/bottom affordance.
+            const effMode: SectionMode = mode === "text" && !sectionSupportsText(id) ? "tiles" : mode;
             const cur = state.sections[id] ?? { mode: "tiles" };
-            const next: SectionState = { ...cur, mode };
+            const next: SectionState = { ...cur, mode: effMode };
             // Seed a blank text config on first switch so the section renders + edits.
-            if (mode === "text" && !next.text)
+            if (effMode === "text" && !next.text)
               next.text = { ...DEFAULT_BOTTOM_BAR, fontFamily: SCHOOL_DEFAULT_FONT_FAMILY, text: "" };
             return {
               sections: { ...state.sections, [id]: next },
