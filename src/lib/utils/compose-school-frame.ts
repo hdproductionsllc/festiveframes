@@ -46,7 +46,6 @@ import {
   QR_SIZE_RATIO,
   QR_GAP_RATIO,
 } from "@/lib/utils/text-bar";
-import { getPlateArea } from "@/lib/utils/layout";
 import { SECTION_IDS, sectionBounds, slotSuppressed } from "@/lib/utils/sections";
 import { getPiece } from "@/data/sets";
 import { getFullRes } from "@/lib/utils/image-store";
@@ -325,8 +324,9 @@ export function drawSchoolFrame(
   ctx: CanvasRenderingContext2D,
   design: SchoolDesign,
   images: SchoolImageBundle,
+  // The transparent-background render derives all geometry from width + config, so the
+  // canvas HEIGHT isn't needed here (the caller still sizes the canvas to both).
   canvasWidth: number,
-  canvasHeight: number,
 ): void {
   const { frameConfig: config, slots, textBars, sections } = design;
   const grid = buildGrid(config, canvasWidth);
@@ -339,26 +339,13 @@ export function drawSchoolFrame(
   const covered = coveredBySnappets(visibleAnchorSlots(slots, grid, sections), grid);
   const barCovered = new Set(coveredSlotIds(textBars));
 
-  // 1) Frame base (matte black, like the on-screen frame body).
-  ctx.fillStyle = "#111111";
-  ctx.fillRect(0, 0, canvasWidth, canvasHeight);
-
-  // 2) License-plate OPENING — punched TRANSPARENT on the print (no ink at all).
-  //    The customer inserts their real metal plate here, so the print must carry NO
-  //    plate graphic AND no black fill: printing the big center rectangle black would
-  //    waste a lot of ink on an area that gets covered by the real plate. So we erase
-  //    the plate's rounded rect back to transparent (destination-out) after the frame
-  //    base. The on-screen preview still shows a plate to help the customer visualize;
-  //    the print deliberately diverges. `images.plate` stays unused by design.
-  const plate = getPlateArea(config, canvasWidth);
-  if (plate) {
-    const r = Math.max(3, plate.width * 0.012);
-    ctx.save();
-    ctx.globalCompositeOperation = "destination-out"; // erase to transparent
-    roundRect(ctx, plate.x, plate.y, plate.width, plate.height, r);
-    ctx.fill();
-    ctx.restore();
-  }
+  // 1) Background is TRANSPARENT — the canvas starts clear and we never fill it. Only
+  //    the printed elements below paint ink (white tiles, section panels, banners); the
+  //    frame body, the gaps, and the license-plate opening all stay transparent so the
+  //    UV printer lays NO ink there. Printing the frame/plate solid black would waste a
+  //    lot of ink on areas the physical frame + the customer's real plate already cover.
+  //    The on-screen preview still shows a black frame body + a plate to help the
+  //    customer visualize; the print deliberately diverges. `images.plate` stays unused.
 
   // 3) Ring + wing tiles, including multi-cell snappet anchors at their span size.
   //    Every printed cell is a WHITE snappet (art sits on white); covered cells,
@@ -547,7 +534,7 @@ export async function composeSchoolFrame(
     objectUrls.forEach((u) => URL.revokeObjectURL(u));
     return "";
   }
-  drawSchoolFrame(ctx, design, bundle, W, H);
+  drawSchoolFrame(ctx, design, bundle, W);
 
   // Rotate to lie along the bed's long (16.5") axis.
   let out: HTMLCanvasElement = canvas;

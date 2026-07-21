@@ -126,7 +126,7 @@ describe("drawSchoolFrame (node-canvas render of a seeded design)", () => {
       try { bundle.plate = await loadImage(platePath); } catch { /* fall back to flat plate */ }
     }
 
-    drawSchoolFrame(ctx, design, bundle, W, H);
+    drawSchoolFrame(ctx, design, bundle, W);
 
     const m = schoolRenderMetrics(SCHOOL_FRAME_CONFIG, W);
     const napi = ctx as unknown as SKRSContext2D;
