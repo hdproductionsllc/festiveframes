@@ -13,6 +13,9 @@
 @import url('https://fonts.googleapis.com/css2?family=Abril+Fatface&family=Archivo+Black&family=Bowlby+One&family=Concert+One&family=Lobster&family=Montserrat:wght@700;800;900&family=Passion+One:wght@700;900&family=Playfair+Display:wght@700;800;900&family=Poppins:wght@600;700;800&family=Staatliches&family=Ultra&display=swap');
 /* Additional script / festive faces. */
 @import url('https://fonts.googleapis.com/css2?family=Cookie&family=Courgette&family=Damion&family=Lobster+Two:ital,wght@0,700;1,700&family=Marck+Script&display=swap');
+/* Collegiate / varsity faces — leads the SCHOOL builder's font picker. Graduate is
+   the classic collegiate slab; the rest are athletic/condensed team faces. */
+@import url('https://fonts.googleapis.com/css2?family=Graduate&family=Fjalla+One&family=Big+Shoulders+Display:wght@600;700;800;900&family=Saira+Condensed:wght@600;700;800&family=Squada+One&display=swap');
 @import url('https://fonts.cdnfonts.com/css/license-plate-usa');
 
 /* Stars & Stripes — a free font that isn't on a CDN. Drop the file at
