@@ -5,15 +5,15 @@ import { SECTION_IDS, SECTION_LABELS } from "@/lib/utils/sections";
 import type { SectionMode } from "@/lib/types";
 
 // Per-section mode picker for the school builder. Each frame section (the two side
-// panels, the top bar, the bottom banner) can be Tiles (achievement tiles), Text
-// (school name / slogan) or Image (mascot / logo). Switching to text/image turns
-// that whole section into ONE direct-to-print piece; switching back to Tiles is
-// lossless (its tiles were suppressed, not deleted).
+// panels, the top bar, the bottom banner) can be Tiles (achievement tiles) or Text
+// (school name / slogan). Switching to Text turns that whole section into ONE
+// direct-to-print banner; switching back to Tiles is lossless (its tiles were
+// suppressed, not deleted). ART is no longer a section MODE — uploaded art enters a
+// Tiles panel as a SNAPPET (see SectionEditor's "Add art"), one unified system.
 
 const MODES: { id: SectionMode; label: string }[] = [
   { id: "tiles", label: "Tiles" },
   { id: "text", label: "Text" },
-  { id: "image", label: "Image" },
 ];
 
 export function SectionControls() {
@@ -72,8 +72,8 @@ export function SectionControls() {
       </div>
 
       <p className="mt-3 text-[11px] leading-relaxed text-[#1e1b17]/55">
-        Set each section to tiles, a text banner, or a printed image (mascot / logo).
-        The text &amp; image editors come next.
+        Set each section to tiles or a text banner. To add a photo, mascot, or logo,
+        select a tiles panel and use <span className="font-bold">Add art</span> below.
       </p>
     </div>
   );

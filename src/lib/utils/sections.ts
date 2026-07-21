@@ -1,9 +1,15 @@
-// Section helpers for the school builder. A "section" is a frame zone that can be
-// tiled or turned into one direct-to-print piece (text/image). SectionId maps 1:1
-// to a SlotZone (`bottom` covers all bottom rows). Absent section = tiles = the
-// normal grid, so this is inert on /build (which never populates `sections`).
+// Section helpers for the school builder. A "section" is one of the four PANELS —
+// the two side panels, the top banner, the bottom banner — that can be TILED or
+// turned into ONE direct-to-print piece (text/image). A SectionId is a PANEL, NOT
+// a SlotZone: the string values coincide with four zone names (a persistence
+// convenience), but a panel is a grid RECTANGLE that OWNS ITS CORNERS, whereas the
+// zone of the same name does not. See `panelOf`/`panelRects` in utils/panels.
+//
+// Absent section = tiles = the normal grid, so all of this is inert on /build,
+// which never populates `sections`.
 
-import type { FrameSlot, SectionId, SectionState } from "@/lib/types";
+import type { FrameConfig, FrameSlot, SectionId, SectionState } from "@/lib/types";
+import { panelOf } from "@/lib/utils/panels";
 
 /** Section order for the picker (left → top → bottom → right reads naturally). */
 export const SECTION_IDS: SectionId[] = ["wing-left", "top", "bottom", "wing-right"];
@@ -15,12 +21,13 @@ export const SECTION_LABELS: Record<SectionId, string> = {
   "wing-right": "Right panel",
 };
 
-/** Bounding box (px) of a section = the union of its zone's slot rects. Null when
- *  the zone has no slots (e.g. wings off). Exact for the full-width top + 2-row
- *  bottom because it's derived from the SAME slots the tiles render at. */
+/** Bounding box (px) of a section = the union of the rects of every slot the PANEL
+ *  owns (resolved by `panelOf` on each slot's grid coord — NOT by zone, so the box
+ *  covers the panel's corners too). Null when the panel has no slots. */
 export function sectionBounds(
   id: SectionId,
   slots: FrameSlot[],
+  config: FrameConfig,
 ): { x: number; y: number; width: number; height: number } | null {
   let minX = Infinity;
   let minY = Infinity;
@@ -28,7 +35,7 @@ export function sectionBounds(
   let maxB = -Infinity;
   let found = false;
   for (const s of slots) {
-    if (s.zone !== id) continue;
+    if (panelOf(s.row, s.col, config) !== id) continue;
     found = true;
     if (s.x < minX) minX = s.x;
     if (s.y < minY) minY = s.y;
@@ -38,11 +45,25 @@ export function sectionBounds(
   return found ? { x: minX, y: minY, width: maxR - minX, height: maxB - minY } : null;
 }
 
-/** Whether a slot's zone is a section in a NON-tile mode (so its tile is hidden). */
-export function slotSuppressed(
-  zone: string,
+/** Whether a PANEL is in a NON-tile mode (so the tiles it owns are hidden). Null
+ *  panel (plate / off-grid) is never suppressed. This is the primitive both the
+ *  canvas and the placement gate resolve suppression through. */
+export function panelSuppressed(
+  panel: SectionId | null,
   sections: Partial<Record<SectionId, SectionState>>,
 ): boolean {
-  const sec = sections[zone as SectionId];
+  if (panel == null) return false;
+  const sec = sections[panel];
   return sec != null && sec.mode !== "tiles";
+}
+
+/** Whether the PANEL owning a slot is in a non-tile mode (its tile is hidden).
+ *  Resolves the slot's owning panel via `panelOf` on its grid coord — so a corner
+ *  cell is suppressed by its SIDE panel, not by the top/bottom banner. */
+export function slotSuppressed(
+  slot: Pick<FrameSlot, "row" | "col">,
+  sections: Partial<Record<SectionId, SectionState>>,
+  config: FrameConfig,
+): boolean {
+  return panelSuppressed(panelOf(slot.row, slot.col, config), sections);
 }

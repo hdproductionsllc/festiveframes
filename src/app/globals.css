@@ -334,6 +334,30 @@ body {
   }
 }
 
+/* A footprint the frame will REFUSE — it crosses the license plate, reaches under
+   a text bar, or lands in a section that is no longer tiled. Same box, same
+   position, restated in red: the user still sees the exact area they are aiming
+   at, and sees that it will not take. It cannot borrow the banner preview's
+   `--invalid` SHAKE, because this cue carries its position in `transform` and a
+   shake keyframe would fight it (the cue would drift off its cell); the alarm
+   is a colour + glow pulse instead, which leaves transform alone. */
+.ff-drop-indicator--rejected {
+  outline-color: rgba(214, 69, 69, 0.95);
+  background: rgba(214, 69, 69, 0.16);
+  box-shadow: 0 0 14px 2px rgba(214, 69, 69, 0.5);
+  animation: ff-drop-reject 0.7s ease-in-out infinite;
+}
+@keyframes ff-drop-reject {
+  0%, 100% {
+    outline-color: rgba(214, 69, 69, 0.75);
+    box-shadow: 0 0 10px 1px rgba(214, 69, 69, 0.4);
+  }
+  50% {
+    outline-color: rgba(214, 69, 69, 1);
+    box-shadow: 0 0 20px 4px rgba(214, 69, 69, 0.75);
+  }
+}
+
 /* ── Banner landing preview ───────────────────────────────────────────────────
    The banner-shaped ghost (in FrameCanvas) showing the EXACT run a dragged banner
    will land on. It GLIDES between landing spots (left/top/width transition) the

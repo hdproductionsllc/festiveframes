@@ -1,106 +1,131 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { useDesignStore } from "@/stores/design-store";
 import { SECTION_LABELS } from "@/lib/utils/sections";
-import { BOTTOM_BAR_FONTS } from "@/lib/constants/frame";
-import { SCHOOL_PHRASES } from "@/data/school-phrases";
+import { buildGrid } from "@/lib/utils/slot-generator";
+import { coveredSlotIds } from "@/lib/utils/text-bar";
+import { panelSnappetPlacement } from "@/lib/utils/snappet";
+import { putFullRes } from "@/lib/utils/image-store";
+import { reviewUploadedImage } from "@/lib/utils/image-moderation";
+import { SCHOOL_COLLEGIATE_FONTS, SCHOOL_OTHER_FONTS } from "@/lib/constants/frame";
+import { SCHOOL_PHRASE_GROUPS } from "@/data/school-phrases";
+import { ImageCropModal, type ImageCropResult } from "./ImageCropModal";
 
-// Editor for the SELECTED section (school builder). Text mode: phrase + font +
-// colors → setSectionText. Image mode: upload (downscaled) + fit → setSectionImage.
-// Presets are Phase 4. Shown only when a text/image section is selected.
+// Editor for the SELECTED section (school builder).
+//   TEXT mode  → phrase + font + colors → setSectionText.
+//   TILES mode → "Add art": upload → CROP MODAL (pan/zoom + live print-resolution
+//                gate) → the art drops into the panel as a SNAPPET at a suggested
+//                native-aspect size (portrait → tall, landscape → compact). It then
+//                behaves like any snappet: drag it, resize it from the handles, or
+//                drag it off to remove. There is no separate "image mode" — uploaded
+//                art and set-piece tiles are ONE system.
+// Shown only when a section is selected.
 
 const MAX_CHARS = 60; // room for multi-line school text
 
-/** True if any pixel is even slightly transparent — logos need PNG to keep their
- *  cutout; photos are fully opaque and compress ~5-20x smaller as JPEG. Scans once
- *  on a downscaled canvas and early-exits on the first transparent pixel. */
-function hasTransparency(ctx: CanvasRenderingContext2D, w: number, h: number): boolean {
-  try {
-    const { data } = ctx.getImageData(0, 0, w, h);
-    for (let i = 3; i < data.length; i += 4) {
-      if (data[i] < 255) return true;
-    }
-    return false;
-  } catch {
-    return true; // can't inspect (tainted canvas) → keep PNG to be safe
-  }
-}
-
-/** Read a file, draw it to a canvas capped at `maxPx` on the long edge, and return
- *  a data URL small enough for localStorage: JPEG q0.85 for opaque photos, PNG only
- *  when the source has real transparency (a logo/mascot cutout). */
-function downscaleToDataUrl(file: File, maxPx: number): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = () => reject(new Error("read failed"));
-    reader.onload = () => {
-      const img = new Image();
-      img.onerror = () => reject(new Error("decode failed"));
-      img.onload = () => {
-        const scale = Math.min(1, maxPx / Math.max(img.width, img.height));
-        const w = Math.round(img.width * scale);
-        const h = Math.round(img.height * scale);
-        const canvas = document.createElement("canvas");
-        canvas.width = w;
-        canvas.height = h;
-        const ctx = canvas.getContext("2d");
-        if (!ctx) return reject(new Error("no ctx"));
-        ctx.drawImage(img, 0, 0, w, h);
-        try {
-          resolve(
-            hasTransparency(ctx, w, h)
-              ? canvas.toDataURL("image/png")
-              : canvas.toDataURL("image/jpeg", 0.85),
-          );
-        } catch {
-          resolve(String(reader.result));
-        }
-      };
-      img.src = String(reader.result);
+/** Decode a file just far enough to read its aspect (width / height). Falls back to
+ *  1 (square) on any error, matching suggestSnappetSize's own bad-aspect guard. */
+function readImageAspect(file: File): Promise<number> {
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(file);
+    const image = new Image();
+    image.onload = () => {
+      const a = image.naturalWidth / image.naturalHeight;
+      URL.revokeObjectURL(url);
+      resolve(Number.isFinite(a) && a > 0 ? a : 1);
     };
-    reader.readAsDataURL(file);
+    image.onerror = () => {
+      URL.revokeObjectURL(url);
+      resolve(1);
+    };
+    image.src = url;
   });
 }
 
 export function SectionEditor() {
   const selectedSectionId = useDesignStore((s) => s.selectedSectionId);
   const sections = useDesignStore((s) => s.sections);
+  const frameConfig = useDesignStore((s) => s.frameConfig);
+  const slots = useDesignStore((s) => s.slots);
+  const textBars = useDesignStore((s) => s.textBars);
   const setSectionText = useDesignStore((s) => s.setSectionText);
-  const setSectionImage = useDesignStore((s) => s.setSectionImage);
-  const clearSection = useDesignStore((s) => s.clearSection);
+  const placeImageSnappet = useDesignStore((s) => s.placeImageSnappet);
   const fileRef = useRef<HTMLInputElement>(null);
+  // The file waiting to be cropped, plus the crop's aspect target (the SUGGESTED
+  // snappet's physical size) and the source aspect the store re-derives the span
+  // from. The aspect target makes the crop match where the art will land — so on a
+  // native-aspect upload there is little to no crop.
+  const [cropFile, setCropFile] = useState<File | null>(null);
+  const [cropTarget, setCropTarget] = useState<{ width: number; height: number } | null>(null);
+  const pendingAspect = useRef<number>(1);
 
   const sec = selectedSectionId ? sections[selectedSectionId] : undefined;
 
-  if (!selectedSectionId || !sec || sec.mode === "tiles") {
+  if (!selectedSectionId) {
     return (
       <div className="rounded-xl border border-surface-700/50 bg-surface-800/40 p-4 text-sm font-semibold text-surface-300">
-        Pick a section above and set it to <span className="text-[#ed5aa0]">Text</span> or{" "}
-        <span className="text-[#3fb0e6]">Image</span> to edit it here.
+        Pick a section above to edit it here — set it to{" "}
+        <span className="text-[#ed5aa0]">Text</span>, or leave it on{" "}
+        <span className="text-[#3fb0e6]">Tiles</span> and use <span className="font-bold">Add art</span>.
       </div>
     );
   }
 
   const label = SECTION_LABELS[selectedSectionId];
+  // Image mode is retired; a section with no explicit mode (just selected) is a
+  // tiles panel. Anything not TEXT is a tiles panel that can take uploaded art.
+  const isText = sec?.mode === "text";
 
+  // File picked → decide where/how big the art lands (the SAME decision the store
+  // makes on commit), size the crop's aspect target to that snappet, open the modal.
   const onFile = async (file?: File) => {
-    if (!file) return;
+    if (!file || !selectedSectionId) return;
+    const aspect = await readImageAspect(file);
+    pendingAspect.current = aspect;
+    const grid = buildGrid(frameConfig);
+    const ctx = { grid, slots, sections, barCovered: new Set(coveredSlotIds(textBars)) };
+    const placement = panelSnappetPlacement(ctx, selectedSectionId, aspect);
+    const span = placement?.span ?? { cols: 1, rows: 1 };
+    // Every grid column is exactly one tile wide (the grid invariant), so the
+    // snappet's physical size is just span × tile — the aspect target + the
+    // resolution gate's denominator.
+    setCropTarget({
+      width: span.cols * frameConfig.tileSizeInches,
+      height: span.rows * frameConfig.tileSizeInches,
+    });
+    setCropFile(file);
+  };
+
+  // Crop confirmed → stash the full-res original in IndexedDB (only the id is
+  // persisted, never the heavy bytes) and drop the art into the panel as a snappet.
+  const onCropConfirm = async (result: ImageCropResult) => {
+    if (!selectedSectionId) return;
+    const id = crypto.randomUUID();
     try {
-      const dataUrl = await downscaleToDataUrl(file, 1200);
-      setSectionImage(selectedSectionId, { imageUrl: dataUrl, fit: sec.imageFit ?? "cover" });
+      await putFullRes(id, result.fullResBlob);
     } catch {
-      /* ignore a bad file */
+      /* IndexedDB unavailable → the preview still renders; full-res is re-derivable */
     }
+    // Moderation integration point: user prints MUST be gated by a real server-side
+    // vision check before production. No-op today (it does not fake an approval).
+    void reviewUploadedImage(result.fullResBlob);
+    placeImageSnappet(selectedSectionId, {
+      imageUrl: result.previewUrl,
+      fullResId: id,
+      sourceAspect: pendingAspect.current,
+    });
+    setCropFile(null);
+    setCropTarget(null);
   };
 
   return (
     <div className="bsk-panel-pink space-y-4 rounded-xl border border-surface-700/50 bg-surface-800/50 p-4">
       <h3 className="text-sm font-extrabold uppercase tracking-wide text-[#1e1b17]">
-        {label} — {sec.mode === "text" ? "Text" : "Image"}
+        {label} — {isText ? "Text" : "Art"}
       </h3>
 
-      {sec.mode === "text" ? (
+      {isText ? (
         <div className="space-y-3 rounded-2xl border-2 border-[#1e1b17] bg-white/70 p-3.5 shadow-[3px_3px_0_#1e1b17]">
           <label className="block">
             <span className="mb-1 block text-xs font-bold uppercase tracking-wide text-[#1e1b17]/70">
@@ -116,23 +141,35 @@ export function SectionEditor() {
             />
           </label>
 
-          {/* School phrases — one tap fills the section (line breaks come in too). */}
+          {/* School phrases — tap to fill (line breaks come in too). Grouped by category;
+              {year} is already resolved, [MASCOT]/[#] are placeholders to overwrite. */}
           <div>
-            <span className="text-[11px] font-semibold text-[#1e1b17]/55">Or tap a school phrase:</span>
-            <div className="mt-1.5 flex max-h-[6.5rem] flex-wrap gap-1.5 overflow-y-auto pr-1">
-              {SCHOOL_PHRASES.map((p) => (
-                <button
-                  key={p}
-                  type="button"
-                  onClick={() => setSectionText(selectedSectionId, { text: p })}
-                  className={`rounded-full border-2 px-2.5 py-1 text-[12px] font-bold transition-all active:scale-95 ${
-                    sec.text?.text === p
-                      ? "border-[#1e1b17] bg-[#ed5aa0] text-white shadow-[2px_2px_0_#1e1b17]"
-                      : "border-[#1e1b17]/15 bg-white text-[#1e1b17] hover:border-[#ed5aa0] hover:bg-[#ed5aa0]/10"
-                  }`}
-                >
-                  {p.replace(/\n/g, " / ")}
-                </button>
+            <span className="text-[11px] font-semibold text-[#1e1b17]/55">
+              Or tap a school phrase <span className="text-[#1e1b17]/40">— edit [MASCOT] / [#] after</span>:
+            </span>
+            <div className="mt-1.5 max-h-[11rem] space-y-2 overflow-y-auto pr-1">
+              {SCHOOL_PHRASE_GROUPS.map((group) => (
+                <div key={group.category}>
+                  <span className="block text-[10px] font-extrabold uppercase tracking-wide text-[#1e1b17]/45">
+                    {group.category}
+                  </span>
+                  <div className="mt-1 flex flex-wrap gap-1.5">
+                    {group.phrases.map((p) => (
+                      <button
+                        key={p}
+                        type="button"
+                        onClick={() => setSectionText(selectedSectionId, { text: p })}
+                        className={`rounded-full border-2 px-2.5 py-1 text-[12px] font-bold transition-all active:scale-95 ${
+                          sec.text?.text === p
+                            ? "border-[#1e1b17] bg-[#ed5aa0] text-white shadow-[2px_2px_0_#1e1b17]"
+                            : "border-[#1e1b17]/15 bg-white text-[#1e1b17] hover:border-[#ed5aa0] hover:bg-[#ed5aa0]/10"
+                        }`}
+                      >
+                        {p.replace(/\n/g, " / ")}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               ))}
             </div>
           </div>
@@ -145,11 +182,20 @@ export function SectionEditor() {
                 onChange={(e) => setSectionText(selectedSectionId, { fontFamily: e.target.value })}
                 className="w-full rounded-lg border-2 border-[#1e1b17]/15 bg-white px-3 py-2 text-sm font-semibold text-[#1e1b17] focus:border-[#ed5aa0] focus:outline-none"
               >
-                {BOTTOM_BAR_FONTS.map((f) => (
-                  <option key={f.id} value={f.family}>
-                    {f.name}
-                  </option>
-                ))}
+                <optgroup label="Collegiate">
+                  {SCHOOL_COLLEGIATE_FONTS.map((f) => (
+                    <option key={f.id} value={f.family}>
+                      {f.name}
+                    </option>
+                  ))}
+                </optgroup>
+                <optgroup label="More fonts">
+                  {SCHOOL_OTHER_FONTS.map((f) => (
+                    <option key={f.id} value={f.family}>
+                      {f.name}
+                    </option>
+                  ))}
+                </optgroup>
               </select>
             </label>
             <div>
@@ -189,53 +235,39 @@ export function SectionEditor() {
             type="file"
             accept="image/*"
             className="hidden"
-            onChange={(e) => onFile(e.target.files?.[0])}
+            onChange={(e) => {
+              void onFile(e.target.files?.[0]);
+              e.target.value = ""; // let the same file be re-picked / re-cropped
+            }}
           />
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => fileRef.current?.click()}
-              className="rounded-xl border-[3px] border-[#1e1b17] bg-[#3fb0e6] px-4 py-2 text-sm font-extrabold uppercase tracking-wide text-white shadow-[3px_3px_0_#1e1b17] transition-all hover:brightness-105 active:translate-y-0.5"
-            >
-              {sec.imageUrl ? "Change image" : "Upload mascot / logo"}
-            </button>
-            {sec.imageUrl && (
-              <button
-                type="button"
-                onClick={() => clearSection(selectedSectionId)}
-                className="rounded-xl border-2 border-[#1e1b17]/15 bg-white px-3 py-2 text-sm font-bold text-[#1e1b17] hover:bg-white/70"
-              >
-                Remove
-              </button>
-            )}
-          </div>
-
-          <div>
-            <span className="mb-1 block text-xs font-bold uppercase tracking-wide text-[#1e1b17]/70">Fit</span>
-            <div className="flex gap-2">
-              {(["cover", "contain"] as const).map((fit) => {
-                const active = (sec.imageFit ?? "cover") === fit;
-                return (
-                  <button
-                    key={fit}
-                    type="button"
-                    disabled={!sec.imageUrl}
-                    onClick={() => sec.imageUrl && setSectionImage(selectedSectionId, { imageUrl: sec.imageUrl, presetId: sec.presetId, fit })}
-                    className={`flex-1 rounded-md border-2 px-3 py-1.5 text-xs font-extrabold uppercase tracking-wide transition-all disabled:opacity-40 ${
-                      active ? "border-[#1e1b17] bg-[#ed5aa0] text-white shadow-[2px_2px_0_#1e1b17]" : "border-[#1e1b17]/15 bg-white text-[#1e1b17] hover:border-[#ed5aa0]"
-                    }`}
-                  >
-                    {fit === "cover" ? "Fill" : "Fit"}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            className="rounded-xl border-[3px] border-[#1e1b17] bg-[#3fb0e6] px-4 py-2 text-sm font-extrabold uppercase tracking-wide text-white shadow-[3px_3px_0_#1e1b17] transition-all hover:brightness-105 active:translate-y-0.5"
+          >
+            Add art
+          </button>
 
           <p className="text-[11px] leading-relaxed text-[#1e1b17]/50">
-            Upload a PNG/JPG (auto-downscaled). School presets come next.
+            Upload a photo, mascot, or logo for the {label.toLowerCase()}. It drops in
+            at a suggested size — a portrait lands tall, a landscape lands compact — then
+            drag it, pull the resize handles, or drag it off the frame to remove. A live
+            meter checks it&apos;s sharp enough to print at that size.
           </p>
         </div>
+      )}
+
+      {cropFile && cropTarget && (
+        <ImageCropModal
+          file={cropFile}
+          targetInches={cropTarget}
+          panelLabel={label}
+          onCancel={() => {
+            setCropFile(null);
+            setCropTarget(null);
+          }}
+          onConfirm={onCropConfirm}
+        />
       )}
     </div>
   );

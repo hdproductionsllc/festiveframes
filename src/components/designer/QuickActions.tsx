@@ -3,17 +3,28 @@
 import { useDesignStore } from "@/stores/design-store";
 import { usePaletteStore } from "@/stores/palette-store";
 import { useUIStore } from "@/stores/ui-store";
-import { getSetPieces } from "@/data/sets";
+import { getSetPieces, resolveSurfacedSetId } from "@/data/sets";
 import { playSound, type SoundName } from "@/lib/utils/sound";
 
-export function QuickActions() {
+interface QuickActionsProps {
+  /**
+   * Which sets this builder surfaces. When set (school builder), Fill All / Random
+   * draw from the same set the palette shows. Omitted (/build) keeps the exact
+   * prior behavior: the raw global active set.
+   */
+  surfacedSetIds?: readonly string[];
+}
+
+export function QuickActions({ surfacedSetIds }: QuickActionsProps = {}) {
   const selectedPieceId = usePaletteStore((s) => s.selectedPieceId);
   const activeSetId = usePaletteStore((s) => s.activeSetId);
   const soundEnabled = useUIStore((s) => s.soundEnabled);
   const { fillAll, randomFill, mirrorTopSlots, clearAll, undo, redo, canUndo, canRedo } =
     useDesignStore();
 
-  const pieces = getSetPieces(activeSetId);
+  const pieces = getSetPieces(
+    surfacedSetIds ? resolveSurfacedSetId(activeSetId, surfacedSetIds) : activeSetId
+  );
 
   const sfx = (name: SoundName) => { if (soundEnabled) playSound(name); };
 

@@ -3,23 +3,13 @@
 import { useMemo, useState } from "react";
 import { useDesignStore } from "@/stores/design-store";
 import { getPiece } from "@/data/sets";
-import { coveredSlotIds } from "@/lib/utils/text-bar";
+import { tallyTiles } from "@/lib/utils/tile-tally";
+import { skuFor } from "@/lib/order/parts-list";
+import { isMultiCell } from "@/lib/utils/snappet";
 import { composeBarImage } from "@/lib/utils/compose-frame";
 import { composeEufyPrintSheets } from "@/lib/utils/eufy-print";
 import { EUFY_JIG_3X12, type EufyJigConfig } from "@/config/eufy-jig";
-
-// Short, stable part-number prefixes per set. Falls back to the first 3 letters.
-const SET_CODE: Record<string, string> = {
-  july4th: "J4",
-  essentials: "ESS",
-};
-
-/** Stable part number derived from the piece id (not the filename). */
-function skuFor(pieceId: string): string {
-  const [setId, slug = pieceId] = pieceId.split(":");
-  const code = SET_CODE[setId] ?? setId.slice(0, 3).toUpperCase();
-  return `${code}-${slug.toUpperCase().replace(/[^A-Z0-9]+/g, "-")}`;
-}
+import type { TileSpan } from "@/lib/types";
 
 interface Row {
   sku: string;
@@ -28,6 +18,9 @@ interface Row {
   artworkUrl: string;
   color: string;
   qty: number;
+  span: TileSpan;
+  /** Physical size in inches at the design's tile pitch, "cols x rows" (2dp). */
+  size: string;
 }
 
 /**
@@ -58,28 +51,29 @@ export function ExportPartsList({
   const [eufyStatus, setEufyStatus] = useState<string | null>(null);
 
   const rows = useMemo<Row[]>(() => {
-    const counts = new Map<string, number>();
-    const covered = new Set(coveredSlotIds(textBars));
-    for (const [slotId, placed] of Object.entries(slots)) {
-      if (covered.has(slotId)) continue; // hidden under a text bar — not produced
-      counts.set(placed.pieceId, (counts.get(placed.pieceId) ?? 0) + 1);
-    }
-    return Array.from(counts.entries())
-      .map(([pieceId, qty]) => {
+    // Same tally the parts list and the print queue use (utils/tile-tally).
+    return Array.from(tallyTiles(slots, textBars).values())
+      .map(({ pieceId, span, qty }) => {
         const piece = getPiece(pieceId);
         return {
-          sku: skuFor(pieceId),
+          sku: skuFor(pieceId, span),
           name: piece?.name ?? pieceId,
           pieceId,
           artworkUrl: piece?.artworkUrl ?? "",
           color: piece?.backgroundColor ?? "#FFFFFF",
           qty,
+          span,
+          size: `${(span.cols * tileIn).toFixed(2)} x ${(span.rows * tileIn).toFixed(2)}`,
         };
       })
-      .sort((a, b) => b.qty - a.qty || a.name.localeCompare(b.name));
-  }, [slots, textBars]);
+      // Size only breaks a tie between rows equal on qty AND name — every size is
+      // equal in an all-1x1 design, so the /build ordering is unchanged.
+      .sort((a, b) => b.qty - a.qty || a.name.localeCompare(b.name) || a.size.localeCompare(b.size));
+  }, [slots, textBars, tileIn]);
 
   const totalTiles = rows.reduce((sum, r) => sum + r.qty, 0);
+  const totalCells = rows.reduce((sum, r) => sum + r.qty * r.span.cols * r.span.rows, 0);
+  const hasMulti = rows.some((r) => isMultiCell(r.span));
   const slug = (designName || "festive-frames").replace(/[^a-z0-9]+/gi, "-");
 
   if (!open) return null;
@@ -93,9 +87,14 @@ export function ExportPartsList({
       ["Plate", plateState],
       ...(qrCode.enabled ? [["QR", qrCode.url]] : []),
       [],
-      ["Part #", "Tile", "Color", "Qty"],
-      ...rows.map((r) => [r.sku, r.name, r.color, String(r.qty)]),
-      ["", "", "Total tiles", String(totalTiles)],
+      hasMulti ? ["Part #", "Tile", "Color", "Size (in)", "Qty"] : ["Part #", "Tile", "Color", "Qty"],
+      ...rows.map((r) =>
+        hasMulti ? [r.sku, r.name, r.color, r.size, String(r.qty)] : [r.sku, r.name, r.color, String(r.qty)],
+      ),
+      hasMulti
+        ? ["", "", "", "Total parts", String(totalTiles)]
+        : ["", "", "Total tiles", String(totalTiles)],
+      ...(hasMulti ? [["", "", "", "Total cells", String(totalCells)]] : []),
       [],
       ["Custom parts (text bars)"],
       ["Text", "Font", "Row", "Size (tiles)", "Size (in)"],
@@ -196,7 +195,9 @@ export function ExportPartsList({
             r.artworkUrl
               ? `<img src="${origin}${esc(r.artworkUrl)}"/>`
               : `<span class="sw" style="background:${esc(r.color)}"></span>`
-          }<span>${esc(r.name)}</span></div></td><td class="mono">${esc(r.color)}</td><td class="qty">${r.qty}</td></tr>`
+          }<span>${esc(r.name)}</span></div></td><td class="mono">${esc(r.color)}</td>${
+            hasMulti ? `<td>${esc(r.size)}</td>` : ""
+          }<td class="qty">${r.qty}</td></tr>`
       )
       .join("");
 
@@ -226,8 +227,8 @@ export function ExportPartsList({
       <h1>Festive Frames — Parts List</h1>
       <div class="meta">Order #${esc(orderNumber || "—")} · Customer ${esc(customerName || "—")} · ${esc(designName)} · Plate ${esc(plateState)}${qrCode.enabled ? ` · QR ${esc(qrCode.url)}` : ""}</div>
       ${frameImage ? `<img class="mock" src="${frameImage}"/>` : ""}
-      <table><thead><tr><th>Part #</th><th>Tile</th><th>Color</th><th class="qty">Qty</th></tr></thead>
-      <tbody>${rowsHtml}<tr class="total"><td colspan="3">Total tiles</td><td class="qty">${totalTiles}</td></tr></tbody></table>
+      <table><thead><tr><th>Part #</th><th>Tile</th><th>Color</th>${hasMulti ? `<th>Size (in)</th>` : ""}<th class="qty">Qty</th></tr></thead>
+      <tbody>${rowsHtml}<tr class="total"><td colspan="${hasMulti ? 4 : 3}">${hasMulti ? "Total parts" : "Total tiles"}</td><td class="qty">${totalTiles}</td></tr>${hasMulti ? `<tr><td colspan="4">Total cells</td><td class="qty">${totalCells}</td></tr>` : ""}</tbody></table>
       ${barsHtml ? `<h2>Custom parts — text bars</h2>${barsHtml}` : ""}
       <script>window.onload=function(){window.focus();window.print()};window.onafterprint=function(){window.close()}<\/script>
     </body></html>`;

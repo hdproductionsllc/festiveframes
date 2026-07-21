@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getSetPieces, surfacedSets, SURFACED_SET_IDS } from "@/data/sets";
+import { getSetPieces, resolveSurfacedSetId, SURFACED_SET_IDS } from "@/data/sets";
 import { usePaletteStore } from "@/stores/palette-store";
 import { PaletteTile } from "./PaletteTile";
 
@@ -11,9 +11,15 @@ interface TileGridProps {
    * "row"  — mobile tray (single horizontal-scrolling row of big tiles).
    */
   variant?: "grid" | "row";
+  /**
+   * Which sets this palette may surface. Defaults to the global SURFACED_SET_IDS
+   * (the /build behavior). The school builder passes SCHOOL_SURFACED_SET_IDS so it
+   * shows the School Spirit set without changing /build.
+   */
+  surfacedSetIds?: readonly string[];
 }
 
-export function TileGrid({ variant = "grid" }: TileGridProps) {
+export function TileGrid({ variant = "grid", surfacedSetIds = SURFACED_SET_IDS }: TileGridProps) {
   const activeSetId = usePaletteStore((s) => s.activeSetId);
 
   // One-time drag demo: the first tile mimes a pick-up-and-drag on the visitor's
@@ -36,9 +42,7 @@ export function TileGrid({ variant = "grid" }: TileGridProps) {
   // For launch only the surfaced sets are offered. If the seasonal default
   // landed on a non-surfaced set (e.g. the app is opened in October), fall
   // back to the first surfaced set so the tray is never empty / off-theme.
-  const setId = SURFACED_SET_IDS.includes(activeSetId)
-    ? activeSetId
-    : surfacedSets[0]?.id ?? activeSetId;
+  const setId = resolveSurfacedSetId(activeSetId, surfacedSetIds);
 
   const pieces = getSetPieces(setId);
 

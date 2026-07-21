@@ -1,41 +1,30 @@
-# Tier 1 — Revenue & trust hardening  (2026-07-03)
+# School Print Output (safe half)  (2026-07-21)
 
-Scope: close the abuse/trust holes surfaced by the 4-agent review before the school
-builder ships. NONE of this changes `/build`'s rendered output, checkout payload, or
-print pipeline.
+Scope: give the school design a PRINT-READY output — a high-DPI PNG of the whole
+assembled frame + a panel-grouped parts list. NEW renderer; do NOT touch
+compose-frame.ts / fulfill.ts / Stripe. /build stays byte-identical.
 
-## 1. save-design phishing fix (I introduced this — C1)
-- [x] `save-design/route.ts`: build the restore link from `SITE_URL` only, never the
-      attacker-controllable `Origin` header.
-- [x] `email.ts`: `escapeHtml` also escapes `"` and `'`; escape the URL in both `href`s.
+## Plan — DONE
+- [x] 1. NEW `src/lib/utils/compose-school-frame.ts`
+  - [x] Pure geometry helpers: `schoolCanvasSize`, `shouldRotateForBed`,
+        `schoolBannerRect` + `schoolRenderMetrics` (wing offset + base bottom row =
+        the compose-frame banner bug fixed HERE)
+  - [x] `drawSchoolFrame(ctx, design, images, W, H)` — env-agnostic (browser canvas
+        AND @napi-rs/canvas): plate, ring+wing tiles, multi-cell snappets (uploaded
+        art full-res), text/image sections, banners
+  - [x] `composeSchoolFrame(design, opts)` — browser entry: preload (Image +
+        getFullRes + QR), draw, rotate to 16.5x13 bed, setPngDpi → data URL
+  - [x] copied small helpers; imported shared text-bar fit fns; compose-frame UNTOUCHED
+- [x] 2. Export button in SchoolDesigner header ("Export print file") — client-only PNG download
+- [x] 3. Additive `buildPanelPartsList` in parts-list.ts (groups by `grid.panelAt`);
+        flat `buildPartsList` byte-identical
+- [x] 4. Tests: geometry + drawSchoolFrame napi smoke + panel grouping + /build regression
+- [x] 5. tsc / vitest (206 pass) / eslint all clean; sample PNG rendered → scratchpad → Read OK
 
-## 2. Rate limiting (H1)
-- [x] New `src/middleware.ts`: per-IP sliding-window limits on the abuse-prone routes
-      (cartoonize, pet-caption, lab/pet-submit, save-design, contact, subscribe,
-      review, order/draft). Leave webhook / checkout / fulfill untouched.
-      VERIFIED: subscribe → 12x 200 then 429.
+## v2 ideas
+- Render the multi-cell uploaded-art snappets in the sample (needs a seeded IndexedDB blob)
+- A "Preview" (open in new tab) alongside the download; a per-panel PNG export
+- Wire composeSchoolFrame + buildPanelPartsList into the (confirm-first) school order flow
 
-## 3. Body-size cap (H2)
-- [x] Same middleware rejects oversized POSTs (per-route `maxBytes` via content-length).
-      VERIFIED: 70KB body to contact (64KB cap) → 413.
-
-## 4. School image = silent data loss (I introduced this — perf CRITICAL)
-- [x] `SectionEditor.tsx`: encode uploads as JPEG q0.85 (PNG only when the image has
-      real transparency via alpha scan), cap the long edge at 1200px.
-- [x] `design-store.ts`: guarded localStorage wrapper catches quota failures + exposes
-      `onPersistQuotaExceeded` listener. Stored bytes identical → /build unaffected.
-- [x] `SchoolDesigner.tsx`: dismissible red banner when a persist write is rejected.
-
-## Verify
-- [x] `npx tsc --noEmit` clean
-- [x] `npm run lint` clean (0 errors; 19 pre-existing warnings, none in touched files)
-- [x] `npm run build` succeeds (middleware registered as ƒ Proxy)
-- [x] Screenshot `/build` unchanged; `/lab/school` still works
-
-## 5. Stop the subscribe-notification flood (added 2026-07-03, from owner)
-- [x] `store.ts`: `subscribers` table + `recordSubscriber(email)` (INSERT..ON CONFLICT
-      DO NOTHING RETURNING; in-memory fallback) — true only for a NEW email.
-- [x] `subscribe/route.ts`: lowercase-normalize, dedup gate (fail-open), notify only when
-      new. VERIFIED: new→{ok:true}; repeat→{ok:true,already:true}; UPPERCASE→already.
-- [x] Rename `middleware.ts`→`proxy.ts` (Next 16 convention; kills deprecation warning).
-- [x] Cleaned test rows from prod `subscribers` table (0 real rows remain).
+## Guardrails
+- Do NOT modify compose-frame.ts, fulfill.ts, or any Stripe/checkout/order code

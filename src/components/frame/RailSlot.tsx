@@ -1,8 +1,9 @@
 "use client";
 
-import { memo, useEffect, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import { useDroppable, useDraggable } from "@dnd-kit/core";
-import type { FrameSlot, PlacedTile } from "@/lib/types";
+import type { FrameSlot, PlacedTile, TileSpan } from "@/lib/types";
+import { grabOffsetIn, isMultiCell, tileSpan, type GrabOffset } from "@/lib/utils/snappet";
 import { PlacedTileView } from "./PlacedTileView";
 import { SparkleBurst } from "./SparkleBurst";
 import { useDesignStore } from "@/stores/design-store";
@@ -14,9 +15,29 @@ import { emitTilePlaced, onTilePlaced } from "@/lib/utils/place-fx";
 interface RailSlotProps {
   slot: FrameSlot;
   placedTile: PlacedTile | undefined;
+  /**
+   * This cell is HIDDEN UNDER a multi-cell snappet anchored in another cell (see
+   * `coveredBySnappets`). It still registers its droppable — the grid of drop
+   * targets must stay complete — but it paints NOTHING: no art, no empty-cell
+   * surface, no armed cue. The anchor's art is what the user sees here, and a
+   * covered cell drawing its own chrome would show through the seams of the tile
+   * sitting on top of it. Always false/undefined on /build (no design has a span).
+   */
+  covered?: boolean;
+  /**
+   * The pixel footprint of a multi-cell tile ANCHORED in this cell — the width and
+   * height of `snappetRect`. Passed as two numbers rather than a rect object so the
+   * `memo` below still compares equal across a drag's re-renders. Undefined = a
+   * plain 1x1 tile drawn at the cell's own size (every tile on /build).
+   *
+   * The x/y are deliberately absent: the anchor cell is ALREADY positioned at the
+   * snappet's origin, so the tile simply overflows its cell to the right/down.
+   */
+  spanWidth?: number;
+  spanHeight?: number;
 }
 
-function RailSlotInner({ slot, placedTile }: RailSlotProps) {
+function RailSlotInner({ slot, placedTile, covered, spanWidth, spanHeight }: RailSlotProps) {
   const { setNodeRef } = useDroppable({ id: slot.id });
   const placeTile = useDesignStore((s) => s.placeTile);
   const selectedPieceId = usePaletteStore((s) => s.selectedPieceId);
@@ -64,6 +85,26 @@ function RailSlotInner({ slot, placedTile }: RailSlotProps) {
   // armed. Reduced-motion users still get the static dashed ring (pulse frozen).
   const armed = selectedPieceId != null;
 
+  // A snappet's footprint, or the cell's own size for a plain 1x1. The cell BOX is
+  // always one grid cell (it is the droppable); only the tile drawn inside it grows.
+  const tileWidth = spanWidth ?? slot.width;
+  const tileHeight = spanHeight ?? slot.height;
+  const isSnappet = spanWidth !== undefined || spanHeight !== undefined;
+
+  // Hidden under someone else's snappet: the droppable and nothing else. No click
+  // handler either — placing a 1x1 into a cell buried under a snappet would create
+  // a tile the user can neither see nor reach.
+  if (covered) {
+    return (
+      <div
+        ref={setNodeRef}
+        aria-hidden
+        className="absolute"
+        style={{ left: slot.x, top: slot.y, width: slot.width, height: slot.height }}
+      />
+    );
+  }
+
   return (
     <div
       ref={setNodeRef}
@@ -74,22 +115,30 @@ function RailSlotInner({ slot, placedTile }: RailSlotProps) {
         top: slot.y,
         width: slot.width,
         height: slot.height,
+        // A multi-cell tile overflows its cell, so it must paint ABOVE the empty
+        // cells it hangs over (they are later siblings in DOM order).
+        zIndex: isSnappet ? 1 : undefined,
       }}
     >
       {/* Persistent armed-state drop cue — sits ABOVE the tile/cell art but below
-          the remove ✕ and sparkle; pointer-events off so it never eats the tap. */}
+          the remove ✕ and sparkle; pointer-events off so it never eats the tap.
+          Sized to the TILE, so on a snappet the cue outlines the whole footprint
+          the tap would replace rather than just its anchor corner. */}
       {armed && (
         <span
           aria-hidden
           className="ff-armed-cue pointer-events-none absolute inset-0 z-[2] rounded-[3px]"
+          style={isSnappet ? { width: tileWidth, height: tileHeight } : undefined}
         />
       )}
       {placedTile ? (
         <PlacedTileCell
           slotId={slot.id}
           pieceId={placedTile.pieceId}
-          width={slot.width}
-          height={slot.height}
+          image={placedTile.image}
+          span={tileSpan(placedTile)}
+          width={tileWidth}
+          height={tileHeight}
           armed={selectedPieceId != null}
           landing={landing}
         />
@@ -140,6 +189,8 @@ export const RailSlot = memo(RailSlotInner);
 function PlacedTileCell({
   slotId,
   pieceId,
+  image,
+  span,
   width,
   height,
   armed,
@@ -147,6 +198,8 @@ function PlacedTileCell({
 }: {
   slotId: string;
   pieceId: string;
+  image?: { url: string; fullResId?: string };
+  span: TileSpan;
   width: number;
   height: number;
   armed: boolean;
@@ -154,12 +207,33 @@ function PlacedTileCell({
 }) {
   const removeTile = useDesignStore((s) => s.removeTile);
   const soundEnabled = useUIStore((s) => s.soundEnabled);
+  const selectSnappet = useUIStore((s) => s.selectSnappet);
   const [showRemove, setShowRemove] = useState(false);
   const [poofing, setPoofing] = useState(false);
 
+  // WHICH CELL of the footprint the pointer is holding — see `GrabOffset`.
+  //
+  // Handed to dnd-kit as the REF ITSELF, not as a value, and deliberately so:
+  // dnd-kit reads `active.data.current` at the moment the drag ACTIVATES, which is
+  // the first pointermove past the 5px threshold and can land in the same frame as
+  // the pointerdown — before any re-render has committed. A value copied into
+  // `data` at render time would therefore be last gesture's offset on a quick
+  // flick, and the snappet would jump. A ref is read when the drop is resolved, so
+  // it is always the offset this pointerdown wrote. Inert for a 1x1 — it stays
+  // {0,0} — so /build is untouched.
+  const grabOffset = useRef<GrabOffset>({ dr: 0, dc: 0 });
+  const captureGrab = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isMultiCell(span)) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    grabOffset.current = grabOffsetIn(rect, { x: e.clientX, y: e.clientY }, span);
+  };
+
   const { setNodeRef, attributes, listeners, isDragging } = useDraggable({
     id: `placed-tile:${slotId}`,
-    data: { type: "placed-tile", slotId, pieceId },
+    // `span` rides along so the collision strategy and the drop resolver can size
+    // the footprint without a store read; `grabOffset` so they can locate it;
+    // `image` so the drag overlay lifts the actual photo for uploaded art.
+    data: { type: "placed-tile", slotId, pieceId, span, grabOffset, image },
   });
 
   // Dismiss the ✕ on any outside tap so it never lingers.
@@ -180,6 +254,11 @@ function PlacedTileCell({
     if (armed) return;
     e.stopPropagation();
     setShowRemove((v) => !v);
+    // A MULTI-CELL snappet also becomes SELECTED for resize on tap — the handles
+    // (drawn in FrameCanvas's overflow layer) appear around it. A 1x1 tile is never
+    // multi-cell, so this never fires on /build and its behavior is unchanged. The
+    // stopPropagation above keeps the frame's deselect-on-empty-click from firing.
+    if (isMultiCell(span)) selectSnappet(slotId);
   };
 
   const handleRemove = (e: React.MouseEvent) => {
@@ -192,6 +271,12 @@ function PlacedTileCell({
   return (
     <div
       data-tile-cell={slotId}
+      // Captured on the WRAPPER, not the draggable inside it: the wrapper's box is
+      // exactly the footprint and carries no transform, while the inner tile wears
+      // a `hover:scale-[1.04]`, whose inflated rect would bias the offset by up to
+      // half a cell across a wide snappet. Capture phase, so it runs before
+      // dnd-kit's own pointerdown listener starts the drag.
+      onPointerDownCapture={captureGrab}
       style={{
         position: "absolute",
         left: 0,
@@ -223,7 +308,7 @@ function PlacedTileCell({
           ${poofing ? "animate-tile-poof" : landing ? "motion-safe:animate-tile-snap" : ""}`}
         style={{ touchAction: "none" }}
       >
-        <PlacedTileView pieceId={pieceId} width={width} height={height} />
+        <PlacedTileView pieceId={pieceId} image={image} width={width} height={height} />
 
         {/* Poof puff — a quick patriotic sparkle puff as the tile disappears. */}
         {poofing && <SparkleBurst variant="poof" />}

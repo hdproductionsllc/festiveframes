@@ -33,6 +33,9 @@ const RULES: Record<string, Rule> = {
   "/api/cartoonize": { windowMs: 5 * 60_000, max: 12, maxBytes: 12 * MB },
   "/api/pet-caption": { windowMs: 5 * 60_000, max: 20, maxBytes: 12 * MB },
   "/api/lab/pet-submit": { windowMs: 10 * 60_000, max: 6, maxBytes: 12 * MB },
+  // A full-frame 300-DPI print PNG is a few MB; base64 in the JSON body inflates it
+  // ~1.33x, so allow ~20MB encoded (the route enforces an 18MB DECODED ceiling).
+  "/api/school/submit": { windowMs: 10 * 60_000, max: 10, maxBytes: 20 * MB },
   "/api/save-design": { windowMs: 5 * 60_000, max: 15, maxBytes: 6 * MB },
   "/api/order/draft": { windowMs: 5 * 60_000, max: 40, maxBytes: 12 * MB },
   "/api/contact": { windowMs: 10 * 60_000, max: 6, maxBytes: 64 * 1024 },
@@ -91,6 +94,7 @@ export const config = {
     "/api/cartoonize",
     "/api/pet-caption",
     "/api/lab/pet-submit",
+    "/api/school/submit",
     "/api/save-design",
     "/api/order/draft",
     "/api/contact",

@@ -1,8 +1,63 @@
-import type { FrameConfig, FrameSlot, SlotZone } from "@/lib/types";
+import type { FrameConfig, FrameSlot, GridCoord, SectionId, SlotZone } from "@/lib/types";
 import { getTotalWidthInches } from "@/lib/constants/frame";
+import { panelOf } from "@/lib/utils/panels";
 
 function makeSlotId(zone: SlotZone, index: number): string {
   return `frame:${zone}-${index}`;
+}
+
+const WING_ID_PREFIXES = ["frame:wing-left-", "frame:wing-right-"] as const;
+
+/**
+ * The flat wing index encoded in a slot id, or null when the id is not a wing slot
+ * (or carries no valid index). The inverse of `makeSlotId` for the two wing zones.
+ *
+ * Callers used to do `parseInt(id.split("-").pop())`, which assumes the id ends in a
+ * bare integer — true of today's ids only by luck. Parsing off the KNOWN prefix is
+ * the contract, and it can say "not a wing slot" instead of silently returning 0.
+ */
+export function wingSlotIndex(slotId: string): number | null {
+  for (const prefix of WING_ID_PREFIXES) {
+    if (!slotId.startsWith(prefix)) continue;
+    const rest = slotId.slice(prefix.length);
+    if (!/^\d+$/.test(rest)) return null;
+    return Number(rest);
+  }
+  return null;
+}
+
+/**
+ * Rows in ONE wing column. Banded: an optional top corner (fullWidthTopBar), the
+ * side-rail rows, then the bottom row(s).
+ *
+ * This was previously computed inline in four places, two of which had drifted to
+ * `leftSlots + 1` — ignoring both flags and so under-counting the school wing by 2
+ * rows (see design-store mirrorTopSlots / setWingColumns). One definition now.
+ */
+export function wingRowCount(config: FrameConfig): number {
+  const extraBottomRows = Math.max(0, (config.bottomRows ?? 1) - 1);
+  const topRows = config.fullWidthTopBar ? 1 : 0;
+  return topRows + config.leftSlots + 1 + extraBottomRows;
+}
+
+/**
+ * GRID INVARIANT — the frame is a gapless integer lattice of `tileSizeInches` cells.
+ *
+ * Holds only when the rail steps equal the tile pitch exactly:
+ *   widthInches  === tileSizeInches * topSlots        (topStep === tileSize)
+ *   heightInches === tileSizeInches * (leftSlots + 2) (leftStep === tileSize)
+ *
+ * Both DEFAULT_FRAME_CONFIG (12.883 = .991*13, 6.937 = .991*7) and
+ * SCHOOL_FRAME_CONFIG (11.892 = .991*12, 6.937) satisfy it. If a future config
+ * does not, the rails render with a cumulative gap and every (row,col) below is
+ * a lie — `gridInvariantHolds` is exported so tests can assert it.
+ */
+export function gridInvariantHolds(config: FrameConfig): boolean {
+  const EPS = 1e-6;
+  return (
+    Math.abs(config.widthInches - config.tileSizeInches * config.topSlots) < EPS &&
+    Math.abs(config.heightInches - config.tileSizeInches * (config.leftSlots + 2)) < EPS
+  );
 }
 
 /**
@@ -26,10 +81,25 @@ export function generateSlots(
   const extraBottomRows = Math.max(0, (config.bottomRows ?? 1) - 1);
   const fullWidthTop = config.fullWidthTopBar === true;
   const baseHeightPx = config.heightInches * scale; // original inner-frame height
-  const containerHeight = baseHeightPx + extraBottomRows * tileSize; // render height
   const hasWings = config.wings && config.wingColumns > 0;
   const wingOffset = hasWings ? config.wingWidthInches * scale : 0;
   const innerWidth = config.widthInches * scale;
+
+  // ─── Grid coordinates (integers, derived from the loop indices) ──────────
+  // Deliberately NOT derived by rounding x/tileSize — the indices are already
+  // exact, so rounding px would only add a way to be wrong. See the GRID
+  // INVARIANT note above for why these line up with the px math.
+  const wingCols = hasWings ? config.wingColumns : 0; // grid cols left of the inner frame
+  const baseBottomRow = config.leftSlots + 1; // side rows occupy 1..leftSlots
+  const topRows = fullWidthTop ? 1 : 0;
+
+  /** Map a wing column's banded row index to its grid row. */
+  const wingGridRow = (row: number): number => {
+    if (row < topRows) return 0;
+    const side = row - topRows;
+    if (side < config.leftSlots) return side + 1;
+    return baseBottomRow + (side - config.leftSlots);
+  };
 
   const slots: FrameSlot[] = [];
 
@@ -48,6 +118,8 @@ export function generateSlots(
       y: 0,
       width: tileSize,
       height: tileSize,
+      row: 0,
+      col: wingCols + i,
     });
   }
 
@@ -70,6 +142,8 @@ export function generateSlots(
       y: (i + 1) * leftStep * scale,
       width: tileSize,
       height: tileSize,
+      row: i + 1,
+      col: wingCols,
     });
   }
 
@@ -86,6 +160,8 @@ export function generateSlots(
       y: (i + 1) * rightStep * scale,
       width: tileSize,
       height: tileSize,
+      row: i + 1,
+      col: wingCols + config.topSlots - 1,
     });
   }
 
@@ -104,6 +180,8 @@ export function generateSlots(
       y: bottomY,
       width: tileSize,
       height: tileSize,
+      row: baseBottomRow,
+      col: wingCols + i,
     });
   }
 
@@ -123,6 +201,8 @@ export function generateSlots(
         y,
         width: tileSize,
         height: tileSize,
+        row: baseBottomRow + r,
+        col: wingCols + i,
       });
     }
   }
@@ -132,11 +212,9 @@ export function generateSlots(
   // Rows match the left/right rail Y positions plus one at the bottom row.
   if (hasWings) {
     // Banded wing rows: an optional TOP corner (fullWidthTop), the side rows, then
-    // the bottom row(s). With both flags off → topRows=0, bottomRowsCount=1, so
-    // wingRows = leftSlots + 1 and every y matches the original literal exactly.
-    const topRows = fullWidthTop ? 1 : 0;
-    const bottomRowsCount = 1 + extraBottomRows;
-    const wingRows = topRows + config.leftSlots + bottomRowsCount;
+    // the bottom row(s). With both flags off → topRows=0, so wingRows = leftSlots + 1
+    // and every y matches the original literal exactly.
+    const wingRows = wingRowCount(config);
 
     const wingY = (row: number, sideSlots: number, sideStep: number): number => {
       if (row < topRows) return 0; // top corner (over the wing)
@@ -158,6 +236,8 @@ export function generateSlots(
           y: wingY(row, config.leftSlots, leftStep),
           width: tileSize,
           height: tileSize,
+          row: wingGridRow(row),
+          col: wingCols - 1 - col, // col 0 is adjacent to the frame, so it maps rightmost
         });
       }
     }
@@ -174,6 +254,8 @@ export function generateSlots(
           y: wingY(row, config.rightSlots, rightStep),
           width: tileSize,
           height: tileSize,
+          row: wingGridRow(row),
+          col: wingCols + config.topSlots + col,
         });
       }
     }
@@ -186,8 +268,6 @@ export function generateSlots(
  * Get the number of slots in a given zone.
  */
 function getZoneSlotCount(config: FrameConfig, zone: SlotZone): number {
-  // Flag-gated counts (default to the standard frame when unset).
-  const extraBottomRows = Math.max(0, (config.bottomRows ?? 1) - 1);
   switch (zone) {
     case "top": return config.topSlots;
     case "bottom": return config.bottomSlots * (config.bottomRows ?? 1);
@@ -196,9 +276,7 @@ function getZoneSlotCount(config: FrameConfig, zone: SlotZone): number {
     case "wing-left":
     case "wing-right": {
       if (config.wingColumns <= 0) return 0;
-      const topRows = config.fullWidthTopBar ? 1 : 0;
-      const wingRows = topRows + config.leftSlots + 1 + extraBottomRows;
-      return config.wingColumns * wingRows;
+      return config.wingColumns * wingRowCount(config);
     }
   }
 }
@@ -226,4 +304,75 @@ export function getAllSlotIds(config: FrameConfig): string[] {
     ...getSlotIdsByZone(config, "wing-left"),
     ...getSlotIdsByZone(config, "wing-right"),
   ];
+}
+
+// ─── Frame Grid ───────────────────────────────────────────────
+//
+// The unified coordinate space. Zones are six disjoint flat index spaces, so they
+// cannot express a footprint spanning a zone boundary — e.g. a 2-wide snappet
+// covering the wing column AND the inner rail. Every zone maps into one (row, col)
+// lattice here, which is what multi-cell snappets address.
+//
+// Slot IDs stay the persistence key; this is pure geometry, rebuilt per layout.
+
+export interface FrameGrid {
+  rows: number;
+  cols: number;
+  /** The slot at a coordinate, or null for the plate hole / off-grid. */
+  cellAt(row: number, col: number): FrameSlot | null;
+  /** The coordinate of a slot id, or null if it isn't in this config. */
+  coordOf(slotId: string): GridCoord | null;
+  /** Inside the plate cut-out (no slot, and snappets may never cover it). */
+  isPlate(row: number, col: number): boolean;
+  /** Outside the lattice entirely. Legal for snappet OVERHANG, not for anchors. */
+  isOutside(row: number, col: number): boolean;
+  /** Which PANEL rectangle owns a cell, or null for the plate / off-grid. The
+   *  panel is the printable/sellable unit; unlike a SlotZone it owns its corners.
+   *  See `panelOf` in utils/panels. */
+  panelAt(row: number, col: number): SectionId | null;
+  /** Every generated slot, for callers that want to iterate rather than address. */
+  slots: FrameSlot[];
+}
+
+/**
+ * Build the grid for a config. `containerWidth` only scales the px fields carried
+ * on each slot; the (row, col) lattice is scale-independent.
+ */
+export function buildGrid(config: FrameConfig, containerWidth = 1000): FrameGrid {
+  const slots = generateSlots(config, containerWidth);
+
+  const wingCols = config.wings && config.wingColumns > 0 ? config.wingColumns : 0;
+  const cols = wingCols * 2 + config.topSlots;
+  const rows = config.leftSlots + 2 + Math.max(0, (config.bottomRows ?? 1) - 1);
+
+  const byCoord = new Map<string, FrameSlot>();
+  const byId = new Map<string, GridCoord>();
+  for (const s of slots) {
+    byCoord.set(`${s.row}:${s.col}`, s);
+    byId.set(s.id, { row: s.row, col: s.col });
+  }
+
+  const isOutside = (row: number, col: number): boolean =>
+    row < 0 || col < 0 || row >= rows || col >= cols;
+
+  // The plate cut-out: the interior of the inner frame, i.e. everything strictly
+  // between the side rails and strictly between the top and base bottom rows.
+  // Extra bottom rows sit BELOW the plate, so they are never part of it.
+  const isPlate = (row: number, col: number): boolean => {
+    if (isOutside(row, col)) return false;
+    const firstInnerCol = wingCols + 1;
+    const lastInnerCol = wingCols + config.topSlots - 2;
+    return row >= 1 && row <= config.leftSlots && col >= firstInnerCol && col <= lastInnerCol;
+  };
+
+  return {
+    rows,
+    cols,
+    slots,
+    cellAt: (row, col) => byCoord.get(`${row}:${col}`) ?? null,
+    coordOf: (slotId) => byId.get(slotId) ?? null,
+    isPlate,
+    isOutside,
+    panelAt: (row, col) => panelOf(row, col, config),
+  };
 }

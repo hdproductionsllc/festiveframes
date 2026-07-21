@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -14,10 +14,20 @@ import {
   type DragEndEvent,
   type DragOverEvent,
 } from "@dnd-kit/core";
-import type { TextBarRow, BannerPreview } from "@/lib/types";
+import type { TextBarRow, BannerPreview, TileSpan } from "@/lib/types";
 import { useDesignStore } from "@/stores/design-store";
 import { useUIStore } from "@/stores/ui-store";
-import { measureTextBarUnits, rowLength, findFreeStart } from "@/lib/utils/text-bar";
+import { measureTextBarUnits, rowLength, findFreeStart, coveredSlotIds } from "@/lib/utils/text-bar";
+import { buildGrid } from "@/lib/utils/slot-generator";
+import {
+  isMultiCell,
+  resolveSnappetDrop,
+  tileSpan,
+  NO_GRAB,
+  UPLOAD_PIECE_ID,
+  type GrabOffset,
+  type SnappetPreview,
+} from "@/lib/utils/snappet";
 import { getPiece } from "@/data/sets";
 import { PlacedTileView } from "@/components/frame/PlacedTileView";
 import { playSound } from "@/lib/utils/sound";
@@ -27,6 +37,35 @@ interface DndProviderProps {
   children: React.ReactNode;
   onOverSlotChange: (slotId: string | null) => void;
   onBannerPreviewChange: (preview: BannerPreview | null) => void;
+  /**
+   * Live footprint preview for a MULTI-CELL tile drag (the school frame). Optional
+   * because a builder with no multi-cell pieces never produces one: /build passes
+   * no handler and every snappet branch below short-circuits before reaching it.
+   */
+  onSnappetPreviewChange?: (preview: SnappetPreview | null) => void;
+}
+
+/** The footprint carried by a drag, from the draggable's own data. 1x1 for a
+ *  plain tile — i.e. for every drag on /build, which is what routes those drags
+ *  down the untouched single-cell path below. */
+function dragSpanOf(data: Record<string, unknown> | undefined): TileSpan {
+  if (data?.type === "placed-tile") return tileSpan({ span: data.span as TileSpan });
+  const pieceId = data?.pieceId as string | undefined;
+  return tileSpan({ span: pieceId ? getPiece(pieceId)?.defaultSpan : undefined });
+}
+
+/**
+ * Which cell of the footprint the drag is holding.
+ *
+ * A placed snappet publishes a REF rather than a value (see RailSlot): the drag can
+ * activate in the same frame as the pointerdown that measured the grab, before any
+ * re-render, so a value snapshotted at render time would be one gesture stale.
+ * Reading it here — at preview/commit time — always gets the current gesture's.
+ * A palette drag has no ref and no grabbed cell: the hovered cell is its top-left.
+ */
+function readGrab(data: Record<string, unknown> | undefined): GrabOffset {
+  const ref = data?.grabOffset as { current: GrabOffset } | undefined;
+  return ref?.current ?? NO_GRAB;
 }
 
 /**
@@ -82,8 +121,19 @@ const collisionStrategy: CollisionDetection = (args) => {
   //  • Palette tiles / NEW banners drag from a panel far below-right of the frame;
   //    there the ghost/source center resolves to a corner, so those keep the
   //    CURSOR (which is what stops the "cue flashes to a corner on pickup" bug).
+  //  • A MULTI-CELL snappet is the exception to the ghost rule. Its ghost's centre
+  //    is up to half a footprint away from the hand holding it, so aiming from the
+  //    centre would report a cell several columns off the pointer — and the drop
+  //    resolver, which subtracts the GRAB offset (measured from the pointer), would
+  //    then compound the two errors. The cursor is the one reference both halves
+  //    agree on, and subtracting the grab offset already removes the over-drag that
+  //    centre-aiming exists to prevent. `span` is 1x1 for every /build drag, so
+  //    that path keeps centre-aiming exactly as before.
   const activeId = String(args.active?.id ?? "");
-  const aimsGhost = activeId.startsWith("placed-tile:") || activeId.startsWith("placed-textbar:");
+  const activeSpan = tileSpan({ span: args.active?.data.current?.span as TileSpan | undefined });
+  const aimsGhost =
+    (activeId.startsWith("placed-tile:") || activeId.startsWith("placed-textbar:")) &&
+    !isMultiCell(activeSpan);
   const pointer = aimsGhost && args.collisionRect
     ? {
         x: args.collisionRect.left + args.collisionRect.width / 2,
@@ -132,12 +182,21 @@ const collisionStrategy: CollisionDetection = (args) => {
   return distToFrameSq <= margin * margin ? [best] : [];
 };
 
-export function DndProvider({ children, onOverSlotChange, onBannerPreviewChange }: DndProviderProps) {
+export function DndProvider({
+  children,
+  onOverSlotChange,
+  onBannerPreviewChange,
+  onSnappetPreviewChange,
+}: DndProviderProps) {
   const [dragPieceId, setDragPieceId] = useState<string | null>(null);
   const [dragKind, setDragKind] = useState<
     "tile" | "placed-tile" | "textbar" | "placed-textbar" | null
   >(null);
   const [dragBarId, setDragBarId] = useState<string | null>(null);
+  const [dragSpan, setDragSpan] = useState<TileSpan>({ cols: 1, rows: 1 });
+  // Uploaded art carried by a placed-tile drag — the overlay lifts the photo itself
+  // (getPiece("upload") is undefined, so the set-piece ghost path can't render it).
+  const [dragImage, setDragImage] = useState<{ url: string; fullResId?: string } | null>(null);
   const placeTile = useDesignStore((s) => s.placeTile);
   const moveTile = useDesignStore((s) => s.moveTile);
   const removeTile = useDesignStore((s) => s.removeTile);
@@ -148,7 +207,38 @@ export function DndProvider({ children, onOverSlotChange, onBannerPreviewChange 
   const bottomBar = useDesignStore((s) => s.bottomBar);
   const qrCode = useDesignStore((s) => s.qrCode);
   const frameConfig = useDesignStore((s) => s.frameConfig);
+  const slots = useDesignStore((s) => s.slots);
+  const sections = useDesignStore((s) => s.sections);
   const soundEnabled = useUIStore((s) => s.soundEnabled);
+
+  // The (row, col) lattice the footprint resolver addresses. Pure geometry, so it
+  // depends on the config alone — rebuilt only when the frame changes, never per
+  // pointer move. Its px fields are unused here; FrameCanvas owns the on-screen
+  // geometry, and the two agree because both derive from this one config.
+  const grid = useMemo(() => buildGrid(frameConfig), [frameConfig]);
+
+  /**
+   * Where a multi-cell drag will land, from the single cell dnd-kit reports.
+   *
+   * Returns null for a 1x1 — the FAST PATH. `hasAnySpan` is false for every /build
+   * design and no /build piece declares a `defaultSpan`, so every drag there exits
+   * here and takes the original single-cell code path untouched.
+   */
+  const resolveDrop = useCallback(
+    (
+      overId: string | undefined,
+      span: TileSpan,
+      grab: GrabOffset,
+      excludeId?: string,
+    ): SnappetPreview | null => {
+      if (!overId?.startsWith("frame:") || !isMultiCell(span)) return null;
+      return resolveSnappetDrop(
+        { grid, slots, sections, barCovered: new Set(coveredSlotIds(textBars)) },
+        { overSlotId: overId, span, grab, excludeId },
+      );
+    },
+    [grid, slots, sections, textBars],
+  );
 
   const pointerSensor = useSensor(PointerSensor, {
     activationConstraint: { distance: 5 },
@@ -168,11 +258,16 @@ export function DndProvider({ children, onOverSlotChange, onBannerPreviewChange 
   // will use, so the preview can never be a frame stale relative to the drop.
   // RailSlot is memoized, so updating the cue re-renders only the indicator.
   const setCue = useCallback(
-    (slotId: string | null, banner: BannerPreview | null) => {
+    (
+      slotId: string | null,
+      banner: BannerPreview | null,
+      snappet: SnappetPreview | null = null,
+    ) => {
       onOverSlotChange(slotId);
       onBannerPreviewChange(banner);
+      onSnappetPreviewChange?.(snappet);
     },
-    [onOverSlotChange, onBannerPreviewChange]
+    [onOverSlotChange, onBannerPreviewChange, onSnappetPreviewChange]
   );
 
   const handleDragStart = useCallback((event: DragStartEvent) => {
@@ -182,6 +277,8 @@ export function DndProvider({ children, onOverSlotChange, onBannerPreviewChange 
     );
     setDragPieceId((data?.pieceId as string | undefined) ?? null);
     setDragBarId((data?.id as string | undefined) ?? null);
+    setDragSpan(dragSpanOf(data));
+    setDragImage((data?.image as { url: string; fullResId?: string } | undefined) ?? null);
     if (soundEnabled) playSound("pickup");
   }, [soundEnabled]);
 
@@ -238,10 +335,22 @@ export function DndProvider({ children, onOverSlotChange, onBannerPreviewChange 
         return;
       }
 
+      // MULTI-CELL tile drags get a FOOTPRINT preview, computed with the same
+      // resolver `handleDragEnd` commits through — so the ghost is never a lie:
+      // where it shows is where the tile lands, and when it shows REJECTED the
+      // drop really is refused. The 1x1 line below is untouched for everything
+      // else (all of /build).
+      const span = dragSpanOf(data);
+      if (isMultiCell(span)) {
+        const grab = readGrab(data);
+        setCue(null, null, resolveDrop(overId, span, grab, data?.slotId as string | undefined));
+        return;
+      }
+
       // Tile drags: drive the single gliding drop indicator via the over slot id.
       setCue(overId?.startsWith("frame:") ? overId : null, null);
     },
-    [setCue, textBars, bottomBar, qrCode, frameConfig, dragBarId]
+    [setCue, textBars, bottomBar, qrCode, frameConfig, dragBarId, resolveDrop]
   );
 
   const handleDragEnd = useCallback(
@@ -249,6 +358,8 @@ export function DndProvider({ children, onOverSlotChange, onBannerPreviewChange 
       setDragPieceId(null);
       setDragKind(null);
       setDragBarId(null);
+      setDragSpan({ cols: 1, rows: 1 });
+      setDragImage(null);
       setCue(null, null);
 
       const overId = event.over?.id as string | undefined;
@@ -279,11 +390,22 @@ export function DndProvider({ children, onOverSlotChange, onBannerPreviewChange 
 
       // Placed tile: dropped on another cell MOVES it; dropped off the frame
       // POOFS it away. Mirrors the placed-textbar drag model.
+      // The footprint this drag commits — identical to the one the preview drew,
+      // because both come from `resolveDrop`. Null for a 1x1 (and so for every
+      // drag on /build), which keeps the original two branches below as they were.
+      const span = dragSpanOf(data);
+      const grab = readGrab(data);
+      const drop = resolveDrop(overId, span, grab, data?.slotId as string | undefined);
+
       if (data?.type === "placed-tile") {
         const fromSlotId = data.slotId as string;
         if (overId?.startsWith("frame:")) {
-          moveTile(fromSlotId, overId);
-          emitTilePlaced(overId);
+          // A REJECTED footprint drop is a no-op, not a removal: the tile is over
+          // the frame, the preview said "not here", so it stays where it was.
+          if (isMultiCell(span) && !drop?.valid) return;
+          const toSlotId = drop?.anchorSlotId ?? overId;
+          moveTile(fromSlotId, toSlotId);
+          emitTilePlaced(toSlotId);
           if (soundEnabled) playSound("snap");
         } else {
           removeTile(fromSlotId);
@@ -294,9 +416,13 @@ export function DndProvider({ children, onOverSlotChange, onBannerPreviewChange 
 
       const pieceId = data?.pieceId as string | undefined;
       if (overId?.startsWith("frame:") && pieceId) {
+        if (isMultiCell(span) && !drop?.valid) return;
         const setId = pieceId.split(":")[0];
-        placeTile(overId, pieceId, setId);
-        emitTilePlaced(overId);
+        const toSlotId = drop?.anchorSlotId ?? overId;
+        // The piece's natural footprint travels with it; `undefined` for a plain
+        // tile, so the stored record keeps its original two-field shape.
+        placeTile(toSlotId, pieceId, setId, isMultiCell(span) ? span : undefined);
+        emitTilePlaced(toSlotId);
         if (soundEnabled) playSound("snap");
       }
     },
@@ -309,6 +435,7 @@ export function DndProvider({ children, onOverSlotChange, onBannerPreviewChange 
       removeTextBar,
       soundEnabled,
       setCue,
+      resolveDrop,
     ]
   );
 
@@ -316,6 +443,8 @@ export function DndProvider({ children, onOverSlotChange, onBannerPreviewChange 
     setDragPieceId(null);
     setDragKind(null);
     setDragBarId(null);
+    setDragSpan({ cols: 1, rows: 1 });
+    setDragImage(null);
     setCue(null, null);
   }, [setCue]);
 
@@ -357,14 +486,34 @@ export function DndProvider({ children, onOverSlotChange, onBannerPreviewChange 
               {overlayBar.text || "YOUR TEXT HERE"}
             </span>
           </div>
-        ) : piece && dragKind === "placed-tile" ? (
-          // Tile-sized ghost that lifts off the workbench (placed-tile drags use
-          // the overlay; palette tiles use a source transform).
+        ) : dragImage && dragKind === "placed-tile" ? (
+          // Uploaded-art ghost — lift the photo at its footprint's aspect (one cell
+          // per span unit), the image twin of the set-piece ghost below.
           <div
             className="ff-drag-lift relative pointer-events-none"
-            style={{ width: 48, height: 48 }}
+            style={{ width: 48 * dragSpan.cols, height: 48 * dragSpan.rows }}
           >
-            <PlacedTileView pieceId={piece.id} width={48} height={48} />
+            <PlacedTileView
+              pieceId={UPLOAD_PIECE_ID}
+              image={dragImage}
+              width={48 * dragSpan.cols}
+              height={48 * dragSpan.rows}
+            />
+          </div>
+        ) : piece && dragKind === "placed-tile" ? (
+          // Tile-sized ghost that lifts off the workbench (placed-tile drags use
+          // the overlay; palette tiles use a source transform). A snappet lifts at
+          // its FOOTPRINT's aspect — one cell per span unit — so what you carry
+          // looks like the thing that will land. 48x48 for a 1x1, as before.
+          <div
+            className="ff-drag-lift relative pointer-events-none"
+            style={{ width: 48 * dragSpan.cols, height: 48 * dragSpan.rows }}
+          >
+            <PlacedTileView
+              pieceId={piece.id}
+              width={48 * dragSpan.cols}
+              height={48 * dragSpan.rows}
+            />
           </div>
         ) : null}
       </DragOverlay>

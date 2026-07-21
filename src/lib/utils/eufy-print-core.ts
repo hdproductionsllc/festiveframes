@@ -11,7 +11,8 @@
 // network — that environment-specific drawing lives in the two renderer files.
 
 import { getPiece } from "@/data/sets";
-import { coveredSlotIds } from "@/lib/utils/text-bar";
+import { tallyTiles } from "@/lib/utils/tile-tally";
+import { isMultiCell } from "@/lib/utils/snappet";
 import { jigPocketCenters, type EufyJigConfig } from "@/config/eufy-jig";
 import type { PlacedTile, TextBarPlacement } from "@/lib/types";
 
@@ -62,19 +63,26 @@ export function isWhiteSnappet(color: string): boolean {
 export function buildPrintQueue(
   slots: Record<string, PlacedTile>,
   textBars: TextBarPlacement[],
-): { queue: PrintItem[]; skippedBlankTiles: number } {
-  const covered = new Set(coveredSlotIds(textBars));
-
-  // Tally placed tiles by piece (tiles hidden under a text bar aren't produced).
-  const counts = new Map<string, number>();
-  for (const [slotId, placed] of Object.entries(slots)) {
-    if (covered.has(slotId)) continue;
-    counts.set(placed.pieceId, (counts.get(placed.pieceId) ?? 0) + 1);
-  }
+): { queue: PrintItem[]; skippedBlankTiles: number; oversizedTiles: number } {
+  // Tally placed tiles by piece + footprint — SHARED with the parts list and the
+  // in-builder export sheet (utils/tile-tally), so "what gets produced" has one
+  // definition.
+  const counts = tallyTiles(slots, textBars);
 
   const queue: PrintItem[] = [];
   let skippedBlankTiles = 0; // white tiles only — use a blank snappet, no print
-  for (const [pieceId, qty] of counts) {
+  let oversizedTiles = 0; // multi-cell snappets that can't sit in a 1x1 jig pocket
+  for (const { pieceId, span, qty } of counts.values()) {
+    // The jig lays ONE tile face per pocket. A multi-cell snappet (a 2x4 flag) is
+    // a single large part that does NOT fit a 1x1 pocket, so seating it as one
+    // pocket would mis-register the print. The jig path is /build-era (no spans),
+    // so this never fires in production today — but rather than mis-plan, surface
+    // the count and keep it OUT of the pocket queue. For /build (all 1x1) this
+    // branch is dead and the queue is byte-identical to before.
+    if (isMultiCell(span)) {
+      oversizedTiles += qty;
+      continue;
+    }
     const piece = getPiece(pieceId);
     const url = piece?.artworkUrl;
     if (url) {
@@ -85,7 +93,7 @@ export function buildPrintQueue(
       else for (let i = 0; i < qty; i++) queue.push({ kind: "fill", color });
     }
   }
-  return { queue, skippedBlankTiles };
+  return { queue, skippedBlankTiles, oversizedTiles };
 }
 
 // ─── Sheet LAYOUT (tiles and banners on SEPARATE print runs) ────────────────

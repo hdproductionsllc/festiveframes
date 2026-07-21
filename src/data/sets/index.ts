@@ -16,6 +16,7 @@ import { kwanzaaSet } from "./kwanzaa";
 import { diwaliSet } from "./diwali";
 import { militarySet } from "./military";
 import { militaryRealisticSet } from "./military-realistic";
+import { schoolSet } from "./school";
 
 // Ordered: Essentials first, holidays chronologically, then cultural/themed sets
 export const tileSets: TileSet[] = [
@@ -36,6 +37,7 @@ export const tileSets: TileSet[] = [
   sakuraSet,
   militarySet,
   militaryRealisticSet,
+  schoolSet,
 ];
 
 /**
@@ -53,6 +55,28 @@ export const SURFACED_SET_IDS: readonly string[] = ["july4th"];
 export const surfacedSets: TileSet[] = SURFACED_SET_IDS.map(
   (id) => tileSets.find((s) => s.id === id)
 ).filter((s): s is TileSet => s !== undefined);
+
+/**
+ * Sets surfaced in the SCHOOL builder ONLY (/lab/school), kept separate from the
+ * global SURFACED_SET_IDS so the school palette can show off-theme-for-consumers
+ * tiles (the School Spirit set) WITHOUT touching /build. The school builder passes
+ * this to <TilePalette surfacedSetIds={...}> — /build passes nothing and keeps the
+ * global list. See TileGrid / QuickActions.
+ */
+export const SCHOOL_SURFACED_SET_IDS: readonly string[] = ["school"];
+
+/**
+ * Resolve which set the palette should actually show. If the (globally shared)
+ * active set is in the given surfaced list, use it; otherwise fall back to the
+ * first surfaced set so the palette is never empty or off-theme. Defaults to the
+ * global SURFACED_SET_IDS, which reproduces /build's original behavior exactly.
+ */
+export function resolveSurfacedSetId(
+  activeSetId: string,
+  surfacedIds: readonly string[] = SURFACED_SET_IDS
+): string {
+  return surfacedIds.includes(activeSetId) ? activeSetId : surfacedIds[0] ?? activeSetId;
+}
 
 const setMap = new Map<string, TileSet>(tileSets.map((s) => [s.id, s]));
 

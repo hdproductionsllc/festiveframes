@@ -65,11 +65,20 @@ export function getStandardConfig(config: FrameConfig): FrameConfig {
 }
 
 /**
- * SCHOOL / fundraising frame — the live builder's geometry with WIDE 3-tile side
- * panels (wings) flanking the plate. The school builder (`/lab/school`) seeds this
- * so the real drag-drop + text-bar editor + plate all work, just with big side
+ * SCHOOL / fundraising frame — the live builder's geometry with a SINGLE-tile side
+ * panel (wing) per side flanking the plate. The school builder (`/lab/school`) seeds
+ * this so the real drag-drop + text-bar editor + plate all work, just with side
  * rails for the school's direct-print art. Everything else (the plate, the top/
  * bottom rails, text bars) is the standard frame.
+ *
+ * WHY ONE WING COLUMN (and not three): this frame is DIRECT-PRINTED on the eufyMake
+ * E1, whose bed is 16.5" x 13". At 3 wing columns the frame measured
+ * 11.892 + 2*(3*0.991) = 17.838" wide — wider than 16.5", so it fit the bed in NO
+ * orientation and simply could not be produced. At 1 column it is
+ * 11.892 + 2*0.991 = 13.874" wide x 7.928" tall: it fits ROTATED (long axis along
+ * the bed's 16.5" side) with 2.63" / 5.07" of margin. The wing count is therefore a
+ * manufacturing constraint, not a styling choice — see the "eufyMake E1 bed fit"
+ * tests in slot-generator.test.ts.
  */
 export const SCHOOL_FRAME_CONFIG: FrameConfig = getWingFrameConfig(
   {
@@ -79,13 +88,24 @@ export const SCHOOL_FRAME_CONFIG: FrameConfig = getWingFrameConfig(
     // the school frame read one tile less wide.
     topSlots: 12,
     bottomSlots: 12,
-    widthInches: DEFAULT_FRAME_CONFIG.plateWidthInches, // 12" — flush to the plate
+    // 12 gapless tiles = 11.892", NOT the plate's flat 12". Using 12 made
+    // slot-generator's topStep resolve to (12 - 0.991)/11 = 1.0008" — a 0.0098"
+    // gap per tile compounding to 0.108" across the row, so the rails were never
+    // actually gapless and the frame did not sit on an integer lattice. The 0.108"
+    // shortfall against the plate is hidden by the frame overlapping the plate's
+    // margin, exactly as the ring already does on /build.
+    widthInches: 12 * DEFAULT_FRAME_CONFIG.tileSizeInches, // 11.892"
     // School frame: top rail spans the full width (over the wings), and the bottom
     // is 2 rows tall. Both are opt-in flags — /build never sets them.
     fullWidthTopBar: true,
     bottomRows: 2,
+    // The school frame is the one that takes multi-cell snappets, and a snappet
+    // may legally hang off the outer edge. One tile of bleed on every side is the
+    // room the canvas reserves for that overhang (see FrameConfig.overhangTiles).
+    overhangTiles: 1,
   },
-  3 * DEFAULT_FRAME_CONFIG.tileSizeInches,
+  // One tile column per side — the widest the E1's 16.5" bed can take (see above).
+  1 * DEFAULT_FRAME_CONFIG.tileSizeInches,
 );
 
 /**
@@ -184,6 +204,35 @@ export const BOTTOM_BAR_FONTS: ReadonlyArray<{
   { id: "marck-script", name: "Marck Script", family: "'Marck Script', cursive", category: "Script" },
   { id: "damion", name: "Damion", family: "'Damion', cursive", category: "Script" },
 ];
+
+// ─── School builder: collegiate font curation ──────────────
+// The school builder (`/lab/school`) leads with a COLLEGIATE stack — the athletic /
+// varsity display faces already present in BOTTOM_BAR_FONTS — and de-emphasizes the
+// cartoon-sticker faces that define the consumer brand. These ids are surfaced FIRST
+// in the school font picker; the full list stays available below. /build is untouched:
+// nothing here removes or reorders BOTTOM_BAR_FONTS.
+export const SCHOOL_FONT_IDS: readonly string[] = [
+  "anton",
+  "alfa-slab-one",
+  "oswald",
+  "bebas",
+  "teko",
+  "staatliches",
+  "russo",
+  "passion-one",
+  "archivo-black",
+  "black-ops-one",
+  "bungee",
+  "bowlby-one",
+  "ultra",
+];
+
+/** Default font family for a new school TEXT section — a collegiate face (Anton). */
+export const SCHOOL_DEFAULT_FONT_FAMILY = "'Anton', sans-serif";
+
+/** BOTTOM_BAR_FONTS split into collegiate-first order for the school picker. */
+export const SCHOOL_COLLEGIATE_FONTS = BOTTOM_BAR_FONTS.filter((f) => SCHOOL_FONT_IDS.includes(f.id));
+export const SCHOOL_OTHER_FONTS = BOTTOM_BAR_FONTS.filter((f) => !SCHOOL_FONT_IDS.includes(f.id));
 
 // Pricing
 export const FRAME_BASE_PRICE = 24.99;

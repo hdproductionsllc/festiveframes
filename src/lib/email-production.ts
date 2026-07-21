@@ -19,7 +19,7 @@
 // ─────────────────────────────────────────────────────────────
 
 import { Resend } from "resend";
-import { partsListCsv, partsListHtml, type PartsList } from "@/lib/order/parts-list";
+import { partsListCsv, partsListHtml, type PartsList, type PanelPartsList } from "@/lib/order/parts-list";
 
 // Cartoon sticker palette (matches the homepage).
 const PAGE = "#fff9ec"; // warm cream page background
@@ -507,6 +507,113 @@ export async function sendCartCustomerEmail(o: CartCustomerInput): Promise<void>
       o.customerEmail,
       `Production emails SENT, but the CUSTOMER CONFIRMATION for the cart FAILED (${reason}). Reach out to the customer manually — their order IS in production.`,
     );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// SCHOOL builder "Send to production" — email-only order path (no payment).
+//
+// The whole order is: render the assembled print PNG in the browser, POST it to
+// /api/school/submit, and email it (plus an optional parts list) to a SERVER-FIXED
+// recipient. This is a deliberate, self-contained sibling of sendProductionEmails:
+// it shares this module's brand shell + attachment helpers but has its OWN recipient
+// and NEVER touches the paid-order founders/customer sends above.
+//
+// Recipient is read from SCHOOL_ORDERS_EMAIL (defaulting to the literal
+// orders@festiveframes.co) — NEVER from the request body. Never throws: it returns a
+// typed result so the route can answer honestly ("sent" vs "email not configured").
+// ─────────────────────────────────────────────────────────────
+
+export interface SchoolOrderInput {
+  /** Human design name — escaped before it touches the HTML/subject. */
+  designName: string;
+  /** The full-resolution, DPI-stamped print PNG (a data:image/(png|jpeg) URL). */
+  printPng: NamedImage;
+  /** Optional parts list for an at-a-glance production summary in the body. */
+  partsList?: PartsList | PanelPartsList | null;
+}
+
+export type SchoolOrderResult =
+  | { ok: true }
+  | { ok: false; reason: "email-not-configured" | "invalid-attachment" | "attachment-too-large" | "send-failed" };
+
+/** The fixed production inbox for school orders. Server-side only, env-overridable. */
+function schoolOrdersRecipient(): string {
+  return (process.env.SCHOOL_ORDERS_EMAIL || "orders@festiveframes.co").trim();
+}
+
+/** Attachment with a correct extension for its content type (toAttachment always
+ *  says .png; a school print may be jpeg). */
+function toPrintAttachment(img: NamedImage): Attachment | null {
+  const base = toAttachment(img);
+  if (!base) return null;
+  const ext = base.contentType === "image/jpeg" ? "jpg" : "png";
+  return { ...base, filename: `${img.name}.${ext}` };
+}
+
+function schoolOrderHtml(designName: string, parts: PartsList | PanelPartsList | null): string {
+  const partsBlock = parts
+    ? `<div style="margin:18px 0 0;">${partsListHtml(parts)}</div>`
+    : `<p style="margin:14px 0 0;color:${INK};font-size:13px;">No parts list was included — the print file is attached.</p>`;
+  return shell(
+    `New school frame order — ${esc(designName || "Untitled")}`,
+    `
+    <p style="margin:0 0 14px;display:inline-block;padding:6px 14px;background:${BLUE};color:${PAGE};font-size:13px;font-weight:bold;text-transform:uppercase;border:3px solid ${INK};border-radius:99px;">New school order</p>
+    <p style="margin:0 0 8px;color:${INK};font-size:14px;">
+      <strong>Design:</strong> ${esc(designName || "Untitled")}
+    </p>
+    <p style="margin:0 0 12px;color:${INK};font-size:13px;">The print-ready file is attached to this email.</p>
+    ${partsBlock}`,
+  );
+}
+
+function schoolOrderText(designName: string): string {
+  return [
+    `NEW SCHOOL FRAME ORDER`,
+    ``,
+    `Design: ${designName || "Untitled"}`,
+    ``,
+    `The print-ready file is attached to this email.`,
+    ``,
+    `Made to order in the USA · St. Louis, Missouri.`,
+  ].join("\n");
+}
+
+/**
+ * Email a school-builder design to the fixed production inbox. Returns a typed
+ * result instead of throwing so the route never lies about what happened:
+ *   - no RESEND_API_KEY  → { ok:false, reason:"email-not-configured" } (nothing sent)
+ *   - bad/oversize image → invalid-attachment / attachment-too-large
+ *   - Resend throws      → send-failed
+ *   - sent               → { ok:true }
+ */
+export async function sendSchoolOrderEmail(o: SchoolOrderInput): Promise<SchoolOrderResult> {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) return { ok: false, reason: "email-not-configured" };
+
+  const attachment = toPrintAttachment(o.printPng);
+  if (!attachment) return { ok: false, reason: "invalid-attachment" };
+  if (attachmentBytes(attachment) > MAX_ATTACHMENT_BYTES) return { ok: false, reason: "attachment-too-large" };
+
+  const from = process.env.EMAIL_FROM || "Festive Frames <onboarding@resend.dev>";
+  const to = schoolOrdersRecipient();
+  // Strip control chars from the subject so a crafted design name can't inject a
+  // header line; the HTML body escapes it separately via esc().
+  const subjectName = (o.designName || "Untitled").replace(/[\r\n\t]+/g, " ").slice(0, 120);
+
+  try {
+    await new Resend(apiKey).emails.send({
+      from,
+      to,
+      subject: `SCHOOL ORDER — ${subjectName}`,
+      html: schoolOrderHtml(o.designName, o.partsList ?? null),
+      text: schoolOrderText(o.designName),
+      attachments: [attachment],
+    });
+    return { ok: true };
+  } catch (err) {
+    console.error("[email-production] school order email failed:", err);
+    return { ok: false, reason: "send-failed" };
   }
 }
 
