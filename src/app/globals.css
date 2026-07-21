@@ -386,6 +386,22 @@ body {
   75% { transform: translateX(3px); }
 }
 
+/* ── Indeterminate upload bar ─────────────────────────────────────────────────
+   Immediate feedback while a phone decodes a just-picked photo (see
+   UploadPhotoButton). A slice slides across its overflow-hidden track — the decode
+   has no real progress events, so an indeterminate sweep is the honest cue. */
+.ff-upload-bar {
+  width: 42%;
+  animation: ff-upload-bar 1.05s ease-in-out infinite;
+}
+@keyframes ff-upload-bar {
+  0% { margin-left: -42%; }
+  100% { margin-left: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ff-upload-bar { animation-duration: 1.8s; }
+}
+
 /* ── Drag "lift" ──────────────────────────────────────────────────────────────
    The thing under your finger (the DragOverlay ghost — a placed tile or a banner)
    pops up with a tactile little tilt + a deeper drop shadow, so grabbing reads as

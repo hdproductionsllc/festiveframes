@@ -19,7 +19,7 @@ import { ImageCropModal, type ImageCropResult } from "./ImageCropModal";
 
 /** Decode a file just far enough to read its aspect (width / height). Falls back to
  *  1 (square) on any error, matching suggestSnappetSize's own bad-aspect guard. */
-function readImageAspect(file: File): Promise<number> {
+export function readImageAspect(file: File): Promise<number> {
   return new Promise((resolve) => {
     const url = URL.createObjectURL(file);
     const image = new Image();
@@ -59,9 +59,25 @@ export function firstUploadableSection(
   return null;
 }
 
+/** Every panel that can take an uploaded snappet right now (not a text banner, and
+ *  has a free cell), in SECTION_IDS order. Drives the "where should it go?" prompt. */
+export function uploadableSections(
+  frameConfig: FrameConfig,
+  slots: Record<string, PlacedTile>,
+  sections: Partial<Record<SectionId, SectionState>>,
+  textBars: PlacedTextBar[],
+): SectionId[] {
+  const grid = buildGrid(frameConfig);
+  const ctx = { grid, slots, sections, barCovered: new Set(coveredSlotIds(textBars)) };
+  return SECTION_IDS.filter(
+    (id) => sections[id]?.mode !== "text" && panelSnappetPlacement(ctx, id, 1),
+  );
+}
+
 export interface SnappetUpload {
-  /** Kick off the flow: size the crop for `sectionId` and open the crop modal. */
-  begin: (file: File, sectionId: SectionId) => Promise<void>;
+  /** Kick off the flow: size the crop for `sectionId` and open the crop modal. Pass
+   *  `knownAspect` to skip re-decoding when the caller already read it (mobile flow). */
+  begin: (file: File, sectionId: SectionId, knownAspect?: number) => Promise<void>;
   /** The crop modal, or null when idle. Render this wherever the button lives. */
   cropModal: ReactNode;
 }
@@ -81,8 +97,8 @@ export function useSnappetUpload(): SnappetUpload {
   const [target, setTarget] = useState<SectionId | null>(null);
   const pendingAspect = useRef<number>(1);
 
-  const begin = async (file: File, sectionId: SectionId) => {
-    const aspect = await readImageAspect(file);
+  const begin = async (file: File, sectionId: SectionId, knownAspect?: number) => {
+    const aspect = knownAspect ?? (await readImageAspect(file));
     pendingAspect.current = aspect;
     const grid = buildGrid(frameConfig);
     const ctx = { grid, slots, sections, barCovered: new Set(coveredSlotIds(textBars)) };
