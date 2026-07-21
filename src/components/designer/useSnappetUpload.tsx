@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { useDesignStore } from "@/stores/design-store";
 import { SECTION_IDS, SECTION_LABELS } from "@/lib/utils/sections";
 import { buildGrid } from "@/lib/utils/slot-generator";
@@ -135,20 +136,25 @@ export function useSnappetUpload(): SnappetUpload {
     setTarget(null);
   };
 
+  // Portaled to <body> so no transformed/clipping ancestor can trap the fixed
+  // overlay (a real iOS failure mode). Guarded for SSR (document is undefined).
   const cropModal =
-    cropFile && cropTarget && target ? (
-      <ImageCropModal
-        file={cropFile}
-        targetInches={cropTarget}
-        panelLabel={SECTION_LABELS[target]}
-        onCancel={() => {
-          setCropFile(null);
-          setCropTarget(null);
-          setTarget(null);
-        }}
-        onConfirm={onCropConfirm}
-      />
-    ) : null;
+    cropFile && cropTarget && target && typeof document !== "undefined"
+      ? createPortal(
+          <ImageCropModal
+            file={cropFile}
+            targetInches={cropTarget}
+            panelLabel={SECTION_LABELS[target]}
+            onCancel={() => {
+              setCropFile(null);
+              setCropTarget(null);
+              setTarget(null);
+            }}
+            onConfirm={onCropConfirm}
+          />,
+          document.body,
+        )
+      : null;
 
   return { begin, cropModal };
 }
