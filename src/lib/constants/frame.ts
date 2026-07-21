@@ -203,6 +203,16 @@ export const BOTTOM_BAR_FONTS: ReadonlyArray<{
   { id: "courgette", name: "Courgette", family: "'Courgette', cursive", category: "Script" },
   { id: "marck-script", name: "Marck Script", family: "'Marck Script', cursive", category: "Script" },
   { id: "damion", name: "Damion", family: "'Damion', cursive", category: "Script" },
+
+  // ─── Collegiate / Varsity (leads the SCHOOL builder) ───────
+  // Graduate is the classic collegiate slab; the rest are athletic/condensed team
+  // faces. Loaded in builder-fonts.css; surfaced first in the school picker via
+  // SCHOOL_FONT_IDS below.
+  { id: "graduate", name: "Graduate (Collegiate)", family: "'Graduate', 'Rockwell', serif", category: "Display" },
+  { id: "fjalla-one", name: "Fjalla One", family: "'Fjalla One', 'Oswald', sans-serif", category: "Classic" },
+  { id: "big-shoulders", name: "Big Shoulders", family: "'Big Shoulders Display', 'Oswald', sans-serif", category: "Display" },
+  { id: "saira-condensed", name: "Saira Condensed", family: "'Saira Condensed', 'Oswald', sans-serif", category: "Classic" },
+  { id: "squada-one", name: "Squada One", family: "'Squada One', 'Oswald', sans-serif", category: "Display" },
 ];
 
 // ─── School builder: collegiate font curation ──────────────
@@ -212,6 +222,13 @@ export const BOTTOM_BAR_FONTS: ReadonlyArray<{
 // in the school font picker; the full list stays available below. /build is untouched:
 // nothing here removes or reorders BOTTOM_BAR_FONTS.
 export const SCHOOL_FONT_IDS: readonly string[] = [
+  // Collegiate / varsity first — the school builder's signature look.
+  "graduate",
+  "fjalla-one",
+  "big-shoulders",
+  "saira-condensed",
+  "squada-one",
+  // Athletic block / condensed display faces (already present) round out the group.
   "anton",
   "alfa-slab-one",
   "oswald",
@@ -227,8 +244,8 @@ export const SCHOOL_FONT_IDS: readonly string[] = [
   "ultra",
 ];
 
-/** Default font family for a new school TEXT section — a collegiate face (Anton). */
-export const SCHOOL_DEFAULT_FONT_FAMILY = "'Anton', sans-serif";
+/** Default font family for a new school TEXT section — the collegiate slab (Graduate). */
+export const SCHOOL_DEFAULT_FONT_FAMILY = "'Graduate', 'Rockwell', serif";
 
 /** BOTTOM_BAR_FONTS split into collegiate-first order for the school picker. */
 export const SCHOOL_COLLEGIATE_FONTS = BOTTOM_BAR_FONTS.filter((f) => SCHOOL_FONT_IDS.includes(f.id));
