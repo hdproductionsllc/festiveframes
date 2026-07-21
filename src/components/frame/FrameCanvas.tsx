@@ -83,7 +83,8 @@ function PlacedBar({
         top: rect.y,
         width: rect.width,
         height: rect.height,
-        touchAction: "none",
+        // pan-y: scroll the page vertically off a placed banner; press-and-hold drags.
+        touchAction: "pan-y",
         zIndex: selected ? 2 : 1,
         // Selected bar gets a bold gold ring + glow so the on-frame bar and the
         // editor panel below read as the same object.

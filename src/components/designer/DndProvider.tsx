@@ -4,7 +4,7 @@ import { useState, useCallback, useMemo } from "react";
 import {
   DndContext,
   DragOverlay,
-  PointerSensor,
+  MouseSensor,
   TouchSensor,
   useSensor,
   useSensors,
@@ -240,7 +240,12 @@ export function DndProvider({
     [grid, slots, sections, textBars],
   );
 
-  const pointerSensor = useSensor(PointerSensor, {
+  // MOUSE-only (not PointerSensor). PointerSensor also fires on TOUCH, and with just a
+  // 5px distance constraint it would grab a vertical scroll swipe over the frame after
+  // 5px — hijacking the gesture so the phone page can't scroll up/down. Splitting into
+  // MouseSensor (desktop) + TouchSensor (phone) lets the touch sensor's press-and-hold
+  // rule below actually govern touch, so a swipe scrolls the page.
+  const mouseSensor = useSensor(MouseSensor, {
     activationConstraint: { distance: 5 },
   });
   // Touch drag activation, tuned so all three gestures stay distinct on a phone:
@@ -250,7 +255,7 @@ export function DndProvider({
   const touchSensor = useSensor(TouchSensor, {
     activationConstraint: { delay: 180, tolerance: 8 },
   });
-  const sensors = useSensors(pointerSensor, touchSensor);
+  const sensors = useSensors(mouseSensor, touchSensor);
 
   // Drop-cue updates go through directly (no rAF coalescing): `onDragOver` only
   // fires when the `over` target CHANGES (not every pixel), so this is cheap, and

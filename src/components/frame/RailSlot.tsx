@@ -306,7 +306,9 @@ function PlacedTileCell({
         className={`absolute inset-0 cursor-grab active:cursor-grabbing transition-transform duration-150
           ${isDragging ? "opacity-40" : "hover:scale-[1.04]"}
           ${poofing ? "animate-tile-poof" : landing ? "motion-safe:animate-tile-snap" : ""}`}
-        style={{ touchAction: "none" }}
+        // pan-y: let the page scroll vertically off a placed tile; a press-and-hold
+        // still starts a drag via the delay-based TouchSensor (see DndProvider).
+        style={{ touchAction: "pan-y" }}
       >
         <PlacedTileView pieceId={pieceId} image={image} width={width} height={height} />
 
