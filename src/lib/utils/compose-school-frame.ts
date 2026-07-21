@@ -46,6 +46,7 @@ import {
   QR_SIZE_RATIO,
   QR_GAP_RATIO,
 } from "@/lib/utils/text-bar";
+import { getPlateArea } from "@/lib/utils/layout";
 import { SECTION_IDS, sectionBounds, slotSuppressed } from "@/lib/utils/sections";
 import { getPiece } from "@/data/sets";
 import { getFullRes } from "@/lib/utils/image-store";
@@ -342,13 +343,22 @@ export function drawSchoolFrame(
   ctx.fillStyle = "#111111";
   ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
-  // 2) License-plate OPENING — left intentionally BLANK on the print.
-  //    The customer inserts their real metal plate here, so the print file must
-  //    carry NO plate graphic (no state photo, no simulated plate). The on-screen
-  //    preview still shows a plate to help the customer visualize; the print
-  //    deliberately diverges. We leave the region as the matte frame base (drawn in
-  //    step 1) so the opening reads as an empty cutout in the black frame body.
-  //    `images.plate` stays unused by design.
+  // 2) License-plate OPENING — punched TRANSPARENT on the print (no ink at all).
+  //    The customer inserts their real metal plate here, so the print must carry NO
+  //    plate graphic AND no black fill: printing the big center rectangle black would
+  //    waste a lot of ink on an area that gets covered by the real plate. So we erase
+  //    the plate's rounded rect back to transparent (destination-out) after the frame
+  //    base. The on-screen preview still shows a plate to help the customer visualize;
+  //    the print deliberately diverges. `images.plate` stays unused by design.
+  const plate = getPlateArea(config, canvasWidth);
+  if (plate) {
+    const r = Math.max(3, plate.width * 0.012);
+    ctx.save();
+    ctx.globalCompositeOperation = "destination-out"; // erase to transparent
+    roundRect(ctx, plate.x, plate.y, plate.width, plate.height, r);
+    ctx.fill();
+    ctx.restore();
+  }
 
   // 3) Ring + wing tiles, including multi-cell snappet anchors at their span size.
   //    Every printed cell is a WHITE snappet (art sits on white); covered cells,

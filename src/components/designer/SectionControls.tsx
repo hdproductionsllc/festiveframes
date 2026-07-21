@@ -1,7 +1,7 @@
 "use client";
 
 import { useDesignStore } from "@/stores/design-store";
-import { SECTION_IDS, SECTION_LABELS } from "@/lib/utils/sections";
+import { SECTION_IDS, SECTION_LABELS, sectionSupportsText } from "@/lib/utils/sections";
 import type { SectionMode } from "@/lib/types";
 
 // Per-section mode picker for the school builder. Each frame section (the two side
@@ -46,34 +46,43 @@ export function SectionControls() {
               >
                 {SECTION_LABELS[id]}
               </button>
-              <div className="flex gap-1">
-                {MODES.map((m) => {
-                  const active = mode === m.id;
-                  return (
-                    <button
-                      key={m.id}
-                      type="button"
-                      onClick={() => setSectionMode(id, m.id)}
-                      aria-pressed={active}
-                      className={`flex-1 rounded-md border-2 px-1.5 py-1.5 text-[11px] font-extrabold uppercase tracking-wide transition-all active:scale-95 ${
-                        active
-                          ? "border-[#1e1b17] bg-[#ed5aa0] text-white shadow-[2px_2px_0_#1e1b17]"
-                          : "border-[#1e1b17]/15 bg-white text-[#1e1b17] hover:border-[#ed5aa0] hover:bg-[#ed5aa0]/10"
-                      }`}
-                    >
-                      {m.label}
-                    </button>
-                  );
-                })}
-              </div>
+              {/* Side panels are tiles/art only — the Text banner is a top/bottom
+                  affordance, so the toggle only shows there. */}
+              {sectionSupportsText(id) ? (
+                <div className="flex gap-1">
+                  {MODES.map((m) => {
+                    const active = mode === m.id;
+                    return (
+                      <button
+                        key={m.id}
+                        type="button"
+                        onClick={() => setSectionMode(id, m.id)}
+                        aria-pressed={active}
+                        className={`flex-1 rounded-md border-2 px-1.5 py-1.5 text-[11px] font-extrabold uppercase tracking-wide transition-all active:scale-95 ${
+                          active
+                            ? "border-[#1e1b17] bg-[#ed5aa0] text-white shadow-[2px_2px_0_#1e1b17]"
+                            : "border-[#1e1b17]/15 bg-white text-[#1e1b17] hover:border-[#ed5aa0] hover:bg-[#ed5aa0]/10"
+                        }`}
+                      >
+                        {m.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <span className="inline-block rounded-md border-2 border-[#1e1b17]/15 bg-white px-2 py-1 text-[11px] font-extrabold uppercase tracking-wide text-[#1e1b17]/70">
+                  Tiles / Art
+                </span>
+              )}
             </div>
           );
         })}
       </div>
 
       <p className="mt-3 text-[11px] leading-relaxed text-[#1e1b17]/55">
-        Set each section to tiles or a text banner. To add a photo, mascot, or logo,
-        select a tiles panel and use <span className="font-bold">Add art</span> below.
+        The top bar and bottom banner can be tiles or a text banner; the side panels are
+        tiles/art. To add a photo, mascot, or logo, select a panel and use{" "}
+        <span className="font-bold">Add art</span> below.
       </p>
     </div>
   );
