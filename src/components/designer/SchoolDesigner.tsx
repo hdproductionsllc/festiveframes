@@ -29,6 +29,7 @@ import { SCHOOL_SURFACED_SET_IDS } from "@/data/sets";
 import { BottomBarEditor } from "@/components/bottom-bar/BottomBarEditor";
 import { SectionControls } from "./SectionControls";
 import { SectionEditor } from "./SectionEditor";
+import { UploadPhotoButton } from "./UploadPhotoButton";
 import { SnappetRecropModal } from "./SnappetRecropModal";
 import { ArmedBanner } from "@/components/tiles/ArmedBanner";
 import { StateSelector } from "@/components/frame/StateSelector";
@@ -247,8 +248,10 @@ export function SchoolDesigner() {
       >
         <main className="flex-1 grid grid-cols-1 lg:grid-cols-[340px_minmax(0,1fr)] gap-4 p-4 mx-auto w-full max-w-[1560px] items-start">
           {/* Tile palette — the real draggable tile source. School-scoped: it
-              surfaces the School Spirit set (not /build's global list). */}
-          <div className="order-1 lg:order-none min-w-0">
+              surfaces the School Spirit set (not /build's global list). The prominent
+              photo-upload lives above it so uploading is a one-tap, discoverable action. */}
+          <div className="order-1 lg:order-none min-w-0 flex flex-col gap-4">
+            <UploadPhotoButton />
             <TilePalette surfacedSetIds={SCHOOL_SURFACED_SET_IDS} />
           </div>
 

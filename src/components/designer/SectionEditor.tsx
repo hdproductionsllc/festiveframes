@@ -1,16 +1,11 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef } from "react";
 import { useDesignStore } from "@/stores/design-store";
 import { SECTION_LABELS } from "@/lib/utils/sections";
-import { buildGrid } from "@/lib/utils/slot-generator";
-import { coveredSlotIds } from "@/lib/utils/text-bar";
-import { panelSnappetPlacement } from "@/lib/utils/snappet";
-import { putFullRes } from "@/lib/utils/image-store";
-import { reviewUploadedImage } from "@/lib/utils/image-moderation";
 import { SCHOOL_COLLEGIATE_FONTS, SCHOOL_OTHER_FONTS } from "@/lib/constants/frame";
 import { SCHOOL_PHRASE_GROUPS } from "@/data/school-phrases";
-import { ImageCropModal, type ImageCropResult } from "./ImageCropModal";
+import { useSnappetUpload } from "./useSnappetUpload";
 
 // Editor for the SELECTED section (school builder).
 //   TEXT mode  → phrase + font + colors → setSectionText.
@@ -24,41 +19,13 @@ import { ImageCropModal, type ImageCropResult } from "./ImageCropModal";
 
 const MAX_CHARS = 60; // room for multi-line school text
 
-/** Decode a file just far enough to read its aspect (width / height). Falls back to
- *  1 (square) on any error, matching suggestSnappetSize's own bad-aspect guard. */
-function readImageAspect(file: File): Promise<number> {
-  return new Promise((resolve) => {
-    const url = URL.createObjectURL(file);
-    const image = new Image();
-    image.onload = () => {
-      const a = image.naturalWidth / image.naturalHeight;
-      URL.revokeObjectURL(url);
-      resolve(Number.isFinite(a) && a > 0 ? a : 1);
-    };
-    image.onerror = () => {
-      URL.revokeObjectURL(url);
-      resolve(1);
-    };
-    image.src = url;
-  });
-}
-
 export function SectionEditor() {
   const selectedSectionId = useDesignStore((s) => s.selectedSectionId);
   const sections = useDesignStore((s) => s.sections);
-  const frameConfig = useDesignStore((s) => s.frameConfig);
-  const slots = useDesignStore((s) => s.slots);
-  const textBars = useDesignStore((s) => s.textBars);
   const setSectionText = useDesignStore((s) => s.setSectionText);
-  const placeImageSnappet = useDesignStore((s) => s.placeImageSnappet);
   const fileRef = useRef<HTMLInputElement>(null);
-  // The file waiting to be cropped, plus the crop's aspect target (the SUGGESTED
-  // snappet's physical size) and the source aspect the store re-derives the span
-  // from. The aspect target makes the crop match where the art will land — so on a
-  // native-aspect upload there is little to no crop.
-  const [cropFile, setCropFile] = useState<File | null>(null);
-  const [cropTarget, setCropTarget] = useState<{ width: number; height: number } | null>(null);
-  const pendingAspect = useRef<number>(1);
+  // Upload → crop → snappet flow (shared with the prominent Upload button).
+  const { begin, cropModal } = useSnappetUpload();
 
   const sec = selectedSectionId ? sections[selectedSectionId] : undefined;
 
@@ -76,48 +43,6 @@ export function SectionEditor() {
   // Image mode is retired; a section with no explicit mode (just selected) is a
   // tiles panel. Anything not TEXT is a tiles panel that can take uploaded art.
   const isText = sec?.mode === "text";
-
-  // File picked → decide where/how big the art lands (the SAME decision the store
-  // makes on commit), size the crop's aspect target to that snappet, open the modal.
-  const onFile = async (file?: File) => {
-    if (!file || !selectedSectionId) return;
-    const aspect = await readImageAspect(file);
-    pendingAspect.current = aspect;
-    const grid = buildGrid(frameConfig);
-    const ctx = { grid, slots, sections, barCovered: new Set(coveredSlotIds(textBars)) };
-    const placement = panelSnappetPlacement(ctx, selectedSectionId, aspect);
-    const span = placement?.span ?? { cols: 1, rows: 1 };
-    // Every grid column is exactly one tile wide (the grid invariant), so the
-    // snappet's physical size is just span × tile — the aspect target + the
-    // resolution gate's denominator.
-    setCropTarget({
-      width: span.cols * frameConfig.tileSizeInches,
-      height: span.rows * frameConfig.tileSizeInches,
-    });
-    setCropFile(file);
-  };
-
-  // Crop confirmed → stash the full-res original in IndexedDB (only the id is
-  // persisted, never the heavy bytes) and drop the art into the panel as a snappet.
-  const onCropConfirm = async (result: ImageCropResult) => {
-    if (!selectedSectionId) return;
-    const id = crypto.randomUUID();
-    try {
-      await putFullRes(id, result.fullResBlob);
-    } catch {
-      /* IndexedDB unavailable → the preview still renders; full-res is re-derivable */
-    }
-    // Moderation integration point: user prints MUST be gated by a real server-side
-    // vision check before production. No-op today (it does not fake an approval).
-    void reviewUploadedImage(result.fullResBlob);
-    placeImageSnappet(selectedSectionId, {
-      imageUrl: result.previewUrl,
-      fullResId: id,
-      sourceAspect: pendingAspect.current,
-    });
-    setCropFile(null);
-    setCropTarget(null);
-  };
 
   return (
     <div className="bsk-panel-pink space-y-4 rounded-xl border border-surface-700/50 bg-surface-800/50 p-4">
@@ -236,7 +161,8 @@ export function SectionEditor() {
             accept="image/*"
             className="hidden"
             onChange={(e) => {
-              void onFile(e.target.files?.[0]);
+              const file = e.target.files?.[0];
+              if (file && selectedSectionId) void begin(file, selectedSectionId);
               e.target.value = ""; // let the same file be re-picked / re-cropped
             }}
           />
@@ -257,18 +183,7 @@ export function SectionEditor() {
         </div>
       )}
 
-      {cropFile && cropTarget && (
-        <ImageCropModal
-          file={cropFile}
-          targetInches={cropTarget}
-          panelLabel={label}
-          onCancel={() => {
-            setCropFile(null);
-            setCropTarget(null);
-          }}
-          onConfirm={onCropConfirm}
-        />
-      )}
+      {cropModal}
     </div>
   );
 }
