@@ -1,6 +1,7 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
+import { createPortal } from "react-dom";
 import { useDesignStore } from "@/stores/design-store";
 import { SECTION_LABELS } from "@/lib/utils/sections";
 import type { SectionId } from "@/lib/types";
@@ -9,6 +10,13 @@ import {
   uploadableSections,
   readImageAspect,
 } from "./useSnappetUpload";
+
+/** Render fixed overlays into <body> so no transformed/clipping ancestor can trap
+ *  them (a real iOS failure mode). No-op during SSR (document is undefined). */
+function Overlay({ children }: { children: React.ReactNode }) {
+  if (typeof document === "undefined") return null;
+  return createPortal(children, document.body);
+}
 
 // The PROMINENT, always-visible upload entry point for the school builder. The
 // per-section "Add art" in SectionEditor shares the same crop flow (useSnappetUpload),
@@ -32,7 +40,6 @@ export function UploadPhotoButton() {
   const textBars = useDesignStore((s) => s.textBars);
   const selectSection = useDesignStore((s) => s.selectSection);
   const { begin, cropModal } = useSnappetUpload();
-  const fileRef = useRef<HTMLInputElement>(null);
   const [phase, setPhase] = useState<Phase>({ kind: "idle" });
 
   const onPick = async (file?: File) => {
@@ -55,26 +62,27 @@ export function UploadPhotoButton() {
 
   return (
     <div className="rounded-2xl border-2 border-[#1e1b17] bg-[#f8c53b] p-3 shadow-[3px_3px_0_#1e1b17]">
-      <input
-        ref={fileRef}
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={(e) => {
-          void onPick(e.target.files?.[0]);
-          e.target.value = ""; // let the same file be re-picked / re-cropped
-        }}
-      />
-      <button
-        type="button"
-        onClick={() => fileRef.current?.click()}
-        className="flex w-full items-center justify-center gap-2 rounded-xl border-[3px] border-[#1e1b17]
-          bg-[#3fb0e6] px-4 py-3 text-base font-extrabold uppercase tracking-wide text-white
-          shadow-[3px_3px_0_#1e1b17] transition-all hover:brightness-105 active:translate-y-0.5"
+      {/* A <label> wrapping a visually-hidden (NOT display:none) input. On iOS this
+          is the reliable pattern: tapping the label opens the picker AND the native
+          label→input link fires `change` on selection. A `display:none` input opens
+          the picker but often never fires `change` on iOS — the tap looked dead. */}
+      <label
+        className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-[3px]
+          border-[#1e1b17] bg-[#3fb0e6] px-4 py-3 text-base font-extrabold uppercase tracking-wide
+          text-white shadow-[3px_3px_0_#1e1b17] transition-all hover:brightness-105 active:translate-y-0.5"
       >
+        <input
+          type="file"
+          accept="image/*"
+          className="sr-only"
+          onChange={(e) => {
+            void onPick(e.target.files?.[0]);
+            e.target.value = ""; // let the same file be re-picked / re-cropped
+          }}
+        />
         <span aria-hidden className="text-lg">📷</span>
         Upload a photo
-      </button>
+      </label>
       <p className="mt-2 text-[11px] font-semibold leading-relaxed text-[#1e1b17]/70">
         Add your own photo, mascot, or logo. Pick where it goes, then drag it and pull
         the handles to resize.
@@ -82,6 +90,7 @@ export function UploadPhotoButton() {
 
       {/* Loading overlay — immediate feedback while the phone decodes the photo. */}
       {phase.kind === "loading" && (
+        <Overlay>
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 p-6">
           <div className="w-full max-w-[320px] rounded-2xl border-[3px] border-[#1e1b17] bg-[#faf0d6] p-5 text-center shadow-[6px_6px_0_#1e1b17]">
             <p className="mb-3 text-sm font-extrabold uppercase tracking-wide text-[#1e1b17]">
@@ -92,10 +101,12 @@ export function UploadPhotoButton() {
             </div>
           </div>
         </div>
+        </Overlay>
       )}
 
       {/* Placement prompt — "where should it go?" One tap per panel with room. */}
       {phase.kind === "placing" && (
+        <Overlay>
         <div
           className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 p-6"
           role="dialog"
@@ -136,6 +147,7 @@ export function UploadPhotoButton() {
             </button>
           </div>
         </div>
+        </Overlay>
       )}
 
       {phase.kind === "full" && (

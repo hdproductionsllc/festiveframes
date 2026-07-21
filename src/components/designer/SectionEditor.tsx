@@ -1,6 +1,5 @@
 "use client";
 
-import { useRef } from "react";
 import { useDesignStore } from "@/stores/design-store";
 import { SECTION_LABELS } from "@/lib/utils/sections";
 import { SCHOOL_COLLEGIATE_FONTS, SCHOOL_OTHER_FONTS } from "@/lib/constants/frame";
@@ -23,7 +22,6 @@ export function SectionEditor() {
   const selectedSectionId = useDesignStore((s) => s.selectedSectionId);
   const sections = useDesignStore((s) => s.sections);
   const setSectionText = useDesignStore((s) => s.setSectionText);
-  const fileRef = useRef<HTMLInputElement>(null);
   // Upload → crop → snappet flow (shared with the prominent Upload button).
   const { begin, cropModal } = useSnappetUpload();
 
@@ -155,24 +153,23 @@ export function SectionEditor() {
         </div>
       ) : (
         <div className="space-y-3 rounded-2xl border-2 border-[#1e1b17] bg-white/70 p-3.5 shadow-[3px_3px_0_#1e1b17]">
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file && selectedSectionId) void begin(file, selectedSectionId);
-              e.target.value = ""; // let the same file be re-picked / re-cropped
-            }}
-          />
-          <button
-            type="button"
-            onClick={() => fileRef.current?.click()}
-            className="rounded-xl border-[3px] border-[#1e1b17] bg-[#3fb0e6] px-4 py-2 text-sm font-extrabold uppercase tracking-wide text-white shadow-[3px_3px_0_#1e1b17] transition-all hover:brightness-105 active:translate-y-0.5"
+          {/* <label> + visually-hidden (NOT display:none) input — reliable on iOS,
+              where a display:none input opens the picker but never fires `change`. */}
+          <label
+            className="inline-flex cursor-pointer rounded-xl border-[3px] border-[#1e1b17] bg-[#3fb0e6] px-4 py-2 text-sm font-extrabold uppercase tracking-wide text-white shadow-[3px_3px_0_#1e1b17] transition-all hover:brightness-105 active:translate-y-0.5"
           >
+            <input
+              type="file"
+              accept="image/*"
+              className="sr-only"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file && selectedSectionId) void begin(file, selectedSectionId);
+                e.target.value = ""; // let the same file be re-picked / re-cropped
+              }}
+            />
             Add art
-          </button>
+          </label>
 
           <p className="text-[11px] leading-relaxed text-[#1e1b17]/50">
             Upload a photo, mascot, or logo for the {label.toLowerCase()}. It drops in
