@@ -1,4 +1,6 @@
 import { describe, it, expect } from "vitest";
+import { existsSync } from "node:fs";
+import path from "node:path";
 import {
   getSet,
   getSetPieces,
@@ -34,15 +36,17 @@ describe("school spirit set", () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it("references no missing LOCAL art — placeholders are empty or Twemoji CDN", () => {
+  it("references no missing art — empty, Twemoji CDN, or a local file that EXISTS", () => {
     // Real production art is a human task (tasks/school-spirit-ideogram-brief.md).
-    // Until it lands, every artworkUrl must be either empty (solid color block) or a
-    // Twemoji CDN SVG (a generic emoji placeholder, the same mechanism Essentials
-    // uses) — never a local "/tiles/..." path pointing at a file that doesn't exist.
+    // Until it lands, every artworkUrl must be either empty (solid color block), a
+    // Twemoji CDN SVG (generic emoji placeholder), or a local "/tiles/..." path that
+    // actually points at a committed file (the multi-cell TEST placeholders) — the
+    // real guard is "never reference a local file that doesn't exist".
     for (const p of schoolSet.pieces) {
-      const ok = p.artworkUrl === "" || p.artworkUrl.startsWith("https://cdn.jsdelivr.net/");
-      expect(ok, `${p.id} -> ${p.artworkUrl}`).toBe(true);
-      expect(p.artworkUrl.startsWith("/tiles/")).toBe(false);
+      if (p.artworkUrl === "" || p.artworkUrl.startsWith("https://cdn.jsdelivr.net/")) continue;
+      expect(p.artworkUrl.startsWith("/tiles/"), `${p.id} -> ${p.artworkUrl}`).toBe(true);
+      const onDisk = path.join(process.cwd(), "public", p.artworkUrl);
+      expect(existsSync(onDisk), `missing local art file: ${onDisk}`).toBe(true);
     }
   });
 

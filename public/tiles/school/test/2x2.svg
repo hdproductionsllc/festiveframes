@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">
+  <rect width="200" height="200" fill="#1B4DFF"/>
+  <rect x="6" y="6" width="188" height="188" fill="none" stroke="#FFFFFF" stroke-width="6" stroke-dasharray="16 12"/>
+  <text x="100" y="100" font-family="Arial, Helvetica, sans-serif" font-size="66" font-weight="bold" fill="#FFFFFF" text-anchor="middle" dominant-baseline="central">2×2</text>
+  <text x="100" y="178" font-family="Arial, Helvetica, sans-serif" font-size="16" fill="#FFFFFF" opacity="0.8" text-anchor="middle" dominant-baseline="central" letter-spacing="2">TEST TILE</text>
+</svg>
