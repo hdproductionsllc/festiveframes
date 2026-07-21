@@ -357,9 +357,10 @@ export const FrameCanvas = forwardRef<FrameCanvasHandle, FrameCanvasProps>(
         <div
           ref={frameRef}
           // Clicking empty frame space clears the snappet selection (a click ON a
-          // snappet or a handle stops propagation, so it survives). Attached only
-          // when the design has a snappet — inert, and unattached, on /build.
-          onClick={anySpan ? () => selectSnappet(null) : undefined}
+          // snappet or a handle stops propagation, so it survives). Attached when the
+          // frame supports snappets (has wings) OR already has one — so a selected 1x1
+          // clears too. Inert and unattached on /build (no wings, never any span).
+          onClick={anySpan || frameConfig.wings ? () => selectSnappet(null) : undefined}
           className="relative w-full rounded-md overflow-hidden"
           style={{
             height: containerHeight || "auto",

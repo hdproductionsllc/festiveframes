@@ -206,6 +206,7 @@ function PlacedTileCell({
   landing?: boolean;
 }) {
   const removeTile = useDesignStore((s) => s.removeTile);
+  const wings = useDesignStore((s) => s.frameConfig.wings);
   const soundEnabled = useUIStore((s) => s.soundEnabled);
   const selectSnappet = useUIStore((s) => s.selectSnappet);
   const [showRemove, setShowRemove] = useState(false);
@@ -254,11 +255,13 @@ function PlacedTileCell({
     if (armed) return;
     e.stopPropagation();
     setShowRemove((v) => !v);
-    // A MULTI-CELL snappet also becomes SELECTED for resize on tap — the handles
-    // (drawn in FrameCanvas's overflow layer) appear around it. A 1x1 tile is never
-    // multi-cell, so this never fires on /build and its behavior is unchanged. The
-    // stopPropagation above keeps the frame's deselect-on-empty-click from firing.
-    if (isMultiCell(span)) selectSnappet(slotId);
+    // Tap SELECTS the tile for resize. On a snappet-capable frame (the school frame,
+    // which has wings) ANY tile is selectable — so a 1x1 or a freshly-placed photo can
+    // be grown, not just an already-multi-cell snappet. The selected tile gets on-canvas
+    // handles (multi-cell) and the size-stepper control. /build has no wings, so this
+    // stays multi-cell-only there and its behavior is unchanged. stopPropagation above
+    // keeps the frame's deselect-on-empty-click from firing.
+    if (wings || isMultiCell(span)) selectSnappet(slotId);
   };
 
   const handleRemove = (e: React.MouseEvent) => {

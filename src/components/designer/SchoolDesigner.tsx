@@ -32,6 +32,7 @@ import { SectionEditor } from "./SectionEditor";
 import { UploadPhotoButton } from "./UploadPhotoButton";
 import { PanelWidthToggle } from "./PanelWidthToggle";
 import { SnappetRecropModal } from "./SnappetRecropModal";
+import { SnappetSizeControl } from "./SnappetSizeControl";
 import { ArmedBanner } from "@/components/tiles/ArmedBanner";
 import { StateSelector } from "@/components/frame/StateSelector";
 import { SCHOOL_FRAME_CONFIG } from "@/lib/constants/frame";
@@ -287,6 +288,10 @@ export function SchoolDesigner() {
           a snappet selected on the canvas with no section open. Renders nothing until
           a resize requests it. */}
       <SnappetRecropModal />
+
+      {/* Floating size control for the selected tile/snappet — grow/shrink any placed
+          tile (photos re-crop on aspect change). Portaled to <body> internally. */}
+      <SnappetSizeControl />
     </div>
   );
 }
