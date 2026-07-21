@@ -30,6 +30,7 @@ import { BottomBarEditor } from "@/components/bottom-bar/BottomBarEditor";
 import { SectionControls } from "./SectionControls";
 import { SectionEditor } from "./SectionEditor";
 import { UploadPhotoButton } from "./UploadPhotoButton";
+import { PanelWidthToggle } from "./PanelWidthToggle";
 import { SnappetRecropModal } from "./SnappetRecropModal";
 import { ArmedBanner } from "@/components/tiles/ArmedBanner";
 import { StateSelector } from "@/components/frame/StateSelector";
@@ -273,6 +274,7 @@ export function SchoolDesigner() {
                 />
               </div>
             </div>
+            <PanelWidthToggle />
             <SectionControls />
             <SectionEditor />
             <BottomBarEditor />
