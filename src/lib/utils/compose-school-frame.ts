@@ -46,10 +46,8 @@ import {
   QR_SIZE_RATIO,
   QR_GAP_RATIO,
 } from "@/lib/utils/text-bar";
-import { getPlateArea } from "@/lib/utils/layout";
 import { SECTION_IDS, sectionBounds, slotSuppressed } from "@/lib/utils/sections";
 import { getPiece } from "@/data/sets";
-import { getPlateImageUrl, getPlateImageDisplay } from "@/data/plate-images";
 import { getFullRes } from "@/lib/utils/image-store";
 
 /** Default print resolution. 300 DPI is the eufyMake sheet standard. */
@@ -329,7 +327,7 @@ export function drawSchoolFrame(
   canvasWidth: number,
   canvasHeight: number,
 ): void {
-  const { frameConfig: config, slots, textBars, plateState, sections } = design;
+  const { frameConfig: config, slots, textBars, sections } = design;
   const grid = buildGrid(config, canvasWidth);
   const frameSlots = grid.slots;
   const m = schoolRenderMetrics(config, canvasWidth);
@@ -344,21 +342,13 @@ export function drawSchoolFrame(
   ctx.fillStyle = "#111111";
   ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
-  // 2) License plate.
-  const plate = getPlateArea(config, canvasWidth);
-  if (plate) {
-    const r = Math.max(3, plate.width * 0.012);
-    ctx.save();
-    roundRect(ctx, plate.x, plate.y, plate.width, plate.height, r);
-    ctx.clip();
-    ctx.fillStyle = "#e9e6df";
-    ctx.fillRect(plate.x, plate.y, plate.width, plate.height);
-    if (images.plate) {
-      const disp = getPlateImageDisplay(plateState);
-      drawFit(ctx, images.plate, plate.x, plate.y, plate.width, plate.height, disp.objectFit, disp.scale);
-    }
-    ctx.restore();
-  }
+  // 2) License-plate OPENING — left intentionally BLANK on the print.
+  //    The customer inserts their real metal plate here, so the print file must
+  //    carry NO plate graphic (no state photo, no simulated plate). The on-screen
+  //    preview still shows a plate to help the customer visualize; the print
+  //    deliberately diverges. We leave the region as the matte frame base (drawn in
+  //    step 1) so the opening reads as an empty cutout in the black frame body.
+  //    `images.plate` stays unused by design.
 
   // 3) Ring + wing tiles, including multi-cell snappet anchors at their span size.
   //    Every printed cell is a WHITE snappet (art sits on white); covered cells,
@@ -458,7 +448,7 @@ export async function composeSchoolFrame(
   const fonts = (document as unknown as { fonts?: { ready?: Promise<unknown> } }).fonts;
   if (fonts?.ready) { try { await fonts.ready; } catch { /* ignore */ } }
 
-  const { frameConfig: config, slots, textBars, qrCode, plateState, sections } = design;
+  const { frameConfig: config, slots, textBars, qrCode, sections } = design;
   const { width: W, height: H } = schoolCanvasSize(config, dpi);
 
   // Which tiles will actually draw (mirror drawSchoolFrame's skip rules) — so we only
@@ -484,9 +474,8 @@ export async function composeSchoolFrame(
 
   const jobs: Promise<void>[] = [];
 
-  // Plate.
-  const plateUrl = getPlateImageUrl(plateState);
-  if (plateUrl) jobs.push(loadImage(plateUrl).then((img) => { bundle.plate = img; }));
+  // Plate is intentionally NOT loaded or drawn — the print leaves the plate opening
+  // blank (the customer inserts their real plate). See drawSchoolFrame step 2.
 
   // Tiles / snappets.
   for (const slot of grid.slots) {

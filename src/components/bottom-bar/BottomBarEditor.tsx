@@ -52,7 +52,8 @@ function DragToPlace() {
         {...attributes}
         {...listeners}
         title="Drag this bar onto the top or bottom of your frame — it lands where you drop it"
-        style={{ touchAction: "none" }}
+        // pan-y so the page scrolls off this button; press-and-hold still drags (TouchSensor).
+        style={{ touchAction: "pan-y" }}
         className={`flex w-full flex-col items-center gap-1.5 rounded-xl border-2 border-dashed border-[#1e1b17]/40
           bg-white/70 p-2.5 cursor-grab active:cursor-grabbing transition-all hover:bg-white active:scale-[0.99]
           focus:outline-none focus-visible:ring-2 focus-visible:ring-[#ed5aa0] ${isDragging ? "opacity-50" : ""}`}
