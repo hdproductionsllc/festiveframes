@@ -25,14 +25,19 @@ export function QuickActions({ surfacedSetIds }: QuickActionsProps = {}) {
   const pieces = getSetPieces(
     surfacedSetIds ? resolveSurfacedSetId(activeSetId, surfacedSetIds) : activeSetId
   );
+  // Fill All / Random place cell-by-cell (1x1), so a multi-cell piece (one with a
+  // `defaultSpan`, e.g. the school test tiles) would get squished into a single cell.
+  // Those are drag-only; the auto-fill pool is 1x1 pieces exclusively.
+  const fillablePieces = pieces.filter((p) => !p.defaultSpan);
 
   const sfx = (name: SoundName) => { if (soundEnabled) playSound(name); };
 
   const handleFillAll = () => {
-    // Prefer the user's selected tile; otherwise gracefully fall back to the
-    // active set's first piece so "Fill All" always does something obvious
-    // instead of silently no-op'ing.
-    const pieceId = selectedPieceId ?? pieces[0]?.id ?? null;
+    // Prefer the user's selected tile — but only if it's a 1x1 (a multi-cell piece
+    // can't fill single cells). Otherwise fall back to the first 1x1 piece so "Fill
+    // All" always does something obvious instead of squishing a footprint.
+    const selected = selectedPieceId ? pieces.find((p) => p.id === selectedPieceId) : null;
+    const pieceId = (selected && !selected.defaultSpan ? selected.id : fillablePieces[0]?.id) ?? null;
     if (!pieceId) return;
     const setId = pieceId.split(":")[0];
     fillAll(pieceId, setId);
@@ -40,8 +45,8 @@ export function QuickActions({ surfacedSetIds }: QuickActionsProps = {}) {
   };
 
   const handleRandomFill = () => {
-    if (pieces.length === 0) return;
-    const pieceData = pieces.map((p) => ({ pieceId: p.id, setId: p.setId }));
+    if (fillablePieces.length === 0) return;
+    const pieceData = fillablePieces.map((p) => ({ pieceId: p.id, setId: p.setId }));
     randomFill(pieceData);
     sfx("rattle");
   };
@@ -54,7 +59,7 @@ export function QuickActions({ surfacedSetIds }: QuickActionsProps = {}) {
       onClick: handleFillAll,
       // Enabled as long as the set has tiles — uses your selected tile, or the
       // set's first tile if you haven't picked one yet.
-      disabled: pieces.length === 0,
+      disabled: fillablePieces.length === 0,
       title: selectedPieceId
         ? "Fill every slot with your selected tile"
         : "Fill every slot with this set's first tile (tap a tile to choose)",
@@ -64,7 +69,7 @@ export function QuickActions({ surfacedSetIds }: QuickActionsProps = {}) {
       icon: "🎲",
       color: "bsk-purple",
       onClick: handleRandomFill,
-      disabled: pieces.length === 0,
+      disabled: fillablePieces.length === 0,
       title: "Random fill from current set",
     },
     {

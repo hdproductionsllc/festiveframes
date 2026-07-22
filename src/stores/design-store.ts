@@ -676,9 +676,11 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
             const barCovered = new Set(coveredSlotIds(state.textBars));
             const ctx = { grid, slots: state.slots, sections: state.sections, barCovered };
             // ONE decision, shared with the crop modal's aspect target: where a
-            // native-aspect snappet of this image lands, and how big.
-            const placement = panelSnappetPlacement(ctx, panelId, image.sourceAspect);
-            if (!placement) return state; // panel full / no free cell
+            // native-aspect snappet of this image lands, and how big. allowEvict so a
+            // deliberate photo upload still seats on a FULL panel (evicting tiles) —
+            // otherwise a fully-tiled frame silently refuses the photo.
+            const placement = panelSnappetPlacement(ctx, panelId, image.sourceAspect, { allowEvict: true });
+            if (!placement) return state; // no cells in panel at all (shouldn't happen)
             const anchor = grid.coordOf(placement.anchorSlotId);
             if (!anchor) return state;
             // Re-validate at commit (evicts are only populated on a valid placement).

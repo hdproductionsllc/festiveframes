@@ -760,6 +760,20 @@ describe("panelSnappetPlacement", () => {
     };
     expect(panelSnappetPlacement(ctx({ slots }), "wing-left", 1)).toBeNull();
   });
+
+  it("with allowEvict, still places on a FULL panel (evicting) instead of refusing", () => {
+    const slots: Record<string, PlacedTile> = {
+      // The whole left panel is full (a 2x8 snappet).
+      [schoolGrid.cellAt(0, 0)!.id]: tile("a", { cols: 2, rows: 8 }),
+    };
+    const placement = panelSnappetPlacement(ctx({ slots }), "wing-left", 2 / 3, { allowEvict: true });
+    expect(placement).not.toBeNull();
+    // Anchors at the panel's top-left cell; the placement is seatable — it evicts the
+    // tile(s) it covers, exactly like dragging a snappet onto an occupied area.
+    const anchor = schoolGrid.coordOf(placement!.anchorSlotId)!;
+    expect(anchor).toEqual({ row: 0, col: 0 });
+    expect(canPlace(ctx({ slots }), anchor, placement!.span, placement!.anchorSlotId).ok).toBe(true);
+  });
 });
 
 describe("anchorIdFor", () => {
