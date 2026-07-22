@@ -4,6 +4,11 @@ import type { Metadata } from "next";
 // builder's font picker fell back to system fonts — collegiate faces never loaded,
 // on-screen OR in the print canvas. Importing it here fixes both.
 import "../../builder-fonts.css";
+// The "build skin" (cream workbench background + the bsk-panel / bsk-btn card styling)
+// also lived only on /build, so the school builder's control cards rendered dark and
+// low-contrast (unreadable headings). SchoolDesigner's root already has the `build-skin`
+// class — this makes the styles it targets actually load.
+import "../../build/build-skin.css";
 import { SchoolBuilder } from "@/components/designer/SchoolDesigner";
 
 // Internal prototype of the SCHOOL / fundraising builder — a FORK of the real
@@ -15,5 +20,12 @@ export const metadata: Metadata = {
 };
 
 export default function SchoolFrameLabPage() {
-  return <SchoolBuilder />;
+  // `build-skin` on the PARENT (matching /build) so the descendant rules in
+  // build-skin.css (`.build-skin .workbench-bg` cream, `.build-skin .bsk-panel`, …)
+  // apply to SchoolDesigner's root and cards.
+  return (
+    <div className="build-skin">
+      <SchoolBuilder />
+    </div>
+  );
 }

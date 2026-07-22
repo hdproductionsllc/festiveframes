@@ -168,7 +168,7 @@ export function SchoolDesigner() {
   // no effect can clobber it.
 
   return (
-    <div className="build-skin workbench-bg min-h-screen flex flex-col">
+    <div className="workbench-bg min-h-screen flex flex-col">
       {/* Minimal prototype header — school context + the plate state picker (the
           real StateSelector, wired to the shared store). No storefront/order flow. */}
       <header className="flex flex-wrap items-center justify-between gap-3 border-b-[3px] border-[#1e1b17] bg-[#1e1b17] px-4 py-2">
@@ -247,16 +247,25 @@ export function SchoolDesigner() {
         onBannerPreviewChange={setBannerPreview}
         onSnappetPreviewChange={setSnappetPreview}
       >
+        {/* Layout MIRRORS /build: a LEFT tools rail (photo upload, frame width, the
+            section pickers, and the tile palette — the palette scrolls inside its own
+            42vh box, so the rail never grows tall) and a RIGHT column with the frame
+            preview on top of the ONE active editor beneath it. Because the tools live
+            in the bounded left rail, the frame + its editor fit the viewport without a
+            long stack pushing the frame out of view. On MOBILE it collapses to one
+            column: tools rail (1) -> frame + editor (2). */}
         <main className="flex-1 grid grid-cols-1 lg:grid-cols-[340px_minmax(0,1fr)] gap-4 p-4 mx-auto w-full max-w-[1560px] items-start">
-          {/* Tile palette — the real draggable tile source. School-scoped: it
-              surfaces the School Spirit set (not /build's global list). The prominent
-              photo-upload lives above it so uploading is a one-tap, discoverable action. */}
+          {/* LEFT tools rail. Palette LAST so it sits directly above the frame on mobile
+              (the drag/tap source next to its target). */}
           <div className="order-1 lg:order-none min-w-0 flex flex-col gap-4">
             <UploadPhotoButton />
+            <PanelWidthToggle />
+            <SectionControls />
             <TilePalette surfacedSetIds={SCHOOL_SURFACED_SET_IDS} />
           </div>
 
-          {/* Frame preview + text editor, stacked. */}
+          {/* RIGHT column — frame preview + the selected section's editor, stacked in one
+              cell so the editor sits directly under the frame (mirrors /build). */}
           <div className="order-2 lg:order-none flex flex-col gap-4 min-w-0">
             <div className="w-full flex flex-col gap-3">
               <div className="relative">
@@ -274,8 +283,6 @@ export function SchoolDesigner() {
                 />
               </div>
             </div>
-            <PanelWidthToggle />
-            <SectionControls />
             <SectionEditor />
           </div>
         </main>

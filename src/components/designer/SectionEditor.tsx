@@ -30,8 +30,8 @@ export function SectionEditor() {
   if (!selectedSectionId) {
     return (
       <div className="rounded-xl border border-surface-700/50 bg-surface-800/40 p-4 text-sm font-semibold text-surface-300">
-        Pick a section above to edit it here — set it to{" "}
-        <span className="text-[#ed5aa0]">Text</span>, or leave it on{" "}
+        Pick a section from the <span className="font-bold">Sections</span> panel to edit
+        it here — set it to <span className="text-[#ed5aa0]">Text</span>, or leave it on{" "}
         <span className="text-[#3fb0e6]">Tiles</span> and use <span className="font-bold">Add art</span>.
       </div>
     );
