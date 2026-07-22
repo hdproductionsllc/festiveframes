@@ -539,6 +539,7 @@ export function panelSnappetPlacement(
   ctx: PlacementContext,
   panelId: SectionId,
   imageAspect: number,
+  opts: { allowEvict?: boolean } = {},
 ): PanelSnappetPlacement | null {
   const { grid, slots, barCovered } = ctx;
 
@@ -561,10 +562,10 @@ export function panelSnappetPlacement(
   const row0 = Math.min(...inPanel.map((s) => s.row));
   const row1 = Math.max(...inPanel.map((s) => s.row));
 
+  const inPanelCell = (row: number, col: number): boolean =>
+    grid.cellAt(row, col) != null && grid.panelAt(row, col) === panelId;
   const free = (row: number, col: number): boolean =>
-    grid.cellAt(row, col) != null &&
-    grid.panelAt(row, col) === panelId &&
-    !occupied.has(`${row}:${col}`);
+    inPanelCell(row, col) && !occupied.has(`${row}:${col}`);
 
   // Anchor: scan row-major for the first free cell of the panel.
   let anchor: GridCoord | null = null;
@@ -576,15 +577,26 @@ export function panelSnappetPlacement(
       }
     }
   }
-  if (!anchor) return null; // panel full
+  // Panel FULL (no free cell). By default we refuse. But with `allowEvict` (uploading a
+  // photo — a deliberate act, not an auto-fill) we still place it: anchor at the panel's
+  // top-left cell and let canPlace EVICT the tiles it covers, exactly like dragging a
+  // snappet onto an occupied area. This is what lets a photo land on a fully-tiled frame.
+  const evicting = !anchor;
+  if (!anchor) {
+    if (!opts.allowEvict) return null;
+    anchor = { row: row0, col: col0 };
+  }
   const anchorCell = grid.cellAt(anchor.row, anchor.col);
   if (!anchorCell) return null;
 
-  // Free rectangle at the anchor: contiguous free columns to the right, rows down.
+  // Available rectangle at the anchor: contiguous columns right / rows down. When
+  // seating into free space that's the free run; when evicting a full panel it's the
+  // panel's own extent (occupancy ignored — canPlace evicts overlaps below).
+  const openAt = evicting ? inPanelCell : free;
   let freeCols = 0;
-  for (let col = anchor.col; col <= col1 && free(anchor.row, col); col++) freeCols++;
+  for (let col = anchor.col; col <= col1 && openAt(anchor.row, col); col++) freeCols++;
   let freeRows = 0;
-  for (let row = anchor.row; row <= row1 && free(row, anchor.col); row++) freeRows++;
+  for (let row = anchor.row; row <= row1 && openAt(row, anchor.col); row++) freeRows++;
 
   // Suggest a size, then shrink until canPlace accepts it (the anchor tile — if any —
   // is excluded so growing over its own cell is never a self-collision).

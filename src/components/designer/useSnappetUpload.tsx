@@ -55,7 +55,7 @@ export function firstUploadableSection(
   const order = preferred ? [preferred, ...SECTION_IDS] : SECTION_IDS;
   for (const id of order) {
     if (sections[id]?.mode === "text") continue; // a text banner can't hold art
-    if (panelSnappetPlacement(ctx, id, 1)) return id;
+    if (panelSnappetPlacement(ctx, id, 1, { allowEvict: true })) return id;
   }
   return null;
 }
@@ -71,7 +71,7 @@ export function uploadableSections(
   const grid = buildGrid(frameConfig);
   const ctx = { grid, slots, sections, barCovered: new Set(coveredSlotIds(textBars)) };
   return SECTION_IDS.filter(
-    (id) => sections[id]?.mode !== "text" && panelSnappetPlacement(ctx, id, 1),
+    (id) => sections[id]?.mode !== "text" && panelSnappetPlacement(ctx, id, 1, { allowEvict: true }),
   );
 }
 
@@ -103,7 +103,7 @@ export function useSnappetUpload(): SnappetUpload {
     pendingAspect.current = aspect;
     const grid = buildGrid(frameConfig);
     const ctx = { grid, slots, sections, barCovered: new Set(coveredSlotIds(textBars)) };
-    const placement = panelSnappetPlacement(ctx, sectionId, aspect);
+    const placement = panelSnappetPlacement(ctx, sectionId, aspect, { allowEvict: true });
     const span = placement?.span ?? { cols: 1, rows: 1 };
     // Every grid column is exactly one tile wide (the grid invariant), so the snappet's
     // physical size is just span × tile — the crop's aspect target + the gate denominator.
