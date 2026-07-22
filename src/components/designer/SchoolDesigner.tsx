@@ -26,7 +26,6 @@ import { DndProvider } from "./DndProvider";
 import { FrameCanvas, type FrameCanvasHandle } from "@/components/frame/FrameCanvas";
 import { TilePalette } from "@/components/tiles/TilePalette";
 import { SCHOOL_SURFACED_SET_IDS } from "@/data/sets";
-import { BottomBarEditor } from "@/components/bottom-bar/BottomBarEditor";
 import { SectionControls } from "./SectionControls";
 import { SectionEditor } from "./SectionEditor";
 import { UploadPhotoButton } from "./UploadPhotoButton";
@@ -278,7 +277,6 @@ export function SchoolDesigner() {
             <PanelWidthToggle />
             <SectionControls />
             <SectionEditor />
-            <BottomBarEditor />
           </div>
         </main>
       </DndProvider>

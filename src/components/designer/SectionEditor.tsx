@@ -52,17 +52,36 @@ export function SectionEditor() {
         <div className="space-y-3 rounded-2xl border-2 border-[#1e1b17] bg-white/70 p-3.5 shadow-[3px_3px_0_#1e1b17]">
           <label className="block">
             <span className="mb-1 block text-xs font-bold uppercase tracking-wide text-[#1e1b17]/70">
-              Text <span className="font-semibold normal-case text-[#1e1b17]/45">— press Enter for a new line</span>
+              {selectedSectionId === "bottom" ? "Headline" : "Text"}{" "}
+              <span className="font-semibold normal-case text-[#1e1b17]/45">— press Enter for a new line</span>
             </span>
             <textarea
               value={sec.text?.text ?? ""}
               maxLength={MAX_CHARS}
-              rows={3}
+              rows={selectedSectionId === "bottom" ? 2 : 3}
               onChange={(e) => setSectionText(selectedSectionId, { text: e.target.value.slice(0, MAX_CHARS) })}
-              placeholder={"School name,\nslogan,\nyear…"}
+              placeholder={selectedSectionId === "bottom" ? "GO WILDCATS" : "School name,\nslogan,\nyear…"}
               className="w-full resize-none rounded-lg border-2 border-[#1e1b17]/15 bg-white px-3 py-2.5 text-base font-bold leading-tight text-[#1e1b17] placeholder:text-[#1e1b17]/35 focus:border-[#ed5aa0] focus:outline-none"
             />
           </label>
+
+          {/* Bottom banner only: an optional SMALLER tagline under the headline. The
+              double-height bottom banner renders two tiers when this is filled. */}
+          {selectedSectionId === "bottom" && (
+            <label className="block">
+              <span className="mb-1 block text-xs font-bold uppercase tracking-wide text-[#1e1b17]/70">
+                Tagline <span className="font-semibold normal-case text-[#1e1b17]/45">— optional, smaller line underneath</span>
+              </span>
+              <input
+                type="text"
+                value={sec.text?.tagline ?? ""}
+                maxLength={MAX_CHARS}
+                onChange={(e) => setSectionText(selectedSectionId, { tagline: e.target.value.slice(0, MAX_CHARS) })}
+                placeholder="Est. 1998 · State Champions"
+                className="w-full rounded-lg border-2 border-[#1e1b17]/15 bg-white px-3 py-2 text-sm font-bold text-[#1e1b17] placeholder:text-[#1e1b17]/35 focus:border-[#ed5aa0] focus:outline-none"
+              />
+            </label>
+          )}
 
           {/* School phrases — tap to fill (line breaks come in too). Grouped by category;
               {year} is already resolved, [MASCOT]/[#] are placeholders to overwrite. */}
