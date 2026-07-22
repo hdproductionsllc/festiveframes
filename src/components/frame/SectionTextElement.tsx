@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { BottomBarConfig } from "@/lib/types";
+import { bannerBands } from "@/lib/utils/banner-tiers";
 
 // A section's TEXT rendered as a MULTI-LINE block that honors `\n` line breaks and
 // works on a wide top/bottom bar AND a tall/narrow side panel (wing).
@@ -101,10 +102,31 @@ export function SectionTextElement({
   }, []);
 
   void fontTick; // referenced so a font-load bump re-renders → font is re-measured
-  const fontPx = fitBlockFont(text, fontFamily, letterSpacing, contentW, contentH, fill);
 
   const align =
     config.textAlign === "left" ? "flex-start" : config.textAlign === "right" ? "flex-end" : "center";
+
+  // Two-tier bottom banner: a big headline + a smaller tagline, each fit to its own
+  // vertical band (shared with the print renderer via `bannerBands`). One line = a
+  // single big headline (the original single-block behavior).
+  const tagline = config.tagline?.trim() ? config.tagline : "";
+  const bands = bannerBands(contentH);
+  const headlineFont = tagline
+    ? fitBlockFont(text, fontFamily, letterSpacing, contentW, bands.headlineH, fill)
+    : fitBlockFont(text, fontFamily, letterSpacing, contentW, contentH, fill);
+  const taglineFont = tagline
+    ? fitBlockFont(tagline, fontFamily, letterSpacing, contentW, bands.taglineH, fill)
+    : 0;
+
+  const lineStyle = (fontPx: number): React.CSSProperties => ({
+    fontFamily,
+    fontSize: fontPx,
+    fontWeight: 800,
+    lineHeight: LINE_HEIGHT,
+    letterSpacing,
+    whiteSpace: "pre", // honor \n only — never soft-wrap (keeps the fit exact)
+    textAlign: config.textAlign,
+  });
 
   return (
     <div
@@ -113,22 +135,17 @@ export function SectionTextElement({
         height: "100%",
         background: config.backgroundColor,
         color: config.textColor,
-        fontFamily,
-        fontSize: fontPx,
-        fontWeight: 700,
-        lineHeight: LINE_HEIGHT,
-        letterSpacing,
-        whiteSpace: "pre", // honor \n only — never soft-wrap (keeps the fit exact)
-        textAlign: config.textAlign,
         display: "flex",
         flexDirection: "column",
         alignItems: align,
         justifyContent: "center",
+        gap: tagline ? contentH * 0.06 : 0,
         overflow: "hidden",
         padding: pad,
       }}
     >
-      {text}
+      <div style={lineStyle(headlineFont)}>{text}</div>
+      {tagline && <div style={lineStyle(taglineFont)}>{tagline}</div>}
     </div>
   );
 }

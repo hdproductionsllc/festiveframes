@@ -117,6 +117,11 @@ export interface PlacedTile {
 
 export interface BottomBarConfig {
   text: string;
+  /** Optional SMALLER second-tier line under the headline (`text`). Bottom banner
+   *  only — when set, the banner renders two tiers: a big headline + a smaller
+   *  tagline. Absent = one big headline (backward-compatible; every other bar and
+   *  /build never set it). */
+  tagline?: string;
   fontFamily: string;
   fontSize: number; // auto-fit fill (0–1): 1 = fill the bar, lower scales down. Default 1.
   textColor: string;

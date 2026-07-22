@@ -47,6 +47,7 @@ import {
   QR_GAP_RATIO,
 } from "@/lib/utils/text-bar";
 import { SECTION_IDS, sectionBounds, slotSuppressed } from "@/lib/utils/sections";
+import { bannerBands } from "@/lib/utils/banner-tiers";
 import { getPiece } from "@/data/sets";
 import { getFullRes } from "@/lib/utils/image-store";
 
@@ -271,7 +272,9 @@ function fitSectionFont(
   return Math.max(6, fontPx * fill);
 }
 
-/** Draw a section's TEXT panel (school name / slogan) into a box. */
+/** Draw a section's TEXT panel into a box. A bottom banner with a `tagline` renders in
+ *  TWO tiers — a big headline over a smaller tagline (bands shared with the on-screen
+ *  SectionTextElement via `bannerBands`); otherwise it's one auto-fit block. */
 function drawTextBlock(
   ctx: CanvasRenderingContext2D,
   cfg: BottomBarConfig,
@@ -287,27 +290,44 @@ function drawTextBlock(
   const pad = Math.min(w, h) * SECTION_PAD_RATIO;
   const contentW = Math.max(1, w - pad * 2);
   const contentH = Math.max(1, h - pad * 2);
-  const text = cfg.text ?? "";
-  if (text.length) {
-    const fill = cfg.fontSize ?? 1;
-    const ls = cfg.letterSpacing ?? 0;
-    const fontPx = fitSectionFont(ctx, text, cfg.fontFamily, ls, contentW, contentH, fill);
-    ctx.font = `700 ${fontPx}px ${cfg.fontFamily}`;
+  const headline = cfg.text ?? "";
+  const tagline = cfg.tagline?.trim() ? cfg.tagline : "";
+  const fill = cfg.fontSize ?? 1;
+  const ls = cfg.letterSpacing ?? 0;
+  const contentTop = y + pad;
+  const align = cfg.textAlign;
+  const tx = align === "left" ? x + pad : align === "right" ? x + w - pad : x + w / 2;
+
+  // Draw one tier's `\n` lines, vertically centered within a band that starts
+  // `bandTop` below the content top and is `bandH` tall.
+  const drawTier = (str: string, fontPx: number, bandTop: number, bandH: number) => {
+    ctx.font = `800 ${fontPx}px ${cfg.fontFamily}`;
     ctx.fillStyle = cfg.textColor;
     ctx.textBaseline = "middle";
     try { (ctx as CanvasRenderingContext2D & { letterSpacing?: string }).letterSpacing = `${ls}px`; } catch { /* unsupported */ }
-    const lines = text.split("\n");
-    const lineBox = fontPx * SECTION_LINE_HEIGHT;
-    const blockH = lineBox * lines.length;
-    let ty = y + h / 2 - blockH / 2 + lineBox / 2;
-    const align = cfg.textAlign;
     ctx.textAlign = align === "left" ? "left" : align === "right" ? "right" : "center";
-    const tx = align === "left" ? x + pad : align === "right" ? x + w - pad : x + w / 2;
+    const lines = str.split("\n");
+    const lineBox = fontPx * SECTION_LINE_HEIGHT;
+    const bandCenter = contentTop + bandTop + bandH / 2;
+    let ty = bandCenter - (lineBox * lines.length) / 2 + lineBox / 2;
     for (const ln of lines) {
       ctx.fillText(ln, tx, ty);
       ty += lineBox;
     }
     try { (ctx as CanvasRenderingContext2D & { letterSpacing?: string }).letterSpacing = "0px"; } catch { /* unsupported */ }
+  };
+
+  if (headline.length) {
+    if (tagline) {
+      const bands = bannerBands(contentH);
+      const hFont = fitSectionFont(ctx, headline, cfg.fontFamily, ls, contentW, bands.headlineH, fill);
+      const tFont = fitSectionFont(ctx, tagline, cfg.fontFamily, ls, contentW, bands.taglineH, fill);
+      drawTier(headline, hFont, bands.headlineTop, bands.headlineH);
+      drawTier(tagline, tFont, bands.taglineTop, bands.taglineH);
+    } else {
+      const fontPx = fitSectionFont(ctx, headline, cfg.fontFamily, ls, contentW, contentH, fill);
+      drawTier(headline, fontPx, 0, contentH);
+    }
   }
   ctx.restore();
 }
