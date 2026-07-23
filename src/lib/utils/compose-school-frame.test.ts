@@ -8,10 +8,12 @@ import {
   schoolBannerRect,
   schoolRenderMetrics,
   drawSchoolFrame,
+  panelBleedBox,
   SCHOOL_PRINT_DPI,
   type SchoolDesign,
   type SchoolImageBundle,
 } from "./compose-school-frame";
+import { panelRects } from "@/lib/utils/panels";
 import { SCHOOL_FRAME_CONFIG } from "@/lib/constants/frame";
 import { getTotalWidthInches, getRenderHeightInches } from "@/lib/constants/frame";
 import type { BottomBarConfig, PlacedTextBar, PlacedTile, SectionState } from "@/lib/types";
@@ -78,6 +80,38 @@ describe("schoolBannerRect (the compose-frame banner bug, fixed)", () => {
     expect(m.baseFrameHeightPx).toBeLessThan(H);
     expect(bottom.y).toBeCloseTo(m.baseFrameHeightPx - m.tileSize, 5);
     expect(bottom.y).not.toBeCloseTo(H - m.tileSize, 0);
+  });
+});
+
+describe("panelBleedBox (per-panel export crop — bleed adds AREA, never scale)", () => {
+  const tilePx = 300; // 1in tile at 300 DPI, round numbers
+  const bleedPx = 12; // 0.04in bleed
+
+  it("draws 1:1 — source crop size equals output size (no enlargement)", () => {
+    for (const id of ["wing-left", "wing-right", "top", "bottom"] as const) {
+      const box = panelBleedBox(panelRects(SCHOOL_FRAME_CONFIG)[id], tilePx, bleedPx);
+      // The load-bearing invariant: the panel art is NOT stretched to fill the bleed.
+      expect(box.srcW).toBe(box.outW);
+      expect(box.srcH).toBe(box.outH);
+    }
+  });
+
+  it("adds exactly one bleed of margin on every side around the true content", () => {
+    const box = panelBleedBox({ col0: 0, col1: 1, row0: 0, row1: 7 }, tilePx, bleedPx);
+    expect(box.contentW).toBe(2 * tilePx); // 2 tiles wide (rail + wing)
+    expect(box.contentH).toBe(8 * tilePx); // full 8-row height
+    expect(box.outW).toBe(2 * tilePx + 2 * bleedPx);
+    expect(box.outH).toBe(8 * tilePx + 2 * bleedPx);
+    // Crop starts one bleed BEFORE the panel's top-left (picks up real adjacent pixels).
+    expect(box.srcX).toBe(0 * tilePx - bleedPx);
+    expect(box.srcY).toBe(0 * tilePx - bleedPx);
+  });
+
+  it("a zero bleed is an exact, unpadded panel crop", () => {
+    const box = panelBleedBox({ col0: 2, col1: 5, row0: 0, row1: 0, }, tilePx, 0);
+    expect(box.srcX).toBe(2 * tilePx);
+    expect(box.outW).toBe(box.contentW);
+    expect(box.outH).toBe(box.contentH);
   });
 });
 

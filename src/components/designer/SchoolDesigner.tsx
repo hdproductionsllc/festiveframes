@@ -20,7 +20,7 @@ import {
   createDesignStore,
   onPersistQuotaExceeded,
 } from "@/stores/design-store";
-import { composeSchoolFrame } from "@/lib/utils/compose-school-frame";
+import { composeSchoolFrame, composeSchoolPanels } from "@/lib/utils/compose-school-frame";
 import { buildPanelPartsList } from "@/lib/order/parts-list";
 import { DndProvider } from "./DndProvider";
 import { FrameCanvas, type FrameCanvasHandle } from "@/components/frame/FrameCanvas";
@@ -102,18 +102,25 @@ export function SchoolDesigner() {
     setSubmitState(null);
     try {
       const s = storeApi.getState();
-      const printPng = await composeSchoolFrame({
+      const design = {
         frameConfig: s.frameConfig,
         slots: s.slots,
         textBars: s.textBars,
         qrCode: s.qrCode,
         plateState: s.plateState,
         sections: s.sections,
-      });
+      };
+      // The assembled sheet is the OVERVIEW; the 4 panel PNGs are the print files
+      // (each positioned separately on the bed — the seams are hard to hit assembled).
+      const [printPng, panelPngs] = await Promise.all([
+        composeSchoolFrame(design),
+        composeSchoolPanels(design),
+      ]);
       if (!printPng) {
         setSubmitState({ kind: "error", msg: "Couldn't render the print file. Try again." });
         return;
       }
+      const panels = panelPngs.map((p) => ({ name: p.id, dataUrl: p.dataUrl }));
       const partsList = buildPanelPartsList({
         slots: s.slots,
         textBars: s.textBars,
@@ -128,7 +135,7 @@ export function SchoolDesigner() {
       const res = await fetch("/api/school/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ printPng, designName: s.designName, partsList }),
+        body: JSON.stringify({ printPng, panels, designName: s.designName, partsList }),
       });
       const data = (await res.json().catch(() => ({}))) as { ok?: boolean; reason?: string };
       if (res.ok && data.ok) {
