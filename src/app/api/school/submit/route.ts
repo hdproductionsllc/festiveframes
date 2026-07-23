@@ -118,7 +118,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json({ ok: false, error: "Invalid request." }, { status: 400 });
   }
 
-  const { printPng, designName, partsList } = (body ?? {}) as Record<string, unknown>;
+  const { printPng, panels, designName, partsList } = (body ?? {}) as Record<string, unknown>;
 
   // ── Validate the print image (type + size). ──
   if (typeof printPng !== "string" || !DATA_URL_RE.test(printPng)) {
@@ -135,10 +135,28 @@ export async function POST(request: Request): Promise<NextResponse> {
   }
   const name = designName.trim() || "Untitled";
 
+  // ── Validate the optional per-panel print files (left/right/top/bottom + a little
+  //    slack). Each must be a valid, size-bounded image data URL; anything malformed is
+  //    dropped so the assembled overview still sends. ──
+  const panelImages: { name: string; dataUrl: string }[] = [];
+  if (Array.isArray(panels)) {
+    for (const p of panels.slice(0, 8)) {
+      const rec = (p ?? {}) as Record<string, unknown>;
+      const url = rec.dataUrl;
+      if (typeof url !== "string" || !DATA_URL_RE.test(url)) continue;
+      if (base64Bytes(url.slice(url.indexOf(",") + 1)) > MAX_PRINT_BYTES) {
+        return NextResponse.json({ ok: false, error: "A panel image is too large." }, { status: 413 });
+      }
+      const label = typeof rec.name === "string" ? rec.name : "";
+      panelImages.push({ name: `${safeName(name)}-${str(label, 40).replace(/[^a-z0-9]+/gi, "-").toLowerCase() || `panel-${panelImages.length + 1}`}`, dataUrl: url });
+    }
+  }
+
   // ── Send (recipient is server-fixed inside sendSchoolOrderEmail). ──
   const result = await sendSchoolOrderEmail({
     designName: name,
-    printPng: { name: safeName(name), dataUrl: printPng },
+    printPng: { name: `${safeName(name)}-OVERVIEW`, dataUrl: printPng },
+    panels: panelImages,
     partsList: coercePartsList(partsList),
   });
 

@@ -46,7 +46,8 @@ import {
   QR_SIZE_RATIO,
   QR_GAP_RATIO,
 } from "@/lib/utils/text-bar";
-import { SECTION_IDS, sectionBounds, slotSuppressed } from "@/lib/utils/sections";
+import { SECTION_IDS, SECTION_LABELS, sectionBounds, slotSuppressed } from "@/lib/utils/sections";
+import { panelRects } from "@/lib/utils/panels";
 import { bannerBands } from "@/lib/utils/banner-tiers";
 import { getPiece } from "@/data/sets";
 import { getFullRes } from "@/lib/utils/image-store";
@@ -446,21 +447,21 @@ function loadImage(src: string): Promise<HTMLImageElement | null> {
   });
 }
 
+/** Overspray bleed per side when exporting PANELS separately (`composeSchoolPanels`).
+ *  The panel art is drawn a hair oversize so a little UV overspray hides the cut edge
+ *  — the same trick the jig uses (1.03" print for a 0.992" tile face). */
+export const SCHOOL_PANEL_BLEED_INCHES = 0.04;
+
 /**
- * Render a school design to a print-ready PNG data URL (browser only).
- *
- * Preloads every needed bitmap — plate photo, set-piece artwork, uploaded-art
- * snappets pulled at FULL resolution from IndexedDB (`getFullRes`, falling back to
- * the small preview url), image-section panels, and the QR — draws the frame, rotates
- * it to lie along the 16.5" bed axis, and stamps the physical DPI via `setPngDpi`.
- * Returns "" on the server (no document).
+ * Load every bitmap a design needs and draw the WHOLE frame (un-rotated) to a canvas.
+ * Shared by `composeSchoolFrame` (assembled sheet) and `composeSchoolPanels` (4 files).
+ * Returns null on the server or if a 2D context can't be had.
  */
-export async function composeSchoolFrame(
+async function renderSchoolFrameCanvas(
   design: SchoolDesign,
-  opts: ComposeSchoolOptions = {},
-): Promise<string> {
-  if (typeof document === "undefined") return "";
-  const dpi = opts.dpi ?? SCHOOL_PRINT_DPI;
+  dpi: number,
+): Promise<{ canvas: HTMLCanvasElement; width: number; height: number } | null> {
+  if (typeof document === "undefined") return null;
 
   const fonts = (document as unknown as { fonts?: { ready?: Promise<unknown> } }).fonts;
   if (fonts?.ready) { try { await fonts.ready; } catch { /* ignore */ } }
@@ -552,29 +553,125 @@ export async function composeSchoolFrame(
   const ctx = canvas.getContext("2d");
   if (!ctx) {
     objectUrls.forEach((u) => URL.revokeObjectURL(u));
-    return "";
+    return null;
   }
   drawSchoolFrame(ctx, design, bundle, W);
-
-  // Rotate to lie along the bed's long (16.5") axis.
-  let out: HTMLCanvasElement = canvas;
-  if (shouldRotateForBed(W, H)) {
-    const rotated = document.createElement("canvas");
-    rotated.width = H;
-    rotated.height = W;
-    const rctx = rotated.getContext("2d");
-    if (rctx) {
-      rctx.translate(H, 0);
-      rctx.rotate(Math.PI / 2);
-      rctx.drawImage(canvas, 0, 0);
-      out = rotated;
-    }
-  }
-
-  const dataUrl = out.toDataURL("image/png");
+  // The bitmaps have been rasterized into the canvas; their object URLs are done.
   objectUrls.forEach((u) => URL.revokeObjectURL(u));
+  return { canvas, width: W, height: H };
+}
 
-  // Stamp physical DPI so eufyMake imports at true inches (reuses the eufy core).
+/** Rotate a canvas 90° when it's portrait, so its long axis lies horizontal (fits the
+ *  bed / a fixed drop orientation). Returns the same canvas when already landscape. */
+function rotateToLandscape(src: HTMLCanvasElement): HTMLCanvasElement {
+  if (src.height <= src.width) return src;
+  const rot = document.createElement("canvas");
+  rot.width = src.height;
+  rot.height = src.width;
+  const rctx = rot.getContext("2d");
+  if (!rctx) return src;
+  rctx.translate(src.height, 0);
+  rctx.rotate(Math.PI / 2);
+  rctx.drawImage(src, 0, 0);
+  return rot;
+}
+
+/**
+ * Render a school design to a print-ready PNG data URL (browser only) — the ASSEMBLED
+ * frame, rotated to lie along the 16.5" bed axis and DPI-stamped. Returns "" on the
+ * server (no document).
+ */
+export async function composeSchoolFrame(
+  design: SchoolDesign,
+  opts: ComposeSchoolOptions = {},
+): Promise<string> {
+  const dpi = opts.dpi ?? SCHOOL_PRINT_DPI;
+  const r = await renderSchoolFrameCanvas(design, dpi);
+  if (!r) return "";
+  const out = shouldRotateForBed(r.width, r.height) ? rotateToLandscape(r.canvas) : r.canvas;
   const { setPngDpi } = await import("@/lib/utils/eufy-print-core");
-  return setPngDpi(dataUrl, dpi);
+  return setPngDpi(out.toDataURL("image/png"), dpi);
+}
+
+/** One separately-printable panel PNG (see `composeSchoolPanels`). */
+export interface SchoolPanelPng {
+  id: SectionId;
+  label: string;
+  /** DPI-stamped PNG data URL, rotated to landscape, transparent background. */
+  dataUrl: string;
+  /** Final printed size (after bleed + rotation), inches. */
+  widthInches: number;
+  heightInches: number;
+}
+
+/**
+ * Render the design as FOUR separate panel PNGs — left, right, top, bottom — instead
+ * of one assembled sheet, so each can be positioned independently on the eufyMake bed
+ * (the assembled sheet's seams are hard to hit with the bed's positioning system).
+ *
+ * Each panel is cropped from the full render at its `panelRects` rectangle, drawn a
+ * hair oversize to add overspray BLEED, rotated to landscape (`auto-rotate to fit`),
+ * and DPI-stamped. Panels with NO ink (fully transparent) are skipped — an empty panel
+ * has nothing to print. Browser only; returns [] on the server.
+ */
+export async function composeSchoolPanels(
+  design: SchoolDesign,
+  opts: ComposeSchoolOptions & { bleedInches?: number } = {},
+): Promise<SchoolPanelPng[]> {
+  const dpi = opts.dpi ?? SCHOOL_PRINT_DPI;
+  const bleedPx = (opts.bleedInches ?? SCHOOL_PANEL_BLEED_INCHES) * dpi;
+  const r = await renderSchoolFrameCanvas(design, dpi);
+  if (!r) return [];
+
+  const config = design.frameConfig;
+  const tilePx = config.tileSizeInches * dpi;
+  const rects = panelRects(config);
+  const { setPngDpi } = await import("@/lib/utils/eufy-print-core");
+
+  const out: SchoolPanelPng[] = [];
+  for (const id of SECTION_IDS) {
+    const rc = rects[id];
+    const sx = rc.col0 * tilePx;
+    const sy = rc.row0 * tilePx;
+    const sw = (rc.col1 - rc.col0 + 1) * tilePx;
+    const sh = (rc.row1 - rc.row0 + 1) * tilePx;
+    const outW = Math.max(1, Math.round(sw + 2 * bleedPx));
+    const outH = Math.max(1, Math.round(sh + 2 * bleedPx));
+
+    const c = document.createElement("canvas");
+    c.width = outW;
+    c.height = outH;
+    const cx = c.getContext("2d");
+    if (!cx) continue;
+    // Stretch the panel's crop to fill the bleed-expanded canvas → overspray bleed.
+    cx.drawImage(r.canvas, sx, sy, sw, sh, 0, 0, outW, outH);
+
+    // Skip a panel that carries no ink at all (nothing to print).
+    if (isCanvasBlank(cx, outW, outH)) continue;
+
+    const fin = rotateToLandscape(c);
+    out.push({
+      id,
+      label: SECTION_LABELS[id],
+      dataUrl: setPngDpi(fin.toDataURL("image/png"), dpi),
+      widthInches: fin.width / dpi,
+      heightInches: fin.height / dpi,
+    });
+  }
+  return out;
+}
+
+/** True if every sampled pixel is fully transparent (a coarse step keeps it cheap). */
+function isCanvasBlank(ctx: CanvasRenderingContext2D, w: number, h: number): boolean {
+  let data: Uint8ClampedArray;
+  try {
+    data = ctx.getImageData(0, 0, w, h).data;
+  } catch {
+    return false; // can't inspect → assume it has content (never drop real art)
+  }
+  // Sample every ~16th pixel's alpha; any opaque sample means "not blank".
+  for (let i = 3; i < data.length; i += 4 * 16) {
+    if (data[i] !== 0) return false;
+  }
+  return true;
 }

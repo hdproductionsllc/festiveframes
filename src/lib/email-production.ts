@@ -527,8 +527,12 @@ export async function sendCartCustomerEmail(o: CartCustomerInput): Promise<void>
 export interface SchoolOrderInput {
   /** Human design name — escaped before it touches the HTML/subject. */
   designName: string;
-  /** The full-resolution, DPI-stamped print PNG (a data:image/(png|jpeg) URL). */
+  /** The assembled full-frame PNG (data:image/(png|jpeg) URL). When `panels` are also
+   *  present this is the OVERVIEW (shows the whole layout) and the panels are printed. */
   printPng: NamedImage;
+  /** The 4 separately-printable panel PNGs (left/right/top/bottom). When present, these
+   *  are the print files and `printPng` is just an overview. */
+  panels?: NamedImage[];
   /** Optional parts list for an at-a-glance production summary in the body. */
   partsList?: PartsList | PanelPartsList | null;
 }
@@ -551,10 +555,17 @@ function toPrintAttachment(img: NamedImage): Attachment | null {
   return { ...base, filename: `${img.name}.${ext}` };
 }
 
-function schoolOrderHtml(designName: string, parts: PartsList | PanelPartsList | null): string {
+function schoolOrderHtml(
+  designName: string,
+  parts: PartsList | PanelPartsList | null,
+  panelCount = 0,
+): string {
   const partsBlock = parts
     ? `<div style="margin:18px 0 0;">${partsListHtml(parts)}</div>`
-    : `<p style="margin:14px 0 0;color:${INK};font-size:13px;">No parts list was included — the print file is attached.</p>`;
+    : `<p style="margin:14px 0 0;color:${INK};font-size:13px;">No parts list was included — the print files are attached.</p>`;
+  const filesNote = panelCount
+    ? `<strong>${panelCount} panel print files</strong> are attached — print and position each one separately on the bed. The <strong>OVERVIEW</strong> attachment shows the assembled layout (do not print it).`
+    : `The print-ready file is attached to this email.`;
   return shell(
     `New school frame order — ${esc(designName || "Untitled")}`,
     `
@@ -562,18 +573,20 @@ function schoolOrderHtml(designName: string, parts: PartsList | PanelPartsList |
     <p style="margin:0 0 8px;color:${INK};font-size:14px;">
       <strong>Design:</strong> ${esc(designName || "Untitled")}
     </p>
-    <p style="margin:0 0 12px;color:${INK};font-size:13px;">The print-ready file is attached to this email.</p>
+    <p style="margin:0 0 12px;color:${INK};font-size:13px;">${filesNote}</p>
     ${partsBlock}`,
   );
 }
 
-function schoolOrderText(designName: string): string {
+function schoolOrderText(designName: string, panelCount = 0): string {
   return [
     `NEW SCHOOL FRAME ORDER`,
     ``,
     `Design: ${designName || "Untitled"}`,
     ``,
-    `The print-ready file is attached to this email.`,
+    panelCount
+      ? `${panelCount} panel print files are attached — print and position each one separately. The OVERVIEW attachment shows the assembled layout (do not print it).`
+      : `The print-ready file is attached to this email.`,
     ``,
     `Made to order in the USA · St. Louis, Missouri.`,
   ].join("\n");
@@ -591,9 +604,18 @@ export async function sendSchoolOrderEmail(o: SchoolOrderInput): Promise<SchoolO
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) return { ok: false, reason: "email-not-configured" };
 
-  const attachment = toPrintAttachment(o.printPng);
-  if (!attachment) return { ok: false, reason: "invalid-attachment" };
-  if (attachmentBytes(attachment) > MAX_ATTACHMENT_BYTES) return { ok: false, reason: "attachment-too-large" };
+  const overview = toPrintAttachment(o.printPng);
+  if (!overview) return { ok: false, reason: "invalid-attachment" };
+
+  // When panels are supplied, THEY are the print files (each positioned separately on
+  // the bed) and `printPng` becomes an OVERVIEW. Panels first, overview last.
+  const panelAttachments = (o.panels ?? [])
+    .map(toPrintAttachment)
+    .filter((a): a is Attachment => a !== null);
+  const attachments = panelAttachments.length ? [...panelAttachments, overview] : [overview];
+
+  const totalBytes = attachments.reduce((sum, a) => sum + attachmentBytes(a), 0);
+  if (totalBytes > MAX_ATTACHMENT_BYTES) return { ok: false, reason: "attachment-too-large" };
 
   const from = process.env.EMAIL_FROM || "Festive Frames <onboarding@resend.dev>";
   const to = schoolOrdersRecipient();
@@ -606,9 +628,9 @@ export async function sendSchoolOrderEmail(o: SchoolOrderInput): Promise<SchoolO
       from,
       to,
       subject: `SCHOOL ORDER — ${subjectName}`,
-      html: schoolOrderHtml(o.designName, o.partsList ?? null),
-      text: schoolOrderText(o.designName),
-      attachments: [attachment],
+      html: schoolOrderHtml(o.designName, o.partsList ?? null, panelAttachments.length),
+      text: schoolOrderText(o.designName, panelAttachments.length),
+      attachments,
     });
     return { ok: true };
   } catch (err) {

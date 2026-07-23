@@ -82,6 +82,57 @@ describe("POST /api/school/submit — validation", () => {
   });
 });
 
+describe("POST /api/school/submit — panels", () => {
+  it("attaches every valid panel PLUS the overview (panels first, overview last)", async () => {
+    process.env.RESEND_API_KEY = "test-key";
+    const res = await POST(
+      req({
+        printPng: TINY_PNG,
+        designName: "Lincoln HS",
+        panels: [
+          { name: "wing-left", dataUrl: TINY_PNG },
+          { name: "wing-right", dataUrl: TINY_PNG },
+          { name: "top", dataUrl: TINY_PNG },
+          { name: "bottom", dataUrl: TINY_PNG },
+        ],
+      }),
+    );
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ ok: true });
+    const arg = sendMock.mock.calls[0][0];
+    // 4 panels + 1 overview.
+    expect(arg.attachments).toHaveLength(5);
+    // Overview is LAST and named as such; panels precede it.
+    expect(arg.attachments[4].filename).toMatch(/OVERVIEW/i);
+    expect(arg.attachments[0].filename).toMatch(/wing-left/);
+  });
+
+  it("drops a malformed panel but still sends the rest + overview", async () => {
+    process.env.RESEND_API_KEY = "test-key";
+    const res = await POST(
+      req({
+        printPng: TINY_PNG,
+        designName: "X",
+        panels: [
+          { name: "top", dataUrl: TINY_PNG },
+          { name: "bad", dataUrl: "https://evil.example/x.png" }, // not a data URL → dropped
+        ],
+      }),
+    );
+    expect(res.status).toBe(200);
+    const arg = sendMock.mock.calls[0][0];
+    expect(arg.attachments).toHaveLength(2); // 1 valid panel + overview
+  });
+
+  it("still works with NO panels (assembled-only path)", async () => {
+    process.env.RESEND_API_KEY = "test-key";
+    const res = await POST(req({ printPng: TINY_PNG, designName: "X" }));
+    expect(res.status).toBe(200);
+    const arg = sendMock.mock.calls[0][0];
+    expect(arg.attachments).toHaveLength(1);
+  });
+});
+
 describe("POST /api/school/submit — security", () => {
   it("sends to the SERVER-FIXED recipient, ignoring any recipient in the body", async () => {
     process.env.RESEND_API_KEY = "test-key";
