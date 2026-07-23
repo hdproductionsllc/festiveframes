@@ -47,7 +47,7 @@ import {
   QR_GAP_RATIO,
 } from "@/lib/utils/text-bar";
 import { SECTION_IDS, SECTION_LABELS, sectionBounds, slotSuppressed } from "@/lib/utils/sections";
-import { panelRects } from "@/lib/utils/panels";
+import { panelRects, type PanelRect } from "@/lib/utils/panels";
 import { bannerBands } from "@/lib/utils/banner-tiers";
 import { getPiece } from "@/data/sets";
 import { getFullRes } from "@/lib/utils/image-store";
@@ -59,6 +59,30 @@ export const SCHOOL_PRINT_DPI = 300;
  *  along the bed's 16.5" side (the school frame fits only in that orientation). */
 export const EUFY_BED_LONG_INCHES = 16.5;
 export const EUFY_BED_SHORT_INCHES = 13;
+
+/**
+ * Source-crop + output box for one panel PNG, with overspray BLEED added as EXTRA AREA
+ * — never as scaling. `srcW === outW` and `srcH === outH`, so the panel draws 1:1: tiles
+ * keep their true size and seams stay aligned, and only the (transparent or neighbour)
+ * bleed margin is added around the content. The crop starts a bleed BEFORE the panel's
+ * top-left, so the outward margin picks up the real adjacent pixels. Pure — node-testable.
+ */
+export function panelBleedBox(rc: PanelRect, tilePx: number, bleedPx: number) {
+  const contentW = (rc.col1 - rc.col0 + 1) * tilePx;
+  const contentH = (rc.row1 - rc.row0 + 1) * tilePx;
+  const outW = Math.max(1, Math.round(contentW + 2 * bleedPx));
+  const outH = Math.max(1, Math.round(contentH + 2 * bleedPx));
+  return {
+    srcX: rc.col0 * tilePx - bleedPx,
+    srcY: rc.row0 * tilePx - bleedPx,
+    srcW: outW, // === outW → 1:1 draw (no enlargement)
+    srcH: outH,
+    outW,
+    outH,
+    contentW,
+    contentH,
+  };
+}
 
 // ── The design, passed in explicitly (NOT read from any store) ────────────────
 export interface SchoolDesign {
@@ -630,21 +654,20 @@ export async function composeSchoolPanels(
 
   const out: SchoolPanelPng[] = [];
   for (const id of SECTION_IDS) {
-    const rc = rects[id];
-    const sx = rc.col0 * tilePx;
-    const sy = rc.row0 * tilePx;
-    const sw = (rc.col1 - rc.col0 + 1) * tilePx;
-    const sh = (rc.row1 - rc.row0 + 1) * tilePx;
-    const outW = Math.max(1, Math.round(sw + 2 * bleedPx));
-    const outH = Math.max(1, Math.round(sh + 2 * bleedPx));
+    const box = panelBleedBox(rects[id], tilePx, bleedPx);
 
     const c = document.createElement("canvas");
-    c.width = outW;
-    c.height = outH;
+    c.width = box.outW;
+    c.height = box.outH;
     const cx = c.getContext("2d");
     if (!cx) continue;
-    // Stretch the panel's crop to fill the bleed-expanded canvas → overspray bleed.
-    cx.drawImage(r.canvas, sx, sy, sw, sh, 0, 0, outW, outH);
+    // TRUE bleed — the panel art is drawn at 1:1 (NEVER scaled/enlarged). The crop is
+    // EXTENDED outward by the bleed on every side (box.srcW === box.outW), so the margin
+    // is filled with the real adjacent pixels: a neighbouring panel's tiles at a shared
+    // seam, or transparent past the frame's outer edge. The panel's own content keeps
+    // its true size, so tiles print at the design's exact dimensions and seams line up.
+    cx.drawImage(r.canvas, box.srcX, box.srcY, box.srcW, box.srcH, 0, 0, box.outW, box.outH);
+    const { outW, outH } = box;
 
     // Skip a panel that carries no ink at all (nothing to print).
     if (isCanvasBlank(cx, outW, outH)) continue;
