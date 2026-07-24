@@ -83,16 +83,17 @@ describe("schoolBannerRect (the compose-frame banner bug, fixed)", () => {
   });
 });
 
-describe("panelBleedBox (per-panel export crop — bleed adds AREA, never scale)", () => {
+describe("panelBleedBox (per-panel export crop — bleed adds AREA via edge-clamp, never scale)", () => {
   const tilePx = 300; // 1in tile at 300 DPI, round numbers
   const bleedPx = 12; // 0.04in bleed
 
-  it("draws 1:1 — source crop size equals output size (no enlargement)", () => {
+  it("keeps content 1:1 and pads by exactly one bleed on every side", () => {
     for (const id of ["wing-left", "wing-right", "top", "bottom"] as const) {
       const box = panelBleedBox(panelRects(SCHOOL_FRAME_CONFIG)[id], tilePx, bleedPx);
-      // The load-bearing invariant: the panel art is NOT stretched to fill the bleed.
-      expect(box.srcW).toBe(box.outW);
-      expect(box.srcH).toBe(box.outH);
+      // The load-bearing invariant: the panel art is NOT stretched to fill the bleed —
+      // the output is exactly the content plus one bleed of margin on each side.
+      expect(box.outW).toBe(Math.round(box.contentW) + 2 * box.bleed);
+      expect(box.outH).toBe(Math.round(box.contentH) + 2 * box.bleed);
     }
   });
 
@@ -102,14 +103,17 @@ describe("panelBleedBox (per-panel export crop — bleed adds AREA, never scale)
     expect(box.contentH).toBe(8 * tilePx); // full 8-row height
     expect(box.outW).toBe(2 * tilePx + 2 * bleedPx);
     expect(box.outH).toBe(8 * tilePx + 2 * bleedPx);
-    // Crop starts one bleed BEFORE the panel's top-left (picks up real adjacent pixels).
-    expect(box.srcX).toBe(0 * tilePx - bleedPx);
-    expect(box.srcY).toBe(0 * tilePx - bleedPx);
+    // Content is sampled from its TRUE position (no reaching into the neighbour); the
+    // bleed margin is filled by edge-clamp, so the crop origin is the panel's own corner.
+    expect(box.contentX).toBe(0 * tilePx);
+    expect(box.contentY).toBe(0 * tilePx);
+    expect(box.bleed).toBe(bleedPx);
   });
 
   it("a zero bleed is an exact, unpadded panel crop", () => {
     const box = panelBleedBox({ col0: 2, col1: 5, row0: 0, row1: 0, }, tilePx, 0);
-    expect(box.srcX).toBe(2 * tilePx);
+    expect(box.contentX).toBe(2 * tilePx);
+    expect(box.bleed).toBe(0);
     expect(box.outW).toBe(box.contentW);
     expect(box.outH).toBe(box.contentH);
   });

@@ -61,27 +61,22 @@ export const EUFY_BED_LONG_INCHES = 16.5;
 export const EUFY_BED_SHORT_INCHES = 13;
 
 /**
- * Source-crop + output box for one panel PNG, with overspray BLEED added as EXTRA AREA
- * — never as scaling. `srcW === outW` and `srcH === outH`, so the panel draws 1:1: tiles
- * keep their true size and seams stay aligned, and only the (transparent or neighbour)
- * bleed margin is added around the content. The crop starts a bleed BEFORE the panel's
- * top-left, so the outward margin picks up the real adjacent pixels. Pure — node-testable.
+ * Geometry for one panel PNG: the panel's TRUE source rectangle in the full render,
+ * plus the integer bleed and the output size. The panel content draws 1:1 at
+ * `(bleed, bleed)` (never scaled), and the bleed margin is filled by EDGE-CLAMP — the
+ * panel's own outermost pixels replicated outward. Crucially this does NOT sample the
+ * neighbouring panel, so the bleed never leaves a stray sliver of an adjacent tile at a
+ * seam (which showed up as artifacts on spaced-apart panels). Pure — node-testable.
  */
 export function panelBleedBox(rc: PanelRect, tilePx: number, bleedPx: number) {
+  const bleed = Math.max(0, Math.round(bleedPx));
+  const contentX = rc.col0 * tilePx;
+  const contentY = rc.row0 * tilePx;
   const contentW = (rc.col1 - rc.col0 + 1) * tilePx;
   const contentH = (rc.row1 - rc.row0 + 1) * tilePx;
-  const outW = Math.max(1, Math.round(contentW + 2 * bleedPx));
-  const outH = Math.max(1, Math.round(contentH + 2 * bleedPx));
-  return {
-    srcX: rc.col0 * tilePx - bleedPx,
-    srcY: rc.row0 * tilePx - bleedPx,
-    srcW: outW, // === outW → 1:1 draw (no enlargement)
-    srcH: outH,
-    outW,
-    outH,
-    contentW,
-    contentH,
-  };
+  const outW = Math.max(1, Math.round(contentW) + 2 * bleed);
+  const outH = Math.max(1, Math.round(contentH) + 2 * bleed);
+  return { contentX, contentY, contentW, contentH, bleed, outW, outH };
 }
 
 // ── The design, passed in explicitly (NOT read from any store) ────────────────
@@ -671,13 +666,24 @@ export async function composeSchoolPanels(
     c.height = box.outH;
     const cx = c.getContext("2d");
     if (!cx) continue;
-    // TRUE bleed — the panel art is drawn at 1:1 (NEVER scaled/enlarged). The crop is
-    // EXTENDED outward by the bleed on every side (box.srcW === box.outW), so the margin
-    // is filled with the real adjacent pixels: a neighbouring panel's tiles at a shared
-    // seam, or transparent past the frame's outer edge. The panel's own content keeps
-    // its true size, so tiles print at the design's exact dimensions and seams line up.
-    cx.drawImage(r.canvas, box.srcX, box.srcY, box.srcW, box.srcH, 0, 0, box.outW, box.outH);
-    const { outW, outH } = box;
+    // EDGE-CLAMP bleed. The panel art draws 1:1 at (bleed, bleed) — NEVER scaled — so
+    // tiles print at the design's exact dimensions. The bleed margin is then filled by
+    // replicating the panel's OWN outermost row/column outward (edges) and its corner
+    // pixels into the corners. This deliberately does NOT sample the neighbouring panel,
+    // so a spaced-apart panel never carries a stray sliver of an adjacent tile at a seam
+    // (the artifact seen on banner ends) — the overspray is only ever the panel's own colour.
+    const { contentX: X, contentY: Y, contentW: W2, contentH: H2, bleed: b, outW, outH } = box;
+    cx.drawImage(r.canvas, X, Y, W2, H2, b, b, W2, H2); // core, 1:1
+    if (b > 0) {
+      cx.drawImage(r.canvas, X, Y, W2, 1, b, 0, W2, b); // top edge
+      cx.drawImage(r.canvas, X, Y + H2 - 1, W2, 1, b, b + H2, W2, b); // bottom edge
+      cx.drawImage(r.canvas, X, Y, 1, H2, 0, b, b, H2); // left edge
+      cx.drawImage(r.canvas, X + W2 - 1, Y, 1, H2, b + W2, b, b, H2); // right edge
+      cx.drawImage(r.canvas, X, Y, 1, 1, 0, 0, b, b); // TL corner
+      cx.drawImage(r.canvas, X + W2 - 1, Y, 1, 1, b + W2, 0, b, b); // TR corner
+      cx.drawImage(r.canvas, X, Y + H2 - 1, 1, 1, 0, b + H2, b, b); // BL corner
+      cx.drawImage(r.canvas, X + W2 - 1, Y + H2 - 1, 1, 1, b + W2, b + H2, b, b); // BR corner
+    }
 
     // Skip a panel that carries no ink at all (nothing to print).
     if (isCanvasBlank(cx, outW, outH)) continue;
