@@ -17,6 +17,7 @@ import { diwaliSet } from "./diwali";
 import { militarySet } from "./military";
 import { militaryRealisticSet } from "./military-realistic";
 import { schoolSet } from "./school";
+import { highSchoolSet } from "./high-school";
 
 // Ordered: Essentials first, holidays chronologically, then cultural/themed sets
 export const tileSets: TileSet[] = [
@@ -38,6 +39,7 @@ export const tileSets: TileSet[] = [
   militarySet,
   militaryRealisticSet,
   schoolSet,
+  highSchoolSet,
 ];
 
 /**
@@ -62,6 +64,12 @@ export const surfacedSets: TileSet[] = SURFACED_SET_IDS.map(
  * tiles (the School Spirit set) WITHOUT touching /build. The school builder passes
  * this to <TilePalette surfacedSetIds={...}> — /build passes nothing and keeps the
  * global list. See TileGrid / QuickActions.
+ *
+ * "hs" (Becky's High School collection) is deliberately NOT here yet: its piece
+ * data is complete, but the PNGs in `public/tiles/high-school/` are not committed,
+ * so surfacing it now would show a palette of broken images. Once the art is in
+ * (`node scripts/import-high-school-art.mjs <dir>` verifies it), add "hs" to this
+ * list — that one edit is the whole switch-on.
  */
 export const SCHOOL_SURFACED_SET_IDS: readonly string[] = ["school"];
 
