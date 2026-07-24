@@ -487,8 +487,18 @@ async function renderSchoolFrameCanvas(
 ): Promise<{ canvas: HTMLCanvasElement; width: number; height: number } | null> {
   if (typeof document === "undefined") return null;
 
+  // Wait for web fonts so text banners measure/paint with real glyph metrics — but
+  // NEVER hang the export on it. A slow or blocked font CDN could leave fonts.ready
+  // pending indefinitely; cap the wait so the render (and the download) always proceeds.
   const fonts = (document as unknown as { fonts?: { ready?: Promise<unknown> } }).fonts;
-  if (fonts?.ready) { try { await fonts.ready; } catch { /* ignore */ } }
+  if (fonts?.ready) {
+    try {
+      await Promise.race([
+        fonts.ready,
+        new Promise((resolve) => setTimeout(resolve, 4000)),
+      ]);
+    } catch { /* ignore */ }
+  }
 
   const { frameConfig: config, slots, textBars, qrCode, sections } = design;
   const { width: W, height: H } = schoolCanvasSize(config, dpi);
