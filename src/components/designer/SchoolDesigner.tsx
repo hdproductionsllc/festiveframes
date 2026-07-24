@@ -57,6 +57,13 @@ export function SchoolDesigner() {
   const [snappetPreview, setSnappetPreview] = useState<SnappetPreview | null>(null);
   const [storageFull, setStorageFull] = useState(false);
   const [exporting, setExporting] = useState(false);
+  // Export result surfaced in a banner so the button is NEVER a silent no-op — and so
+  // it carries a REAL tappable download link, which iOS Safari honors (a synthetic
+  // <a download>.click() does not, which is why "won't allow me to export anything").
+  const [exportResult, setExportResult] = useState<
+    { kind: "rendering" | "ready" | "error"; msg: string; href?: string; filename?: string } | null
+  >(null);
+  const exportUrlRef = useRef<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   // null = idle; otherwise the outcome of the last "Send to production" attempt.
   const [submitState, setSubmitState] = useState<
@@ -71,6 +78,12 @@ export function SchoolDesigner() {
   const handleExportPrint = async () => {
     if (exporting) return;
     setExporting(true);
+    setExportResult({ kind: "rendering", msg: "Rendering your print files…" });
+    // Release any prior export URL before minting a new one.
+    if (exportUrlRef.current) {
+      URL.revokeObjectURL(exportUrlRef.current);
+      exportUrlRef.current = null;
+    }
     try {
       const s = storeApi.getState();
       const design = {
@@ -87,30 +100,48 @@ export function SchoolDesigner() {
       ]);
       const base = (s.designName || "school-frame").replace(/[^a-z0-9]+/gi, "-").replace(/^-+|-+$/g, "").toLowerCase() || "school-frame";
 
-      const triggerDownload = (href: string, filename: string) => {
-        const a = document.createElement("a");
-        a.href = href;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-      };
-
-      // No printable panels (e.g. an empty design) → just the assembled PNG.
+      let blob: Blob;
+      let filename: string;
       if (panelPngs.length === 0) {
-        if (overview) triggerDownload(overview, `${base}-print.png`);
-        return;
+        // Nothing printable yet (empty design) → fall back to the assembled sheet.
+        if (!overview) {
+          setExportResult({ kind: "error", msg: "Nothing to export yet — add some tiles or art to the frame first." });
+          return;
+        }
+        blob = new Blob([dataUrlToBytes(overview) as unknown as BlobPart], { type: "image/png" });
+        filename = `${base}-print.png`;
+      } else {
+        const entries: ZipEntry[] = panelPngs.map((p) => ({
+          name: `${base}-${p.id}.png`,
+          data: dataUrlToBytes(p.dataUrl),
+        }));
+        if (overview) entries.push({ name: `${base}-OVERVIEW-do-not-print.png`, data: dataUrlToBytes(overview) });
+        blob = makeZip(entries);
+        filename = `${base}-print-panels.zip`;
       }
 
-      const entries: ZipEntry[] = panelPngs.map((p) => ({
-        name: `${base}-${p.id}.png`,
-        data: dataUrlToBytes(p.dataUrl),
-      }));
-      if (overview) entries.push({ name: `${base}-OVERVIEW-do-not-print.png`, data: dataUrlToBytes(overview) });
+      const url = URL.createObjectURL(blob);
+      exportUrlRef.current = url;
 
-      const url = URL.createObjectURL(makeZip(entries));
-      triggerDownload(url, `${base}-print-panels.zip`);
-      URL.revokeObjectURL(url);
+      // Desktop convenience: auto-trigger the download. iOS Safari ignores a synthetic
+      // click, so the banner below ALSO shows a REAL anchor the user can tap to save.
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+
+      setExportResult({
+        kind: "ready",
+        msg: filename.endsWith(".zip")
+          ? "Your 4 panel print files are ready (zipped)."
+          : "Your print file is ready.",
+        href: url,
+        filename,
+      });
+    } catch {
+      setExportResult({ kind: "error", msg: "Couldn't render the print files. Please try again." });
     } finally {
       setExporting(false);
     }
@@ -255,6 +286,47 @@ export function SchoolDesigner() {
           >
             Dismiss
           </button>
+        </div>
+      )}
+
+      {exportResult && (
+        <div
+          role="status"
+          className={`flex flex-wrap items-center justify-between gap-3 border-b-[3px] border-[#1e1b17] px-4 py-2.5 ${
+            exportResult.kind === "ready"
+              ? "bg-[#3fb0e6] text-[#0a1a22]"
+              : exportResult.kind === "rendering"
+                ? "bg-[#f8c53b] text-[#1e1b17]"
+                : "bg-[#C8102E] text-[#fff9ec]"
+          }`}
+        >
+          <p className="text-xs font-bold leading-snug sm:text-sm">
+            {exportResult.msg}
+            {exportResult.kind === "ready" && (
+              <span className="font-semibold opacity-80"> If the download didn&apos;t start, tap the button →</span>
+            )}
+          </p>
+          <div className="flex shrink-0 items-center gap-2">
+            {exportResult.kind === "ready" && exportResult.href && (
+              // A REAL anchor the user taps — this is what downloads on iOS Safari.
+              <a
+                href={exportResult.href}
+                download={exportResult.filename}
+                className="rounded-full border-2 border-[#1e1b17] bg-[#fff9ec] px-3 py-1 text-xs font-extrabold uppercase tracking-wide text-[#1e1b17] hover:bg-white"
+              >
+                ⬇ Download{exportResult.filename?.endsWith(".zip") ? " .zip" : ""}
+              </a>
+            )}
+            {exportResult.kind !== "rendering" && (
+              <button
+                type="button"
+                onClick={() => setExportResult(null)}
+                className="rounded-full border-2 border-current px-2.5 py-0.5 text-xs font-extrabold uppercase tracking-wide hover:opacity-80"
+              >
+                Dismiss
+              </button>
+            )}
+          </div>
         </div>
       )}
 
