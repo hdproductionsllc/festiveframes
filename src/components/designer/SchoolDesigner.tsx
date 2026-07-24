@@ -21,6 +21,7 @@ import {
   onPersistQuotaExceeded,
 } from "@/stores/design-store";
 import { composeSchoolFrame, composeSchoolPanels } from "@/lib/utils/compose-school-frame";
+import { makeZip, dataUrlToBytes, type ZipEntry } from "@/lib/utils/zip";
 import { buildPanelPartsList } from "@/lib/order/parts-list";
 import { DndProvider } from "./DndProvider";
 import { FrameCanvas, type FrameCanvasHandle } from "@/components/frame/FrameCanvas";
@@ -62,30 +63,54 @@ export function SchoolDesigner() {
     { kind: "ok" | "not-configured" | "error"; msg: string } | null
   >(null);
 
-  // Export the WHOLE assembled frame to a print-ready, DPI-stamped PNG (the school
-  // print renderer — a separate path from /build's checkout proof). Client-side only:
-  // it reads the current design snapshot, composes the PNG, and downloads it. No
-  // order, no payment — that commerce wiring is a separate, confirmed step.
+  // Export the print files as a downloaded ZIP: the 4 separately-printable panel PNGs
+  // (left/right/top/bottom) plus the assembled sheet as an OVERVIEW (do-not-print), so
+  // the operator has exactly what the production email would carry. Client-side only —
+  // no order, no payment. Falls back to a single assembled PNG if a design somehow has
+  // no printable panels.
   const handleExportPrint = async () => {
     if (exporting) return;
     setExporting(true);
     try {
       const s = storeApi.getState();
-      const dataUrl = await composeSchoolFrame({
+      const design = {
         frameConfig: s.frameConfig,
         slots: s.slots,
         textBars: s.textBars,
         qrCode: s.qrCode,
         plateState: s.plateState,
         sections: s.sections,
-      });
-      if (!dataUrl) return;
-      const a = document.createElement("a");
-      a.href = dataUrl;
-      a.download = `${(s.designName || "school-frame").replace(/[^a-z0-9]+/gi, "-").toLowerCase()}-print.png`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
+      };
+      const [overview, panelPngs] = await Promise.all([
+        composeSchoolFrame(design),
+        composeSchoolPanels(design),
+      ]);
+      const base = (s.designName || "school-frame").replace(/[^a-z0-9]+/gi, "-").replace(/^-+|-+$/g, "").toLowerCase() || "school-frame";
+
+      const triggerDownload = (href: string, filename: string) => {
+        const a = document.createElement("a");
+        a.href = href;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      };
+
+      // No printable panels (e.g. an empty design) → just the assembled PNG.
+      if (panelPngs.length === 0) {
+        if (overview) triggerDownload(overview, `${base}-print.png`);
+        return;
+      }
+
+      const entries: ZipEntry[] = panelPngs.map((p) => ({
+        name: `${base}-${p.id}.png`,
+        data: dataUrlToBytes(p.dataUrl),
+      }));
+      if (overview) entries.push({ name: `${base}-OVERVIEW-do-not-print.png`, data: dataUrlToBytes(overview) });
+
+      const url = URL.createObjectURL(makeZip(entries));
+      triggerDownload(url, `${base}-print-panels.zip`);
+      URL.revokeObjectURL(url);
     } finally {
       setExporting(false);
     }
