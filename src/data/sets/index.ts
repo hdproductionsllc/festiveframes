@@ -17,6 +17,7 @@ import { diwaliSet } from "./diwali";
 import { militarySet } from "./military";
 import { militaryRealisticSet } from "./military-realistic";
 import { schoolSet } from "./school";
+import { highSchoolSet } from "./high-school";
 
 // Ordered: Essentials first, holidays chronologically, then cultural/themed sets
 export const tileSets: TileSet[] = [
@@ -38,6 +39,7 @@ export const tileSets: TileSet[] = [
   militarySet,
   militaryRealisticSet,
   schoolSet,
+  highSchoolSet,
 ];
 
 /**
@@ -62,6 +64,12 @@ export const surfacedSets: TileSet[] = SURFACED_SET_IDS.map(
  * tiles (the School Spirit set) WITHOUT touching /build. The school builder passes
  * this to <TilePalette surfacedSetIds={...}> — /build passes nothing and keeps the
  * global list. See TileGrid / QuickActions.
+ *
+ * "hs" (Becky's High School collection) is intentionally NOT listed here even though
+ * its art has landed. The palette renders ONE set at a time and offers no switcher,
+ * so adding "hs" would REPLACE the school palette and hide the solids, multi-cell
+ * test tiles, and text presets. Instead schoolSet spreads the hs pieces in at the
+ * front (see ./school), so both show up in a single palette.
  */
 export const SCHOOL_SURFACED_SET_IDS: readonly string[] = ["school"];
 

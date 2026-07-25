@@ -20,15 +20,31 @@ describe("school spirit set", () => {
     expect(set?.name).toBe("School Spirit");
   });
 
-  it("has pieces, all with well-formed ids and matching setId", () => {
+  it("has pieces, all with well-formed ids whose prefix matches their setId", () => {
+    // The school PALETTE deliberately composes two namespaces: Becky's real
+    // "hs:" artwork spread in from ./high-school, plus the original "school:"
+    // placeholders, solids, and test tiles. (TileGrid renders one set at a time
+    // and has no switcher, so they have to share a palette to both be reachable.)
+    // A piece's id prefix must still agree with its own setId — that pairing is
+    // what makes getPiece()'s flat, cross-set lookup unambiguous.
     const pieces = getSetPieces("school");
     expect(pieces.length).toBeGreaterThan(0);
     for (const p of pieces) {
-      expect(p.id).toMatch(/^school:[a-z0-9-]+$/);
-      expect(p.setId).toBe("school");
+      expect(p.id).toMatch(/^(school|hs):[a-z0-9-]+$/);
+      expect(p.id.split(":")[0]).toBe(p.setId);
       expect(p.name.length).toBeGreaterThan(0);
       expect(p.emoji.length).toBeGreaterThan(0);
     }
+  });
+
+  it("leads the palette with Becky's real high-school art", () => {
+    const pieces = getSetPieces("school");
+    const hs = pieces.filter((p) => p.setId === "hs");
+    expect(hs.length).toBe(19); // 20 minus Field Hockey, whose art hasn't arrived
+    // Real art first, so the collection is what you see on open.
+    expect(pieces.slice(0, hs.length).every((p) => p.setId === "hs")).toBe(true);
+    // Every one points at a committed local PNG (not an emoji/CDN placeholder).
+    for (const p of hs) expect(p.artworkUrl).toMatch(/^\/tiles\/high-school\/[a-z0-9-]+\.png$/);
   });
 
   it("has unique piece ids", () => {
