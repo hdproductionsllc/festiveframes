@@ -55,6 +55,18 @@ function dragSpanOf(data: Record<string, unknown> | undefined): TileSpan {
 }
 
 /**
+ * Whether this drag auto-sizes: a NEW tile from the palette whose span is a
+ * preference rather than a fixture. Both halves matter — carrying a placed snappet
+ * must keep the size the user chose, and a `spanRequired` piece (the calibration
+ * tiles) means that exact footprint and nothing else.
+ */
+function autoSizes(data: Record<string, unknown> | undefined): boolean {
+  if (data?.type === "placed-tile") return false;
+  const pieceId = data?.pieceId as string | undefined;
+  return pieceId ? !getPiece(pieceId)?.spanRequired : false;
+}
+
+/**
  * Which cell of the footprint the drag is holding.
  *
  * A placed snappet publishes a REF rather than a value (see RailSlot): the drag can
@@ -230,12 +242,21 @@ export function DndProvider({
       span: TileSpan,
       grab: GrabOffset,
       excludeId?: string,
-      shrinkToFit?: boolean,
+      autoSize?: boolean,
     ): SnappetPreview | null => {
       if (!overId?.startsWith("frame:") || !isMultiCell(span)) return null;
       return resolveSnappetDrop(
         { grid, slots, sections, barCovered: new Set(coveredSlotIds(textBars)) },
-        { overSlotId: overId, span, grab, excludeId, shrinkToFit },
+        {
+          overSlotId: overId,
+          span,
+          grab,
+          excludeId,
+          // One flag drives both halves of auto-sizing: grow the preference to the
+          // panel, then walk it down to whatever is actually seatable there.
+          shrinkToFit: autoSize,
+          growToPanel: autoSize,
+        },
       );
     },
     [grid, slots, sections, textBars],
@@ -349,13 +370,10 @@ export function DndProvider({
       const span = dragSpanOf(data);
       if (isMultiCell(span)) {
         const grab = readGrab(data);
-        // A palette drag may shrink to fit (its span is the piece's preference, not
-        // the user's choice); carrying a placed snappet never does.
-        const fromPalette = data?.type !== "placed-tile";
         setCue(
           null,
           null,
-          resolveDrop(overId, span, grab, data?.slotId as string | undefined, fromPalette),
+          resolveDrop(overId, span, grab, data?.slotId as string | undefined, autoSizes(data)),
         );
         return;
       }
@@ -413,7 +431,7 @@ export function DndProvider({
         span,
         grab,
         data?.slotId as string | undefined,
-        data?.type !== "placed-tile", // palette drags shrink to fit; moves keep their size
+        autoSizes(data), // palette drags auto-size; moves keep the size the user chose
       );
 
       if (data?.type === "placed-tile") {

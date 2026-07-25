@@ -814,38 +814,111 @@ describe("spanLadder", () => {
   });
 });
 
-describe("resolveSnappetDrop — shrinkToFit (palette drags auto-size)", () => {
-  // The top banner is a single row, so a 2x2 cannot seat there: reaching down puts
-  // the footprint into the plate. This is the case the feature exists for.
+describe("resolveSnappetDrop — auto-sizing a palette drag", () => {
+  // The top banner is a single row, so a 2x2 cannot seat there.
   const topInner = "frame:top-5";
 
-  it("seats the largest footprint that fits instead of refusing", () => {
+  it("sizes square art to the PANEL, so a wider wing yields a bigger tile", () => {
+    // Default school frame: the side panel is 2 wide (wing column + inner rail),
+    // so square art wants 2x2 there.
+    const twoWide = resolveSnappetDrop(ctx(), {
+      overSlotId: schoolGrid.cellAt(2, 0)!.id,
+      span: { cols: 2, rows: 2 },
+      shrinkToFit: true,
+      growToPanel: true,
+    })!;
+    expect(twoWide.valid).toBe(true);
+    expect({ cols: twoWide.cols, rows: twoWide.rows }).toEqual({ cols: 2, rows: 2 });
+
+    // Widen the wings and the SAME piece should grow to fill the wider panel.
+    const wideCfg = { ...SCHOOL_FRAME_CONFIG, wingColumns: SCHOOL_FRAME_CONFIG.wingColumns + 1 };
+    const wideGrid = buildGrid(wideCfg);
+    const wideCtx: PlacementContext = {
+      grid: wideGrid,
+      slots: noSlots,
+      sections: noSections,
+      barCovered: noBars,
+    };
+    const anchor = wideGrid.cellAt(2, 0)!;
+    const panelCols = wideGrid.slots.filter(
+      (s) => wideGrid.panelAt(s.row, s.col) === wideGrid.panelAt(2, 0),
+    );
+    const width =
+      Math.max(...panelCols.map((s) => s.col)) - Math.min(...panelCols.map((s) => s.col)) + 1;
+    expect(width).toBe(3); // sanity: the wing really did get wider
+
+    const threeWide = resolveSnappetDrop(wideCtx, {
+      overSlotId: anchor.id,
+      span: { cols: 2, rows: 2 }, // same piece, same 'square' hint
+      shrinkToFit: true,
+      growToPanel: true,
+    })!;
+    expect(threeWide.valid).toBe(true);
+    expect({ cols: threeWide.cols, rows: threeWide.rows }).toEqual({ cols: 3, rows: 3 });
+  });
+
+  it("keeps square art at 1x1 in a one-row banner", () => {
+    // Art renders at its NATIVE aspect with background filling the rest, so a 2x1
+    // box would show the art at exactly the same size as 1x1 and simply waste a
+    // cell of background. Maximising art area — not box area — is the rule.
     const drop = resolveSnappetDrop(ctx(), {
       overSlotId: topInner,
       span: { cols: 2, rows: 2 },
       shrinkToFit: true,
+      growToPanel: true,
     })!;
     expect(drop.valid).toBe(true);
-    expect({ cols: drop.cols, rows: drop.rows }).toEqual({ cols: 2, rows: 1 });
+    expect({ cols: drop.cols, rows: drop.rows }).toEqual({ cols: 1, rows: 1 });
   });
 
-  it("keeps the full footprint where it DOES fit — shrinking is a fallback", () => {
-    // The left wing + rail is 2 wide and tall, so 2x2 seats as-is.
-    const drop = resolveSnappetDrop(ctx(), {
-      overSlotId: schoolGrid.cellAt(2, 0)!.id,
+  it("shrinks below the panel size when a cell is genuinely BLOCKED", () => {
+    // Note an overlapping TILE would not shrink anything — overlap is legal here and
+    // simply evicts. A text bar is a hard block, so it really does force a smaller
+    // footprint: covering the rail column means the 2-wide candidates are refused and
+    // the drag falls to the 1-wide column it can still have.
+    const barCovered = new Set([schoolGrid.cellAt(3, 1)!.id]);
+    const drop = resolveSnappetDrop(ctx({ barCovered }), {
+      overSlotId: schoolGrid.cellAt(3, 0)!.id,
       span: { cols: 2, rows: 2 },
       shrinkToFit: true,
+      growToPanel: true,
     })!;
     expect(drop.valid).toBe(true);
-    expect({ cols: drop.cols, rows: drop.rows }).toEqual({ cols: 2, rows: 2 });
+    expect(drop.cols).toBe(1);
+    expect(drop.cols * drop.rows).toBeLessThan(4);
   });
 
-  it("does NOT shrink without the flag — a MOVE keeps the size the user chose", () => {
+  it("does NOT auto-size without the flags — a MOVE keeps the user's size", () => {
     const drop = resolveSnappetDrop(ctx(), {
       overSlotId: topInner,
       span: { cols: 2, rows: 2 },
     })!;
     expect(drop.valid).toBe(false);
     expect({ cols: drop.cols, rows: drop.rows }).toEqual({ cols: 2, rows: 2 });
+  });
+});
+
+describe("panelSnappetPlacement — uploaded photos size to the panel too", () => {
+  const wideGrid = buildGrid({
+    ...SCHOOL_FRAME_CONFIG,
+    wingColumns: SCHOOL_FRAME_CONFIG.wingColumns + 1,
+  });
+
+  it("grows a square photo from 2x2 to 3x3 when the wing widens", () => {
+    const narrow = panelSnappetPlacement(ctx(), "wing-left", 1)!;
+    expect(narrow.span).toEqual({ cols: 2, rows: 2 });
+
+    const wide = panelSnappetPlacement(
+      { grid: wideGrid, slots: noSlots, sections: noSections, barCovered: noBars },
+      "wing-left",
+      1,
+    )!;
+    expect(wide.span).toEqual({ cols: 3, rows: 3 });
+  });
+
+  it("lands a PORTRAIT photo taller than a square one in the same panel", () => {
+    const portrait = panelSnappetPlacement(ctx(), "wing-left", 0.5)!; // 1:2
+    const square = panelSnappetPlacement(ctx(), "wing-left", 1)!;
+    expect(portrait.span.rows).toBeGreaterThan(square.span.rows);
   });
 });
