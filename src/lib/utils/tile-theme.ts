@@ -60,11 +60,13 @@ export function tileBackground(piece: Pick<TilePiece, "backgroundColor">): strin
 
 /**
  * Bevel thickness as a FRACTION of the tile's short side, so a 1x1 and a 3x3 badge
- * look like the same moulding rather than the big one looking flat. Tuned against
- * the product mock: thick enough to read as a raised edge at ~1in, thin enough not
- * to eat the art.
+ * look like the same moulding rather than the big one looking flat.
+ *
+ * Tuned by rendering real badges and looking: at 0.075 the shaded band read as a
+ * muddy grey inner frame on the WHITE fields, competing with the brass rim. Pulled
+ * back so the rim carries the edge and the bevel only supplies the lift.
  */
-export const BEVEL_RATIO = 0.075;
+export const BEVEL_RATIO = 0.055;
 
 /**
  * Bevel geometry for a tile rect — pure, so it is testable without a canvas.
@@ -87,7 +89,7 @@ export function bevelMetrics(w: number, h: number, background: string = TILE_BG.
     /** The lit (top-left) edge. */
     highlight: light ? "rgba(0,0,0,0.10)" : "rgba(255,255,255,0.45)",
     /** The falling-away (bottom-right) edge — always the darker of the two. */
-    shade: light ? "rgba(0,0,0,0.30)" : "rgba(0,0,0,0.38)",
+    shade: light ? "rgba(0,0,0,0.22)" : "rgba(0,0,0,0.38)",
   };
 }
 
@@ -102,8 +104,70 @@ export function bevelBoxShadow(background: string = TILE_BG.navy): string {
   const light = luminance(background) > 0.6;
   return [
     `inset 1.5px 1.5px 0 ${light ? "rgba(0,0,0,0.10)" : "rgba(255,255,255,0.45)"}`,
-    `inset -1.5px -1.5px 0 ${light ? "rgba(0,0,0,0.30)" : "rgba(0,0,0,0.38)"}`,
+    `inset -1.5px -1.5px 0 ${light ? "rgba(0,0,0,0.22)" : "rgba(0,0,0,0.38)"}`,
     "inset 0 0 0 1px rgba(0,0,0,0.25)",
     "0 2px 5px rgba(0,0,0,0.45)",
   ].join(", ");
+}
+
+// ─── Brass rim + cast shadow ────────────────────────────────────────────────
+
+/**
+ * The metallic rim. Real metal is not one colour — it reads as metal precisely
+ * because it runs bright where it faces the light and dark where it turns away.
+ * A flat gold line looks like a yellow stroke; these three stops, run along the
+ * same upper-left light axis as the bevel, look like brass.
+ */
+export const BRASS = {
+  /** Catching the light, top-left. */
+  light: "#F0D488",
+  /** Body colour. */
+  mid: "#C9A227",
+  /** In shade, bottom-right. */
+  dark: "#7C5E15",
+} as const;
+
+/**
+ * Rim thickness and inset for a tile. Thin on purpose: the rim should read as a
+ * machined edge, not a gold frame. Scaled off the short side so every badge gets
+ * the same weight of edge regardless of footprint.
+ */
+export function rimMetrics(w: number, h: number) {
+  const short = Math.min(w, h);
+  return {
+    width: Math.max(1, Math.round(short * 0.018)),
+    /** Sits just INSIDE the tile edge so the stroke is not half-clipped away. */
+    inset: Math.max(1, Math.round(short * 0.012)),
+    radius: Math.max(2, Math.round(short * 0.06)),
+  };
+}
+
+/**
+ * The shadow the ARTWORK casts onto the field behind it.
+ *
+ * This is what sells the badge as two physical layers — art sitting ON a field —
+ * rather than one flat print. It only reads because the art is cut out to
+ * transparency: the shadow is thrown by the art's own silhouette, so a solid
+ * square piece would just get a shadow around its border and look no different.
+ * Offset down-right, matching the same upper-left light source as the bevel.
+ */
+export function artShadow(w: number, h: number) {
+  const short = Math.min(w, h);
+  return {
+    blur: Math.max(1, short * 0.035),
+    offsetX: Math.max(1, short * 0.012),
+    offsetY: Math.max(1, short * 0.016),
+    color: "rgba(0,0,0,0.38)",
+  };
+}
+
+/** CSS twin of `artShadow`, for the on-screen tile's <img>. */
+export function artShadowCss(size: number): string {
+  const a = artShadow(size, size);
+  return `drop-shadow(${a.offsetX.toFixed(1)}px ${a.offsetY.toFixed(1)}px ${a.blur.toFixed(1)}px ${a.color})`;
+}
+
+/** CSS twin of the brass rim — an inset ring on the tile itself. */
+export function rimCss(): string {
+  return `inset 0 0 0 1px ${BRASS.mid}, inset 1px 1px 0 1px ${BRASS.light}33, inset -1px -1px 0 1px ${BRASS.dark}55`;
 }

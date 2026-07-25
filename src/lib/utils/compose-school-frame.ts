@@ -50,7 +50,7 @@ import { SECTION_IDS, SECTION_LABELS, sectionBounds, slotSuppressed } from "@/li
 import { panelRects, type PanelRect } from "@/lib/utils/panels";
 import { bannerBands } from "@/lib/utils/banner-tiers";
 import { getPiece } from "@/data/sets";
-import { bevelMetrics, tileBackground } from "@/lib/utils/tile-theme";
+import { BRASS, artShadow, bevelMetrics, rimMetrics, tileBackground } from "@/lib/utils/tile-theme";
 import { getFullRes } from "@/lib/utils/image-store";
 
 /** Default print resolution. 300 DPI is the eufyMake sheet standard. */
@@ -119,6 +119,27 @@ function drawBevel(
   roundRect(ctx, x + 0.5, y + 0.5, w - 1, h - 1, m.radius);
   ctx.strokeStyle = "rgba(0,0,0,0.30)";
   ctx.lineWidth = 1;
+  ctx.stroke();
+
+  // BRASS rim, last and thin. Stroked with a gradient along the same upper-left
+  // light axis as the bevel, because a flat gold line reads as a yellow stroke
+  // while a bright-to-dark run reads as metal.
+  const rim = rimMetrics(w, h);
+  const g = ctx.createLinearGradient(x, y, x + w, y + h);
+  g.addColorStop(0, BRASS.light);
+  g.addColorStop(0.5, BRASS.mid);
+  g.addColorStop(1, BRASS.dark);
+  ctx.beginPath();
+  roundRect(
+    ctx,
+    x + rim.inset,
+    y + rim.inset,
+    w - rim.inset * 2,
+    h - rim.inset * 2,
+    rim.radius,
+  );
+  ctx.strokeStyle = g;
+  ctx.lineWidth = rim.width;
   ctx.stroke();
 }
 
@@ -466,7 +487,22 @@ export function drawSchoolFrame(
         // Art sits ON the field at its own aspect; the field fills the rest. Where
         // the art has alpha (Becky's die-cut snappets) the field shows through,
         // which is exactly what makes the set read as one scheme.
-        if (art) drawFit(ctx, art, slot.x, slot.y, w, h, "cover", 1);
+        //
+        // Drawn with a CAST SHADOW so the art reads as a layer sitting on the
+        // field rather than printed flat into it. Canvas throws the shadow from
+        // the image's own alpha silhouette, which is why cutting the backgrounds
+        // out was the prerequisite: a solid square would merely get a rectangular
+        // shadow behind its own edge and look no different.
+        if (art) {
+          const sh = artShadow(w, h);
+          ctx.save();
+          ctx.shadowColor = sh.color;
+          ctx.shadowBlur = sh.blur;
+          ctx.shadowOffsetX = sh.offsetX;
+          ctx.shadowOffsetY = sh.offsetY;
+          drawFit(ctx, art, slot.x, slot.y, w, h, "cover", 1);
+          ctx.restore();
+        }
       }
     }
     // Faux bevel LAST, so it sits over the art and reads as the badge's moulding.
