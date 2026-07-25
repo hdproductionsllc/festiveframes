@@ -344,6 +344,39 @@ export interface SnappetDropRequest {
    * user's own decision and moving it must never silently shrink it.
    */
   shrinkToFit?: boolean;
+  /**
+   * Size the footprint to the PANEL rather than to the piece's declared span, which
+   * is then read only as an ASPECT hint (a 2x2 means "square art", not "two cells").
+   *
+   * This is what makes a wider wing produce a bigger tile: square art in a 2-wide
+   * side panel wants 2x2, but the same art in a 3-wide panel wants 3x3. Delegates to
+   * `suggestSnappetSize` — the same routine the photo-upload path uses via
+   * `panelSnappetPlacement` — so a dragged tile and an uploaded photo of the same
+   * shape land at the same size in the same panel.
+   *
+   * Requires `shrinkToFit`, which walks the result down when the panel is occupied.
+   */
+  growToPanel?: boolean;
+}
+
+/**
+ * The full extent (cols x rows) of the panel containing `coord`, ignoring occupancy.
+ *
+ * Occupancy is deliberately NOT considered: this answers "how big could art be in
+ * this panel", and `spanLadder` + `canPlace` then walk that down to what is actually
+ * seatable. Null when the coord isn't in a panel.
+ */
+function panelExtent(
+  grid: PlacementContext["grid"],
+  coord: GridCoord,
+): { cols: number; rows: number } | null {
+  const panelId = grid.panelAt(coord.row, coord.col);
+  if (!panelId) return null;
+  const inPanel = grid.slots.filter((s) => grid.panelAt(s.row, s.col) === panelId);
+  if (inPanel.length === 0) return null;
+  const cols = Math.max(...inPanel.map((s) => s.col)) - Math.min(...inPanel.map((s) => s.col)) + 1;
+  const rows = Math.max(...inPanel.map((s) => s.row)) - Math.min(...inPanel.map((s) => s.row)) + 1;
+  return { cols, rows };
 }
 
 /**
@@ -441,9 +474,16 @@ export function resolveSnappetDrop(
     };
   };
 
+  // The footprint this drag WANTS. With growToPanel the declared span is only an
+  // aspect hint and the panel decides the size (square art: 2x2 in a 2-wide wing,
+  // 3x3 in a 3-wide one, 1x1 in a one-row banner, where a wider box would add
+  // background without making the art any bigger). Otherwise it is the span itself.
+  const ext = req.growToPanel ? panelExtent(grid, start) : null;
+  const preferred = ext ? suggestSnappetSize(span.cols / span.rows, ext) : span;
+
   // Sizes to try, biggest first. Without shrinkToFit that is just the requested
   // span, so a MOVE behaves exactly as before.
-  const sizes = req.shrinkToFit ? spanLadder(span) : [span];
+  const sizes = req.shrinkToFit ? spanLadder(preferred) : [span];
 
   // First legal (size, anchor) wins. Otherwise remember the first candidate that is
   // a real cell: a rejection still has to be DRAWN somewhere, and drawing it on a
@@ -460,7 +500,7 @@ export function resolveSnappetDrop(
   }
   // Every candidate was blocked AND none of them was a drawable cell — fall back
   // to the cell the pointer is genuinely over, which is a real slot by definition.
-  return rejected ?? at(over, span, canPlace(ctx, over, span, req.excludeId));
+  return rejected ?? at(over, preferred, canPlace(ctx, over, preferred, req.excludeId));
 }
 
 /**
