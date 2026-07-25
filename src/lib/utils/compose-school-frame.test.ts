@@ -175,9 +175,17 @@ describe("drawSchoolFrame (node-canvas render of a seeded design)", () => {
     const bannerPx = napi.getImageData(Math.round(br.x + 3), Math.round(br.y + 3), 1, 1).data;
     expect([bannerPx[0], bannerPx[1], bannerPx[2]]).toEqual([34, 68, 170]);
 
-    // A wing-left tile cell (white snappet) at the top-left corner.
-    const tilePx = napi.getImageData(2, 2, 1, 1).data;
-    expect([tilePx[0], tilePx[1], tilePx[2]]).toEqual([255, 255, 255]);
+    // A wing-left tile cell: its FIELD is the standard white, sampled well inside the
+    // bevel so the edge treatment doesn't colour the reading.
+    const inset = Math.round(m.tileSize * 0.5);
+    const fieldPx = napi.getImageData(inset, inset, 1, 1).data;
+    expect([fieldPx[0], fieldPx[1], fieldPx[2]]).toEqual([255, 255, 255]);
+
+    // ...and the faux bevel really is drawn: the extreme corner sits in the edge, so
+    // it must be DARKER than the field. (On a light field the bevel shades rather
+    // than highlights — a white highlight on white would be invisible.)
+    const edgePx = napi.getImageData(2, 2, 1, 1).data;
+    expect(edgePx[0]).toBeLessThan(fieldPx[0]);
 
     const png = canvas.toBuffer("image/png");
     expect(png.length).toBeGreaterThan(1000);

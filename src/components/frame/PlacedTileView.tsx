@@ -1,6 +1,7 @@
 "use client";
 
 import { getPiece } from "@/data/sets";
+import { bevelBoxShadow, tileBackground } from "@/lib/utils/tile-theme";
 import { TileArtwork, hasCustomArtwork, canDieCut } from "@/components/tiles/TileArtwork";
 import { useDesignStore } from "@/stores/design-store";
 
@@ -56,10 +57,10 @@ export function PlacedTileView({ pieceId, width, height, animate, image }: Place
       style={{
         width,
         height,
-        backgroundColor: isDieCut ? "transparent" : piece.backgroundColor,
-        boxShadow: isDieCut
-          ? "none"
-          : "0 2px 6px rgba(0,0,0,0.5), 0 1px 2px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.15), inset 0 -1px 0 rgba(0,0,0,0.1)",
+        // Same two answers the PRINT path uses (tile-theme), so the preview and the
+        // sheet cannot disagree: the standard field colour, and the raised bevel edge.
+        backgroundColor: isDieCut ? "transparent" : tileBackground(piece),
+        boxShadow: isDieCut ? "none" : bevelBoxShadow(tileBackground(piece)),
         filter: isDieCut ? "drop-shadow(0 2px 3px rgba(0,0,0,0.5))" : undefined,
       }}
     >

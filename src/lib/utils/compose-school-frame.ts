@@ -50,6 +50,7 @@ import { SECTION_IDS, SECTION_LABELS, sectionBounds, slotSuppressed } from "@/li
 import { panelRects, type PanelRect } from "@/lib/utils/panels";
 import { bannerBands } from "@/lib/utils/banner-tiers";
 import { getPiece } from "@/data/sets";
+import { bevelMetrics, tileBackground } from "@/lib/utils/tile-theme";
 import { getFullRes } from "@/lib/utils/image-store";
 
 /** Default print resolution. 300 DPI is the eufyMake sheet standard. */
@@ -77,6 +78,48 @@ export function panelBleedBox(rc: PanelRect, tilePx: number, bleedPx: number) {
   const outW = Math.max(1, Math.round(contentW) + 2 * bleed);
   const outH = Math.max(1, Math.round(contentH) + 2 * bleed);
   return { contentX, contentY, contentW, contentH, bleed, outW, outH };
+}
+
+/**
+ * Draw the faux bevel that makes a printed tile read as a raised snap-in badge.
+ *
+ * A single light source from the upper-left: a highlight inset along the top and
+ * left edges, a shade along the bottom and right, and a hairline round the whole
+ * thing to keep the badge crisp against its neighbour. Drawn as trapezoids (the
+ * corners mitre at 45 degrees) so adjacent edges meet cleanly instead of overlapping
+ * into a darker corner blob.
+ *
+ * Called INSIDE the tile's clip, so it follows the rounded corner for free.
+ */
+function drawBevel(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  m: ReturnType<typeof bevelMetrics>,
+): void {
+  const t = m.thickness;
+  const tri = (pts: [number, number][], fill: string) => {
+    ctx.beginPath();
+    ctx.moveTo(pts[0][0], pts[0][1]);
+    for (const [px, py] of pts.slice(1)) ctx.lineTo(px, py);
+    ctx.closePath();
+    ctx.fillStyle = fill;
+    ctx.fill();
+  };
+  // Top and left catch the light; bottom and right fall away.
+  tri([[x, y], [x + w, y], [x + w - t, y + t], [x + t, y + t]], m.highlight);
+  tri([[x, y], [x + t, y + t], [x + t, y + h - t], [x, y + h]], m.highlight);
+  tri([[x, y + h], [x + t, y + h - t], [x + w - t, y + h - t], [x + w, y + h]], m.shade);
+  tri([[x + w, y], [x + w, y + h], [x + w - t, y + h - t], [x + w - t, y + t]], m.shade);
+
+  // Hairline outline — stops two adjacent badges from bleeding into one shape.
+  ctx.beginPath();
+  roundRect(ctx, x + 0.5, y + 0.5, w - 1, h - 1, m.radius);
+  ctx.strokeStyle = "rgba(0,0,0,0.30)";
+  ctx.lineWidth = 1;
+  ctx.stroke();
 }
 
 // ── The design, passed in explicitly (NOT read from any store) ────────────────
@@ -402,25 +445,33 @@ export function drawSchoolFrame(
     const h = span.rows * m.tileSize;
 
     ctx.save();
-    roundRect(ctx, slot.x, slot.y, w, h, 2);
+    const piece0 = tile && !tile.image ? getPiece(tile.pieceId) : undefined;
+    const field = piece0 ? tileBackground(piece0) : "#ffffff";
+    const bevel = bevelMetrics(w, h, field);
+    roundRect(ctx, slot.x, slot.y, w, h, bevel.radius);
     ctx.clip();
-    ctx.fillStyle = "#ffffff";
+    // The FIELD behind the art. Previously hard-coded white, which silently
+    // disagreed with the on-screen tile for any piece with transparent art — and
+    // left the printed sheet looking like stickers on paper rather than a set of
+    // badges. `tileBackground` is the single answer both renderers now use.
+    const piece = piece0;
+    ctx.fillStyle = field;
     ctx.fillRect(slot.x, slot.y, w, h);
     if (tile) {
       if (tile.image) {
         const img = images.snappets.get(slot.id);
         if (img) drawFit(ctx, img, slot.x, slot.y, w, h, "cover", 1);
       } else {
-        const piece = getPiece(tile.pieceId);
         const art = piece?.artworkUrl ? images.pieces.get(piece.artworkUrl) : undefined;
-        if (art) {
-          drawFit(ctx, art, slot.x, slot.y, w, h, "cover", 1);
-        } else if (piece) {
-          ctx.fillStyle = piece.backgroundColor;
-          ctx.fillRect(slot.x, slot.y, w, h);
-        }
+        // Art sits ON the field at its own aspect; the field fills the rest. Where
+        // the art has alpha (Becky's die-cut snappets) the field shows through,
+        // which is exactly what makes the set read as one scheme.
+        if (art) drawFit(ctx, art, slot.x, slot.y, w, h, "cover", 1);
       }
     }
+    // Faux bevel LAST, so it sits over the art and reads as the badge's moulding.
+    // Still inside the clip, so it follows the rounded corner.
+    drawBevel(ctx, slot.x, slot.y, w, h, bevel);
     ctx.restore();
   }
 
