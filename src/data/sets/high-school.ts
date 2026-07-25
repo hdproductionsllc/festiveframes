@@ -21,10 +21,17 @@ const H = "hs";
  *
  * Every piece's art is now cut out to transparency, so the field really is what you
  * see behind it — which makes this a real design choice rather than a dead value.
- * Each was picked by measuring the art's mean contrast against both fields and then
- * eyeballing the result: white-on-navy logos (DECA, Student Council, FCA) and
- * light/high-key art (volleyball, soccer) sit on NAVY; dark line art and dark type
- * sit on WHITE.
+ * The scheme is NAVY-DOMINANT, matching the product mock: full-colour objects (the
+ * balls, the racket, the masks) and white-on-colour logos all sit on navy, where
+ * they read as premium enamel badges. WHITE is reserved for art that is itself dark
+ * or navy line work — a black chess knight or navy type would simply disappear on a
+ * navy field.
+ *
+ * An earlier pass chose these by pure luminance contrast and came out white-heavy.
+ * That metric maximises raw light/dark distance, which pushes mid-tone colour art
+ * onto white; but a brown football on navy reads better than the same football on
+ * white, exactly as the mock shows. Contrast was the wrong objective — the right one
+ * is 'does the art still read', and beyond that it is a look, not a measurement.
  */
 const WHITE = TILE_BG.white;
 const NAVY = TILE_BG.navy;
@@ -86,7 +93,7 @@ export const highSchoolSet: TileSet = {
       name: "Basketball",
       artworkUrl: `${A}/basketball.png`,
       emoji: "🏀",
-      backgroundColor: WHITE,
+      backgroundColor: NAVY,
       defaultSpan: PREFERRED,
     },
     {
@@ -115,7 +122,7 @@ export const highSchoolSet: TileSet = {
       name: "Football",
       artworkUrl: `${A}/football.png`,
       emoji: "🏈",
-      backgroundColor: WHITE,
+      backgroundColor: NAVY,
       defaultSpan: PREFERRED,
     },
     {
@@ -124,7 +131,7 @@ export const highSchoolSet: TileSet = {
       name: "Golf",
       artworkUrl: `${A}/golf.png`,
       emoji: "⛳",
-      backgroundColor: WHITE,
+      backgroundColor: NAVY,
       defaultSpan: PREFERRED,
     },
     {
@@ -142,7 +149,7 @@ export const highSchoolSet: TileSet = {
       name: "Tennis",
       artworkUrl: `${A}/tennis.png`,
       emoji: "🎾",
-      backgroundColor: WHITE,
+      backgroundColor: NAVY,
       defaultSpan: PREFERRED,
     },
     {
@@ -236,7 +243,7 @@ export const highSchoolSet: TileSet = {
       name: "Drama & Theater",
       artworkUrl: `${A}/drama-theater.png`,
       emoji: "🎭",
-      backgroundColor: WHITE,
+      backgroundColor: NAVY,
       defaultSpan: PREFERRED,
     },
     {
