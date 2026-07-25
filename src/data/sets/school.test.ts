@@ -10,6 +10,7 @@ import {
   resolveSurfacedSetId,
 } from "./index";
 import { schoolSet } from "./school";
+import { TILE_BG, tileBackground } from "@/lib/utils/tile-theme";
 
 describe("school spirit set", () => {
   it("is registered and getSet-able", () => {
@@ -106,5 +107,32 @@ describe("resolveSurfacedSetId", () => {
   it("forces the school set in the school palette regardless of the global active set", () => {
     expect(resolveSurfacedSetId("july4th", SCHOOL_SURFACED_SET_IDS)).toBe("school");
     expect(resolveSurfacedSetId("school", SCHOOL_SURFACED_SET_IDS)).toBe("school");
+  });
+});
+
+describe("High School fields — every piece takes a standard field colour", () => {
+  const hs = getSetPieces("school").filter((p) => p.setId === "hs");
+
+  it("uses ONLY colours from the standard palette", () => {
+    const allowed = Object.values(TILE_BG).map((c) => c.toUpperCase());
+    for (const p of hs) expect(allowed).toContain(p.backgroundColor.toUpperCase());
+  });
+
+  it("resolves each piece's field to itself — nothing gets snapped away", () => {
+    // If a piece ever drifts off-palette, tileBackground silently rewrites it. Pinning
+    // the round-trip means that rewrite can't hide a mistake in the data.
+    for (const p of hs) expect(tileBackground(p)).toBe(p.backgroundColor.toUpperCase());
+  });
+
+  it("mixes both fields, so the set reads as a composed sheet not one flat block", () => {
+    const navy = hs.filter((p) => p.backgroundColor.toUpperCase() === TILE_BG.navy);
+    expect(navy.length).toBeGreaterThan(0);
+    expect(navy.length).toBeLessThan(hs.length);
+  });
+
+  it("puts the white-on-colour logos on NAVY — they would vanish on white", () => {
+    for (const id of ["hs:deca", "hs:student-council", "hs:future-christian-athletes"]) {
+      expect(hs.find((p) => p.id === id)?.backgroundColor.toUpperCase()).toBe(TILE_BG.navy);
+    }
   });
 });

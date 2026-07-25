@@ -1,4 +1,5 @@
 import type { TileSet, TileSpan } from "@/lib/types";
+import { TILE_BG } from "@/lib/utils/tile-theme";
 
 // ─── High School Collection ─────────────────────────────────────────────────
 //
@@ -15,8 +16,18 @@ const A = "/tiles/high-school";
 /** setId shorthand. */
 const H = "hs";
 
-/** Die-cut snappets read as art-on-white, matching the July 4th collection. */
-const WHITE = "#FFFFFF";
+/**
+ * FIELD colours, per piece, drawn from the standard palette (see tile-theme).
+ *
+ * Every piece's art is now cut out to transparency, so the field really is what you
+ * see behind it — which makes this a real design choice rather than a dead value.
+ * Each was picked by measuring the art's mean contrast against both fields and then
+ * eyeballing the result: white-on-navy logos (DECA, Student Council, FCA) and
+ * light/high-key art (volleyball, soccer) sit on NAVY; dark line art and dark type
+ * sit on WHITE.
+ */
+const WHITE = TILE_BG.white;
+const NAVY = TILE_BG.navy;
 
 /**
  * Preferred footprint for this collection. Every piece is square (2000x2000
@@ -122,7 +133,7 @@ export const highSchoolSet: TileSet = {
       name: "Soccer Ball",
       artworkUrl: `${A}/soccer-ball.png`,
       emoji: "⚽",
-      backgroundColor: WHITE,
+      backgroundColor: NAVY,
       defaultSpan: PREFERRED,
     },
     {
@@ -140,7 +151,7 @@ export const highSchoolSet: TileSet = {
       name: "Volleyball",
       artworkUrl: `${A}/volleyball.png`,
       emoji: "🏐",
-      backgroundColor: WHITE,
+      backgroundColor: NAVY,
       defaultSpan: PREFERRED,
     },
     {
@@ -149,7 +160,7 @@ export const highSchoolSet: TileSet = {
       name: "Future Christian Athletes",
       artworkUrl: `${A}/future-christian-athletes.png`,
       emoji: "✝️",
-      backgroundColor: WHITE,
+      backgroundColor: NAVY,
       defaultSpan: PREFERRED,
     },
 
@@ -160,7 +171,7 @@ export const highSchoolSet: TileSet = {
       name: "DECA",
       artworkUrl: `${A}/deca.png`,
       emoji: "📈",
-      backgroundColor: WHITE,
+      backgroundColor: NAVY,
       defaultSpan: PREFERRED,
     },
     {
@@ -178,7 +189,7 @@ export const highSchoolSet: TileSet = {
       name: "Honor Society",
       artworkUrl: `${A}/honor-society.png`,
       emoji: "🎓",
-      backgroundColor: WHITE,
+      backgroundColor: NAVY,
       defaultSpan: PREFERRED,
     },
     {
@@ -254,7 +265,7 @@ export const highSchoolSet: TileSet = {
       name: "Student Council",
       artworkUrl: `${A}/student-council.png`,
       emoji: "🗳️",
-      backgroundColor: WHITE,
+      backgroundColor: NAVY,
       defaultSpan: PREFERRED,
     },
   ],
