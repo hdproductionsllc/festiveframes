@@ -50,7 +50,14 @@ import { SECTION_IDS, SECTION_LABELS, sectionBounds, slotSuppressed } from "@/li
 import { panelRects, type PanelRect } from "@/lib/utils/panels";
 import { bannerBands } from "@/lib/utils/banner-tiers";
 import { getPiece } from "@/data/sets";
-import { BRASS, artShadow, bevelMetrics, rimMetrics, tileBackground } from "@/lib/utils/tile-theme";
+import {
+  BRASS,
+  artShadow,
+  bevelMetrics,
+  glossStops,
+  rimMetrics,
+  tileBackground,
+} from "@/lib/utils/tile-theme";
 import { getFullRes } from "@/lib/utils/image-store";
 
 /** Default print resolution. 300 DPI is the eufyMake sheet standard. */
@@ -368,8 +375,16 @@ function drawTextBlock(
   ctx.beginPath();
   ctx.rect(x, y, w, h);
   ctx.clip();
-  ctx.fillStyle = cfg.backgroundColor;
+  // Banners wear the SAME chrome as the badges — gloss gradient, bevel and brass
+  // rim — because in the mock the bars and the badges read as one system. A flat
+  // bar next to a bevelled badge is what made the frame look assembled from parts.
+  const [gTop, gBot] = glossStops(cfg.backgroundColor);
+  const grad = ctx.createLinearGradient(x, y, x, y + h);
+  grad.addColorStop(0, gTop);
+  grad.addColorStop(1, gBot);
+  ctx.fillStyle = grad;
   ctx.fillRect(x, y, w, h);
+  drawBevel(ctx, x, y, w, h, bevelMetrics(w, h, cfg.backgroundColor));
 
   const pad = Math.min(w, h) * SECTION_PAD_RATIO;
   const contentW = Math.max(1, w - pad * 2);
@@ -461,12 +476,21 @@ export function drawSchoolFrame(
     if (slotSuppressed(slot, sections, config)) continue;
 
     const tile = slots[slot.id];
+    // An EMPTY pocket prints NOTHING — no field, no bevel, no rim. It is a hole in
+    // the frame where the base shows through, so giving it badge chrome turned every
+    // unused cell into a blank white badge and made the frame read as a grid of
+    // vacancies. Leaving it transparent is also what keeps ink off the sheet.
+    //
+    // This MUST come before the save() below: skipping past a save without its
+    // matching restore would leak canvas state once per empty cell.
+    if (!tile) continue;
+
     const span = tileSpan(tile);
     const w = span.cols * m.tileSize;
     const h = span.rows * m.tileSize;
 
     ctx.save();
-    const piece0 = tile && !tile.image ? getPiece(tile.pieceId) : undefined;
+    const piece0 = !tile.image ? getPiece(tile.pieceId) : undefined;
     const field = piece0 ? tileBackground(piece0) : "#ffffff";
     const bevel = bevelMetrics(w, h, field);
     roundRect(ctx, slot.x, slot.y, w, h, bevel.radius);
@@ -478,7 +502,7 @@ export function drawSchoolFrame(
     const piece = piece0;
     ctx.fillStyle = field;
     ctx.fillRect(slot.x, slot.y, w, h);
-    if (tile) {
+    {
       if (tile.image) {
         const img = images.snappets.get(slot.id);
         if (img) drawFit(ctx, img, slot.x, slot.y, w, h, "cover", 1);
