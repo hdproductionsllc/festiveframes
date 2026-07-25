@@ -65,11 +65,11 @@ export const surfacedSets: TileSet[] = SURFACED_SET_IDS.map(
  * this to <TilePalette surfacedSetIds={...}> — /build passes nothing and keeps the
  * global list. See TileGrid / QuickActions.
  *
- * "hs" (Becky's High School collection) is deliberately NOT here yet: its piece
- * data is complete, but the PNGs in `public/tiles/high-school/` are not committed,
- * so surfacing it now would show a palette of broken images. Once the art is in
- * (`node scripts/import-high-school-art.mjs <dir>` verifies it), add "hs" to this
- * list — that one edit is the whole switch-on.
+ * "hs" (Becky's High School collection) is intentionally NOT listed here even though
+ * its art has landed. The palette renders ONE set at a time and offers no switcher,
+ * so adding "hs" would REPLACE the school palette and hide the solids, multi-cell
+ * test tiles, and text presets. Instead schoolSet spreads the hs pieces in at the
+ * front (see ./school), so both show up in a single palette.
  */
 export const SCHOOL_SURFACED_SET_IDS: readonly string[] = ["school"];
 

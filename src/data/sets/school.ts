@@ -1,4 +1,5 @@
 import type { TileSet, PlacedTile, DesignPreset } from "@/lib/types";
+import { highSchoolSet } from "./high-school";
 
 // ─── School Spirit ──────────────────────────────────────────────────────────
 //
@@ -41,7 +42,19 @@ export const schoolSet: TileSet = {
     "Placeholder varsity spirit tiles — stars, pennants, trophies, mascot balls, and school colors. Real collegiate art drops in later.",
   price: 0,
   pieces: [
+    // ─── Becky's High School Collection (REAL art) ─────────────
+    // Spread in from ./high-school rather than surfaced as its own set: the palette
+    // renders exactly one set at a time (TileGrid -> resolveSurfacedSetId) and has no
+    // set switcher, so listing "hs" separately would hide the solids, multi-cell test
+    // tiles, and text presets below. Leading the palette puts the real art first.
+    // These keep their own `hs:` piece ids, which resolve fine — getPiece() is a flat
+    // map across every set, not scoped to the set a piece is listed under.
+    ...highSchoolSet.pieces,
+
     // ─── Spirit icons (Twemoji SVG placeholders) ───────────────
+    // NOTE: Football / Basketball / Soccer / Drama below are now also covered by
+    // Becky's real art above. They're deliberately left in place so any saved design
+    // referencing a `school:` id still resolves; drop them once that's known to be safe.
     { id: `${S}:star`, setId: S, name: "Star", artworkUrl: `${T}/2b50.svg`, emoji: "⭐", backgroundColor: NAVY },
     { id: `${S}:pennant`, setId: S, name: "Pennant", artworkUrl: `${T}/1f6a9.svg`, emoji: "🚩", backgroundColor: GOLD, textColor: "#333333" },
     { id: `${S}:trophy`, setId: S, name: "Trophy", artworkUrl: `${T}/1f3c6.svg`, emoji: "🏆", backgroundColor: NAVY },

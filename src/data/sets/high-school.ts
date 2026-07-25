@@ -74,14 +74,17 @@ export const highSchoolSet: TileSet = {
       emoji: "🏃",
       backgroundColor: WHITE,
     },
-    {
-      id: `${H}:field-hockey`,
-      setId: H,
-      name: "Field Hockey",
-      artworkUrl: `${A}/field-hockey.png`,
-      emoji: "🏑",
-      backgroundColor: WHITE,
-    },
+    // Field Hockey is the one piece whose PNG has not arrived yet. Its entry stays
+    // commented out (rather than pointing at a missing file) so the palette never
+    // renders a broken tile — drop the art in and uncomment to complete the set.
+    // {
+    //   id: `${H}:field-hockey`,
+    //   setId: H,
+    //   name: "Field Hockey",
+    //   artworkUrl: `${A}/field-hockey.png`,
+    //   emoji: "🏑",
+    //   backgroundColor: WHITE,
+    // },
     {
       id: `${H}:football`,
       setId: H,
