@@ -1,7 +1,7 @@
 "use client";
 
 import { getPiece } from "@/data/sets";
-import { bevelBoxShadow, tileBackground } from "@/lib/utils/tile-theme";
+import { artShadowCss, bevelBoxShadow, rimCss, tileBackground } from "@/lib/utils/tile-theme";
 import { TileArtwork, hasCustomArtwork, canDieCut } from "@/components/tiles/TileArtwork";
 import { useDesignStore } from "@/stores/design-store";
 
@@ -60,7 +60,7 @@ export function PlacedTileView({ pieceId, width, height, animate, image }: Place
         // Same two answers the PRINT path uses (tile-theme), so the preview and the
         // sheet cannot disagree: the standard field colour, and the raised bevel edge.
         backgroundColor: isDieCut ? "transparent" : tileBackground(piece),
-        boxShadow: isDieCut ? "none" : bevelBoxShadow(tileBackground(piece)),
+        boxShadow: isDieCut ? "none" : `${rimCss()}, ${bevelBoxShadow(tileBackground(piece))}`,
         filter: isDieCut ? "drop-shadow(0 2px 3px rgba(0,0,0,0.5))" : undefined,
       }}
     >
@@ -69,7 +69,14 @@ export function PlacedTileView({ pieceId, width, height, animate, image }: Place
         <img
           src={piece.artworkUrl}
           alt={piece.name}
-          style={{ width: "100%", height: "100%", objectFit: "cover" }}
+          // Cast shadow from the ART onto the field — the same two-layer read the
+          // print path draws. Only works because the art is cut out to transparency.
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            filter: isDieCut ? undefined : artShadowCss(size),
+          }}
           draggable={false}
         />
       ) : hasCustomArtwork(pieceId) ? (

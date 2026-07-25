@@ -1,5 +1,15 @@
 import { describe, it, expect } from "vitest";
-import { TILE_BG, luminance, tileBackground, bevelMetrics, bevelBoxShadow } from "./tile-theme";
+import {
+  TILE_BG,
+  BRASS,
+  luminance,
+  tileBackground,
+  bevelMetrics,
+  bevelBoxShadow,
+  rimMetrics,
+  artShadow,
+  artShadowCss,
+} from "./tile-theme";
 
 describe("luminance", () => {
   it("orders black < mid < white", () => {
@@ -76,5 +86,51 @@ describe("bevelBoxShadow", () => {
     expect(dark).toContain("inset -1.5px -1.5px 0 rgba(0,0,0");
     // And adapts on a light field, exactly like the printed bevel.
     expect(bevelBoxShadow(TILE_BG.white)).not.toContain("rgba(255,255,255");
+  });
+});
+
+describe("brass rim", () => {
+  it("runs bright to dark, so it reads as metal rather than a yellow line", () => {
+    expect(luminance(BRASS.light)).toBeGreaterThan(luminance(BRASS.mid));
+    expect(luminance(BRASS.mid)).toBeGreaterThan(luminance(BRASS.dark));
+  });
+
+  it("stays THIN and scales off the short side", () => {
+    const m = rimMetrics(1000, 1000);
+    expect(m.width / 1000).toBeLessThan(0.03); // a machined edge, not a gold frame
+    expect(rimMetrics(1000, 200).width).toBe(rimMetrics(200, 200).width);
+  });
+
+  it("insets the stroke so it is not half-clipped by the tile edge", () => {
+    const m = rimMetrics(400, 400);
+    expect(m.inset).toBeGreaterThanOrEqual(1);
+  });
+
+  it("never degenerates at a tiny size", () => {
+    const m = rimMetrics(1, 1);
+    expect(m.width).toBeGreaterThanOrEqual(1);
+    expect(m.inset).toBeGreaterThanOrEqual(1);
+  });
+});
+
+describe("artShadow — the art casting onto its field", () => {
+  it("offsets down-right, matching the bevel's upper-left light source", () => {
+    const s = artShadow(200, 200);
+    expect(s.offsetX).toBeGreaterThan(0);
+    expect(s.offsetY).toBeGreaterThan(0);
+    // Slightly more vertical than horizontal, as a light above and to the left gives.
+    expect(s.offsetY).toBeGreaterThan(s.offsetX);
+  });
+
+  it("scales with the badge so a big one isn't given a hard tiny shadow", () => {
+    expect(artShadow(400, 400).blur).toBeGreaterThan(artShadow(100, 100).blur);
+  });
+
+  it("emits CSS carrying the same numbers as the canvas version", () => {
+    const css = artShadowCss(200);
+    const s = artShadow(200, 200);
+    expect(css).toContain(s.offsetX.toFixed(1));
+    expect(css).toContain(s.offsetY.toFixed(1));
+    expect(css).toContain("drop-shadow(");
   });
 });
