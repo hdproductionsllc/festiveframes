@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { migrateSchoolDesign } from "./school-migration";
 import { SCHOOL_FRAME_CONFIG } from "@/lib/constants/frame";
+import { SCHOOL_DEFAULT_SECTIONS } from "@/lib/constants/defaults";
 import { getAllSlotIds, wingRowCount } from "./slot-generator";
 import type { PlacedTile } from "@/lib/types";
 
@@ -118,6 +119,8 @@ describe("migrateSchoolDesign (v6 → v7 wing trim)", () => {
     expect(migrateSchoolDesign({ designName: "x" })).toEqual({
       designName: "x",
       frameConfig: { ...SCHOOL_FRAME_CONFIG },
+      // Top/bottom are seeded as text banners — see the default-sections tests below.
+      sections: { ...SCHOOL_DEFAULT_SECTIONS },
     });
     expect(migrateSchoolDesign(undefined)).toBeUndefined();
     expect(migrateSchoolDesign(null)).toBeNull();
@@ -144,10 +147,36 @@ describe("migrateSchoolDesign (retired image mode → tiles)", () => {
     expect(out.sections["wing-right"].mode).toBe("tiles");
   });
 
-  it("leaves a blob with no sections alone", () => {
+  it("seeds the text-banner defaults when a blob has no sections at all", () => {
+    // A user who predates the default has no key for top/bottom. Initial state loses
+    // to persistence, so without seeding here they would never see the text banners.
     const out = migrateSchoolDesign({ slots: {}, frameConfig: SCHOOL_FRAME_CONFIG }) as {
-      sections?: unknown;
+      sections: Record<string, { mode: string; text?: { text: string; tagline?: string } }>;
     };
-    expect(out.sections).toBeUndefined();
+    expect(out.sections.top.mode).toBe("text");
+    expect(out.sections.bottom.mode).toBe("text");
+    expect(out.sections.bottom.text?.tagline).toBeTruthy(); // exercises the second tier
+  });
+
+  it("NEVER overrides a section the user explicitly set to tiles", () => {
+    // Choosing tiles writes an explicit `mode: "tiles"`, which is a decision — the
+    // seeding restores a default, it does not re-impose one.
+    const out = migrateSchoolDesign({
+      slots: {},
+      frameConfig: SCHOOL_FRAME_CONFIG,
+      sections: { top: { mode: "tiles" } },
+    }) as { sections: Record<string, { mode: string }> };
+    expect(out.sections.top.mode).toBe("tiles"); // kept
+    expect(out.sections.bottom.mode).toBe("text"); // absent → seeded
+  });
+
+  it("seeds alongside the image-mode conversion without clobbering it", () => {
+    const out = migrateSchoolDesign({
+      slots: {},
+      frameConfig: SCHOOL_FRAME_CONFIG,
+      sections: { "wing-left": { mode: "image", imageUrl: "x" } },
+    }) as { sections: Record<string, { mode: string }> };
+    expect(out.sections["wing-left"].mode).toBe("tiles"); // retired mode converted
+    expect(out.sections.top.mode).toBe("text"); // and the defaults still land
   });
 });

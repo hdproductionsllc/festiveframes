@@ -1,5 +1,6 @@
 import type { FrameConfig, PlacedTile } from "@/lib/types";
 import { SCHOOL_FRAME_CONFIG } from "@/lib/constants/frame";
+import { SCHOOL_DEFAULT_SECTIONS } from "@/lib/constants/defaults";
 import { wingRowCount, wingSlotIndex } from "@/lib/utils/slot-generator";
 
 /**
@@ -39,8 +40,9 @@ export function migrateSchoolDesign(persisted: unknown): unknown {
   // tile-suppressed blank panel. Convert those back to tiles so the panel's tiles
   // reappear (the old preview image is dropped; it lived only in the overlay).
   const sections = blob.sections;
+  const nextSections: Record<string, unknown> =
+    sections && typeof sections === "object" ? {} : {};
   if (sections && typeof sections === "object") {
-    const nextSections: Record<string, unknown> = {};
     for (const [id, sec] of Object.entries(sections as Record<string, unknown>)) {
       if (sec && typeof sec === "object" && (sec as { mode?: unknown }).mode === "image") {
         nextSections[id] = { mode: "tiles" };
@@ -48,8 +50,19 @@ export function migrateSchoolDesign(persisted: unknown): unknown {
         nextSections[id] = sec;
       }
     }
-    next.sections = nextSections;
   }
+  // Top/bottom now DEFAULT to text banners (SCHOOL_DEFAULT_SECTIONS). A user who
+  // predates that default has no entry for them at all, and initial state loses to
+  // persistence — so without this they would keep the old tiles-everywhere frame
+  // forever and never see the feature.
+  //
+  // Seed ONLY a genuinely ABSENT key. Choosing tiles writes an explicit
+  // `mode: "tiles"`, so anyone who made that choice has a key here and keeps it:
+  // this restores a default, it never overrides a decision.
+  for (const [id, seed] of Object.entries(SCHOOL_DEFAULT_SECTIONS)) {
+    if (!(id in nextSections)) nextSections[id] = structuredClone(seed);
+  }
+  next.sections = nextSections;
 
   const slots = blob.slots;
   if (!slots || typeof slots !== "object") return next;
