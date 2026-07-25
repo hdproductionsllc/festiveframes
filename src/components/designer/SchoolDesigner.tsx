@@ -36,6 +36,7 @@ import { SnappetSizeControl } from "./SnappetSizeControl";
 import { ArmedBanner } from "@/components/tiles/ArmedBanner";
 import { StateSelector } from "@/components/frame/StateSelector";
 import { SCHOOL_FRAME_CONFIG } from "@/lib/constants/frame";
+import { SCHOOL_DEFAULT_SECTIONS } from "@/lib/constants/defaults";
 import { migrateSchoolDesign } from "@/lib/utils/school-migration";
 import type { BannerPreview } from "@/lib/types";
 import type { SnappetPreview } from "@/lib/utils/snappet";
@@ -421,6 +422,9 @@ export function SchoolBuilder() {
     createDesignStore("festive-frames-school-v1", {
       frameConfig: SCHOOL_FRAME_CONFIG,
       migrateExtra: migrateSchoolDesign,
+      // Top/bottom start as TEXT banners — see SCHOOL_DEFAULT_SECTIONS. Initial
+      // state only; a returning user's persisted sections still win.
+      sections: SCHOOL_DEFAULT_SECTIONS,
     })
   );
   return (

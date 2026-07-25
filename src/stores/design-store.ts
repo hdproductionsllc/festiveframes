@@ -448,6 +448,15 @@ export interface DesignStoreOptions {
   /** Builder-specific persist migration step. Absent on /build → identity. */
   migrateExtra?: DesignMigrateExtra;
   /**
+   * Section modes this builder STARTS with (school: top/bottom as text banners).
+   *
+   * Unlike `frameConfig` this does NOT win over persistence — it is initial state
+   * only. A returning user's own choices are theirs to keep, and a section they
+   * switched to tiles records an explicit `mode: "tiles"`, so seeding is strictly a
+   * first-run affordance. `migrateExtra` covers users who predate the default.
+   */
+  sections?: Partial<Record<SectionId, SectionState>>;
+  /**
    * Frame geometry OWNED by this store instance.
    *
    * /build lets the user reconfigure the frame, so its geometry is part of the
@@ -468,7 +477,7 @@ export interface DesignStoreOptions {
 // (own state + own localStorage key). /build uses `defaultDesignStore`; the school
 // builder creates its own instance and provides it via `DesignStoreProvider`.
 function createDesignStore(persistName: string, options: DesignStoreOptions = {}) {
-  const { migrateExtra, frameConfig: ownedFrameConfig } = options;
+  const { migrateExtra, frameConfig: ownedFrameConfig, sections: initialSections } = options;
   const baseFrameConfig = ownedFrameConfig ?? DEFAULT_FRAME_CONFIG;
   return createStore<DesignState>()(
   persist(
@@ -514,7 +523,7 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
         frameConfig: { ...baseFrameConfig },
         textBars: [],
         selectedBarId: null,
-        sections: {},
+        sections: initialSections ? structuredClone(initialSections) : {},
         selectedSectionId: null,
         dieCut: false,
         updatedAt: Date.now(),
