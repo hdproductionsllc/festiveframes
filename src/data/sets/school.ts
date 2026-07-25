@@ -95,11 +95,11 @@ export const schoolSet: TileSet = {
     // real varsity art lands. Each carries a `defaultSpan`, so dragging it drops a
     // snappet of that footprint. School-only (never surfaced on /build); remove once
     // real multi-cell art exists.
-    { id: `${S}:test-2x3`, setId: S, name: "Test 2×3", artworkUrl: "/tiles/school/test/2x3.svg", emoji: "🔳", backgroundColor: NAVY, defaultSpan: { cols: 2, rows: 3 } },
-    { id: `${S}:test-2x4`, setId: S, name: "Test 2×4", artworkUrl: "/tiles/school/test/2x4.svg", emoji: "🔳", backgroundColor: CRIMSON, defaultSpan: { cols: 2, rows: 4 } },
-    { id: `${S}:test-2x2`, setId: S, name: "Test 2×2", artworkUrl: "/tiles/school/test/2x2.svg", emoji: "🔳", backgroundColor: ROYAL, defaultSpan: { cols: 2, rows: 2 } },
-    { id: `${S}:test-2x1`, setId: S, name: "Test 2×1", artworkUrl: "/tiles/school/test/2x1.svg", emoji: "🔳", backgroundColor: TURF, defaultSpan: { cols: 2, rows: 1 } },
-    { id: `${S}:test-1x2`, setId: S, name: "Test 1×2", artworkUrl: "/tiles/school/test/1x2.svg", emoji: "🔳", backgroundColor: GOLD, textColor: "#333333", defaultSpan: { cols: 1, rows: 2 } },
+    { id: `${S}:test-2x3`, setId: S, name: "Test 2×3", artworkUrl: "/tiles/school/test/2x3.svg", emoji: "🔳", backgroundColor: NAVY, defaultSpan: { cols: 2, rows: 3 }, spanRequired: true },
+    { id: `${S}:test-2x4`, setId: S, name: "Test 2×4", artworkUrl: "/tiles/school/test/2x4.svg", emoji: "🔳", backgroundColor: CRIMSON, defaultSpan: { cols: 2, rows: 4 }, spanRequired: true },
+    { id: `${S}:test-2x2`, setId: S, name: "Test 2×2", artworkUrl: "/tiles/school/test/2x2.svg", emoji: "🔳", backgroundColor: ROYAL, defaultSpan: { cols: 2, rows: 2 }, spanRequired: true },
+    { id: `${S}:test-2x1`, setId: S, name: "Test 2×1", artworkUrl: "/tiles/school/test/2x1.svg", emoji: "🔳", backgroundColor: TURF, defaultSpan: { cols: 2, rows: 1 }, spanRequired: true },
+    { id: `${S}:test-1x2`, setId: S, name: "Test 1×2", artworkUrl: "/tiles/school/test/1x2.svg", emoji: "🔳", backgroundColor: GOLD, textColor: "#333333", defaultSpan: { cols: 1, rows: 2 }, spanRequired: true },
   ],
   presets: buildPresets(),
 };

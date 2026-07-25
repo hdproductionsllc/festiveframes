@@ -10,6 +10,7 @@ import {
   visibleAnchorSlots,
   resolveSnappetDrop,
   resolveSnappetResize,
+  spanLadder,
   suggestSnappetSize,
   grabOffsetIn,
   anchorIdFor,
@@ -790,5 +791,61 @@ describe("anchorIdFor", () => {
     const slots: Record<string, PlacedTile> = { "frame:top-0": tile("a") };
     expect(anchorIdFor(slots, schoolGrid, "frame:top-0")).toBe("frame:top-0");
     expect(anchorIdFor(slots, schoolGrid, "frame:top-1")).toBeNull();
+  });
+});
+
+describe("spanLadder", () => {
+  it("lists the preferred span first, then every smaller one by area", () => {
+    expect(spanLadder({ cols: 2, rows: 2 })).toEqual([
+      { cols: 2, rows: 2 }, // 4
+      { cols: 2, rows: 1 }, // 2 — wider wins the tie
+      { cols: 1, rows: 2 }, // 2
+      { cols: 1, rows: 1 }, // 1
+    ]);
+  });
+
+  it("always ends at 1x1, and a 1x1 preference is just itself", () => {
+    for (const span of [{ cols: 1, rows: 1 }, { cols: 3, rows: 2 }, { cols: 2, rows: 4 }]) {
+      const ladder = spanLadder(span);
+      expect(ladder[0]).toEqual(span);
+      expect(ladder.at(-1)).toEqual({ cols: 1, rows: 1 });
+    }
+    expect(spanLadder({ cols: 1, rows: 1 })).toEqual([{ cols: 1, rows: 1 }]);
+  });
+});
+
+describe("resolveSnappetDrop — shrinkToFit (palette drags auto-size)", () => {
+  // The top banner is a single row, so a 2x2 cannot seat there: reaching down puts
+  // the footprint into the plate. This is the case the feature exists for.
+  const topInner = "frame:top-5";
+
+  it("seats the largest footprint that fits instead of refusing", () => {
+    const drop = resolveSnappetDrop(ctx(), {
+      overSlotId: topInner,
+      span: { cols: 2, rows: 2 },
+      shrinkToFit: true,
+    })!;
+    expect(drop.valid).toBe(true);
+    expect({ cols: drop.cols, rows: drop.rows }).toEqual({ cols: 2, rows: 1 });
+  });
+
+  it("keeps the full footprint where it DOES fit — shrinking is a fallback", () => {
+    // The left wing + rail is 2 wide and tall, so 2x2 seats as-is.
+    const drop = resolveSnappetDrop(ctx(), {
+      overSlotId: schoolGrid.cellAt(2, 0)!.id,
+      span: { cols: 2, rows: 2 },
+      shrinkToFit: true,
+    })!;
+    expect(drop.valid).toBe(true);
+    expect({ cols: drop.cols, rows: drop.rows }).toEqual({ cols: 2, rows: 2 });
+  });
+
+  it("does NOT shrink without the flag — a MOVE keeps the size the user chose", () => {
+    const drop = resolveSnappetDrop(ctx(), {
+      overSlotId: topInner,
+      span: { cols: 2, rows: 2 },
+    })!;
+    expect(drop.valid).toBe(false);
+    expect({ cols: drop.cols, rows: drop.rows }).toEqual({ cols: 2, rows: 2 });
   });
 });
