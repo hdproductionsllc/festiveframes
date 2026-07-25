@@ -38,7 +38,7 @@ export const SCHOOL_DEFAULT_SECTIONS = {
     text: {
       ...DEFAULT_BOTTOM_BAR,
       text: "HOME OF THE",
-      fontFamily: "'Graduate', 'Rockwell', serif",
+      fontFamily: "'Alfa Slab One', 'Graduate', serif",
       letterSpacing: 4,
     },
   },
@@ -48,7 +48,7 @@ export const SCHOOL_DEFAULT_SECTIONS = {
       ...DEFAULT_BOTTOM_BAR,
       text: "WILDCATS",
       tagline: "CLASS OF 2026",
-      fontFamily: "'Graduate', 'Rockwell', serif",
+      fontFamily: "'Alfa Slab One', 'Graduate', serif",
       letterSpacing: 2,
     },
   },

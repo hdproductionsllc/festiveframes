@@ -171,3 +171,30 @@ export function artShadowCss(size: number): string {
 export function rimCss(): string {
   return `inset 0 0 0 1px ${BRASS.mid}, inset 1px 1px 0 1px ${BRASS.light}33, inset -1px -1px 0 1px ${BRASS.dark}55`;
 }
+
+// ─── Shared panel chrome ────────────────────────────────────────────────────
+
+/** Move a #rrggbb colour toward white (t>0) or black (t<0) by fraction |t|. */
+export function shift(hex: string, t: number): string {
+  const h = hex.replace("#", "");
+  if (h.length !== 6) return hex;
+  const to = t >= 0 ? 255 : 0;
+  const a = Math.abs(t);
+  const ch = [0, 2, 4].map((i) => {
+    const v = parseInt(h.slice(i, i + 2), 16);
+    return Math.round(v + (to - v) * a).toString(16).padStart(2, "0");
+  });
+  return `#${ch.join("")}`;
+}
+
+/**
+ * Top and bottom stops for a panel's gloss gradient.
+ *
+ * The mock's banners are not flat colour — they lift slightly at the top and fall
+ * away at the bottom, which is what makes them read as enamel rather than printed
+ * paper. Subtle on purpose: a strong gradient looks like a web button, while a few
+ * percent reads as a surface catching light. Same upper-left source as the bevel.
+ */
+export function glossStops(background: string): [string, string] {
+  return [shift(background, 0.14), shift(background, -0.08)];
+}
