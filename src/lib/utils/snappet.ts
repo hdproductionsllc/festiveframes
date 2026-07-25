@@ -333,6 +333,32 @@ export interface SnappetDropRequest {
   grab?: GrabOffset;
   /** The tile being MOVED, so it never collides with its own current footprint. */
   excludeId?: string;
+  /**
+   * Treat `span` as a PREFERENCE rather than a requirement: if nothing that big is
+   * seatable here, fall back through progressively smaller footprints (see
+   * `spanLadder`) and place the largest that fits.
+   *
+   * Set for a PALETTE drag, where the span came from the piece's `defaultSpan` and
+   * the user never chose it — a 2x2 dragged at a one-row banner should land 2x1
+   * rather than refuse. NOT set when MOVING a placed snappet: there the size is the
+   * user's own decision and moving it must never silently shrink it.
+   */
+  shrinkToFit?: boolean;
+}
+
+/**
+ * A preferred footprint and every smaller one it may fall back to, largest first.
+ *
+ * Ordered by area descending so the first seatable candidate is always the biggest
+ * available; ties (2x1 vs 1x2) break wider-first, which suits this frame because its
+ * tight panels are the one-row top/bottom banners, where keeping width is what
+ * preserves the art. Always ends at 1x1, so a ladder is never empty.
+ */
+export function spanLadder(span: TileSpan): TileSpan[] {
+  const { cols, rows } = tileSpan({ span });
+  const out: TileSpan[] = [];
+  for (let c = 1; c <= cols; c++) for (let r = 1; r <= rows; r++) out.push({ cols: c, rows: r });
+  return out.sort((a, b) => b.cols * b.rows - a.cols * a.rows || b.cols - a.cols);
 }
 
 /**
@@ -396,33 +422,45 @@ export function resolveSnappetDrop(
     col: Math.min(Math.max(0, over.col - dc), grid.cols - 1),
   };
 
-  const at = (coord: GridCoord, result: PlacementResult): SnappetPreview | null => {
+  const at = (
+    coord: GridCoord,
+    size: TileSpan,
+    result: PlacementResult,
+  ): SnappetPreview | null => {
     const cell = grid.cellAt(coord.row, coord.col);
     if (!cell) return null;
     return {
       anchorSlotId: cell.id,
       anchorRow: coord.row,
       anchorCol: coord.col,
-      cols: span.cols,
-      rows: span.rows,
+      cols: size.cols,
+      rows: size.rows,
       valid: result.ok,
       reason: result.ok ? undefined : result.reason,
       evicts: result.evicts,
     };
   };
 
-  // First legal anchor wins. Otherwise remember the first candidate that is a real
-  // cell: a rejection still has to be DRAWN somewhere, and drawing it on a plate
-  // hole (which has no slot) is not an option.
+  // Sizes to try, biggest first. Without shrinkToFit that is just the requested
+  // span, so a MOVE behaves exactly as before.
+  const sizes = req.shrinkToFit ? spanLadder(span) : [span];
+
+  // First legal (size, anchor) wins. Otherwise remember the first candidate that is
+  // a real cell: a rejection still has to be DRAWN somewhere, and drawing it on a
+  // plate hole (which has no slot) is not an option. The remembered rejection comes
+  // from the PREFERRED size, so a refusal reads as "this is what you asked for, and
+  // no" rather than showing a shrunken ghost that was never wanted.
   let rejected: SnappetPreview | null = null;
-  for (const cand of nudgeCandidates(start, span)) {
-    const verdict = canPlace(ctx, cand, span, req.excludeId);
-    if (verdict.ok) return at(cand, verdict);
-    rejected ??= at(cand, verdict);
+  for (const size of sizes) {
+    for (const cand of nudgeCandidates(start, size)) {
+      const verdict = canPlace(ctx, cand, size, req.excludeId);
+      if (verdict.ok) return at(cand, size, verdict);
+      rejected ??= at(cand, size, verdict);
+    }
   }
   // Every candidate was blocked AND none of them was a drawable cell — fall back
   // to the cell the pointer is genuinely over, which is a real slot by definition.
-  return rejected ?? at(over, canPlace(ctx, over, span, req.excludeId));
+  return rejected ?? at(over, span, canPlace(ctx, over, span, req.excludeId));
 }
 
 /**

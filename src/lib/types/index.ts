@@ -24,6 +24,17 @@ export interface TilePiece {
   /** Natural footprint in grid cells for a MULTI-CELL snappet (2x2, 2x4, 11x2 …).
    *  Absent = 1x1, the standard tile — so every existing piece is untouched. */
   defaultSpan?: TileSpan;
+  /**
+   * `defaultSpan` is ESSENTIAL to this piece, not merely preferred: it is
+   * meaningless at any other size (the "Test 2×3" calibration tiles, whose whole
+   * purpose is that exact footprint). Such pieces are drag-only — Fill All and
+   * Random place cell-by-cell at 1x1, which would squash them.
+   *
+   * Omit for art that simply *prefers* a larger footprint but still reads fine at
+   * 1x1 (Becky's square high-school pieces): those keep their preference on drag
+   * AND stay in the auto-fill pool.
+   */
+  spanRequired?: boolean;
 }
 
 /** A tile footprint measured in grid cells. Absent on a tile/piece means 1x1. */

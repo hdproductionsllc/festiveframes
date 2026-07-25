@@ -1,4 +1,4 @@
-import type { TileSet } from "@/lib/types";
+import type { TileSet, TileSpan } from "@/lib/types";
 
 // ─── High School Collection ─────────────────────────────────────────────────
 //
@@ -6,11 +6,10 @@ import type { TileSet } from "@/lib/types";
 // delivered 2026-07-22. Same shape as the 4th of July set: real PNG art on a
 // white background, with an emoji purely as a fallback if a file is missing.
 //
-// The art files live in `public/tiles/high-school/`. Until every PNG in
-// ART_MANIFEST (see below) is present, this set stays OUT of
-// SCHOOL_SURFACED_SET_IDS so the palette never shows broken images — it is
-// registered and getSet-able, exactly like the seasonal sets that wait on an
-// artist. Flipping it on is a one-line change in ./index.ts.
+// The art files live in `public/tiles/high-school/`. These pieces are NOT
+// surfaced as their own set — `schoolSet` spreads them into the school palette
+// (see ./school for why), so this module is the DATA and ./school is the
+// presentation.
 const A = "/tiles/high-school";
 
 /** setId shorthand. */
@@ -18,6 +17,18 @@ const H = "hs";
 
 /** Die-cut snappets read as art-on-white, matching the July 4th collection. */
 const WHITE = "#FFFFFF";
+
+/**
+ * Preferred footprint for this collection. Every piece is square (2000x2000
+ * sources), and at a single 0.991" cell the art — especially the lockups with
+ * text — is too small to read, so a 2x2 is the size these are meant to be seen at.
+ *
+ * This is a PREFERENCE, not a requirement: a palette drag resolves through
+ * `spanLadder`, so dropping one where 2x2 cannot seat (the one-row top/bottom
+ * banners) seats the largest that does — 2x1 there — instead of refusing. Because
+ * they still read fine at 1x1, they stay in the Fill All / Random pool as well.
+ */
+const PREFERRED: TileSpan = { cols: 2, rows: 2 };
 
 /**
  * The exact PNG filenames this set expects in `public/tiles/high-school/`.
@@ -65,6 +76,7 @@ export const highSchoolSet: TileSet = {
       artworkUrl: `${A}/basketball.png`,
       emoji: "🏀",
       backgroundColor: WHITE,
+      defaultSpan: PREFERRED,
     },
     {
       id: `${H}:cross-country`,
@@ -73,6 +85,7 @@ export const highSchoolSet: TileSet = {
       artworkUrl: `${A}/cross-country.png`,
       emoji: "🏃",
       backgroundColor: WHITE,
+      defaultSpan: PREFERRED,
     },
     // Field Hockey is the one piece whose PNG has not arrived yet. Its entry stays
     // commented out (rather than pointing at a missing file) so the palette never
@@ -92,6 +105,7 @@ export const highSchoolSet: TileSet = {
       artworkUrl: `${A}/football.png`,
       emoji: "🏈",
       backgroundColor: WHITE,
+      defaultSpan: PREFERRED,
     },
     {
       id: `${H}:golf`,
@@ -100,6 +114,7 @@ export const highSchoolSet: TileSet = {
       artworkUrl: `${A}/golf.png`,
       emoji: "⛳",
       backgroundColor: WHITE,
+      defaultSpan: PREFERRED,
     },
     {
       id: `${H}:soccer-ball`,
@@ -108,6 +123,7 @@ export const highSchoolSet: TileSet = {
       artworkUrl: `${A}/soccer-ball.png`,
       emoji: "⚽",
       backgroundColor: WHITE,
+      defaultSpan: PREFERRED,
     },
     {
       id: `${H}:tennis`,
@@ -116,6 +132,7 @@ export const highSchoolSet: TileSet = {
       artworkUrl: `${A}/tennis.png`,
       emoji: "🎾",
       backgroundColor: WHITE,
+      defaultSpan: PREFERRED,
     },
     {
       id: `${H}:volleyball`,
@@ -124,6 +141,7 @@ export const highSchoolSet: TileSet = {
       artworkUrl: `${A}/volleyball.png`,
       emoji: "🏐",
       backgroundColor: WHITE,
+      defaultSpan: PREFERRED,
     },
     {
       id: `${H}:future-christian-athletes`,
@@ -132,6 +150,7 @@ export const highSchoolSet: TileSet = {
       artworkUrl: `${A}/future-christian-athletes.png`,
       emoji: "✝️",
       backgroundColor: WHITE,
+      defaultSpan: PREFERRED,
     },
 
     // ─── Academic & competition clubs ──────────────────────────
@@ -142,6 +161,7 @@ export const highSchoolSet: TileSet = {
       artworkUrl: `${A}/deca.png`,
       emoji: "📈",
       backgroundColor: WHITE,
+      defaultSpan: PREFERRED,
     },
     {
       id: `${H}:fbla`,
@@ -150,6 +170,7 @@ export const highSchoolSet: TileSet = {
       artworkUrl: `${A}/fbla.png`,
       emoji: "💼",
       backgroundColor: WHITE,
+      defaultSpan: PREFERRED,
     },
     {
       id: `${H}:honor-society`,
@@ -158,6 +179,7 @@ export const highSchoolSet: TileSet = {
       artworkUrl: `${A}/honor-society.png`,
       emoji: "🎓",
       backgroundColor: WHITE,
+      defaultSpan: PREFERRED,
     },
     {
       id: `${H}:mu-alpha-theta`,
@@ -166,6 +188,7 @@ export const highSchoolSet: TileSet = {
       artworkUrl: `${A}/mu-alpha-theta.png`,
       emoji: "📐",
       backgroundColor: WHITE,
+      defaultSpan: PREFERRED,
     },
     {
       id: `${H}:robotics-club`,
@@ -174,6 +197,7 @@ export const highSchoolSet: TileSet = {
       artworkUrl: `${A}/robotics-club.png`,
       emoji: "🤖",
       backgroundColor: WHITE,
+      defaultSpan: PREFERRED,
     },
     {
       id: `${H}:chess-club`,
@@ -182,6 +206,7 @@ export const highSchoolSet: TileSet = {
       artworkUrl: `${A}/chess-club.png`,
       emoji: "♟️",
       backgroundColor: WHITE,
+      defaultSpan: PREFERRED,
     },
     {
       id: `${H}:speech-and-debate`,
@@ -190,6 +215,7 @@ export const highSchoolSet: TileSet = {
       artworkUrl: `${A}/speech-and-debate.png`,
       emoji: "🗣️",
       backgroundColor: WHITE,
+      defaultSpan: PREFERRED,
     },
 
     // ─── Arts & media ──────────────────────────────────────────
@@ -200,6 +226,7 @@ export const highSchoolSet: TileSet = {
       artworkUrl: `${A}/drama-theater.png`,
       emoji: "🎭",
       backgroundColor: WHITE,
+      defaultSpan: PREFERRED,
     },
     {
       id: `${H}:photography-club`,
@@ -208,6 +235,7 @@ export const highSchoolSet: TileSet = {
       artworkUrl: `${A}/photography-club.png`,
       emoji: "📷",
       backgroundColor: WHITE,
+      defaultSpan: PREFERRED,
     },
     {
       id: `${H}:yearbook-club`,
@@ -216,6 +244,7 @@ export const highSchoolSet: TileSet = {
       artworkUrl: `${A}/yearbook-club.png`,
       emoji: "📖",
       backgroundColor: WHITE,
+      defaultSpan: PREFERRED,
     },
 
     // ─── Student government ────────────────────────────────────
@@ -226,6 +255,7 @@ export const highSchoolSet: TileSet = {
       artworkUrl: `${A}/student-council.png`,
       emoji: "🗳️",
       backgroundColor: WHITE,
+      defaultSpan: PREFERRED,
     },
   ],
   // No starter layouts yet — the collection is a palette of activities that each

@@ -25,19 +25,21 @@ export function QuickActions({ surfacedSetIds }: QuickActionsProps = {}) {
   const pieces = getSetPieces(
     surfacedSetIds ? resolveSurfacedSetId(activeSetId, surfacedSetIds) : activeSetId
   );
-  // Fill All / Random place cell-by-cell (1x1), so a multi-cell piece (one with a
-  // `defaultSpan`, e.g. the school test tiles) would get squished into a single cell.
-  // Those are drag-only; the auto-fill pool is 1x1 pieces exclusively.
-  const fillablePieces = pieces.filter((p) => !p.defaultSpan);
+  // Fill All / Random place cell-by-cell (1x1), so a piece that is MEANINGLESS at
+  // 1x1 would get squished — the calibration tiles, which mark `spanRequired`.
+  // Filtering on that rather than on `defaultSpan` keeps art that merely PREFERS a
+  // bigger footprint (Becky's square high-school pieces, which read fine small) in
+  // the pool, so auto-fill still reaches the real collection.
+  const fillablePieces = pieces.filter((p) => !p.spanRequired);
 
   const sfx = (name: SoundName) => { if (soundEnabled) playSound(name); };
 
   const handleFillAll = () => {
-    // Prefer the user's selected tile — but only if it's a 1x1 (a multi-cell piece
-    // can't fill single cells). Otherwise fall back to the first 1x1 piece so "Fill
-    // All" always does something obvious instead of squishing a footprint.
+    // Prefer the user's selected tile — but only if it's fillable at 1x1. A piece
+    // that REQUIRES its footprint can't fill single cells, so fall back to the first
+    // fillable piece and always do something obvious instead of squishing it.
     const selected = selectedPieceId ? pieces.find((p) => p.id === selectedPieceId) : null;
-    const pieceId = (selected && !selected.defaultSpan ? selected.id : fillablePieces[0]?.id) ?? null;
+    const pieceId = (selected && !selected.spanRequired ? selected.id : fillablePieces[0]?.id) ?? null;
     if (!pieceId) return;
     const setId = pieceId.split(":")[0];
     fillAll(pieceId, setId);

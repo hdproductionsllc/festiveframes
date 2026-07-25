@@ -230,11 +230,12 @@ export function DndProvider({
       span: TileSpan,
       grab: GrabOffset,
       excludeId?: string,
+      shrinkToFit?: boolean,
     ): SnappetPreview | null => {
       if (!overId?.startsWith("frame:") || !isMultiCell(span)) return null;
       return resolveSnappetDrop(
         { grid, slots, sections, barCovered: new Set(coveredSlotIds(textBars)) },
-        { overSlotId: overId, span, grab, excludeId },
+        { overSlotId: overId, span, grab, excludeId, shrinkToFit },
       );
     },
     [grid, slots, sections, textBars],
@@ -348,7 +349,14 @@ export function DndProvider({
       const span = dragSpanOf(data);
       if (isMultiCell(span)) {
         const grab = readGrab(data);
-        setCue(null, null, resolveDrop(overId, span, grab, data?.slotId as string | undefined));
+        // A palette drag may shrink to fit (its span is the piece's preference, not
+        // the user's choice); carrying a placed snappet never does.
+        const fromPalette = data?.type !== "placed-tile";
+        setCue(
+          null,
+          null,
+          resolveDrop(overId, span, grab, data?.slotId as string | undefined, fromPalette),
+        );
         return;
       }
 
@@ -400,7 +408,13 @@ export function DndProvider({
       // drag on /build), which keeps the original two branches below as they were.
       const span = dragSpanOf(data);
       const grab = readGrab(data);
-      const drop = resolveDrop(overId, span, grab, data?.slotId as string | undefined);
+      const drop = resolveDrop(
+        overId,
+        span,
+        grab,
+        data?.slotId as string | undefined,
+        data?.type !== "placed-tile", // palette drags shrink to fit; moves keep their size
+      );
 
       if (data?.type === "placed-tile") {
         const fromSlotId = data.slotId as string;
@@ -424,9 +438,20 @@ export function DndProvider({
         if (isMultiCell(span) && !drop?.valid) return;
         const setId = pieceId.split(":")[0];
         const toSlotId = drop?.anchorSlotId ?? overId;
-        // The piece's natural footprint travels with it; `undefined` for a plain
-        // tile, so the stored record keeps its original two-field shape.
-        placeTile(toSlotId, pieceId, setId, isMultiCell(span) ? span : undefined);
+        // Commit the RESOLVED footprint, not the requested one. With shrinkToFit a
+        // palette drag can land smaller than the piece's preference (a 2x2 over the
+        // one-row banner seats as 2x1), and the preview already drew that — placing
+        // `span` here instead would make the ghost a lie. Still `undefined` once the
+        // result is 1x1, so a plain tile keeps its original two-field record shape.
+        const placedSpan: TileSpan | undefined = drop
+          ? { cols: drop.cols, rows: drop.rows }
+          : undefined;
+        placeTile(
+          toSlotId,
+          pieceId,
+          setId,
+          placedSpan && isMultiCell(placedSpan) ? placedSpan : undefined,
+        );
         emitTilePlaced(toSlotId);
         if (soundEnabled) playSound("snap");
       }
