@@ -439,8 +439,8 @@ function drawTextBlock(
 
   // Draw one tier's `\n` lines, vertically centered within a band that starts
   // `bandTop` below the content top and is `bandH` tall.
-  const drawTier = (str: string, fontPx: number, bandTop: number, bandH: number) => {
-    ctx.font = `800 ${fontPx}px ${cfg.fontFamily}`;
+  const drawTier = (str: string, fontPx: number, bandTop: number, bandH: number, family: string) => {
+    ctx.font = `800 ${fontPx}px ${family}`;
     ctx.fillStyle = cfg.textColor;
     ctx.textBaseline = "middle";
     try { (ctx as CanvasRenderingContext2D & { letterSpacing?: string }).letterSpacing = `${ls}px`; } catch { /* unsupported */ }
@@ -476,13 +476,14 @@ function drawTextBlock(
   if (headline.length) {
     if (tagline) {
       const bands = bannerBands(contentH);
+      const tagFamily = cfg.taglineFontFamily ?? cfg.fontFamily;
       const hFont = fitSectionFont(ctx, headline, cfg.fontFamily, ls, contentW, bands.headlineH, fill);
-      const tFont = fitSectionFont(ctx, tagline, cfg.fontFamily, ls, contentW, bands.taglineH, fill);
-      drawTier(headline, hFont, bands.headlineTop, bands.headlineH);
-      drawTier(tagline, tFont, bands.taglineTop, bands.taglineH);
+      const tFont = fitSectionFont(ctx, tagline, tagFamily, ls, contentW, bands.taglineH, fill);
+      drawTier(headline, hFont, bands.headlineTop, bands.headlineH, cfg.fontFamily);
+      drawTier(tagline, tFont, bands.taglineTop, bands.taglineH, tagFamily);
     } else {
       const fontPx = fitSectionFont(ctx, headline, cfg.fontFamily, ls, contentW, contentH, fill);
-      drawTier(headline, fontPx, 0, contentH);
+      drawTier(headline, fontPx, 0, contentH, cfg.fontFamily);
     }
   }
   ctx.restore();

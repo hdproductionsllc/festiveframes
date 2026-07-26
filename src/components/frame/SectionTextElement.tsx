@@ -130,16 +130,17 @@ export function SectionTextElement({
   // vertical band (shared with the print renderer via `bannerBands`). One line = a
   // single big headline (the original single-block behavior).
   const tagline = config.tagline?.trim() ? config.tagline : "";
+  const taglineFamily = config.taglineFontFamily ?? fontFamily;
   const bands = bannerBands(contentH);
   const headlineFont = tagline
     ? fitBlockFont(text, fontFamily, letterSpacing, contentW, bands.headlineH, fill)
     : fitBlockFont(text, fontFamily, letterSpacing, contentW, contentH, fill);
   const taglineFont = tagline
-    ? fitBlockFont(tagline, fontFamily, letterSpacing, contentW, bands.taglineH, fill)
+    ? fitBlockFont(tagline, taglineFamily, letterSpacing, contentW, bands.taglineH, fill)
     : 0;
 
-  const lineStyle = (fontPx: number): React.CSSProperties => ({
-    fontFamily,
+  const lineStyle = (fontPx: number, family: string = fontFamily): React.CSSProperties => ({
+    fontFamily: family,
     fontSize: fontPx,
     fontWeight: 800,
     lineHeight: LINE_HEIGHT,
@@ -199,7 +200,7 @@ export function SectionTextElement({
             }}
           >
             <div style={lineStyle(headlineFont)}>{text}</div>
-            {tagline && <div style={lineStyle(taglineFont)}>{tagline}</div>}
+            {tagline && <div style={lineStyle(taglineFont, taglineFamily)}>{tagline}</div>}
           </div>
         </div>
       </div>

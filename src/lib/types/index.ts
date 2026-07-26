@@ -133,6 +133,10 @@ export interface BottomBarConfig {
    *  tagline. Absent = one big headline (backward-compatible; every other bar and
    *  /build never set it). */
   tagline?: string;
+  /** Optional face for the TAGLINE tier only. A banner is set in two voices — a
+   *  block headline over a condensed secondary line — and using one family for both
+   *  makes the tagline read as the headline shrunk. Absent = use `fontFamily`. */
+  taglineFontFamily?: string;
   fontFamily: string;
   fontSize: number; // auto-fit fill (0–1): 1 = fill the bar, lower scales down. Default 1.
   textColor: string;
