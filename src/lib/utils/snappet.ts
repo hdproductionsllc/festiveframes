@@ -18,7 +18,15 @@
 // exactly today's answer for a design in which no tile carries a span, which is
 // what keeps /build unchanged by construction.
 
-import type { FrameSlot, GridCoord, PlacedTile, SectionId, SectionState, TileSpan } from "@/lib/types";
+import type {
+  FrameSlot,
+  GridCoord,
+  PlacedTile,
+  SectionId,
+  SectionState,
+  TilePiece,
+  TileSpan,
+} from "@/lib/types";
 import type { FrameGrid } from "@/lib/utils/slot-generator";
 import { panelSuppressed } from "@/lib/utils/sections";
 
@@ -357,6 +365,12 @@ export interface SnappetDropRequest {
    * Requires `shrinkToFit`, which walks the result down when the panel is occupied.
    */
   growToPanel?: boolean;
+  /**
+   * Floor for `shrinkToFit`. A badge shrunk to 1x1 is unreadable, so art pieces pass
+   * MIN_ART_SPAN here and the ladder never proposes anything smaller (see
+   * `minSpanFor`). Absent = 1x1, i.e. the old behaviour.
+   */
+  minSpan?: TileSpan;
 }
 
 /**
@@ -387,10 +401,32 @@ function panelExtent(
  * tight panels are the one-row top/bottom banners, where keeping width is what
  * preserves the art. Always ends at 1x1, so a ladder is never empty.
  */
-export function spanLadder(span: TileSpan): TileSpan[] {
+export const MIN_ART_SPAN: TileSpan = { cols: 2, rows: 2 };
+
+/**
+ * The smallest footprint a piece may be reduced to.
+ *
+ * Real artwork - especially the lockups with text - is unreadable at a single
+ * 0.991in cell, so a badge floors at 2x2. Two kinds of piece are exempt: a plain
+ * 1x1 (a solid colour block has no detail to lose) and a `spanRequired` calibration
+ * tile, whose whole point is one exact non-square footprint.
+ */
+export function minSpanFor(
+  piece: Pick<TilePiece, "defaultSpan" | "spanRequired"> | null | undefined,
+): TileSpan {
+  if (!piece?.defaultSpan || piece.spanRequired) return { cols: 1, rows: 1 };
+  return MIN_ART_SPAN;
+}
+
+export function spanLadder(span: TileSpan, min: TileSpan = { cols: 1, rows: 1 }): TileSpan[] {
   const { cols, rows } = tileSpan({ span });
+  const lo = tileSpan({ span: min });
   const out: TileSpan[] = [];
-  for (let c = 1; c <= cols; c++) for (let r = 1; r <= rows; r++) out.push({ cols: c, rows: r });
+  for (let c = lo.cols; c <= cols; c++)
+    for (let r = lo.rows; r <= rows; r++) out.push({ cols: c, rows: r });
+  // A min bigger than the preference would leave the ladder empty; fall back to the
+  // floor itself so a drop always has something to try.
+  if (out.length === 0) out.push(lo);
   return out.sort((a, b) => b.cols * b.rows - a.cols * a.rows || b.cols - a.cols);
 }
 
@@ -479,11 +515,18 @@ export function resolveSnappetDrop(
   // 3x3 in a 3-wide one, 1x1 in a one-row banner, where a wider box would add
   // background without making the art any bigger). Otherwise it is the span itself.
   const ext = req.growToPanel ? panelExtent(grid, start) : null;
-  const preferred = ext ? suggestSnappetSize(span.cols / span.rows, ext) : span;
+  const grown = ext ? suggestSnappetSize(span.cols / span.rows, ext) : span;
+  // The panel may suggest something below the floor (a one-row banner suggests 1x1
+  // for square art). Clamp UP so a badge is never proposed at an unreadable size.
+  const floor = tileSpan({ span: req.minSpan ?? { cols: 1, rows: 1 } });
+  const preferred: TileSpan = {
+    cols: Math.max(grown.cols, floor.cols),
+    rows: Math.max(grown.rows, floor.rows),
+  };
 
   // Sizes to try, biggest first. Without shrinkToFit that is just the requested
   // span, so a MOVE behaves exactly as before.
-  const sizes = req.shrinkToFit ? spanLadder(preferred) : [span];
+  const sizes = req.shrinkToFit ? spanLadder(preferred, floor) : [span];
 
   // First legal (size, anchor) wins. Otherwise remember the first candidate that is
   // a real cell: a rejection still has to be DRAWN somewhere, and drawing it on a

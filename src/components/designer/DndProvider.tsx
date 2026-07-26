@@ -21,6 +21,7 @@ import { measureTextBarUnits, rowLength, findFreeStart, coveredSlotIds } from "@
 import { buildGrid } from "@/lib/utils/slot-generator";
 import {
   isMultiCell,
+  minSpanFor,
   resolveSnappetDrop,
   tileSpan,
   NO_GRAB,
@@ -64,6 +65,12 @@ function autoSizes(data: Record<string, unknown> | undefined): boolean {
   if (data?.type === "placed-tile") return false;
   const pieceId = data?.pieceId as string | undefined;
   return pieceId ? !getPiece(pieceId)?.spanRequired : false;
+}
+
+/** The smallest footprint this drag may settle at — see `minSpanFor`. */
+function dragMinSpan(data: Record<string, unknown> | undefined): TileSpan | undefined {
+  const pieceId = data?.pieceId as string | undefined;
+  return pieceId ? minSpanFor(getPiece(pieceId)) : undefined;
 }
 
 /**
@@ -243,6 +250,7 @@ export function DndProvider({
       grab: GrabOffset,
       excludeId?: string,
       autoSize?: boolean,
+      minSpan?: TileSpan,
     ): SnappetPreview | null => {
       if (!overId?.startsWith("frame:") || !isMultiCell(span)) return null;
       return resolveSnappetDrop(
@@ -256,6 +264,7 @@ export function DndProvider({
           // panel, then walk it down to whatever is actually seatable there.
           shrinkToFit: autoSize,
           growToPanel: autoSize,
+          minSpan,
         },
       );
     },
@@ -373,7 +382,7 @@ export function DndProvider({
         setCue(
           null,
           null,
-          resolveDrop(overId, span, grab, data?.slotId as string | undefined, autoSizes(data)),
+          resolveDrop(overId, span, grab, data?.slotId as string | undefined, autoSizes(data), dragMinSpan(data)),
         );
         return;
       }
@@ -432,6 +441,7 @@ export function DndProvider({
         grab,
         data?.slotId as string | undefined,
         autoSizes(data), // palette drags auto-size; moves keep the size the user chose
+        dragMinSpan(data),
       );
 
       if (data?.type === "placed-tile") {
