@@ -29,6 +29,7 @@ import type {
 } from "@/lib/types";
 import type { FrameGrid } from "@/lib/utils/slot-generator";
 import { panelSuppressed } from "@/lib/utils/sections";
+import { NO_CORNERS, type CornerFlags } from "@/lib/utils/tile-theme";
 
 const ONE_BY_ONE: TileSpan = { cols: 1, rows: 1 };
 
@@ -882,6 +883,40 @@ export function blockFill(
     }
   }
   return slots;
+}
+
+/**
+ * Which of the FRAME's four outer corners this footprint occupies.
+ *
+ * Derived from the grid's own extremes rather than from hard-coded row/column
+ * numbers, so widening the side panels or adding a bottom row cannot leave the
+ * corner treatment pointing at cells that are no longer corners.
+ *
+ * A footprint can hold more than one — a badge tall enough to span a whole side
+ * panel owns that side's top AND bottom corner.
+ */
+export function frameCorners(
+  grid: PlacementContext["grid"],
+  anchor: GridCoord,
+  span: TileSpan,
+): CornerFlags {
+  if (grid.slots.length === 0) return NO_CORNERS;
+  let minRow = Infinity, maxRow = -Infinity, minCol = Infinity, maxCol = -Infinity;
+  for (const s of grid.slots) {
+    if (s.row < minRow) minRow = s.row;
+    if (s.row > maxRow) maxRow = s.row;
+    if (s.col < minCol) minCol = s.col;
+    if (s.col > maxCol) maxCol = s.col;
+  }
+  const coords = occupiedCoords(anchor, tileSpan({ span }));
+  const holds = (row: number, col: number) =>
+    coords.some((c) => c.row === row && c.col === col);
+  return {
+    tl: holds(minRow, minCol),
+    tr: holds(minRow, maxCol),
+    bl: holds(maxRow, minCol),
+    br: holds(maxRow, maxCol),
+  };
 }
 
 /**

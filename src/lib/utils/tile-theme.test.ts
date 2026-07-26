@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
 import {
+  NO_CORNERS,
+  radiusCss,
+  insetRadii,
+  cornerRadii,
   TILE_BG,
   BRASS,
   luminance,
@@ -271,5 +275,56 @@ describe("artShadow — the art casting onto its field", () => {
     expect(css).toContain(s.offsetX.toFixed(1));
     expect(css).toContain(s.offsetY.toFixed(1));
     expect(css).toContain("drop-shadow(");
+  });
+});
+
+describe("frame-corner rounding — the whole frame as one part", () => {
+  const CELL = 150;
+
+  it("opens ONLY the corners that face the frame's outside", () => {
+    const r = cornerRadii(CELL, { tl: true, tr: false, br: false, bl: false });
+    expect(r.tl).toBeGreaterThan(r.tr);
+    // The other three match an ordinary interior badge exactly — a corner tile is
+    // the same component in a different place, not a different component.
+    const plain = cornerRadii(CELL, NO_CORNERS);
+    expect(r.tr).toBe(plain.tr);
+    expect(r.br).toBe(plain.br);
+    expect(r.bl).toBe(plain.bl);
+  });
+
+  it("leaves an interior badge completely uniform", () => {
+    const r = cornerRadii(CELL, NO_CORNERS);
+    expect(new Set([r.tl, r.tr, r.br, r.bl]).size).toBe(1);
+  });
+
+  it("is measured against the CELL, so a 3x3 corner badge curves like a 2x2", () => {
+    expect(cornerRadii(CELL, { tl: true, tr: false, br: false, bl: false })).toEqual(
+      cornerRadii(CELL, { tl: true, tr: false, br: false, bl: false }),
+    );
+    expect(cornerRadii(CELL * 2, NO_CORNERS).tl).toBeGreaterThan(cornerRadii(CELL, NO_CORNERS).tl);
+  });
+
+  it("handles a badge that owns two corners at once", () => {
+    // A badge tall enough to span a whole side panel owns that side's top AND bottom.
+    const r = cornerRadii(CELL, { tl: true, bl: true, tr: false, br: false });
+    expect(r.tl).toBe(r.bl);
+    expect(r.tl).toBeGreaterThan(r.tr);
+  });
+
+  it("insets every corner together, keeping the rings concentric", () => {
+    const r = cornerRadii(CELL, { tl: true, tr: false, br: false, bl: false });
+    const inner = insetRadii(r, 6);
+    expect(inner.tl).toBe(r.tl - 6);
+    expect(inner.tr).toBe(r.tr - 6);
+    expect(inner.tl).toBeGreaterThan(inner.tr); // the wide corner stays wide
+  });
+
+  it("never insets a radius below 1", () => {
+    const inner = insetRadii(cornerRadii(8, NO_CORNERS), 999);
+    for (const v of [inner.tl, inner.tr, inner.br, inner.bl]) expect(v).toBeGreaterThanOrEqual(1);
+  });
+
+  it("emits border-radius in CSS's own order: tl tr br bl", () => {
+    expect(radiusCss({ tl: 1, tr: 2, br: 3, bl: 4 })).toBe("1px 2px 3px 4px");
   });
 });

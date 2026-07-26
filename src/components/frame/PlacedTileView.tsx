@@ -1,7 +1,18 @@
 "use client";
 
 import { getPiece } from "@/data/sets";
-import { artShadowCss, ringCss, solidFill, tileBackground, tileEdgeCss } from "@/lib/utils/tile-theme";
+import {
+  artShadowCss,
+  cornerRadii,
+  insetRadii,
+  radiusCss,
+  ringCss,
+  solidFill,
+  tileBackground,
+  tileEdgeCss,
+  NO_CORNERS,
+  type CornerFlags,
+} from "@/lib/utils/tile-theme";
 import { TileArtwork, hasCustomArtwork, canDieCut } from "@/components/tiles/TileArtwork";
 import { useDesignStore } from "@/stores/design-store";
 
@@ -21,9 +32,23 @@ interface PlacedTileViewProps {
    * own short side for callers that draw a lone tile at cell size (the drag ghost).
    */
   unit?: number;
+  /**
+   * Which of this badge's corners face the FRAME's outside. Those get a much wider
+   * radius, so the frame reads as one rounded part instead of a grid of separately
+   * rounded squares. Absent = an interior badge, ordinary radius all round.
+   */
+  corners?: CornerFlags;
 }
 
-export function PlacedTileView({ pieceId, width, height, animate, image, unit }: PlacedTileViewProps) {
+export function PlacedTileView({
+  pieceId,
+  width,
+  height,
+  animate,
+  image,
+  unit,
+  corners,
+}: PlacedTileViewProps) {
   const dieCut = useDesignStore((s) => s.dieCut);
 
   // Uploaded art: render the image itself, sized to the snappet rect. `cover` fills
@@ -58,6 +83,9 @@ export function PlacedTileView({ pieceId, width, height, animate, image, unit }:
   const isDieCut = dieCut && canDieCut(pieceId);
   const field = tileBackground(piece);
   const edge = tileEdgeCss(size, field, width, height, unit ?? size);
+  const radii = cornerRadii(unit ?? size, corners ?? NO_CORNERS);
+  const rimRadii = insetRadii(radii, edge.rimInset);
+  const bevelRadii = insetRadii(rimRadii, edge.rimWidth);
 
   const art = piece.artworkUrl ? (
     // eslint-disable-next-line @next/next/no-img-element
@@ -103,7 +131,7 @@ export function PlacedTileView({ pieceId, width, height, animate, image, unit }:
         width,
         height,
         backgroundColor: field,
-        borderRadius: edge.radius,
+        borderRadius: radiusCss(radii),
         boxShadow: edge.outerShadow,
         padding: edge.rimInset,
       }}
@@ -113,7 +141,7 @@ export function PlacedTileView({ pieceId, width, height, animate, image, unit }:
           width: "100%",
           height: "100%",
           border: `${edge.rimWidth}px solid transparent`,
-          borderRadius: edge.rimRadius,
+          borderRadius: radiusCss(rimRadii),
           background: ringCss(solidFill(field), edge.brassGradient),
         }}
       >
@@ -123,7 +151,7 @@ export function PlacedTileView({ pieceId, width, height, animate, image, unit }:
             height: "100%",
             overflow: "hidden",
             border: `${edge.bevelWidth}px solid transparent`,
-            borderRadius: edge.bevelRadius,
+            borderRadius: radiusCss(bevelRadii),
             background: ringCss(solidFill(field), edge.bevelGradient),
           }}
         >

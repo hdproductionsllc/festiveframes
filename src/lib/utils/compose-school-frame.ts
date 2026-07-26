@@ -38,7 +38,12 @@ import type {
 } from "@/lib/types";
 import { getRenderHeightInches, getTotalWidthInches } from "@/lib/constants/frame";
 import { buildGrid } from "@/lib/utils/slot-generator";
-import { coveredBySnappets, tileSpan, visibleAnchorSlots } from "@/lib/utils/snappet";
+import {
+  coveredBySnappets,
+  frameCorners,
+  tileSpan,
+  visibleAnchorSlots,
+} from "@/lib/utils/snappet";
 import { coveredSlotIds } from "@/lib/utils/text-bar";
 import {
   fitTextBarFont,
@@ -63,7 +68,11 @@ import {
   bevelGradient,
   bevelMetrics,
   chromeInset,
+  cornerRadii,
   glossStops,
+  insetRadii,
+  NO_CORNERS,
+  type CornerRadii,
   rimMetrics,
   textEmboss,
   tileBackground,
@@ -124,12 +133,14 @@ function drawBevel(
   background: string,
   /** One grid cell, so the edge is the same width on every badge and both bars. */
   unit: number,
+  /** Per-corner radii — wide where the badge faces the frame's outside. */
+  radii: CornerRadii,
 ): void {
   const rim = rimMetrics(w, h, unit);
 
   // Hairline outline — stops two adjacent badges from bleeding into one shape.
   ctx.beginPath();
-  roundRect(ctx, x + 0.5, y + 0.5, w - 1, h - 1, m.radius);
+  roundRect(ctx, x + 0.5, y + 0.5, w - 1, h - 1, radii);
   ctx.strokeStyle = "rgba(0,0,0,0.30)";
   ctx.lineWidth = 1;
   ctx.stroke();
@@ -142,7 +153,14 @@ function drawBevel(
   g.addColorStop(0.5, BRASS.mid);
   g.addColorStop(1, BRASS.dark);
   ctx.beginPath();
-  roundRect(ctx, x + rim.inset, y + rim.inset, w - rim.inset * 2, h - rim.inset * 2, rim.radius);
+  roundRect(
+    ctx,
+    x + rim.inset,
+    y + rim.inset,
+    w - rim.inset * 2,
+    h - rim.inset * 2,
+    insetRadii(radii, rim.inset),
+  );
   ctx.strokeStyle = g;
   ctx.lineWidth = rim.width;
   ctx.stroke();
@@ -156,12 +174,12 @@ function drawBevel(
   if (bw <= 0 || bh <= 0) return;
   const t = Math.min(m.thickness, Math.floor(Math.min(bw, bh) / 2));
   if (t <= 0) return;
-  const outerR = Math.max(0, m.radius - rim.inset - rim.width);
+  const outerR = insetRadii(radii, rim.inset + rim.width);
 
   ctx.save();
   ctx.beginPath();
   roundRectPath(ctx, bx, by, bw, bh, outerR);
-  roundRectPath(ctx, bx + t, by + t, bw - t * 2, bh - t * 2, Math.max(0, outerR - t));
+  roundRectPath(ctx, bx + t, by + t, bw - t * 2, bh - t * 2, insetRadii(outerR, t));
   ctx.clip("evenodd");
   const ax = bevelAxis(bx, by, bw, bh);
   const bg = ctx.createLinearGradient(ax.x0, ax.y0, ax.x1, ax.y1);
@@ -278,22 +296,33 @@ export function schoolBannerRect(
 
 /** Append a rounded rect to the CURRENT path without starting a new one, so two of
  *  them can be combined into a ring and filled or clipped "evenodd". */
+/** A single radius, or one per corner so a badge can open up only the corners that
+ *  face the frame's outside (see `cornerRadii`). */
+type Radius = number | CornerRadii;
+
 function roundRectPath(
   ctx: CanvasRenderingContext2D,
-  x: number, y: number, w: number, h: number, r: number,
+  x: number, y: number, w: number, h: number, r: Radius,
 ) {
-  const rr = Math.max(0, Math.min(r, w / 2, h / 2));
-  ctx.moveTo(x + rr, y);
-  ctx.arcTo(x + w, y, x + w, y + h, rr);
-  ctx.arcTo(x + w, y + h, x, y + h, rr);
-  ctx.arcTo(x, y + h, x, y, rr);
-  ctx.arcTo(x, y, x + w, y, rr);
+  const cap = Math.min(w / 2, h / 2);
+  const c = typeof r === "number" ? { tl: r, tr: r, br: r, bl: r } : r;
+  const tl = Math.max(0, Math.min(c.tl, cap));
+  const tr = Math.max(0, Math.min(c.tr, cap));
+  const br = Math.max(0, Math.min(c.br, cap));
+  const bl = Math.max(0, Math.min(c.bl, cap));
+  // Each arcTo carries its OWN radius, which is what lets one corner be wide while
+  // the other three stay at the ordinary tile radius.
+  ctx.moveTo(x + tl, y);
+  ctx.arcTo(x + w, y, x + w, y + h, tr);
+  ctx.arcTo(x + w, y + h, x, y + h, br);
+  ctx.arcTo(x, y + h, x, y, bl);
+  ctx.arcTo(x, y, x + w, y, tl);
   ctx.closePath();
 }
 
 function roundRect(
   ctx: CanvasRenderingContext2D,
-  x: number, y: number, w: number, h: number, r: number,
+  x: number, y: number, w: number, h: number, r: Radius,
 ) {
   ctx.beginPath();
   roundRectPath(ctx, x, y, w, h, r);
@@ -405,10 +434,13 @@ function drawTextBlock(
   unit: number,
 ) {
   const bevel = bevelMetrics(w, h, cfg.backgroundColor, unit);
+  // A banner never reaches a frame corner on this geometry — the wings do, and they
+  // run the full height on both sides. Ordinary radii all round.
+  const radii = cornerRadii(unit, NO_CORNERS);
   ctx.save();
   // Rounded like the badges, not square. A square-cornered bar carrying a rounded
   // brass rim was the loudest mismatch between the bars and the badges.
-  roundRect(ctx, x, y, w, h, bevel.radius);
+  roundRect(ctx, x, y, w, h, radii);
   ctx.clip();
   // Banners wear the SAME chrome as the badges — gloss gradient, bevel and brass
   // rim — because in the mock the bars and the badges read as one system. A flat
@@ -419,7 +451,7 @@ function drawTextBlock(
   grad.addColorStop(1, gBot);
   ctx.fillStyle = grad;
   ctx.fillRect(x, y, w, h);
-  drawBevel(ctx, x, y, w, h, bevel, cfg.backgroundColor, unit);
+  drawBevel(ctx, x, y, w, h, bevel, cfg.backgroundColor, unit, radii);
 
   // Clear the chrome before the text starts. Derived from the chrome itself rather
   // than guessed alongside it, so the bevel can never cut into a descender again.
@@ -551,7 +583,14 @@ export function drawSchoolFrame(
     const piece0 = !tile.image ? getPiece(tile.pieceId) : undefined;
     const field = piece0 ? tileBackground(piece0) : "#ffffff";
     const bevel = bevelMetrics(w, h, field, m.tileSize);
-    roundRect(ctx, slot.x, slot.y, w, h, bevel.radius);
+    // Open up whichever corners face the frame's OUTSIDE, so the whole assembly
+    // reads as one rounded part rather than a grid of separately-rounded squares.
+    const anchorCoord = grid.coordOf(slot.id);
+    const radii = cornerRadii(
+      m.tileSize,
+      anchorCoord ? frameCorners(grid, anchorCoord, span) : NO_CORNERS,
+    );
+    roundRect(ctx, slot.x, slot.y, w, h, radii);
     ctx.clip();
     // The FIELD behind the art. Previously hard-coded white, which silently
     // disagreed with the on-screen tile for any piece with transparent art — and
@@ -596,7 +635,7 @@ export function drawSchoolFrame(
     }
     // Faux bevel LAST, so it sits over the art and reads as the badge's moulding.
     // Still inside the clip, so it follows the rounded corner.
-    drawBevel(ctx, slot.x, slot.y, w, h, bevel, field, m.tileSize);
+    drawBevel(ctx, slot.x, slot.y, w, h, bevel, field, m.tileSize, radii);
     ctx.restore();
   }
 

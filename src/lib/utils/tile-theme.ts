@@ -78,6 +78,69 @@ export const BEVEL_RATIO = 0.055;
 export const RADIUS_RATIO = 0.1;
 
 /**
+ * Corner radius for a badge sitting at one of the FRAME's four outer corners,
+ * as a fraction of the short side.
+ *
+ * Much wider than the ordinary tile radius, and applied to that one corner only.
+ * The frame is a grid of separately-rounded squares, and at the outside edge that
+ * is exactly what it looks like — four little rounded boxes marking the extremes
+ * rather than one moulded part. Opening up just the outward-facing corner lets the
+ * whole assembly read as a single rounded rectangle, because the outline the eye
+ * traces around the frame is now continuous.
+ *
+ * The badge's other three corners keep the ordinary radius: enlarging all four
+ * would make the corner tile a different-looking component instead of the same
+ * component in a different place.
+ */
+export const FRAME_CORNER_RADIUS_RATIO = 0.34;
+
+/** Which of a footprint's corners sit at the frame's outer corners. */
+export interface CornerFlags {
+  tl: boolean;
+  tr: boolean;
+  br: boolean;
+  bl: boolean;
+}
+
+export const NO_CORNERS: CornerFlags = { tl: false, tr: false, br: false, bl: false };
+
+/** A per-corner radius set, in the order CSS writes them. */
+export interface CornerRadii {
+  tl: number;
+  tr: number;
+  br: number;
+  bl: number;
+}
+
+/**
+ * Radii for a badge, opening up whichever corners face the frame's outside.
+ *
+ * Measured against ONE CELL like every other edge number, so a 3x3 corner badge
+ * and a 2x2 one carry the same physical curve.
+ */
+export function cornerRadii(unit: number, corners: CornerFlags = NO_CORNERS): CornerRadii {
+  const base = Math.max(2, Math.round(unit * RADIUS_RATIO));
+  const wide = Math.max(base, Math.round(unit * FRAME_CORNER_RADIUS_RATIO));
+  return {
+    tl: corners.tl ? wide : base,
+    tr: corners.tr ? wide : base,
+    br: corners.br ? wide : base,
+    bl: corners.bl ? wide : base,
+  };
+}
+
+/** Pull a radius set inward by `inset`, keeping every ring concentric. */
+export function insetRadii(r: CornerRadii, inset: number): CornerRadii {
+  const one = (v: number) => Math.max(1, v - inset);
+  return { tl: one(r.tl), tr: one(r.tr), br: one(r.br), bl: one(r.bl) };
+}
+
+/** `border-radius` shorthand — CSS orders them top-left, top-right, bottom-right, bottom-left. */
+export function radiusCss(r: CornerRadii): string {
+  return `${r.tl}px ${r.tr}px ${r.br}px ${r.bl}px`;
+}
+
+/**
  * Bevel geometry for a tile rect — pure, so it is testable without a canvas.
  *
  * The edge colours ADAPT to the field, because a fixed pair only works on a dark
