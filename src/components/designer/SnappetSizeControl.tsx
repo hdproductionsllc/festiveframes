@@ -2,10 +2,11 @@
 
 import { createPortal } from "react-dom";
 import { useDesignStore } from "@/stores/design-store";
+import { getPiece } from "@/data/sets";
 import { useUIStore } from "@/stores/ui-store";
 import { buildGrid } from "@/lib/utils/slot-generator";
 import { coveredSlotIds } from "@/lib/utils/text-bar";
-import { tileSpan, resolveSnappetResize } from "@/lib/utils/snappet";
+import { minSpanFor, tileSpan, resolveSnappetResize } from "@/lib/utils/snappet";
 
 // Floating size control for the SELECTED tile/snappet (school builder). The on-canvas
 // resize handles only exist for already-multi-cell snappets and are fiddly on a phone,
@@ -35,6 +36,10 @@ export function SnappetSizeControl() {
   if (!tile) return null; // stale selection (tile moved/removed)
 
   const span = tileSpan(tile);
+  // The floor for THIS piece. Real artwork is unreadable at a single ~1in cell, so a
+  // badge stops at 2x2; a plain 1x1 tile and the calibration tiles are exempt.
+  // See `minSpanFor`. Uploaded photos carry no piece and keep the 1x1 floor.
+  const min = minSpanFor(getPiece(tile.pieceId));
   const grid = buildGrid(frameConfig);
   const ctx = { grid, slots, sections, barCovered: new Set(coveredSlotIds(textBars)) };
   const isPhoto = !!tile.image;
@@ -44,6 +49,7 @@ export function SnappetSizeControl() {
 
   const apply = (cols: number, rows: number) => {
     if (cols === span.cols && rows === span.rows) return;
+    if (cols < min.cols || rows < min.rows) return;
     if (!seatable(cols, rows)) return;
     // Photo + aspect change → re-crop instead of a silent cover-crop.
     if (isPhoto && cols * span.rows !== rows * span.cols) {
@@ -58,6 +64,7 @@ export function SnappetSizeControl() {
   const renderStepper = (label: "W" | "H") => {
     const isW = label === "W";
     const dec = isW ? { cols: span.cols - 1, rows: span.rows } : { cols: span.cols, rows: span.rows - 1 };
+    const belowMin = dec.cols < min.cols || dec.rows < min.rows;
     const inc = isW ? { cols: span.cols + 1, rows: span.rows } : { cols: span.cols, rows: span.rows + 1 };
     const value = isW ? span.cols : span.rows;
     return (
@@ -66,7 +73,7 @@ export function SnappetSizeControl() {
         <button
           type="button"
           aria-label={`Shrink ${label === "W" ? "width" : "height"}`}
-          disabled={!seatable(dec.cols, dec.rows)}
+          disabled={belowMin || !seatable(dec.cols, dec.rows)}
           onClick={() => apply(dec.cols, dec.rows)}
           className="grid h-8 w-8 place-items-center rounded-lg border-2 border-[#1e1b17] bg-white text-lg font-black leading-none text-[#1e1b17] shadow-[2px_2px_0_#1e1b17] active:translate-y-0.5 disabled:opacity-30 disabled:shadow-none"
         >

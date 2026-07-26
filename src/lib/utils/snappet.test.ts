@@ -11,6 +11,8 @@ import {
   resolveSnappetDrop,
   resolveSnappetResize,
   spanLadder,
+  minSpanFor,
+  MIN_ART_SPAN,
   suggestSnappetSize,
   grabOffsetIn,
   anchorIdFor,
@@ -920,5 +922,57 @@ describe("panelSnappetPlacement — uploaded photos size to the panel too", () =
     const portrait = panelSnappetPlacement(ctx(), "wing-left", 0.5)!; // 1:2
     const square = panelSnappetPlacement(ctx(), "wing-left", 1)!;
     expect(portrait.span.rows).toBeGreaterThan(square.span.rows);
+  });
+});
+
+describe("MIN_ART_SPAN — badges never shrink below 2x2", () => {
+  it("floors real artwork at 2x2 but exempts plain and calibration tiles", () => {
+    expect(minSpanFor({ defaultSpan: { cols: 2, rows: 2 } })).toEqual(MIN_ART_SPAN);
+    // A plain 1x1 (a solid colour block) has no detail to lose.
+    expect(minSpanFor({})).toEqual({ cols: 1, rows: 1 });
+    // A calibration tile means its exact footprint, which may be below the floor.
+    expect(minSpanFor({ defaultSpan: { cols: 2, rows: 1 }, spanRequired: true })).toEqual({
+      cols: 1,
+      rows: 1,
+    });
+    expect(minSpanFor(undefined)).toEqual({ cols: 1, rows: 1 });
+  });
+
+  it("spanLadder never proposes anything under the floor", () => {
+    const ladder = spanLadder({ cols: 3, rows: 3 }, MIN_ART_SPAN);
+    expect(ladder.every((s) => s.cols >= 2 && s.rows >= 2)).toBe(true);
+    expect(ladder).toContainEqual({ cols: 2, rows: 2 });
+    expect(ladder).not.toContainEqual({ cols: 1, rows: 1 });
+  });
+
+  it("returns the floor itself rather than an empty ladder when the floor exceeds the preference", () => {
+    expect(spanLadder({ cols: 1, rows: 1 }, MIN_ART_SPAN)).toEqual([MIN_ART_SPAN]);
+  });
+
+  it("a drop keeps a badge at 2x2 where the panel would have suggested 1x1", () => {
+    // The one-row top banner suggests 1x1 for square art; the floor overrides that,
+    // and since a 2x2 cannot seat in a single row the drop is refused rather than
+    // silently placing something unreadable.
+    const drop = resolveSnappetDrop(ctx(), {
+      overSlotId: "frame:top-5",
+      span: { cols: 2, rows: 2 },
+      shrinkToFit: true,
+      growToPanel: true,
+      minSpan: MIN_ART_SPAN,
+    })!;
+    expect(drop.cols).toBeGreaterThanOrEqual(2);
+    expect(drop.rows).toBeGreaterThanOrEqual(2);
+  });
+
+  it("still seats a badge at 2x2 in the side panel", () => {
+    const drop = resolveSnappetDrop(ctx(), {
+      overSlotId: schoolGrid.cellAt(2, 0)!.id,
+      span: { cols: 2, rows: 2 },
+      shrinkToFit: true,
+      growToPanel: true,
+      minSpan: MIN_ART_SPAN,
+    })!;
+    expect(drop.valid).toBe(true);
+    expect({ cols: drop.cols, rows: drop.rows }).toEqual({ cols: 2, rows: 2 });
   });
 });
