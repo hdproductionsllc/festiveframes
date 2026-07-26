@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
 import {
+  UPLOAD_SET_ID,
+  UPLOAD_PIECE_ID,
+  dropUnknownPieces,
   blockFill,
   canPlace,
   coveredBySnappets,
@@ -1134,5 +1137,30 @@ describe("panelSnappetPlacement — an uploaded photo is not a thumbnail", () =>
       minSpan: MIN_ART_SPAN,
     });
     if (placed) expect(placed.span.rows).toBe(1);
+  });
+});
+
+describe("dropUnknownPieces — a retired piece leaves no ghost", () => {
+  const known = (id: string) => id === "hs:basketball";
+
+  it("removes a tile whose piece no longer exists", () => {
+    const slots = {
+      a: { pieceId: "hs:basketball", setId: "hs" },
+      b: { pieceId: "school:star", setId: "school" }, // retired placeholder
+    };
+    const out = dropUnknownPieces(slots, known);
+    expect(Object.keys(out)).toEqual(["a"]);
+  });
+
+  it("returns the SAME object when every piece still resolves", () => {
+    const slots = { a: { pieceId: "hs:basketball", setId: "hs" } };
+    expect(dropUnknownPieces(slots, known)).toBe(slots);
+  });
+
+  it("never purges an uploaded photo — it has no catalogue piece by design", () => {
+    const slots = {
+      a: { pieceId: UPLOAD_PIECE_ID, setId: UPLOAD_SET_ID, image: { url: "blob:x" } },
+    };
+    expect(dropUnknownPieces(slots, known)).toBe(slots);
   });
 });

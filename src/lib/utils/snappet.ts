@@ -857,6 +857,35 @@ export function blockFill(
   return slots;
 }
 
+/**
+ * Drop tiles whose piece no longer exists.
+ *
+ * A retired piece leaves a record that resolves to nothing: the cell renders blank
+ * but still occupies the grid, still blocks a drop, and still appears in the parts
+ * list as something to print. That is worse than an empty pocket, which is a
+ * deliberate part of the design and prints nothing at all.
+ *
+ * Runs on hydrate, not in `migrate` — a repair in `migrate` never reaches a browser
+ * whose blob is already at the current version, which is exactly the case it is
+ * written for.
+ *
+ * Returns the SAME object when nothing changed, so a normal hydrate does no work.
+ */
+export function dropUnknownPieces(
+  slots: Record<string, PlacedTile>,
+  exists: (pieceId: string) => boolean,
+): Record<string, PlacedTile> {
+  let changed = false;
+  const out: Record<string, PlacedTile> = {};
+  for (const [id, tile] of Object.entries(slots)) {
+    // An uploaded photo carries a reserved marker id and no set piece — it must
+    // survive a purge aimed at retired catalogue pieces.
+    if (tile.image || exists(tile.pieceId)) out[id] = tile;
+    else changed = true;
+  }
+  return changed ? out : slots;
+}
+
 export function growUndersizedBadges(
   ctx: PlacementContext,
   minFor: (pieceId: string) => TileSpan,

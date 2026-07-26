@@ -37,6 +37,7 @@ import {
   canPlace,
   coveredBySnappets,
   blockFill,
+  dropUnknownPieces,
   growUndersizedBadges,
   hasAnySpan,
   isMultiCell,
@@ -1499,6 +1500,11 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
         // and the RESIZE, so tiles already in a design — and anything Fill All or
         // Random wrote cell-by-cell — stayed 1x1 and the rule never reached them.
         // Conservative by construction: nothing grows if it would evict a neighbour.
+        if (merged.slots) {
+          // Retired pieces first: a tile pointing at a piece that no longer exists
+          // renders as nothing but still blocks its cell and still bills for print.
+          merged.slots = dropUnknownPieces(merged.slots, (id) => getPiece(id) != null);
+        }
         if (merged.slots && merged.frameConfig) {
           const grid = buildGrid(merged.frameConfig);
           merged.slots = growUndersizedBadges(
