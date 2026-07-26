@@ -72,7 +72,6 @@ import {
   glossStops,
   insetRadii,
   NO_CORNERS,
-  TILE_BG,
   type CornerRadii,
   rimMetrics,
   textEmboss,
@@ -136,12 +135,15 @@ function drawBevel(
   unit: number,
   /** Per-corner radii — wide where the badge faces the frame's outside. */
   radii: CornerRadii,
+  /** Opening-corner fillet radius, and which edge carries it. A badge passes 0. */
+  fillet: number = 0,
+  fillets: "top" | "bottom" | null = null,
 ): void {
   const rim = rimMetrics(w, h, unit);
 
   // Hairline outline — stops two adjacent badges from bleeding into one shape.
   ctx.beginPath();
-  roundRect(ctx, x + 0.5, y + 0.5, w - 1, h - 1, radii);
+  barPath(ctx, x + 0.5, y + 0.5, w - 1, h - 1, radii, fillet, fillets);
   ctx.strokeStyle = "rgba(0,0,0,0.30)";
   ctx.lineWidth = 1;
   ctx.stroke();
@@ -154,13 +156,15 @@ function drawBevel(
   g.addColorStop(0.5, BRASS.mid);
   g.addColorStop(1, BRASS.dark);
   ctx.beginPath();
-  roundRect(
+  barPath(
     ctx,
     x + rim.inset,
     y + rim.inset,
     w - rim.inset * 2,
     h - rim.inset * 2,
     insetRadii(radii, rim.inset),
+    Math.max(0, fillet - rim.inset),
+    fillets,
   );
   ctx.strokeStyle = g;
   ctx.lineWidth = rim.width;
@@ -194,94 +198,56 @@ function drawBevel(
 const OPENING_FILLET_RATIO = 0.42;
 
 /**
- * Round off the plate opening's four square corners.
+ * The outline of a bar that BORDERS the plate opening — not a rectangle.
  *
- * ONLY the corners. Every straight edge of the opening stays exactly where it is —
- * the bars keep their thickness and the rails keep theirs. What gets added is the
- * small wedge of negative space at each corner, the bit between the square corner
- * and the curve a moulded frame would have there. Sharp corners are what read as
- * unfinished; filling just those four notches buys the rounded opening without
- * moving anything else.
+ * The opening's corners sit at the ends of this bar's inner edge, and rounding them
+ * is the bar's job, not a separate wedge laid on top. So the bar's own silhouette
+ * carries them: its inner edge runs straight across, then at each end turns out and
+ * away along a concave arc into the corner. The shape is genuinely non-rectangular,
+ * which is the point — everything that follows an outline (the brass rim, the bevel
+ * band, the clip) then follows THIS one, and the border wraps the corners because
+ * the corners are part of the border's path.
  *
- * Three earlier attempts moved edges instead — a band over the opening, then the
- * bars grown down and up, then the rails grown inward — and all three changed the
- * opening's size, which was never the problem.
- *
- * Each wedge is the corner square minus a quarter-disc, so its inner boundary is a
- * true arc that meets both straight edges tangentially and leaves no seam.
+ * `fillets` says which edge faces the opening: "bottom" for the top bar, "top" for
+ * the bottom bar. Null draws the plain rounded rectangle.
  */
-function drawOpeningCorners(
+function barPath(
   ctx: CanvasRenderingContext2D,
-  rc: { x: number; y: number; w: number; h: number },
-  tileSize: number,
-  background: string,
+  x: number, y: number, w: number, h: number,
+  radii: CornerRadii,
+  fillet: number,
+  fillets: "top" | "bottom" | null,
 ): void {
-  const r = Math.max(2, Math.round(tileSize * OPENING_FILLET_RATIO));
-  if (r * 2 > rc.w || r * 2 > rc.h) return;
-
-  const corners: Array<{ cx: number; cy: number; sx: number; sy: number }> = [
-    { cx: rc.x + r, cy: rc.y + r, sx: rc.x, sy: rc.y }, // top-left
-    { cx: rc.x + rc.w - r, cy: rc.y + r, sx: rc.x + rc.w - r, sy: rc.y }, // top-right
-    { cx: rc.x + rc.w - r, cy: rc.y + rc.h - r, sx: rc.x + rc.w - r, sy: rc.y + rc.h - r },
-    { cx: rc.x + r, cy: rc.y + rc.h - r, sx: rc.x, sy: rc.y + rc.h - r }, // bottom-left
-  ];
-
-  const rim = rimMetrics(tileSize, tileSize, tileSize);
-  for (const c of corners) {
-    ctx.save();
-    // The wedge: the corner square, with the quarter-disc punched out.
-    ctx.beginPath();
-    ctx.rect(c.sx, c.sy, r, r);
-    ctx.arc(c.cx, c.cy, r, 0, Math.PI * 2);
-    ctx.clip("evenodd");
-
-    ctx.fillStyle = background;
-    ctx.fillRect(c.sx, c.sy, r, r);
-    // Same upper-left light as everything else, so the corner belongs to the parts
-    // it sits between rather than looking like a patch.
-    const ax = bevelAxis(c.sx, c.sy, r, r);
-    const grad = ctx.createLinearGradient(ax.x0, ax.y0, ax.x1, ax.y1);
-    for (const [at, colour] of bevelGradient(background)) grad.addColorStop(at, colour);
-    ctx.fillStyle = grad;
-    ctx.fillRect(c.sx, c.sy, r, r);
-    ctx.restore();
-
-    // Brass along the arc, continuing the machined line the neighbouring parts carry.
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(c.sx, c.sy, r, r);
-    ctx.clip();
-    ctx.beginPath();
-    ctx.arc(c.cx, c.cy, r, 0, Math.PI * 2);
-    ctx.strokeStyle = BRASS.mid;
-    ctx.lineWidth = rim.width;
-    ctx.stroke();
-    ctx.restore();
+  if (!fillets || fillet <= 0 || fillet * 2 > w) {
+    roundRectPath(ctx, x, y, w, h, radii);
+    return;
   }
-}
+  const r = fillet;
+  const cap = Math.min(w / 2, h / 2);
+  const tl = Math.min(radii.tl, cap), tr = Math.min(radii.tr, cap);
+  const bl = Math.min(radii.bl, cap), br = Math.min(radii.br, cap);
 
-/** The plate opening's pixel rect, from the cells the grid itself calls plate. */
-function plateRect(
-  grid: ReturnType<typeof buildGrid>,
-  tileSize: number,
-): { x: number; y: number; w: number; h: number } | null {
-  let minRow = Infinity, maxRow = -Infinity, minCol = Infinity, maxCol = -Infinity;
-  for (let row = 0; row < grid.rows; row++) {
-    for (let col = 0; col < grid.cols; col++) {
-      if (!grid.isPlate(row, col)) continue;
-      if (row < minRow) minRow = row;
-      if (row > maxRow) maxRow = row;
-      if (col < minCol) minCol = col;
-      if (col > maxCol) maxCol = col;
-    }
+  if (fillets === "bottom") {
+    const yb = y + h;
+    ctx.moveTo(x + tl, y);
+    ctx.arcTo(x + w, y, x + w, yb, tr);
+    ctx.lineTo(x + w, yb + r);                       // out past the inner edge
+    ctx.arc(x + w - r, yb + r, r, 0, -Math.PI / 2, true); // concave into the corner
+    ctx.lineTo(x + r, yb);                            // straight along the opening
+    ctx.arc(x + r, yb + r, r, -Math.PI / 2, Math.PI, true);
+    ctx.lineTo(x, yb);
+    ctx.arcTo(x, y, x + w, y, tl);
+  } else {
+    ctx.moveTo(x + w - br, y + h);
+    ctx.arcTo(x, y + h, x, y, bl);
+    ctx.lineTo(x, y - r);
+    ctx.arc(x + r, y - r, r, Math.PI, Math.PI / 2, true);
+    ctx.lineTo(x + w - r, y);
+    ctx.arc(x + w - r, y - r, r, Math.PI / 2, 0, true);
+    ctx.lineTo(x + w, y);
+    ctx.arcTo(x + w, y + h, x, y + h, br);
   }
-  if (minRow === Infinity) return null;
-  return {
-    x: minCol * tileSize,
-    y: minRow * tileSize,
-    w: (maxCol - minCol + 1) * tileSize,
-    h: (maxRow - minRow + 1) * tileSize,
-  };
+  ctx.closePath();
 }
 
 // ── The design, passed in explicitly (NOT read from any store) ────────────────
@@ -527,15 +493,21 @@ function drawTextBlock(
   /** One grid cell — keeps the bar's edge identical to the badges' and to the
    *  other bar, regardless of how many rows tall the panel is. */
   unit: number,
+  /** Which edge of this bar forms the plate opening, if any. That edge's ends carry
+   *  the opening's rounded corners as part of the bar's OWN outline, so the brass
+   *  rim and the bevel wrap them — they are not a wedge laid on afterwards. */
+  fillets: "top" | "bottom" | null = null,
 ) {
   const bevel = bevelMetrics(w, h, cfg.backgroundColor, unit);
   // A banner never reaches a frame corner on this geometry — the wings do, and they
   // run the full height on both sides. Ordinary radii all round.
   const radii = cornerRadii(unit, NO_CORNERS);
+  const fillet = fillets ? Math.max(2, Math.round(unit * OPENING_FILLET_RATIO)) : 0;
   ctx.save();
   // Rounded like the badges, not square. A square-cornered bar carrying a rounded
   // brass rim was the loudest mismatch between the bars and the badges.
-  roundRect(ctx, x, y, w, h, radii);
+  ctx.beginPath();
+  barPath(ctx, x, y, w, h, radii, fillet, fillets);
   ctx.clip();
   // Banners wear the SAME chrome as the badges — gloss gradient, bevel and brass
   // rim — because in the mock the bars and the badges read as one system. A flat
@@ -545,8 +517,8 @@ function drawTextBlock(
   grad.addColorStop(0, gTop);
   grad.addColorStop(1, gBot);
   ctx.fillStyle = grad;
-  ctx.fillRect(x, y, w, h);
-  drawBevel(ctx, x, y, w, h, bevel, cfg.backgroundColor, unit, radii);
+  ctx.fillRect(x, y - fillet, w, h + fillet * 2);
+  drawBevel(ctx, x, y, w, h, bevel, cfg.backgroundColor, unit, radii, fillet, fillets);
 
   // Clear the chrome before the text starts. Derived from the chrome itself rather
   // than guessed alongside it, so the bevel can never cut into a descender again.
@@ -734,13 +706,6 @@ export function drawSchoolFrame(
     ctx.restore();
   }
 
-  // 3b) Round off the plate opening's four square corners — the negative-space
-  //     wedges only. Every straight edge of the opening stays where it is.
-  {
-    const rc = plateRect(grid, m.tileSize);
-    if (rc) drawOpeningCorners(ctx, rc, m.tileSize, TILE_BG.navy);
-  }
-
   // 4) Section panels (school builder) — TEXT or IMAGE. One direct-print piece over
   //    the whole panel's bounding box (which OWNS its corners — see panelOf). Tiles
   //    under it were skipped above.
@@ -754,7 +719,19 @@ export function drawSchoolFrame(
     const box = sectionBounds(id, frameSlots, config);
     if (!box) continue;
     if (sec.mode === "text" && sec.text) {
-      drawTextBlock(ctx, sec.text, box.x, box.y, box.width, box.height, m.tileSize);
+      // The bar that borders the plate opening carries the opening's rounded
+      // corners in its OWN outline — the edge facing the plate is the one that
+      // turns out into them.
+      drawTextBlock(
+        ctx,
+        sec.text,
+        box.x,
+        box.y,
+        box.width,
+        box.height,
+        m.tileSize,
+        id === "top" ? "bottom" : id === "bottom" ? "top" : null,
+      );
     } else if (sec.mode === "image") {
       const img = images.sections.get(id);
       ctx.save();
