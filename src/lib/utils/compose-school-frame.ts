@@ -46,7 +46,13 @@ import {
   QR_SIZE_RATIO,
   QR_GAP_RATIO,
 } from "@/lib/utils/text-bar";
-import { SECTION_IDS, SECTION_LABELS, sectionBounds, slotSuppressed } from "@/lib/utils/sections";
+import {
+  SECTION_IDS,
+  SECTION_LABELS,
+  sectionBounds,
+  sectionSupportsText,
+  slotSuppressed,
+} from "@/lib/utils/sections";
 import { panelRects, type PanelRect } from "@/lib/utils/panels";
 import { bannerBands } from "@/lib/utils/banner-tiers";
 import { getPiece } from "@/data/sets";
@@ -541,6 +547,10 @@ export function drawSchoolFrame(
   for (const id of SECTION_IDS) {
     const sec = sections[id];
     if (!sec || sec.mode === "tiles") continue;
+    // Text belongs to the top/bottom banners only. Honouring it on a wing would
+    // reproduce the stranded state the persist migration exists to clear: the UI
+    // stopped offering the toggle there, so a wing drawn as text has no way back.
+    if (sec.mode === "text" && !sectionSupportsText(id)) continue;
     const box = sectionBounds(id, frameSlots, config);
     if (!box) continue;
     if (sec.mode === "text" && sec.text) {

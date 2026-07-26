@@ -1,4 +1,5 @@
-import type { FrameConfig, PlacedTile } from "@/lib/types";
+import type { FrameConfig, PlacedTile, SectionId } from "@/lib/types";
+import { sectionSupportsText } from "@/lib/utils/sections";
 import { SCHOOL_FRAME_CONFIG } from "@/lib/constants/frame";
 import { SCHOOL_DEFAULT_SECTIONS } from "@/lib/constants/defaults";
 import { wingRowCount, wingSlotIndex } from "@/lib/utils/slot-generator";
@@ -44,7 +45,16 @@ export function migrateSchoolDesign(persisted: unknown): unknown {
     sections && typeof sections === "object" ? {} : {};
   if (sections && typeof sections === "object") {
     for (const [id, sec] of Object.entries(sections as Record<string, unknown>)) {
-      if (sec && typeof sec === "object" && (sec as { mode?: unknown }).mode === "image") {
+      const mode = sec && typeof sec === "object" ? (sec as { mode?: unknown }).mode : undefined;
+      // Retired IMAGE mode -> tiles (uploaded art is a snappet now).
+      //
+      // Also TEXT on a SIDE panel -> tiles. Text bars were once allowed on every
+      // panel; they are now a top/bottom affordance only, so the toggle no longer
+      // renders for the wings. A design saved before that change still has a wing in
+      // text mode, and the renderer still honours it — which strands the user with a
+      // text panel and no control anywhere to switch it back. `sectionSupportsText`
+      // is the single source of truth for which panels may hold text.
+      if (mode === "image" || (mode === "text" && !sectionSupportsText(id as SectionId))) {
         nextSections[id] = { mode: "tiles" };
       } else {
         nextSections[id] = sec;
