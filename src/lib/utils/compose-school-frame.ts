@@ -65,6 +65,7 @@ import {
   chromeInset,
   glossStops,
   rimMetrics,
+  textEmboss,
   tileBackground,
 } from "@/lib/utils/tile-theme";
 import { getFullRes } from "@/lib/utils/image-store";
@@ -448,7 +449,24 @@ function drawTextBlock(
     const lineBox = fontPx * SECTION_LINE_HEIGHT;
     const bandCenter = contentTop + bandTop + bandH / 2;
     let ty = bandCenter - (lineBox * lines.length) / 2 + lineBox / 2;
+    // Three passes make the type raised rather than printed on: the shaded underside
+    // (carrying the cast shadow), the lit edge above it, then the face on top. Same
+    // upper-left light as the badge edges, so the letters belong to the same object.
+    const em = textEmboss(fontPx, cfg.textColor);
     for (const ln of lines) {
+      ctx.save();
+      ctx.shadowColor = em.shadow.colour;
+      ctx.shadowBlur = em.shadow.blur;
+      ctx.shadowOffsetX = em.shadow.offsetX;
+      ctx.shadowOffsetY = em.shadow.offsetY;
+      ctx.fillStyle = em.shade;
+      ctx.fillText(ln, tx + em.depth, ty + em.depth);
+      ctx.restore();
+
+      ctx.fillStyle = em.highlight;
+      ctx.fillText(ln, tx - em.depth, ty - em.depth);
+
+      ctx.fillStyle = cfg.textColor;
       ctx.fillText(ln, tx, ty);
       ty += lineBox;
     }

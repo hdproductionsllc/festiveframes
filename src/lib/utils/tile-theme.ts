@@ -350,6 +350,49 @@ export function ringCss(fill: string, gradient: string): string {
   return `${fill} padding-box, ${gradient} border-box`;
 }
 
+// ─── Raised banner type ─────────────────────────────────────────────────────
+
+/**
+ * The lift given to banner TEXT: a cast shadow plus a one-pixel-ish lit edge above
+ * and shaded edge below, scaled to the type size.
+ *
+ * Flat-filled type on a bevelled, rimmed, gloss-gradient bar is the one element
+ * still reading as printed-on rather than part of the moulding. The same upper-left
+ * light source as everything else, so the letters sit in the same world as the badge
+ * edges rather than looking pasted over them.
+ *
+ * `depth` stays a fraction of the font size, not a fixed pixel: at 1px a headline
+ * looks flat and a tagline looks smeared.
+ */
+export function textEmboss(fontPx: number, textColour: string) {
+  const lightText = luminance(textColour) > 0.6;
+  return {
+    depth: Math.max(1, fontPx * 0.022),
+    // Light type cannot get lighter, so its depth comes almost entirely from the
+    // shaded underside — the same reasoning as the bevel on a white field.
+    highlight: lightText ? "rgba(255,255,255,0.35)" : "rgba(255,255,255,0.55)",
+    shade: lightText ? "rgba(0,0,0,0.55)" : "rgba(0,0,0,0.35)",
+    shadow: {
+      blur: Math.max(1, fontPx * 0.09),
+      offsetX: Math.max(1, fontPx * 0.02),
+      offsetY: Math.max(1, fontPx * 0.035),
+      colour: "rgba(0,0,0,0.45)",
+    },
+  };
+}
+
+/** CSS twin of `textEmboss`, as a `text-shadow` stack (lit edge, shade, cast). */
+export function textEmbossCss(fontPx: number, textColour: string): string {
+  const e = textEmboss(fontPx, textColour);
+  const d = e.depth.toFixed(2);
+  const s = e.shadow;
+  return [
+    `${-e.depth.toFixed(2)}px ${-e.depth.toFixed(2)}px 0 ${e.highlight}`,
+    `${d}px ${d}px 0 ${e.shade}`,
+    `${s.offsetX.toFixed(2)}px ${s.offsetY.toFixed(2)}px ${s.blur.toFixed(2)}px ${s.colour}`,
+  ].join(", ");
+}
+
 // ─── Shared panel chrome ────────────────────────────────────────────────────
 
 /** Move a #rrggbb colour toward white (t>0) or black (t<0) by fraction |t|. */
