@@ -195,7 +195,7 @@ function drawBevel(
 }
 
 /** Radius of the plate opening's corner fillets, as a fraction of one cell. */
-const OPENING_FILLET_RATIO = 0.42;
+const OPENING_FILLET_RATIO = 1.1;
 
 /**
  * The outline of a bar that BORDERS the plate opening — not a rectangle.
