@@ -10,6 +10,7 @@ import {
   drawSchoolFrame,
   panelBleedBox,
   SCHOOL_PRINT_DPI,
+  SCHOOL_PANEL_BLEED_INCHES,
   type SchoolDesign,
   type SchoolImageBundle,
 } from "./compose-school-frame";
@@ -193,5 +194,32 @@ describe("drawSchoolFrame (node-canvas render of a seeded design)", () => {
     // Write the sample artifact ONLY when asked, so the committed test stays portable.
     const out = process.env.SCHOOL_SAMPLE_OUT;
     if (out) writeFileSync(out, png);
+  });
+});
+
+describe("panel files are the SAME SIZE as the parts they print", () => {
+  it("exports every panel at its true physical size", () => {
+    // The defect the operator hit on import: bleed is a FIXED 0.08in total, so it
+    // lands as a different percentage on every panel — 7.4% on the top strip's
+    // height, 3.9% across a wing — and each file had to be hand-corrected by a
+    // different amount. These panels are a continuous sheet with no cut edge, so
+    // there was never anything for the bleed to protect.
+    const dpi = SCHOOL_PRINT_DPI;
+    const tilePx = SCHOOL_FRAME_CONFIG.tileSizeInches * dpi;
+    const rects = panelRects(SCHOOL_FRAME_CONFIG);
+    for (const id of ["wing-left", "wing-right", "top", "bottom"] as const) {
+      const rc = rects[id];
+      const box = panelBleedBox(rc, tilePx, SCHOOL_PANEL_BLEED_INCHES * dpi);
+      const partW = (rc.col1 - rc.col0 + 1) * SCHOOL_FRAME_CONFIG.tileSizeInches;
+      const partH = (rc.row1 - rc.row0 + 1) * SCHOOL_FRAME_CONFIG.tileSizeInches;
+      // Within one pixel at print resolution — rounding, not a size difference.
+      expect(Math.abs(box.outW / dpi - partW), `${id} width`).toBeLessThan(1 / dpi + 1e-9);
+      expect(Math.abs(box.outH / dpi - partH), `${id} height`).toBeLessThan(1 / dpi + 1e-9);
+    }
+  });
+
+  it("still honours an explicit bleed for a run that wants overspray", () => {
+    const box = panelBleedBox({ col0: 0, col1: 1, row0: 0, row1: 7 }, 300, 12);
+    expect(box.outW).toBe(2 * 300 + 24);
   });
 });
