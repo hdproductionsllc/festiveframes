@@ -87,9 +87,23 @@ export function SectionControls() {
                   })}
                 </div>
               ) : (
-                <span className="inline-block rounded-md border-2 border-[#1e1b17]/15 bg-white px-2 py-1 text-[11px] font-extrabold uppercase tracking-wide text-[#1e1b17]/70">
-                  Tiles / Art
-                </span>
+                /* A STATEMENT, not a control. This used to be a bordered white chip,
+                   which is the exact styling of an inactive toggle button — so a wing
+                   read as "greyed out, nothing you can do here" when in fact it is the
+                   panel art goes on. Plain caption + a tappable Select, so the card
+                   offers the action it actually has instead of miming a dead one. */
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[11px] font-semibold uppercase tracking-wide text-[#1e1b17]/50">
+                    Art only
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => selectSection(id)}
+                    className="rounded-md border-2 border-[#1e1b17] bg-[#3fb0e6] px-2 py-1 text-[11px] font-extrabold uppercase tracking-wide text-white shadow-[2px_2px_0_#1e1b17] transition-all active:translate-y-0.5 active:scale-95"
+                  >
+                    {selected ? "Selected" : "Select"}
+                  </button>
+                </div>
               )}
             </div>
           );
