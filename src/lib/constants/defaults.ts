@@ -37,15 +37,38 @@ export const DEFAULT_QR_CODE: QRCodeConfig = {
  * two panels alone, and the side wings stay tiles.
  */
 /**
- * The banner face this builder seeded BEFORE Alfa Slab One became the default.
+ * The HEADLINE face for school banners: a true collegiate block.
+ *
+ * Graduate is the varsity lettering of letterman jackets, gym floors and
+ * championship banners — squared serifs with spurs. Alfa Slab One, which this
+ * builder seeded for a while, is a revival of Robert Thorne's Six-lines Pica
+ * Egyptian (Thorowgood, 1821): a Victorian advertising slab. Bold and legible, but
+ * a fairground face rather than an athletic one, which is why it read as almost-
+ * right and never quite right.
+ */
+export const SCHOOL_HEADLINE_FONT = "'Graduate', 'Rockwell', serif";
+
+/**
+ * The TAGLINE face — a condensed athletic sans, the modern uniform-nameplate look.
+ *
+ * Real banners are set in two voices: a heavy block headline over a condensed
+ * secondary line. Setting the tagline in the headline's face at a smaller size just
+ * looks like the headline shrank.
+ */
+export const SCHOOL_TAGLINE_FONT = "'Oswald', 'Saira Condensed', sans-serif";
+
+/**
+ * Exact family strings this builder has SEEDED in the past and no longer wants.
  *
  * A section's font is persisted, so a returning user keeps whatever was seeded when
- * they first opened the builder — the new default alone never reaches them. Matching
- * this EXACT string (not merely "contains Graduate") means only the value we seeded
- * is refreshed; anyone who deliberately picked Graduate from the font picker set a
+ * they first opened the builder — a new default alone never reaches them. Matching
+ * the EXACT seeded string (not merely "contains Alfa Slab") means only our own value
+ * is refreshed; anyone who deliberately picked this face from the font picker set a
  * different family string and keeps it.
  */
-export const LEGACY_SEEDED_BANNER_FONT = "'Graduate', 'Rockwell', serif";
+export const LEGACY_SEEDED_BANNER_FONTS: readonly string[] = [
+  "'Alfa Slab One', 'Graduate', serif",
+];
 
 export const SCHOOL_DEFAULT_SECTIONS = {
   top: {
@@ -53,7 +76,7 @@ export const SCHOOL_DEFAULT_SECTIONS = {
     text: {
       ...DEFAULT_BOTTOM_BAR,
       text: "HOME OF THE",
-      fontFamily: "'Alfa Slab One', 'Graduate', serif",
+      fontFamily: SCHOOL_HEADLINE_FONT,
       letterSpacing: 4,
     },
   },
@@ -63,7 +86,8 @@ export const SCHOOL_DEFAULT_SECTIONS = {
       ...DEFAULT_BOTTOM_BAR,
       text: "WILDCATS",
       tagline: "CLASS OF 2027",
-      fontFamily: "'Alfa Slab One', 'Graduate', serif",
+      fontFamily: SCHOOL_HEADLINE_FONT,
+      taglineFontFamily: SCHOOL_TAGLINE_FONT,
       letterSpacing: 2,
     },
   },

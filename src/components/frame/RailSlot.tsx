@@ -139,6 +139,7 @@ function RailSlotInner({ slot, placedTile, covered, spanWidth, spanHeight }: Rai
           span={tileSpan(placedTile)}
           width={tileWidth}
           height={tileHeight}
+          unit={slot.width}
           armed={selectedPieceId != null}
           landing={landing}
         />
@@ -193,6 +194,7 @@ function PlacedTileCell({
   span,
   width,
   height,
+  unit,
   armed,
   landing,
 }: {
@@ -202,6 +204,9 @@ function PlacedTileCell({
   span: TileSpan;
   width: number;
   height: number;
+  /** ONE grid cell in px — the reference the badge's edge is measured against, so a
+   *  3x3 snappet wears the same thin moulding as a 1x1. */
+  unit: number;
   armed: boolean;
   landing?: boolean;
 }) {
@@ -313,7 +318,13 @@ function PlacedTileCell({
         // still starts a drag via the delay-based TouchSensor (see DndProvider).
         style={{ touchAction: "pan-y" }}
       >
-        <PlacedTileView pieceId={pieceId} image={image} width={width} height={height} />
+        <PlacedTileView
+          pieceId={pieceId}
+          image={image}
+          width={width}
+          height={height}
+          unit={unit}
+        />
 
         {/* Poof puff — a quick patriotic sparkle puff as the tile disappears. */}
         {poofing && <SparkleBurst variant="poof" />}

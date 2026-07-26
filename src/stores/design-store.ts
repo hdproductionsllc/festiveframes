@@ -17,7 +17,13 @@ import type {
 } from "@/lib/types";
 import type { LookPreset, LookBanner } from "@/data/look-presets";
 import { DEFAULT_FRAME_CONFIG, getWingFrameConfig, getStandardConfig, SCHOOL_DEFAULT_FONT_FAMILY } from "@/lib/constants/frame";
-import { DEFAULT_BOTTOM_BAR, DEFAULT_QR_CODE, LEGACY_SEEDED_BANNER_FONT } from "@/lib/constants/defaults";
+import {
+  DEFAULT_BOTTOM_BAR,
+  DEFAULT_QR_CODE,
+  LEGACY_SEEDED_BANNER_FONTS,
+  SCHOOL_HEADLINE_FONT,
+  SCHOOL_TAGLINE_FONT,
+} from "@/lib/constants/defaults";
 import { buildGrid, getAllSlotIds, wingRowCount, wingSlotIndex } from "@/lib/utils/slot-generator";
 import {
   measureTextBarUnits,
@@ -1471,14 +1477,22 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
         }
         if (merged.sections) {
           merged.sections = repairSections(merged.sections);
-          // Refresh the SEEDED banner font. A section's font is persisted, so the
+          // Refresh the SEEDED banner fonts. A section's font is persisted, so a
           // new default would otherwise only ever reach brand-new users. Only the
           // exact previously-seeded value is replaced — a deliberate pick from the
           // font picker carries a different family string and is left alone.
           for (const sec of Object.values(merged.sections)) {
-            if (sec?.text?.fontFamily === LEGACY_SEEDED_BANNER_FONT) {
-              sec.text = { ...sec.text, fontFamily: DEFAULT_BOTTOM_BAR.fontFamily };
+            if (!sec?.text) continue;
+            let next = sec.text;
+            if (LEGACY_SEEDED_BANNER_FONTS.includes(next.fontFamily)) {
+              next = { ...next, fontFamily: SCHOOL_HEADLINE_FONT };
             }
+            // A two-tier banner saved before the tagline had its own face: give it
+            // the condensed one rather than leaving it as the headline shrunk.
+            if (next.tagline?.trim() && !next.taglineFontFamily) {
+              next = { ...next, taglineFontFamily: SCHOOL_TAGLINE_FONT };
+            }
+            if (next !== sec.text) sec.text = next;
           }
         }
         // Owned geometry is not user data — the persisted copy is a cache of the

@@ -3,6 +3,11 @@ import type { FrameConfig, PlacedTile } from "@/lib/types";
 import { DEFAULT_FRAME_CONFIG, SCHOOL_FRAME_CONFIG, MAX_HISTORY_DEPTH } from "@/lib/constants/frame";
 import { getAllSlotIds, buildGrid } from "@/lib/utils/slot-generator";
 import { migrateSchoolDesign } from "@/lib/utils/school-migration";
+import {
+  DEFAULT_BOTTOM_BAR,
+  SCHOOL_HEADLINE_FONT,
+  SCHOOL_TAGLINE_FONT,
+} from "@/lib/constants/defaults";
 
 // The store's removeTile frees an uploaded snappet's IndexedDB full-res blob. Mock
 // the image store so the test can assert that deletion without a real IndexedDB
@@ -204,6 +209,77 @@ describe("store-owned frame geometry (single-SKU builders)", () => {
     expect(store.getState().frameConfig.wingColumns).toBe(SCHOOL_FRAME_CONFIG.wingColumns);
     expect(store.getState().frameConfig).toEqual(SCHOOL_FRAME_CONFIG);
     expect(store.getState().slots["frame:top-0"]?.pieceId).toBe("eagle");
+  });
+
+  it("refreshes the seeded banner font on a design saved with the old one", () => {
+    // The recurring trap: a new default only reaches BRAND-NEW users, because the
+    // font is persisted. This repair lives in `merge` (every hydrate), not
+    // `migrate` (only when the stored version is older) — which is why it works.
+    writeBlob({
+      frameConfig: { ...SCHOOL_FRAME_CONFIG },
+      sections: {
+        bottom: {
+          mode: "text",
+          text: {
+            ...DEFAULT_BOTTOM_BAR,
+            text: "WILDCATS",
+            tagline: "CLASS OF 2027",
+            fontFamily: "'Alfa Slab One', 'Graduate', serif",
+          },
+        },
+      },
+    });
+
+    const store = createDesignStore(KEY, {
+      frameConfig: SCHOOL_FRAME_CONFIG,
+      migrateExtra: migrateSchoolDesign,
+    });
+
+    const text = store.getState().sections.bottom?.text;
+    expect(text?.fontFamily).toBe(SCHOOL_HEADLINE_FONT);
+    // ...and the tagline gains its own condensed voice rather than staying a
+    // shrunken copy of the headline.
+    expect(text?.taglineFontFamily).toBe(SCHOOL_TAGLINE_FONT);
+  });
+
+  it("leaves a font the user PICKED alone", () => {
+    // Only the exact string this builder seeded is refreshed. A deliberate pick
+    // from the font picker carries a different family string.
+    const picked = "'Bungee', display, sans-serif";
+    writeBlob({
+      frameConfig: { ...SCHOOL_FRAME_CONFIG },
+      sections: {
+        bottom: { mode: "text", text: { ...DEFAULT_BOTTOM_BAR, text: "WILDCATS", fontFamily: picked } },
+      },
+    });
+
+    const store = createDesignStore(KEY, {
+      frameConfig: SCHOOL_FRAME_CONFIG,
+      migrateExtra: migrateSchoolDesign,
+    });
+
+    expect(store.getState().sections.bottom?.text?.fontFamily).toBe(picked);
+  });
+
+  it("does not invent a tagline face for a one-line banner", () => {
+    writeBlob({
+      frameConfig: { ...SCHOOL_FRAME_CONFIG },
+      sections: {
+        top: {
+          mode: "text",
+          text: { ...DEFAULT_BOTTOM_BAR, text: "HOME OF THE", fontFamily: "'Alfa Slab One', 'Graduate', serif" },
+        },
+      },
+    });
+
+    const store = createDesignStore(KEY, {
+      frameConfig: SCHOOL_FRAME_CONFIG,
+      migrateExtra: migrateSchoolDesign,
+    });
+
+    const text = store.getState().sections.top?.text;
+    expect(text?.fontFamily).toBe(SCHOOL_HEADLINE_FONT);
+    expect(text?.taglineFontFamily).toBeUndefined();
   });
 
   it("uses the owned config as initial state for a brand-new visitor", () => {
