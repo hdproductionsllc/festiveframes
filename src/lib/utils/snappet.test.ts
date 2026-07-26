@@ -25,7 +25,7 @@ import {
   type PlacementContext,
 } from "./snappet";
 import { buildGrid } from "./slot-generator";
-import { DEFAULT_FRAME_CONFIG, SCHOOL_FRAME_CONFIG } from "@/lib/constants/frame";
+import { DEFAULT_FRAME_CONFIG, SCHOOL_FRAME_CONFIG, getWingFrameConfig } from "@/lib/constants/frame";
 import type { PlacedTile, TileSpan } from "@/lib/types";
 
 // The school grid is the one that matters here: 14 cols x 8 rows, wing column at
@@ -1096,10 +1096,17 @@ describe("blockFill — Fill All / Random lay real footprints", () => {
     }
   });
 
-  it("fills single cells when asked for 1x1 — /build's behaviour is reachable", () => {
+  it("treats the span as a FLOOR, not a fixed size — blocks grow to the panel", () => {
+    // Not "1x1 in, 1x1 out": blockFill sizes each block to the panel it sits in and
+    // uses the argument as the minimum. /build never reaches here at all — its fill
+    // short-circuits to the original per-slot loop, which is what keeps that
+    // product byte-identical.
     const slots = blockFill(ctx(), pick, { cols: 1, rows: 1 });
+    expect(Object.keys(slots).length).toBeGreaterThan(0);
     for (const t of Object.values(slots)) {
-      expect(tileSpan(t)).toEqual({ cols: 1, rows: 1 });
+      const s = tileSpan(t);
+      expect(s.cols).toBeGreaterThanOrEqual(1);
+      expect(s.rows).toBeGreaterThanOrEqual(1);
     }
   });
 
@@ -1162,5 +1169,75 @@ describe("dropUnknownPieces — a retired piece leaves no ghost", () => {
       a: { pieceId: UPLOAD_PIECE_ID, setId: UPLOAD_SET_ID, image: { url: "blob:x" } },
     };
     expect(dropUnknownPieces(slots, known)).toBe(slots);
+  });
+});
+
+describe("blockFill — no holes, nothing off the frame", () => {
+  const pick = () => ({ pieceId: "hs:basketball", setId: "hs" });
+  const wide = getWingFrameConfig(
+    { ...SCHOOL_FRAME_CONFIG },
+    SCHOOL_FRAME_CONFIG.tileSizeInches * 2,
+  );
+
+  /** Every cell a fill covers, and whether any of them is off the grid. */
+  function coverage(cfg: typeof SCHOOL_FRAME_CONFIG) {
+    const grid = buildGrid(cfg);
+    const slots = blockFill(
+      { grid, slots: {}, sections: {}, barCovered: new Set() },
+      pick,
+      MIN_ART_SPAN,
+    );
+    const covered = new Set<string>();
+    let offGrid = 0;
+    const sizes = new Set<string>();
+    for (const [id, t] of Object.entries(slots)) {
+      const anchor = grid.coordOf(id)!;
+      const span = tileSpan(t);
+      sizes.add(`${span.cols}x${span.rows}`);
+      for (const c of occupiedCoords(anchor, span)) {
+        covered.add(`${c.row}:${c.col}`);
+        if (!grid.cellAt(c.row, c.col)) offGrid++;
+      }
+    }
+    return { grid, covered, offGrid, sizes };
+  }
+
+  it("leaves NO hole in a side panel at either width", () => {
+    for (const cfg of [SCHOOL_FRAME_CONFIG, wide]) {
+      const { grid, covered } = coverage(cfg);
+      const holes = grid.slots.filter(
+        (s) =>
+          !grid.isPlate(s.row, s.col) &&
+          String(grid.panelAt(s.row, s.col)).startsWith("wing") &&
+          !covered.has(`${s.row}:${s.col}`),
+      );
+      expect(holes, `wing holes at wingColumns=${cfg.wingColumns}`).toEqual([]);
+    }
+  });
+
+  it("never lays a block off the frame", () => {
+    // canPlace allows overhang for a placement made by hand. An automatic fill must
+    // not use it: art pushed past the edge is invisible and prints nothing.
+    for (const cfg of [SCHOOL_FRAME_CONFIG, wide]) {
+      expect(coverage(cfg).offGrid).toBe(0);
+    }
+  });
+
+  it("sizes blocks to the PANEL, so a wider side panel gets wider badges", () => {
+    // A fixed 2x2 tiles a two-wide panel exactly and a three-wide one not at all —
+    // it leaves a single column running the whole height.
+    expect([...coverage(SCHOOL_FRAME_CONFIG).sizes]).toEqual(["2x2"]);
+    const widened = [...coverage(wide).sizes];
+    expect(widened.some((s) => s.startsWith("3x"))).toBe(true);
+  });
+
+  it("still refuses to go below the floor", () => {
+    for (const cfg of [SCHOOL_FRAME_CONFIG, wide]) {
+      for (const s of coverage(cfg).sizes) {
+        const [c, r] = s.split("x").map(Number);
+        expect(c).toBeGreaterThanOrEqual(MIN_ART_SPAN.cols);
+        expect(r).toBeGreaterThanOrEqual(MIN_ART_SPAN.rows);
+      }
+    }
   });
 });

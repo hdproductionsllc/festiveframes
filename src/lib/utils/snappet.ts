@@ -829,7 +829,27 @@ export function blockFill(
   const slots: Record<string, PlacedTile> = {};
   const taken = new Set<string>();
   const key = (row: number, col: number) => `${row}:${col}`;
-  const sizes = spanLadder(tileSpan({ span }), tileSpan({ span: floor }));
+  const lo = tileSpan({ span: floor });
+
+  /**
+   * Blocks are sized to the PANEL, not fixed at the floor.
+   *
+   * A fixed 2x2 tiles a two-wide side panel exactly and a three-wide one not at
+   * all: it seats one block per row-pair and leaves a single column running the
+   * whole height, which is where the holes came from. (The right wing hid it by
+   * hanging its blocks over the frame edge, which is why only one side looked
+   * wrong.) Squaring the block to the panel's short side makes a three-wide panel
+   * lay 3x3 and cover completely — the same rule a drag already follows when it
+   * grows a badge to fit the panel it lands in.
+   */
+  const sizesFor = (anchor: GridCoord): TileSpan[] => {
+    const ext = panelExtent(grid, anchor);
+    const preferred = ext ? suggestSnappetSize(1, ext) : lo;
+    return spanLadder(
+      { cols: Math.max(preferred.cols, lo.cols), rows: Math.max(preferred.rows, lo.rows) },
+      lo,
+    );
+  };
 
   // Row-major, so blocks pack top-left and the leftovers collect at the far edge
   // rather than scattering as holes through the middle.
@@ -839,11 +859,18 @@ export function blockFill(
   for (const cell of cells) {
     if (taken.has(key(cell.row, cell.col))) continue;
     const anchor: GridCoord = { row: cell.row, col: cell.col };
-    for (const size of sizes) {
+    for (const size of sizesFor(anchor)) {
       const coords = occupiedCoords(anchor, size);
       // Overlapping a block laid a moment ago is not an eviction to resolve, it is
       // simply a size that does not fit here — try the next one down.
       if (coords.some((c) => taken.has(key(c.row, c.col)))) continue;
+      // Every cell must be a REAL cell. `canPlace` permits a footprint to hang past
+      // the outer edge, which is a deliberate rule for a placement someone makes by
+      // hand and watches land. An automatic fill is neither: art pushed off the
+      // frame there is invisible, unasked for, and prints nothing. Constrained here
+      // rather than in `canPlace`, so manual placement keeps whatever behaviour it
+      // is meant to have.
+      if (coords.some((c) => grid.cellAt(c.row, c.col) == null)) continue;
       const verdict = canPlace({ ...ctx, slots }, anchor, size);
       if (!verdict.ok || verdict.evicts.length > 0) continue;
       const piece = pick(placed);
