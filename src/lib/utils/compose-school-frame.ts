@@ -685,10 +685,27 @@ function loadImage(src: string): Promise<HTMLImageElement | null> {
   });
 }
 
-/** Overspray bleed per side when exporting PANELS separately (`composeSchoolPanels`).
- *  The panel art is drawn a hair oversize so a little UV overspray hides the cut edge
- *  — the same trick the jig uses (1.03" print for a 0.992" tile face). */
-export const SCHOOL_PANEL_BLEED_INCHES = 0.04;
+/**
+ * Overspray bleed per side when exporting PANELS separately. ZERO.
+ *
+ * It was 0.04in, borrowed from the tile jig where a slightly oversize print lets
+ * overspray hide a cut edge. The school panels are a CONTINUOUS SHEET — nothing is
+ * cut out of a pocket — so there is no cut edge to hide, and the bleed only made
+ * every file bigger than the part it represents.
+ *
+ * That is what the operator was seeing on import. Because the bleed is a fixed
+ * 0.08in total, it lands as a DIFFERENT percentage on every panel: 7.4% on the top
+ * strip's height (0.991in of art on a 1.070in sheet), 3.9% across a wing, under 1%
+ * along a long side. A file whose size is not the part's size has to be corrected by
+ * hand on every import, differently each time.
+ *
+ * At zero, sheet size == part size and a panel imports at its true dimension. The
+ * live /build path has never had bleed for the same reason.
+ *
+ * `composeSchoolPanels` still takes `bleedInches`, so a run that genuinely needs
+ * overspray can ask for it explicitly.
+ */
+export const SCHOOL_PANEL_BLEED_INCHES = 0;
 
 /**
  * Load every bitmap a design needs and draw the WHOLE frame (un-rotated) to a canvas.
