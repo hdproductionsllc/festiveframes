@@ -120,10 +120,9 @@ describe("clearAll returns the frame to how it ARRIVES", () => {
     expect(s.sections.top?.text?.text).toBe(SCHOOL_DEFAULT_SECTIONS.top.text.text);
   });
 
-  it("seeds a tagline that reads as a BLANK to fill, not a decided year", () => {
-    // "CLASS OF 2026" can ship unnoticed on someone's frame; a blank asks to be filled.
+  it("seeds the class line with a real year, ready to edit", () => {
     return import("@/lib/constants/defaults").then(({ SCHOOL_DEFAULT_SECTIONS }) => {
-      expect(SCHOOL_DEFAULT_SECTIONS.bottom.text.tagline).toMatch(/_{2,}/);
+      expect(SCHOOL_DEFAULT_SECTIONS.bottom.text.tagline).toBe("CLASS OF 2027");
     });
   });
 
