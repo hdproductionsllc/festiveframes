@@ -29,7 +29,22 @@ export function sectionSupportsText(id: SectionId): boolean {
 }
 
 /**
- * Force any section that may NOT hold text out of text mode.
+ * Can this panel hold BADGES?
+ *
+ * Everything except the TOP strip, which is a single row tall — and a badge floors
+ * at 2x2 (MIN_ART_SPAN), because artwork is unreadable at one ~1in cell. So no
+ * badge can physically seat in the top row, and offering tiles there is offering a
+ * mode that cannot produce anything. The top is a text banner, always.
+ *
+ * The BOTTOM banner is two rows tall, so a 2x2 does fit and it keeps the choice.
+ */
+export function sectionSupportsTiles(id: SectionId): boolean {
+  return id !== "top";
+}
+
+/**
+ * Normalise every section to a mode that panel can actually express: out of text
+ * where text is not allowed, and out of tiles where tiles cannot seat.
  *
  * Text bars were once allowed on every panel; they are a top/bottom affordance now,
  * so the Tiles/Text toggle no longer renders on the wings. A design saved before
@@ -44,8 +59,14 @@ export function repairSections<T extends Partial<Record<SectionId, { mode?: stri
   let changed = false;
   const out: Record<string, unknown> = {};
   for (const [id, sec] of Object.entries(sections)) {
-    if (sec?.mode === "text" && !sectionSupportsText(id as SectionId)) {
+    const key = id as SectionId;
+    if (sec?.mode === "text" && !sectionSupportsText(key)) {
       out[id] = { mode: "tiles" };
+      changed = true;
+    } else if (sec?.mode === "tiles" && !sectionSupportsTiles(key)) {
+      // The top strip cannot seat a badge (see sectionSupportsTiles). Keep whatever
+      // text config is already there rather than discarding the user's copy.
+      out[id] = { ...sec, mode: "text" };
       changed = true;
     } else {
       out[id] = sec;

@@ -39,7 +39,7 @@ import {
   UPLOAD_SET_ID,
 } from "@/lib/utils/snappet";
 import { deleteFullRes } from "@/lib/utils/image-store";
-import { repairSections, sectionSupportsText } from "@/lib/utils/sections";
+import { repairSections, sectionSupportsText, sectionSupportsTiles } from "@/lib/utils/sections";
 import { MAX_HISTORY_DEPTH } from "@/lib/constants/frame";
 
 // ── Multi-cell snappets ──────────────────────────────────────────────────────
@@ -1235,7 +1235,16 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
         setSectionMode: (id, mode) => {
           set((state) => {
             // Side panels are tiles/art only — a text bar is a top/bottom affordance.
-            const effMode: SectionMode = mode === "text" && !sectionSupportsText(id) ? "tiles" : mode;
+            // Guard BOTH directions: text only where text is allowed, tiles only
+            // where a badge can actually seat. The top strip is one row tall and a
+            // badge floors at 2x2, so asking for tiles there is asking for a mode
+            // that produces nothing — it stays a text banner.
+            const effMode: SectionMode =
+              mode === "text" && !sectionSupportsText(id)
+                ? "tiles"
+                : mode === "tiles" && !sectionSupportsTiles(id)
+                  ? "text"
+                  : mode;
             const cur = state.sections[id] ?? { mode: "tiles" };
             const next: SectionState = { ...cur, mode: effMode };
             // Seed a blank text config on first switch so the section renders + edits.

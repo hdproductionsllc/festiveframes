@@ -1,7 +1,7 @@
 "use client";
 
 import { useDesignStore } from "@/stores/design-store";
-import { SECTION_LABELS, sectionSupportsText } from "@/lib/utils/sections";
+import { SECTION_LABELS, sectionSupportsText, sectionSupportsTiles } from "@/lib/utils/sections";
 import { SCHOOL_COLLEGIATE_FONTS, SCHOOL_OTHER_FONTS } from "@/lib/constants/frame";
 import { SCHOOL_PHRASE_GROUPS } from "@/data/school-phrases";
 import { useSnappetUpload } from "./useSnappetUpload";
@@ -55,7 +55,7 @@ export function SectionEditor() {
             wings (which have no switch, because art is all they do) look disabled by
             comparison. Changing a banner to badges is deliberate, so it sits with the
             rest of this panel's settings. */}
-        {sectionSupportsText(selectedSectionId) && (
+        {sectionSupportsText(selectedSectionId) && sectionSupportsTiles(selectedSectionId) && (
           <button
             type="button"
             onClick={() => setSectionMode(selectedSectionId, isText ? "tiles" : "text")}

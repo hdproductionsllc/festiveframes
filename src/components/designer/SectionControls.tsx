@@ -1,7 +1,7 @@
 "use client";
 
 import { useDesignStore } from "@/stores/design-store";
-import { SECTION_IDS, SECTION_LABELS, sectionSupportsText } from "@/lib/utils/sections";
+import { SECTION_IDS, SECTION_LABELS, sectionSupportsText, sectionSupportsTiles } from "@/lib/utils/sections";
 
 // Per-section mode picker for the school builder. Each frame section (the two side
 // panels, the top bar, the bottom banner) can be Tiles (achievement tiles) or Text
@@ -64,11 +64,13 @@ export function SectionControls() {
                   of that panel's settings. */}
               <div className="flex items-center justify-between gap-2">
                 <span className="text-[11px] font-semibold uppercase tracking-wide text-[#1e1b17]/50">
-                  {sectionSupportsText(id)
-                    ? mode === "text"
-                      ? "Text banner"
-                      : "Badges"
-                    : "Art only"}
+                  {!sectionSupportsTiles(id)
+                    ? "Text banner"
+                    : sectionSupportsText(id)
+                      ? mode === "text"
+                        ? "Text banner"
+                        : "Badges"
+                      : "Art only"}
                 </span>
                 <button
                   type="button"
@@ -84,9 +86,9 @@ export function SectionControls() {
       </div>
 
       <p className="mt-3 text-[11px] leading-relaxed text-[#1e1b17]/55">
-        The top bar and bottom banner are text banners; the side panels hold badges and
-        art. Select a panel to edit it below — including switching a banner over to
-        badges if you want one there.
+        The top bar is always a text banner — it is one tile tall, too short for a
+        badge to read. The bottom banner is two tall, so it can be either. The side
+        panels hold badges and art. Select a panel to edit it below.
       </p>
     </div>
   );
