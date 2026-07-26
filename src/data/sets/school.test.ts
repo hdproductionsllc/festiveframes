@@ -69,11 +69,17 @@ describe("school spirit set", () => {
 
   it("has well-formed presets referencing only its own pieces", () => {
     expect(schoolSet.presets.length).toBeGreaterThan(0);
-    const ownIds = new Set(schoolSet.pieces.map((p) => p.id));
+    // The set LISTS pieces from more than one set: Becky's collection is spread in
+    // and keeps its own `hs:` ids (see the note on `pieces`). So the invariant is
+    // that a preset names a piece this set actually offers, and labels it with that
+    // piece's OWN set — not that everything is `school:`, which stopped being true
+    // the moment real art arrived.
+    const own = new Map(schoolSet.pieces.map((p) => [p.id, p]));
     for (const preset of schoolSet.presets) {
       for (const tile of Object.values(preset.slots)) {
-        expect(tile.setId).toBe("school");
-        expect(ownIds.has(tile.pieceId)).toBe(true);
+        const piece = own.get(tile.pieceId);
+        expect(piece, `preset ${preset.id} references unknown piece ${tile.pieceId}`).toBeDefined();
+        expect(tile.setId).toBe(piece!.setId);
       }
     }
   });

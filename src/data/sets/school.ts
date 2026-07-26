@@ -39,7 +39,7 @@ export const schoolSet: TileSet = {
   name: "School Spirit",
   icon: "🎓",
   description:
-    "Placeholder varsity spirit tiles — stars, pennants, trophies, mascot balls, and school colors. Real collegiate art drops in later.",
+    "Becky's High School Collection, plus school-colour blocks and text presets.",
   price: 0,
   pieces: [
     // ─── Becky's High School Collection (REAL art) ─────────────
@@ -51,34 +51,16 @@ export const schoolSet: TileSet = {
     // map across every set, not scoped to the set a piece is listed under.
     ...highSchoolSet.pieces,
 
-    // ─── Spirit icons (Twemoji SVG placeholders) ───────────────
-    // NOTE: Football / Basketball / Soccer / Drama below are now also covered by
-    // Becky's real art above. They're deliberately left in place so any saved design
-    // referencing a `school:` id still resolves; drop them once that's known to be safe.
-    { id: `${S}:star`, setId: S, name: "Star", artworkUrl: `${T}/2b50.svg`, emoji: "⭐", backgroundColor: NAVY },
-    { id: `${S}:pennant`, setId: S, name: "Pennant", artworkUrl: `${T}/1f6a9.svg`, emoji: "🚩", backgroundColor: GOLD, textColor: "#333333" },
-    { id: `${S}:trophy`, setId: S, name: "Trophy", artworkUrl: `${T}/1f3c6.svg`, emoji: "🏆", backgroundColor: NAVY },
-    { id: `${S}:medal`, setId: S, name: "Medal", artworkUrl: `${T}/1f3c5.svg`, emoji: "🏅", backgroundColor: CRIMSON },
-    { id: `${S}:megaphone`, setId: S, name: "Megaphone", artworkUrl: `${T}/1f4e3.svg`, emoji: "📣", backgroundColor: ROYAL },
-    { id: `${S}:grad-cap`, setId: S, name: "Grad Cap", artworkUrl: `${T}/1f393.svg`, emoji: "🎓", backgroundColor: INK },
-    { id: `${S}:number-one`, setId: S, name: "Number One", artworkUrl: `${T}/1f947.svg`, emoji: "🥇", backgroundColor: GOLD, textColor: "#333333" },
-    { id: `${S}:crown`, setId: S, name: "Crown", artworkUrl: `${T}/1f451.svg`, emoji: "👑", backgroundColor: NAVY },
-    { id: `${S}:shield`, setId: S, name: "Shield", artworkUrl: `${T}/1f6e1.svg`, emoji: "🛡️", backgroundColor: CRIMSON },
-    { id: `${S}:lightning`, setId: S, name: "Lightning", artworkUrl: `${T}/26a1.svg`, emoji: "⚡", backgroundColor: GOLD, textColor: "#333333" },
-    { id: `${S}:fire`, setId: S, name: "Fire", artworkUrl: `${T}/1f525.svg`, emoji: "🔥", backgroundColor: "#FF4500" },
-    { id: `${S}:heart`, setId: S, name: "Heart", artworkUrl: `${T}/2764.svg`, emoji: "❤️", backgroundColor: CRIMSON },
-    { id: `${S}:paw`, setId: S, name: "Paw", artworkUrl: `${T}/1f43e.svg`, emoji: "🐾", backgroundColor: "#8B4513" },
-    { id: `${S}:book`, setId: S, name: "Book", artworkUrl: `${T}/1f4da.svg`, emoji: "📚", backgroundColor: FOREST },
-
-    // ─── Sports ────────────────────────────────────────────────
-    { id: `${S}:football`, setId: S, name: "Football", artworkUrl: `${T}/1f3c8.svg`, emoji: "🏈", backgroundColor: "#8B4513" },
-    { id: `${S}:basketball`, setId: S, name: "Basketball", artworkUrl: `${T}/1f3c0.svg`, emoji: "🏀", backgroundColor: COURT },
-    { id: `${S}:soccer`, setId: S, name: "Soccer", artworkUrl: `${T}/26bd.svg`, emoji: "⚽", backgroundColor: TURF },
-    { id: `${S}:baseball`, setId: S, name: "Baseball", artworkUrl: `${T}/26be.svg`, emoji: "⚾", backgroundColor: CRIMSON },
-
-    // ─── Arts ──────────────────────────────────────────────────
-    { id: `${S}:music`, setId: S, name: "Band", artworkUrl: `${T}/1f3b5.svg`, emoji: "🎵", backgroundColor: NAVY },
-    { id: `${S}:drama`, setId: S, name: "Drama", artworkUrl: `${T}/1f3ad.svg`, emoji: "🎭", backgroundColor: "#7B2D8E" },
+    // ─── Spirit icons: REMOVED ─────────────────────────────────
+    // Twenty Twemoji cartoons (star, pennant, trophy, mascot balls…) stood in until
+    // real art existed. They now sit next to Becky's collection in the same palette,
+    // where a flat emoji beside a drawn badge reads as a different product, not a
+    // simpler option — so they are gone rather than demoted.
+    //
+    // The old note here said to keep them so saved designs still resolve. That is
+    // handled properly now: `dropUnknownPieces` runs on hydrate and removes tiles
+    // whose piece no longer exists, instead of leaving a record that renders as
+    // nothing but still counts in the parts list.
 
     // ─── School colors (solids — empty url, color-block by design) ─
     { id: `${S}:solid-navy`, setId: S, name: "Navy", artworkUrl: "", emoji: "🟦", backgroundColor: NAVY },
@@ -110,7 +92,10 @@ export const schoolSet: TileSet = {
 // mount a preset gallery yet) — they exist so the set matches the shape of every
 // other set and is ready the moment a "Looks" picker is wired for schools.
 function buildPresets(): DesignPreset[] {
-  const tile = (slug: string): PlacedTile => ({ pieceId: `${S}:${slug}`, setId: S });
+  // Real art carries its OWN set id (`hs:`), so a preset naming it must too — the
+  // twemoji stand-ins these used to cycle are gone.
+  const tile = (id: string): PlacedTile =>
+    id.includes(":") ? { pieceId: id, setId: id.split(":")[0] } : { pieceId: `${S}:${id}`, setId: S };
   const TOP = Array.from({ length: 11 }, (_, i) => `frame:top-${i}`);
   const LEFT = Array.from({ length: 5 }, (_, i) => `frame:left-${i}`);
   const RIGHT = Array.from({ length: 5 }, (_, i) => `frame:right-${i}`);
@@ -123,15 +108,15 @@ function buildPresets(): DesignPreset[] {
     {
       id: `${S}:spirit-day`,
       name: "Spirit Day",
-      description: "Stars and pennants in navy and gold",
-      slots: cycle(["star", "solid-gold", "pennant", "solid-navy"]),
+      description: "Team badges in navy and gold",
+      slots: cycle(["hs:basketball", "solid-gold", "hs:football", "solid-navy"]),
       bottomBar: { text: "GO TEAM", backgroundColor: NAVY, textColor: GOLD },
     },
     {
       id: `${S}:champions`,
       name: "Champions",
-      description: "Trophies and medals for the winning season",
-      slots: cycle(["trophy", "solid-navy", "medal", "star"]),
+      description: "Honours and leadership badges",
+      slots: cycle(["hs:honor-society", "solid-navy", "hs:student-council", "hs:deca"]),
       bottomBar: { text: "STATE CHAMPIONS", backgroundColor: CRIMSON, textColor: "#FFFFFF" },
     },
   ];

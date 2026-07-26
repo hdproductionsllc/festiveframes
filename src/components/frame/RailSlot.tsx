@@ -4,6 +4,7 @@ import { memo, useEffect, useRef, useState } from "react";
 import { useDroppable, useDraggable } from "@dnd-kit/core";
 import type { FrameSlot, PlacedTile, TileSpan } from "@/lib/types";
 import {
+  frameCorners,
   grabOffsetIn,
   isMultiCell,
   minSpanFor,
@@ -14,6 +15,7 @@ import {
 import { buildGrid } from "@/lib/utils/slot-generator";
 import { coveredSlotIds } from "@/lib/utils/text-bar";
 import { getPiece } from "@/data/sets";
+import { NO_CORNERS, type CornerFlags } from "@/lib/utils/tile-theme";
 import { PlacedTileView } from "./PlacedTileView";
 import { SparkleBurst } from "./SparkleBurst";
 import { useDesignStore } from "@/stores/design-store";
@@ -130,6 +132,17 @@ function RailSlotInner({ slot, placedTile, covered, spanWidth, spanHeight }: Rai
   // always one grid cell (it is the droppable); only the tile drawn inside it grows.
   const tileWidth = spanWidth ?? slot.width;
   const tileHeight = spanHeight ?? slot.height;
+
+  // Which of this badge's corners face the frame's OUTSIDE. Derived from the grid's
+  // own extremes, so widening the side panels cannot leave the treatment pointing at
+  // cells that are no longer corners.
+  const corners = placedTile
+    ? frameCorners(
+        buildGrid(frameConfig),
+        { row: slot.row, col: slot.col },
+        tileSpan(placedTile),
+      )
+    : NO_CORNERS;
   const isSnappet = spanWidth !== undefined || spanHeight !== undefined;
 
   // Hidden under someone else's snappet: the droppable and nothing else. No click
@@ -181,6 +194,7 @@ function RailSlotInner({ slot, placedTile, covered, spanWidth, spanHeight }: Rai
           width={tileWidth}
           height={tileHeight}
           unit={slot.width}
+          corners={corners}
           armed={selectedPieceId != null}
           landing={landing}
         />
@@ -236,6 +250,7 @@ function PlacedTileCell({
   width,
   height,
   unit,
+  corners,
   armed,
   landing,
 }: {
@@ -248,6 +263,8 @@ function PlacedTileCell({
   /** ONE grid cell in px — the reference the badge's edge is measured against, so a
    *  3x3 snappet wears the same thin moulding as a 1x1. */
   unit: number;
+  /** Which corners face the frame's outside — see `frameCorners`. */
+  corners: CornerFlags;
   armed: boolean;
   landing?: boolean;
 }) {
@@ -365,6 +382,7 @@ function PlacedTileCell({
           width={width}
           height={height}
           unit={unit}
+          corners={corners}
         />
 
         {/* Poof puff — a quick patriotic sparkle puff as the tile disappears. */}
