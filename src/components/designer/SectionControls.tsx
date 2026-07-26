@@ -11,6 +11,14 @@ import type { SectionMode } from "@/lib/types";
 // suppressed, not deleted). ART is no longer a section MODE — uploaded art enters a
 // Tiles panel as a SNAPPET (see SectionEditor's "Add art"), one unified system.
 
+/** Visual order in the mirror layout: top, then the wings, then bottom. */
+const SECTION_LAYOUT_ORDER: Record<string, number> = {
+  top: 0,
+  "wing-left": 1,
+  "wing-right": 2,
+  bottom: 3,
+};
+
 const MODES: { id: SectionMode; label: string }[] = [
   { id: "tiles", label: "Tiles" },
   { id: "text", label: "Text" },
@@ -28,14 +36,23 @@ export function SectionControls() {
         <span aria-hidden>🧩</span> Sections
       </h3>
 
-      <div className="grid gap-2 sm:grid-cols-2">
+      {/* Laid out to MIRROR the frame, not as a flat list. Rendering SECTION_IDS
+          into a 2-column grid put the cards at
+            [Left panel] [Top bar] / [Bottom banner] [Right panel]
+          so the two Tiles/Text toggles landed top-right and bottom-left — nowhere
+          near the panels they control, which reads as the toggle being on the wrong
+          part of the frame. Top spans the width, the wings sit side by side beneath
+          it, bottom spans the width again: the same shape as the frame itself. */}
+      <div className="grid grid-cols-2 gap-2">
         {SECTION_IDS.map((id) => {
+          const spanFull = id === "top" || id === "bottom";
           const mode = sections[id]?.mode ?? "tiles";
           const selected = selectedSectionId === id;
           return (
             <div
               key={id}
-              className={`rounded-lg border-2 p-2 transition-colors ${
+              style={{ order: SECTION_LAYOUT_ORDER[id] }}
+              className={`rounded-lg border-2 p-2 transition-colors ${spanFull ? "col-span-2" : ""} ${
                 selected ? "border-[#f8c53b] bg-[#f8c53b]/15" : "border-[#1e1b17]/10 bg-white/40"
               }`}
             >
