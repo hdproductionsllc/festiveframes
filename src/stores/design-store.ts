@@ -17,7 +17,7 @@ import type {
 } from "@/lib/types";
 import type { LookPreset, LookBanner } from "@/data/look-presets";
 import { DEFAULT_FRAME_CONFIG, getWingFrameConfig, getStandardConfig, SCHOOL_DEFAULT_FONT_FAMILY } from "@/lib/constants/frame";
-import { DEFAULT_BOTTOM_BAR, DEFAULT_QR_CODE } from "@/lib/constants/defaults";
+import { DEFAULT_BOTTOM_BAR, DEFAULT_QR_CODE, LEGACY_SEEDED_BANNER_FONT } from "@/lib/constants/defaults";
 import { buildGrid, getAllSlotIds, wingRowCount, wingSlotIndex } from "@/lib/utils/slot-generator";
 import {
   measureTextBarUnits,
@@ -875,22 +875,18 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
 
         clearAll: () => {
           set((state) => {
-            // Clear must actually leave a BLANK frame. It used to drop only slots and
-            // textBars, so the school builder's top/bottom banners survived it and
-            // there was no way back to empty — you cleared, and the seeded copy was
-            // still sitting there.
+            // Clear returns the frame to how it ARRIVES, not to nothing. On the school
+            // builder that means the seeded banners come back ("HOME OF THE" /
+            // "WILDCATS" / "CLASS OF ____"), so a cleared frame still shows the shape
+            // of the product and still prompts for the class year. Blanking them left
+            // two empty bars and no way to get the prompt back.
             //
-            // Blank the WORDS, keep the section's mode and styling: someone clearing
-            // a design wants the content gone, not the bar they deliberately switched
-            // to text mode. /build carries no sections, so this is a no-op there.
-            const sections = Object.fromEntries(
-              Object.entries(state.sections).map(([id, sec]) => [
-                id,
-                sec && sec.mode === "text" && sec.text
-                  ? { ...sec, text: { ...sec.text, text: "", tagline: "" } }
-                  : sec,
-              ]),
-            ) as typeof state.sections;
+            // `initialSections` is the same value the store was constructed with, so
+            // this cannot drift from first-run. /build passes none, so sections stay
+            // empty there exactly as before.
+            const sections = initialSections
+              ? (structuredClone(initialSections) as typeof state.sections)
+              : {};
             return withHistory(state, {
               slots: {},
               textBars: [],
@@ -1445,7 +1441,18 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
         // saved after the toggle was removed. Merge runs on every hydrate, so the
         // repair is guaranteed. `sectionSupportsText` is the same source of truth the
         // UI and the renderer use.
-        if (merged.sections) merged.sections = repairSections(merged.sections);
+        if (merged.sections) {
+          merged.sections = repairSections(merged.sections);
+          // Refresh the SEEDED banner font. A section's font is persisted, so the
+          // new default would otherwise only ever reach brand-new users. Only the
+          // exact previously-seeded value is replaced — a deliberate pick from the
+          // font picker carries a different family string and is left alone.
+          for (const sec of Object.values(merged.sections)) {
+            if (sec?.text?.fontFamily === LEGACY_SEEDED_BANNER_FONT) {
+              sec.text = { ...sec.text, fontFamily: DEFAULT_BOTTOM_BAR.fontFamily };
+            }
+          }
+        }
         // Owned geometry is not user data — the persisted copy is a cache of the
         // product's shape at the time of the last save, so the live definition wins.
         // (The persisted DESIGN is untouched; only the frame it sits on is refreshed.)

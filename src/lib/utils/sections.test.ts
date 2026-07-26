@@ -99,32 +99,40 @@ describe("sectionBounds — unions the PANEL cells, incl. corners", () => {
   });
 });
 
-describe("clearAll leaves a genuinely blank frame", () => {
-  it("blanks the banner WORDS but keeps the section in text mode", async () => {
+describe("clearAll returns the frame to how it ARRIVES", () => {
+  it("refills the seeded banners rather than leaving two empty bars", async () => {
     const { createDesignStore } = await import("@/stores/design-store");
     const { SCHOOL_DEFAULT_SECTIONS } = await import("@/lib/constants/defaults");
-    const store = createDesignStore("test-clear-all", {
-      sections: SCHOOL_DEFAULT_SECTIONS,
-    });
-    const s0 = store.getState();
-    expect(s0.sections.top?.text?.text).toBeTruthy(); // seeded copy is there
+    const store = createDesignStore("test-clear-all", { sections: SCHOOL_DEFAULT_SECTIONS });
 
-    s0.placeTile("frame:top-3", "school:star", "school");
-    expect(Object.keys(store.getState().slots).length).toBe(1);
-
+    // Type over the seeded copy and drop a tile, then clear.
+    store.getState().setSectionText("bottom", { text: "EDITED", tagline: "EDITED TOO" });
+    store.getState().placeTile("frame:top-3", "school:star", "school");
     store.getState().clearAll();
-    const s1 = store.getState();
-    expect(Object.keys(s1.slots).length).toBe(0);
-    expect(s1.textBars).toEqual([]);
-    // The words are gone...
-    expect(s1.sections.top?.text?.text).toBe("");
-    expect(s1.sections.bottom?.text?.text).toBe("");
-    expect(s1.sections.bottom?.text?.tagline).toBe("");
-    // ...but the bar is still a TEXT bar, ready to type into.
-    expect(s1.sections.top?.mode).toBe("text");
-    expect(s1.sections.top?.text?.fontFamily).toBe(
-      SCHOOL_DEFAULT_SECTIONS.top.text.fontFamily,
-    );
+
+    const s = store.getState();
+    expect(Object.keys(s.slots).length).toBe(0);
+    expect(s.textBars).toEqual([]);
+    // The prompts come BACK — including the fill-in-the-blank class line, which a
+    // blanking Clear left no way to recover.
+    expect(s.sections.bottom?.text?.text).toBe(SCHOOL_DEFAULT_SECTIONS.bottom.text.text);
+    expect(s.sections.bottom?.text?.tagline).toBe(SCHOOL_DEFAULT_SECTIONS.bottom.text.tagline);
+    expect(s.sections.top?.text?.text).toBe(SCHOOL_DEFAULT_SECTIONS.top.text.text);
+  });
+
+  it("seeds a tagline that reads as a BLANK to fill, not a decided year", () => {
+    // "CLASS OF 2026" can ship unnoticed on someone's frame; a blank asks to be filled.
+    return import("@/lib/constants/defaults").then(({ SCHOOL_DEFAULT_SECTIONS }) => {
+      expect(SCHOOL_DEFAULT_SECTIONS.bottom.text.tagline).toMatch(/_{2,}/);
+    });
+  });
+
+  it("clears to nothing on /build, which seeds no sections", async () => {
+    const { createDesignStore } = await import("@/stores/design-store");
+    const store = createDesignStore("test-clear-build");
+    store.getState().placeTile("frame:top-3", "july4th:star-red", "july4th");
+    store.getState().clearAll();
+    expect(store.getState().sections).toEqual({});
   });
 });
 
