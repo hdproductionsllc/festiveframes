@@ -584,7 +584,12 @@ export const FrameCanvas = forwardRef<FrameCanvasHandle, FrameCanvasProps>(
                   }}
                 >
                   {sec.text?.text ? (
-                    <SectionTextElement width={box.width} height={box.height} config={sec.text} />
+                    <SectionTextElement
+                      width={box.width}
+                      height={box.height}
+                      config={sec.text}
+                      unit={tileSize}
+                    />
                   ) : (
                     <div className="flex h-full w-full items-center justify-center bg-[#1e1b17]/70 px-1 text-center text-[10px] font-bold uppercase tracking-wide text-[#faf0d6]/70">
                       Add a phrase

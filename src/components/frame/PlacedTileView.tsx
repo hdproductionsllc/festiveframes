@@ -15,9 +15,15 @@ interface PlacedTileViewProps {
    *  art with the snappet engine. Absent on every /build tile, so that path is the
    *  set-piece render below, byte-for-byte. */
   image?: { url: string; fullResId?: string };
+  /**
+   * ONE grid cell in px. The badge's edge is measured against this, not against the
+   * badge, so a 3x3 wears the same thin moulding as a 1x1. Defaults to the tile's
+   * own short side for callers that draw a lone tile at cell size (the drag ghost).
+   */
+  unit?: number;
 }
 
-export function PlacedTileView({ pieceId, width, height, animate, image }: PlacedTileViewProps) {
+export function PlacedTileView({ pieceId, width, height, animate, image, unit }: PlacedTileViewProps) {
   const dieCut = useDesignStore((s) => s.dieCut);
 
   // Uploaded art: render the image itself, sized to the snappet rect. `cover` fills
@@ -51,7 +57,7 @@ export function PlacedTileView({ pieceId, width, height, animate, image }: Place
   const size = Math.min(width, height);
   const isDieCut = dieCut && canDieCut(pieceId);
   const field = tileBackground(piece);
-  const edge = tileEdgeCss(size, field);
+  const edge = tileEdgeCss(size, field, width, height, unit ?? size);
 
   const art = piece.artworkUrl ? (
     // eslint-disable-next-line @next/next/no-img-element

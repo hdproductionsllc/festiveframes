@@ -83,6 +83,50 @@ describe("bevelMetrics", () => {
   });
 });
 
+describe("the edge is one width EVERYWHERE, measured against a grid cell", () => {
+  const CELL = 150;
+
+  it("gives the two-row bottom panel the same bevel as the one-row top bar", () => {
+    // The bug: thickness came off the element's short side, so a panel twice as tall
+    // got a band exactly twice as thick.
+    const top = bevelMetrics(1800, CELL, TILE_BG.navy, CELL);
+    const bottom = bevelMetrics(1800, CELL * 2, TILE_BG.navy, CELL);
+    expect(bottom.thickness).toBe(top.thickness);
+  });
+
+  it("gives a 3x3 badge the same bevel as a 1x1", () => {
+    const one = bevelMetrics(CELL, CELL, TILE_BG.navy, CELL);
+    const three = bevelMetrics(CELL * 3, CELL * 3, TILE_BG.navy, CELL);
+    expect(three.thickness).toBe(one.thickness);
+  });
+
+  it("holds the brass rim to one width and one inset too", () => {
+    const one = rimMetrics(CELL, CELL, CELL);
+    const big = rimMetrics(CELL * 3, CELL * 2, CELL);
+    expect(big.width).toBe(one.width);
+    expect(big.inset).toBe(one.inset);
+  });
+
+  it("keeps text clearance constant, so both bars pad the same", () => {
+    expect(chromeInset(1800, CELL * 2, TILE_BG.navy, CELL)).toBe(
+      chromeInset(1800, CELL, TILE_BG.navy, CELL),
+    );
+  });
+
+  it("still scales when the CELL scales — print is 2x the preview, not a fixed px", () => {
+    const preview = bevelMetrics(CELL, CELL, TILE_BG.navy, CELL);
+    const print = bevelMetrics(CELL * 2, CELL * 2, TILE_BG.navy, CELL * 2);
+    expect(print.thickness).toBeGreaterThan(preview.thickness);
+  });
+
+  it("reaches the screen: tileEdgeCss forwards the cell to both metrics", () => {
+    const badge3x3 = tileEdgeCss(CELL * 3, TILE_BG.navy, CELL * 3, CELL * 3, CELL);
+    const badge1x1 = tileEdgeCss(CELL, TILE_BG.navy, CELL, CELL, CELL);
+    expect(badge3x3.bevelWidth).toBe(badge1x1.bevelWidth);
+    expect(badge3x3.rimWidth).toBe(badge1x1.rimWidth);
+  });
+});
+
 describe("bevelGradient — the run that replaced the mitred trapezoids", () => {
   const alpha = (c: string) => Number(c.match(/[\d.]+\)$/)?.[0].slice(0, -1) ?? 0);
 

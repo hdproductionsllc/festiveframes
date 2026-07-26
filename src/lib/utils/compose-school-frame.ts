@@ -121,8 +121,10 @@ function drawBevel(
   h: number,
   m: ReturnType<typeof bevelMetrics>,
   background: string,
+  /** One grid cell, so the edge is the same width on every badge and both bars. */
+  unit: number,
 ): void {
-  const rim = rimMetrics(w, h);
+  const rim = rimMetrics(w, h, unit);
 
   // Hairline outline — stops two adjacent badges from bleeding into one shape.
   ctx.beginPath();
@@ -397,8 +399,11 @@ function drawTextBlock(
   ctx: CanvasRenderingContext2D,
   cfg: BottomBarConfig,
   x: number, y: number, w: number, h: number,
+  /** One grid cell — keeps the bar's edge identical to the badges' and to the
+   *  other bar, regardless of how many rows tall the panel is. */
+  unit: number,
 ) {
-  const bevel = bevelMetrics(w, h, cfg.backgroundColor);
+  const bevel = bevelMetrics(w, h, cfg.backgroundColor, unit);
   ctx.save();
   // Rounded like the badges, not square. A square-cornered bar carrying a rounded
   // brass rim was the loudest mismatch between the bars and the badges.
@@ -413,11 +418,14 @@ function drawTextBlock(
   grad.addColorStop(1, gBot);
   ctx.fillStyle = grad;
   ctx.fillRect(x, y, w, h);
-  drawBevel(ctx, x, y, w, h, bevel, cfg.backgroundColor);
+  drawBevel(ctx, x, y, w, h, bevel, cfg.backgroundColor, unit);
 
   // Clear the chrome before the text starts. Derived from the chrome itself rather
   // than guessed alongside it, so the bevel can never cut into a descender again.
-  const pad = Math.max(Math.min(w, h) * SECTION_PAD_RATIO, chromeInset(w, h, cfg.backgroundColor));
+  const pad = Math.max(
+    Math.min(w, h) * SECTION_PAD_RATIO,
+    chromeInset(w, h, cfg.backgroundColor, unit),
+  );
   const contentW = Math.max(1, w - pad * 2);
   const contentH = Math.max(1, h - pad * 2);
   const headline = cfg.text ?? "";
@@ -523,7 +531,7 @@ export function drawSchoolFrame(
     ctx.save();
     const piece0 = !tile.image ? getPiece(tile.pieceId) : undefined;
     const field = piece0 ? tileBackground(piece0) : "#ffffff";
-    const bevel = bevelMetrics(w, h, field);
+    const bevel = bevelMetrics(w, h, field, m.tileSize);
     roundRect(ctx, slot.x, slot.y, w, h, bevel.radius);
     ctx.clip();
     // The FIELD behind the art. Previously hard-coded white, which silently
@@ -562,7 +570,7 @@ export function drawSchoolFrame(
     }
     // Faux bevel LAST, so it sits over the art and reads as the badge's moulding.
     // Still inside the clip, so it follows the rounded corner.
-    drawBevel(ctx, slot.x, slot.y, w, h, bevel, field);
+    drawBevel(ctx, slot.x, slot.y, w, h, bevel, field, m.tileSize);
     ctx.restore();
   }
 
@@ -579,7 +587,7 @@ export function drawSchoolFrame(
     const box = sectionBounds(id, frameSlots, config);
     if (!box) continue;
     if (sec.mode === "text" && sec.text) {
-      drawTextBlock(ctx, sec.text, box.x, box.y, box.width, box.height);
+      drawTextBlock(ctx, sec.text, box.x, box.y, box.width, box.height, m.tileSize);
     } else if (sec.mode === "image") {
       const img = images.sections.get(id);
       ctx.save();

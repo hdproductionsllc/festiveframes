@@ -87,8 +87,23 @@ export const RADIUS_RATIO = 0.1;
  * light badge shows its depth entirely through shading, with the lit side merely
  * shaded LESS than the falling-away side.
  */
-export function bevelMetrics(w: number, h: number, background: string = TILE_BG.navy) {
-  const t = Math.max(1, Math.round(Math.min(w, h) * BEVEL_RATIO));
+export function bevelMetrics(
+  w: number,
+  h: number,
+  background: string = TILE_BG.navy,
+  /**
+   * ONE grid cell, in the same px as `w`/`h` — the reference the edge is measured
+   * against. Defaults to the short side, which is right only for a single square
+   * cell; every other caller must pass the real cell size.
+   *
+   * Sizing the edge off the element itself is what made the two-row bottom panel's
+   * bevel exactly twice the one-row top bar's, and a 2x2 badge's twice a 1x1's. A
+   * moulded edge is a physical thing: it is the same width wherever it appears, and
+   * scaling it with the part it borders is the giveaway that it was drawn.
+   */
+  unit: number = Math.min(w, h),
+) {
+  const t = Math.max(1, Math.round(unit * BEVEL_RATIO));
   const light = luminance(background) > 0.6;
   return {
     /** Border thickness in px. */
@@ -197,9 +212,12 @@ export function tileEdgeCss(
    *  square, which is every badge; the bars pass their actual width and height. */
   boxW: number = size,
   boxH: number = size,
+  /** ONE grid cell on screen, so the edge is the same width on a 1x1 badge, a 3x3
+   *  badge, the one-row top bar and the two-row bottom panel. */
+  unit: number = size,
 ) {
-  const bevel = bevelMetrics(size, size, background);
-  const rim = rimMetrics(size, size);
+  const bevel = bevelMetrics(boxW, boxH, background, unit);
+  const rim = rimMetrics(boxW, boxH, unit);
   return {
     radius: bevel.radius,
     rimInset: rim.inset,
@@ -239,19 +257,21 @@ export const BRASS = {
  * machined edge, not a gold frame. Scaled off the short side so every badge gets
  * the same weight of edge regardless of footprint.
  */
-export function rimMetrics(w: number, h: number) {
-  const short = Math.min(w, h);
+export function rimMetrics(w: number, h: number, unit: number = Math.min(w, h)) {
+  // Measured against ONE CELL, never the element — same reason as the bevel. A rim
+  // that thickens with the panel it borders stops reading as a machined edge.
+  //
   // The inset is what makes the rim read as a rim. Flush against the edge (it used
   // to be 0.012, which rounds to a pixel or two) it looks like the tile was simply
   // printed with a gold outline. Set back far enough to leave a visible margin of
   // field OUTSIDE it, the eye reads a metal ring sitting on a surface.
-  const inset = Math.max(1, Math.round(short * 0.032));
-  const width = Math.max(1, Math.round(short * 0.018));
+  const inset = Math.max(1, Math.round(unit * 0.032));
+  const width = Math.max(1, Math.round(unit * 0.018));
   return {
     width,
     inset,
     /** Concentric with the outer corner: the outer radius less how far we came in. */
-    radius: Math.max(2, Math.round(short * RADIUS_RATIO) - inset),
+    radius: Math.max(2, Math.round(Math.min(w, h) * RADIUS_RATIO) - inset),
   };
 }
 
@@ -265,10 +285,15 @@ export function rimMetrics(w: number, h: number) {
  * banner read as a sticker with something printed over it. Deriving the padding
  * from the chrome instead of guessing alongside it makes that impossible.
  */
-export function chromeInset(w: number, h: number, background: string = TILE_BG.navy): number {
-  const rim = rimMetrics(w, h);
-  const bevel = bevelMetrics(w, h, background);
-  const air = Math.round(Math.min(w, h) * 0.035);
+export function chromeInset(
+  w: number,
+  h: number,
+  background: string = TILE_BG.navy,
+  unit: number = Math.min(w, h),
+): number {
+  const rim = rimMetrics(w, h, unit);
+  const bevel = bevelMetrics(w, h, background, unit);
+  const air = Math.round(unit * 0.035);
   return rim.inset + rim.width + bevel.thickness + air;
 }
 

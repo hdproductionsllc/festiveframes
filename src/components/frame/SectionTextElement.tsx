@@ -72,10 +72,14 @@ export function SectionTextElement({
   width,
   height,
   config,
+  unit,
 }: {
   width: number;
   height: number;
   config: BottomBarConfig;
+  /** ONE grid cell in px, so the one-row top bar and the two-row bottom panel wear
+   *  the SAME edge instead of the taller one getting a band twice as thick. */
+  unit?: number;
 }) {
   const text = config.text ?? "";
   const fontFamily = config.fontFamily;
@@ -86,7 +90,8 @@ export function SectionTextElement({
   // the frame they sit side by side and a flat bar next to a moulded badge is what
   // made the thing read as assembled from parts.
   const short = Math.min(width, height);
-  const edge = tileEdgeCss(short, config.backgroundColor, width, height);
+  const cell = unit ?? short;
+  const edge = tileEdgeCss(short, config.backgroundColor, width, height, cell);
   const [glossTop, glossBottom] = glossStops(config.backgroundColor);
   // Opaque on purpose — this is what masks the rim and bevel gradients away from the
   // middle of the bar. See `ringCss`.
@@ -95,7 +100,10 @@ export function SectionTextElement({
   // Padding must CLEAR the chrome, not merely coexist with it. At 6% of the short
   // edge against a 5.5% bevel the text ran straight into the shaded lip and read as
   // interrupted, so take whichever is larger.
-  const pad = Math.max(short * PAD_RATIO, chromeInset(width, height, config.backgroundColor));
+  const pad = Math.max(
+    short * PAD_RATIO,
+    chromeInset(width, height, config.backgroundColor, cell),
+  );
   const contentW = Math.max(1, width - pad * 2);
   const contentH = Math.max(1, height - pad * 2);
 
