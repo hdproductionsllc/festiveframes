@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
+  blockFill,
   canPlace,
   coveredBySnappets,
   hasAnySpan,
@@ -1017,5 +1018,121 @@ describe("growUndersizedBadges — a floor introduced later still reaches saved 
     };
     const out = growUndersizedBadges(ctx({ slots }), artMin);
     expect(out["frame:top-5"].span).toBeUndefined();
+  });
+});
+
+describe("minSpanFor — the floor belongs to the BUILDER, not the piece", () => {
+  const plain = { defaultSpan: undefined, spanRequired: undefined };
+  const art = { defaultSpan: { cols: 2, rows: 2 }, spanRequired: undefined };
+  const calibration = { defaultSpan: { cols: 3, rows: 1 }, spanRequired: true };
+
+  it("still floors at 1x1 with no builder floor — /build is untouched", () => {
+    expect(minSpanFor(plain)).toEqual({ cols: 1, rows: 1 });
+    expect(minSpanFor(null)).toEqual({ cols: 1, rows: 1 });
+  });
+
+  it("lifts a PLAIN piece to the builder's floor", () => {
+    // The bug: only pieces carrying `defaultSpan` were ever lifted, and nothing but
+    // Becky's artwork carries it — so every solid, icon and photo landed 1x1.
+    expect(minSpanFor(plain, MIN_ART_SPAN)).toEqual({ cols: 2, rows: 2 });
+  });
+
+  it("takes the LARGER of the piece's own floor and the builder's", () => {
+    expect(minSpanFor(art, { cols: 3, rows: 1 })).toEqual({ cols: 3, rows: 2 });
+    expect(minSpanFor(art, { cols: 1, rows: 1 })).toEqual(MIN_ART_SPAN);
+  });
+
+  it("never pushes a spanRequired calibration tile around", () => {
+    expect(minSpanFor(calibration, MIN_ART_SPAN)).toEqual({ cols: 1, rows: 1 });
+  });
+});
+
+describe("blockFill — Fill All / Random lay real footprints", () => {
+  const pick = () => ({ pieceId: "high-school:basketball", setId: "high-school" });
+
+  it("produces NO 1x1 badges when asked for 2x2 blocks", () => {
+    // The original defect: both actions wrote one cell at a time with no span, so a
+    // floor could never help them — a floor bounds shrinking, and they never asked
+    // for a footprint at all.
+    const slots = blockFill(ctx(), pick, MIN_ART_SPAN);
+    expect(Object.keys(slots).length).toBeGreaterThan(0);
+    for (const t of Object.values(slots)) {
+      expect(tileSpan(t)).toEqual({ cols: 2, rows: 2 });
+    }
+  });
+
+  it("never overlaps two blocks", () => {
+    const slots = blockFill(ctx(), pick, MIN_ART_SPAN);
+    const seen = new Set<string>();
+    for (const [id, t] of Object.entries(slots)) {
+      const anchor = schoolGrid.coordOf(id)!;
+      for (const c of occupiedCoords(anchor, tileSpan(t))) {
+        const key = `${c.row}:${c.col}`;
+        expect(seen.has(key)).toBe(false);
+        seen.add(key);
+      }
+    }
+  });
+
+  it("never covers the plate hole", () => {
+    const slots = blockFill(ctx(), pick, MIN_ART_SPAN);
+    for (const [id, t] of Object.entries(slots)) {
+      const anchor = schoolGrid.coordOf(id)!;
+      for (const c of occupiedCoords(anchor, tileSpan(t))) {
+        expect(schoolGrid.isPlate(c.row, c.col)).toBe(false);
+      }
+    }
+  });
+
+  it("leaves a panel held by a TEXT banner completely alone", () => {
+    const withText = ctx({ sections: { bottom: { mode: "text" as const } } as PlacementContext["sections"] });
+    const slots = blockFill(withText, pick, MIN_ART_SPAN);
+    for (const id of Object.keys(slots)) {
+      const c = schoolGrid.coordOf(id)!;
+      expect(schoolGrid.panelAt(c.row, c.col)).not.toBe("bottom");
+    }
+  });
+
+  it("fills single cells when asked for 1x1 — /build's behaviour is reachable", () => {
+    const slots = blockFill(ctx(), pick, { cols: 1, rows: 1 });
+    for (const t of Object.values(slots)) {
+      expect(tileSpan(t)).toEqual({ cols: 1, rows: 1 });
+    }
+  });
+
+  it("calls pick once per BLOCK, so Random varies by block not by cell", () => {
+    const seenIndexes: number[] = [];
+    const slots = blockFill(
+      ctx(),
+      (i) => {
+        seenIndexes.push(i);
+        return { pieceId: `p${i}`, setId: "s" };
+      },
+      MIN_ART_SPAN,
+    );
+    expect(seenIndexes).toEqual(seenIndexes.map((_, i) => i)); // 0,1,2,… no gaps
+    expect(seenIndexes.length).toBe(Object.keys(slots).length);
+  });
+});
+
+describe("panelSnappetPlacement — an uploaded photo is not a thumbnail", () => {
+  it("floors an upload at the builder's span instead of shrinking to 1x1", () => {
+    const withFloor = panelSnappetPlacement(ctx(), "wing-left", 1, {
+      allowEvict: true,
+      minSpan: MIN_ART_SPAN,
+    });
+    expect(withFloor).not.toBeNull();
+    expect(withFloor!.span.cols).toBeGreaterThanOrEqual(2);
+    expect(withFloor!.span.rows).toBeGreaterThanOrEqual(2);
+  });
+
+  it("still falls back where the floor genuinely cannot seat", () => {
+    // The top strip is ONE row — a 2x2 cannot go there, and refusing the upload
+    // outright would be worse than seating it smaller.
+    const placed = panelSnappetPlacement(ctx(), "top", 1, {
+      allowEvict: true,
+      minSpan: MIN_ART_SPAN,
+    });
+    if (placed) expect(placed.span.rows).toBe(1);
   });
 });

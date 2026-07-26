@@ -413,9 +413,27 @@ export const MIN_ART_SPAN: TileSpan = { cols: 2, rows: 2 };
  */
 export function minSpanFor(
   piece: Pick<TilePiece, "defaultSpan" | "spanRequired"> | null | undefined,
+  /**
+   * The BUILDER's floor, under every piece it places.
+   *
+   * This is the half that was missing. A floor keyed off `defaultSpan` only ever
+   * lifted Becky's artwork, because nothing else carries that field — so solids,
+   * icons and uploaded photos all still landed at 1x1 no matter what the builder
+   * wanted. How small a badge may be is a property of the PRODUCT, not of the piece:
+   * the school frame's cell is 0.991in and nothing reads at that size, whatever is
+   * printed on it. `/build` passes nothing and keeps a 1x1 floor, which is its whole
+   * product.
+   */
+  floor: TileSpan = { cols: 1, rows: 1 },
 ): TileSpan {
-  if (!piece?.defaultSpan || piece.spanRequired) return { cols: 1, rows: 1 };
-  return MIN_ART_SPAN;
+  // A calibration tile's footprint is exact — its whole purpose is one specific
+  // non-square size, so no floor may push it around.
+  if (piece?.spanRequired) return { cols: 1, rows: 1 };
+  const own = piece?.defaultSpan ? MIN_ART_SPAN : { cols: 1, rows: 1 };
+  return {
+    cols: Math.max(own.cols, floor.cols),
+    rows: Math.max(own.rows, floor.rows),
+  };
 }
 
 export function spanLadder(span: TileSpan, min: TileSpan = { cols: 1, rows: 1 }): TileSpan[] {
@@ -660,7 +678,7 @@ export function panelSnappetPlacement(
   ctx: PlacementContext,
   panelId: SectionId,
   imageAspect: number,
-  opts: { allowEvict?: boolean } = {},
+  opts: { allowEvict?: boolean; minSpan?: TileSpan } = {},
 ): PanelSnappetPlacement | null {
   const { grid, slots, barCovered } = ctx;
 
@@ -721,9 +739,28 @@ export function panelSnappetPlacement(
 
   // Suggest a size, then shrink until canPlace accepts it (the anchor tile — if any —
   // is excluded so growing over its own cell is never a self-collision).
-  const suggested = suggestSnappetSize(imageAspect, { cols: freeCols, rows: freeRows });
-  for (let rows = suggested.rows; rows >= 1; rows--) {
-    for (let cols = suggested.cols; cols >= 1; cols--) {
+  //
+  // The shrink stops at the builder's FLOOR, not at 1x1. A photo dropped into a
+  // roomy panel was landing on a single 0.991in cell whenever the free run happened
+  // to be narrow, which is a thumbnail, not a print. Clamp the suggestion up to the
+  // floor first, then never shrink below it.
+  const floor = tileSpan({ span: opts.minSpan ?? { cols: 1, rows: 1 } });
+  const raw = suggestSnappetSize(imageAspect, { cols: freeCols, rows: freeRows });
+  const suggested: TileSpan = {
+    cols: Math.max(raw.cols, floor.cols),
+    rows: Math.max(raw.rows, floor.rows),
+  };
+  for (let rows = suggested.rows; rows >= floor.rows; rows--) {
+    for (let cols = suggested.cols; cols >= floor.cols; cols--) {
+      if (canPlace(ctx, anchor, { cols, rows }, anchorCell.id).ok) {
+        return { anchorSlotId: anchorCell.id, span: { cols, rows } };
+      }
+    }
+  }
+  // The floor genuinely will not seat here (a one-row strip cannot hold a 2x2).
+  // Fall back rather than refuse the upload outright.
+  for (let rows = floor.rows; rows >= 1; rows--) {
+    for (let cols = floor.cols; cols >= 1; cols--) {
       if (canPlace(ctx, anchor, { cols, rows }, anchorCell.id).ok) {
         return { anchorSlotId: anchorCell.id, span: { cols, rows } };
       }
@@ -763,6 +800,63 @@ export function anchorIdFor(
  *
  * Returns the SAME object when nothing changed, so a normal hydrate does no work.
  */
+/**
+ * Lay `span`-sized blocks across every tileable cell, packing from each panel's
+ * top-left, and return the design that results.
+ *
+ * Fill All and Random used to write cells ONE AT A TIME with no span, so every
+ * badge they produced was 1x1 regardless of any floor — a floor governs how small a
+ * footprint may SHRINK to, and these never asked for a footprint at all. Filling
+ * with blocks is a different job from filtering which pieces are eligible, which is
+ * why narrowing the pool only ever hid the symptom.
+ *
+ * A block is placed only where it seats cleanly and evicts nothing. Cells that
+ * cannot take one are LEFT EMPTY rather than back-filled with a smaller badge: an
+ * empty pocket prints nothing and reads as part of the frame, whereas a lone 1x1 of
+ * unreadable artwork is exactly what the floor exists to prevent. Panels held by a
+ * text banner, the plate hole and bar-covered cells are all skipped by `canPlace`.
+ *
+ * `pick` is called once per placed block, so a caller can hand back one piece for
+ * Fill All or a random one per block for Random.
+ */
+export function blockFill(
+  ctx: PlacementContext,
+  pick: (index: number) => { pieceId: string; setId: string } | null,
+  span: TileSpan,
+  floor: TileSpan = span,
+): Record<string, PlacedTile> {
+  const { grid } = ctx;
+  const slots: Record<string, PlacedTile> = {};
+  const taken = new Set<string>();
+  const key = (row: number, col: number) => `${row}:${col}`;
+  const sizes = spanLadder(tileSpan({ span }), tileSpan({ span: floor }));
+
+  // Row-major, so blocks pack top-left and the leftovers collect at the far edge
+  // rather than scattering as holes through the middle.
+  const cells = [...grid.slots].sort((a, b) => a.row - b.row || a.col - b.col);
+
+  let placed = 0;
+  for (const cell of cells) {
+    if (taken.has(key(cell.row, cell.col))) continue;
+    const anchor: GridCoord = { row: cell.row, col: cell.col };
+    for (const size of sizes) {
+      const coords = occupiedCoords(anchor, size);
+      // Overlapping a block laid a moment ago is not an eviction to resolve, it is
+      // simply a size that does not fit here — try the next one down.
+      if (coords.some((c) => taken.has(key(c.row, c.col)))) continue;
+      const verdict = canPlace({ ...ctx, slots }, anchor, size);
+      if (!verdict.ok || verdict.evicts.length > 0) continue;
+      const piece = pick(placed);
+      if (!piece) return slots;
+      slots[cell.id] = { ...piece, span: size };
+      for (const c of coords) taken.add(key(c.row, c.col));
+      placed++;
+      break;
+    }
+  }
+  return slots;
+}
+
 export function growUndersizedBadges(
   ctx: PlacementContext,
   minFor: (pieceId: string) => TileSpan,

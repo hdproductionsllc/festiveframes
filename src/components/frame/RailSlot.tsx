@@ -3,7 +3,17 @@
 import { memo, useEffect, useRef, useState } from "react";
 import { useDroppable, useDraggable } from "@dnd-kit/core";
 import type { FrameSlot, PlacedTile, TileSpan } from "@/lib/types";
-import { grabOffsetIn, isMultiCell, tileSpan, type GrabOffset } from "@/lib/utils/snappet";
+import {
+  grabOffsetIn,
+  isMultiCell,
+  minSpanFor,
+  resolveSnappetDrop,
+  tileSpan,
+  type GrabOffset,
+} from "@/lib/utils/snappet";
+import { buildGrid } from "@/lib/utils/slot-generator";
+import { coveredSlotIds } from "@/lib/utils/text-bar";
+import { getPiece } from "@/data/sets";
 import { PlacedTileView } from "./PlacedTileView";
 import { SparkleBurst } from "./SparkleBurst";
 import { useDesignStore } from "@/stores/design-store";
@@ -40,6 +50,10 @@ interface RailSlotProps {
 function RailSlotInner({ slot, placedTile, covered, spanWidth, spanHeight }: RailSlotProps) {
   const { setNodeRef } = useDroppable({ id: slot.id });
   const placeTile = useDesignStore((s) => s.placeTile);
+  const frameConfig = useDesignStore((s) => s.frameConfig);
+  const slots = useDesignStore((s) => s.slots);
+  const sections = useDesignStore((s) => s.sections);
+  const textBars = useDesignStore((s) => s.textBars);
   const selectedPieceId = usePaletteStore((s) => s.selectedPieceId);
   const soundEnabled = useUIStore((s) => s.soundEnabled);
 
@@ -67,8 +81,35 @@ function RailSlotInner({ slot, placedTile, covered, spanWidth, spanHeight }: Rai
     // its remove ✕ — handled inside PlacedTileCell.)
     if (!selectedPieceId) return;
     const setId = selectedPieceId.split(":")[0];
-    placeTile(slot.id, selectedPieceId, setId);
-    emitTilePlaced(slot.id);
+    // Resolve the footprint the SAME way a drag does. This used to call placeTile
+    // with no span at all, so every tap produced a 1x1 no matter what the frame's
+    // floor said — and tap is the primary gesture on touch, the one the armed
+    // banner tells you to use. Two gestures for one action must not disagree.
+    const piece = getPiece(selectedPieceId);
+    const drop = resolveSnappetDrop(
+      {
+        grid: buildGrid(frameConfig),
+        slots,
+        sections,
+        barCovered: new Set(coveredSlotIds(textBars)),
+      },
+      {
+        overSlotId: slot.id,
+        span: piece?.defaultSpan ?? { cols: 1, rows: 1 },
+        shrinkToFit: !piece?.spanRequired,
+        growToPanel: !piece?.spanRequired,
+        minSpan: minSpanFor(piece, frameConfig.minTileSpan),
+      },
+    );
+    // Commit the RESOLVED footprint, not the requested one.
+    const span = drop ? { cols: drop.cols, rows: drop.rows } : undefined;
+    placeTile(
+      drop?.anchorSlotId ?? slot.id,
+      selectedPieceId,
+      setId,
+      span && isMultiCell(span) ? span : undefined,
+    );
+    emitTilePlaced(drop?.anchorSlotId ?? slot.id);
     if (soundEnabled) playSound("snap");
   };
 

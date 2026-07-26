@@ -36,6 +36,7 @@ import {
 import {
   canPlace,
   coveredBySnappets,
+  blockFill,
   growUndersizedBadges,
   hasAnySpan,
   isMultiCell,
@@ -125,6 +126,38 @@ function syncFirstBarQr(bars: PlacedTextBar[], qrEnabled: boolean): PlacedTextBa
  * covers" true of multi-cell tiles too. A design of ordinary 1x1 tiles has no
  * spans to expand, so /build never leaves the first loop.
  */
+/**
+ * The tiles Fill All / Random lay down.
+ *
+ * With no `span` this is the original behaviour byte for byte — every slot id gets a
+ * 1x1 record — which is what `/build` is and must stay. With a span it defers to
+ * `blockFill`, which walks the grid laying that footprint and leaves cells that
+ * cannot take one empty.
+ */
+function fillSlots(
+  state: { frameConfig: FrameConfig; slots: Record<string, PlacedTile>; sections: DesignState["sections"]; textBars: PlacedTextBar[] },
+  pick: () => { pieceId: string; setId: string },
+  span: TileSpan | undefined,
+): Record<string, PlacedTile> {
+  if (!span || (span.cols === 1 && span.rows === 1)) {
+    const out: Record<string, PlacedTile> = {};
+    for (const id of getAllSlotIds(state.frameConfig)) out[id] = pick();
+    return out;
+  }
+  return blockFill(
+    {
+      grid: buildGrid(state.frameConfig),
+      // A fresh design: existing tiles must NOT make blocks look blocked, or a
+      // second Fill All would lay fewer badges than the first.
+      slots: {},
+      sections: state.sections,
+      barCovered: new Set(coveredSlotIds(state.textBars)),
+    },
+    pick,
+    span,
+  );
+}
+
 function clearCoveredTiles(
   slots: Record<string, PlacedTile>,
   bars: PlacedTextBar[],
@@ -253,10 +286,14 @@ interface DesignState {
    */
   placeImageSnappet: (
     panelId: SectionId,
-    image: { imageUrl: string; fullResId?: string; sourceAspect: number }
+    image: { imageUrl: string; fullResId?: string; sourceAspect: number },
+    /** The builder's smallest footprint. A photo shrunk to one 0.991in cell is a
+     *  thumbnail, not a print. Omitted (/build) = the previous 1x1 floor. */
+    minSpan?: TileSpan
   ) => void;
-  fillAll: (pieceId: string, setId: string) => void;
-  randomFill: (pieces: Array<{ pieceId: string; setId: string }>) => void;
+  /** `span` is the block footprint to lay (default 1x1 — /build's behaviour). */
+  fillAll: (pieceId: string, setId: string, span?: TileSpan) => void;
+  randomFill: (pieces: Array<{ pieceId: string; setId: string }>, span?: TileSpan) => void;
   fillEmpty: (pieces: Array<{ pieceId: string; setId: string }>) => void;
   mirrorTopSlots: () => void;
   alternateSlots: (
@@ -688,7 +725,7 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
           });
         },
 
-        placeImageSnappet: (panelId, image) => {
+        placeImageSnappet: (panelId, image, minSpan) => {
           set((state) => {
             const grid = buildGrid(state.frameConfig);
             const barCovered = new Set(coveredSlotIds(state.textBars));
@@ -697,7 +734,10 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
             // native-aspect snappet of this image lands, and how big. allowEvict so a
             // deliberate photo upload still seats on a FULL panel (evicting tiles) —
             // otherwise a fully-tiled frame silently refuses the photo.
-            const placement = panelSnappetPlacement(ctx, panelId, image.sourceAspect, { allowEvict: true });
+            const placement = panelSnappetPlacement(ctx, panelId, image.sourceAspect, {
+              allowEvict: true,
+              minSpan: minSpan ?? state.frameConfig.minTileSpan,
+            });
             if (!placement) return state; // no cells in panel at all (shouldn't happen)
             const anchor = grid.coordOf(placement.anchorSlotId);
             if (!anchor) return state;
@@ -720,13 +760,9 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
           });
         },
 
-        fillAll: (pieceId, setId) => {
+        fillAll: (pieceId, setId, span) => {
           set((state) => {
-            const allIds = getAllSlotIds(state.frameConfig);
-            const newSlots: Record<string, PlacedTile> = {};
-            for (const id of allIds) {
-              newSlots[id] = { pieceId, setId };
-            }
+            const newSlots = fillSlots(state, () => ({ pieceId, setId }), span ?? state.frameConfig.minTileSpan);
             // A bar REPLACES the tiles under it — never populate covered cells,
             // or the next banner edit would silently delete these hidden tiles.
             return withHistory(state, {
@@ -736,14 +772,14 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
           });
         },
 
-        randomFill: (pieces) => {
+        randomFill: (pieces, span) => {
           set((state) => {
-            const allIds = getAllSlotIds(state.frameConfig);
-            const newSlots: Record<string, PlacedTile> = {};
-            for (const id of allIds) {
-              const piece = pieces[Math.floor(Math.random() * pieces.length)];
-              newSlots[id] = { pieceId: piece.pieceId, setId: piece.setId };
-            }
+            if (pieces.length === 0) return state;
+            const newSlots = fillSlots(
+              state,
+              () => pieces[Math.floor(Math.random() * pieces.length)],
+              span ?? state.frameConfig.minTileSpan,
+            );
             return withHistory(state, {
               slots: clearCoveredTiles(newSlots, state.textBars, state.frameConfig),
               updatedAt: Date.now(),

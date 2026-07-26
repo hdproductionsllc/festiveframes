@@ -1,6 +1,5 @@
 "use client";
 
-import { minSpanFor } from "@/lib/utils/snappet";
 import { useDesignStore } from "@/stores/design-store";
 import { usePaletteStore } from "@/stores/palette-store";
 import { useUIStore } from "@/stores/ui-store";
@@ -26,21 +25,21 @@ export function QuickActions({ surfacedSetIds }: QuickActionsProps = {}) {
   const pieces = getSetPieces(
     surfacedSetIds ? resolveSurfacedSetId(activeSetId, surfacedSetIds) : activeSetId
   );
-  // Fill All / Random write cells one at a time at 1x1, so the pool is exactly the
-  // pieces whose FLOOR is 1x1 (see `minSpanFor`). Artwork floors at 2x2 because it
-  // is unreadable smaller, so filling with it would produce precisely the 1x1 badges
-  // that floor exists to prevent — auto-fill is for the solids and simple icons.
-  const fillablePieces = pieces.filter((p) => {
-    const min = minSpanFor(p);
-    return min.cols === 1 && min.rows === 1;
-  });
+  // Artwork is back in the pool. It was excluded while Fill All wrote single cells,
+  // because filling with it produced exactly the unreadable 1x1 badges the floor
+  // exists to prevent — but that was a workaround for the missing algorithm, not a
+  // rule. `blockFill` lays real footprints now, so a badge that needs 2x2 gets 2x2.
+  //
+  // Only `spanRequired` pieces stay out: their footprint is one exact non-square
+  // size (the calibration tiles), which a uniform block grid cannot honour.
+  const fillablePieces = pieces.filter((p) => !p.spanRequired);
 
   const sfx = (name: SoundName) => { if (soundEnabled) playSound(name); };
 
   const handleFillAll = () => {
-    // Prefer the user's selected tile — but only if it's fillable at 1x1. A piece
-    // that REQUIRES its footprint can't fill single cells, so fall back to the first
-    // fillable piece and always do something obvious instead of squishing it.
+    // Prefer the user's selected tile. A piece that REQUIRES an exact footprint
+    // can't tile a uniform grid, so fall back to the first fillable piece and always
+    // do something obvious instead of squishing it.
     const selected = selectedPieceId ? pieces.find((p) => p.id === selectedPieceId) : null;
     const selectedFills = selected ? fillablePieces.includes(selected) : false;
     const pieceId = (selectedFills ? selected!.id : fillablePieces[0]?.id) ?? null;

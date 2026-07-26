@@ -12,7 +12,7 @@
 // STORE NOTE: it owns an ISOLATED design store (its own `createDesignStore`
 // instance + its own persist key), so nothing it does can reach /build's design.
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import {
   useDesignStore,
   useDesignStoreApi,
@@ -42,12 +42,16 @@ import { migrateSchoolDesign } from "@/lib/utils/school-migration";
 import type { BannerPreview } from "@/lib/types";
 import type { SnappetPreview } from "@/lib/utils/snappet";
 
+/** The school builder's own persist key — its design never touches /build's. */
+export const SCHOOL_PERSIST_KEY = "festive-frames-school-v1";
+
 export function SchoolDesigner() {
   const frameConfig = useDesignStore((s) => s.frameConfig);
   const slots = useDesignStore((s) => s.slots);
   const bottomBar = useDesignStore((s) => s.bottomBar);
   const qrCode = useDesignStore((s) => s.qrCode);
   const plateState = useDesignStore((s) => s.plateState);
+  const clearAll = useDesignStore((s) => s.clearAll);
 
   const canvasRef = useRef<FrameCanvasHandle>(null);
   const storeApi = useDesignStoreApi();
@@ -58,6 +62,7 @@ export function SchoolDesigner() {
   // neither should own the other's state.
   const [snappetPreview, setSnappetPreview] = useState<SnappetPreview | null>(null);
   const [storageFull, setStorageFull] = useState(false);
+  const [restoredDismissed, setRestoredDismissed] = useState(false);
   const [exporting, setExporting] = useState(false);
   // Export result surfaced in a banner so the button is NEVER a silent no-op — and so
   // it carries a REAL tappable download link, which iOS Safari honors (a synthetic
@@ -217,6 +222,26 @@ export function SchoolDesigner() {
   // save is rejected we warn instead of losing the design silently on reload.
   useEffect(() => onPersistQuotaExceeded(() => setStorageFull(true)), []);
 
+  // Was this load a RESTORE? Read the blob rather than inferring from state: a
+  // seeded first visit and a restored design look identical in the store, and the
+  // difference is exactly what the notice is about.
+  //
+  // useSyncExternalStore rather than an effect because the answer is fixed for the
+  // life of the page — there is nothing to subscribe to — and it gives a correct
+  // SSR value (false) instead of rendering the banner then taking it away.
+  const wasRestored = useSyncExternalStore(
+    () => () => {},
+    () => {
+      try {
+        return localStorage.getItem(SCHOOL_PERSIST_KEY) != null;
+      } catch {
+        return false;
+      }
+    },
+    () => false,
+  );
+  const restoredNotice = wasRestored && !restoredDismissed;
+
   // NOTE — there is deliberately no "seed the school frame" effect here.
   //
   // There used to be one: an unconditional `loadDesign({ frameConfig: SCHOOL_FRAME_CONFIG,
@@ -348,6 +373,40 @@ export function SchoolDesigner() {
         </div>
       )}
 
+      {/* Reload RESTORES your design rather than clearing it — which is what you want
+          when a tab closes by accident, and not what you want when you are starting a
+          new school. Both readings are legitimate, so say which one happened and make
+          the other one available, instead of picking for the user.
+
+          Offered, never imposed: a modal on every load would tax the common case
+          (coming back to finish) to serve the rarer one. */}
+      {restoredNotice && (
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b-[3px] border-[#1e1b17] bg-[#f8c53b] px-4 py-2 text-[#1e1b17]">
+          <p className="text-xs font-bold leading-snug sm:text-sm">
+            Picked up where you left off — your last design was restored.
+          </p>
+          <div className="flex shrink-0 items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                clearAll();
+                setRestoredDismissed(true);
+              }}
+              className="rounded-full border-2 border-[#1e1b17] bg-[#1e1b17] px-2.5 py-0.5 text-xs font-extrabold uppercase tracking-wide text-[#fff9ec] hover:bg-[#1e1b17]/85"
+            >
+              Start fresh
+            </button>
+            <button
+              type="button"
+              onClick={() => setRestoredDismissed(true)}
+              className="rounded-full border-2 border-[#1e1b17] px-2.5 py-0.5 text-xs font-extrabold uppercase tracking-wide hover:bg-[#1e1b17]/10"
+            >
+              Keep it
+            </button>
+          </div>
+        </div>
+      )}
+
       <DndProvider
         onOverSlotChange={setOverSlotId}
         onBannerPreviewChange={setBannerPreview}
@@ -432,7 +491,7 @@ export function SchoolBuilder() {
   //    per side → 1, for the E1 bed) invalidated slot ids that remain perfectly valid
   //    on /build, so it cannot live in the shared migration.
   const [store] = useState(() =>
-    createDesignStore("festive-frames-school-v1", {
+    createDesignStore(SCHOOL_PERSIST_KEY, {
       frameConfig: SCHOOL_FRAME_CONFIG,
       migrateExtra: migrateSchoolDesign,
       // Top/bottom start as TEXT banners — see SCHOOL_DEFAULT_SECTIONS. Initial

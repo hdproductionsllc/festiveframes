@@ -69,7 +69,10 @@ export function PlacedTileView({ pieceId, width, height, animate, image, unit }:
       style={{
         width: "100%",
         height: "100%",
-        objectFit: "cover",
+        // CONTAIN, not cover — see the print path's note. A badge is a mark on a
+        // field; cropping a square logo to fit a 2x1 removes exactly the part that
+        // carries the meaning.
+        objectFit: "contain",
         filter: isDieCut ? undefined : artShadowCss(size),
       }}
       draggable={false}
