@@ -69,6 +69,15 @@ export function tileBackground(piece: Pick<TilePiece, "backgroundColor">): strin
 export const BEVEL_RATIO = 0.055;
 
 /**
+ * Outer corner radius as a fraction of the short side.
+ *
+ * Deliberately generous. A small radius reads as a printed square with the corners
+ * knocked off; a real snap-in badge is moulded, and the eye reads the roundness of
+ * the corner as evidence of a physical part.
+ */
+export const RADIUS_RATIO = 0.1;
+
+/**
  * Bevel geometry for a tile rect — pure, so it is testable without a canvas.
  *
  * The edge colours ADAPT to the field, because a fixed pair only works on a dark
@@ -85,7 +94,7 @@ export function bevelMetrics(w: number, h: number, background: string = TILE_BG.
     /** Border thickness in px. */
     thickness: t,
     /** Corner radius of the outer edge — matches the printed tile's rounding. */
-    radius: Math.max(2, Math.round(Math.min(w, h) * 0.06)),
+    radius: Math.max(2, Math.round(Math.min(w, h) * RADIUS_RATIO)),
     /** The lit (top-left) edge. */
     highlight: light ? "rgba(0,0,0,0.10)" : "rgba(255,255,255,0.45)",
     /** The falling-away (bottom-right) edge — always the darker of the two. */
@@ -94,20 +103,118 @@ export function bevelMetrics(w: number, h: number, background: string = TILE_BG.
 }
 
 /**
- * The CSS that gives an on-screen tile the same raised edge the print path draws.
- * Kept here rather than inline in the component so the two stay in step: an inset
- * highlight along the top-left and an inset shade along the bottom-right read as a
- * light source from above-left, plus a small drop shadow to lift the badge off the
- * frame.
+ * The bevel's colour run, as gradient stops along the upper-left light axis.
+ *
+ * This replaced four flat-filled trapezoids. Those mitred at 45 degrees, which put
+ * a straight diagonal seam across every corner while the rim beside it curved — the
+ * one detail that gave the whole badge away as drawn rather than moulded. A gradient
+ * has no seam to misalign: it is filled through a band that follows the rounded
+ * contour, so the corner is simply where the run passes from lit to shaded.
+ *
+ * The middle stops sit close together on purpose. Spread evenly the band looks
+ * domed, like a tube; held flat across the top and bottom with a quick roll between
+ * them, it looks faceted — a cut edge catching light, which is what a bevel is.
  */
-export function bevelBoxShadow(background: string = TILE_BG.navy): string {
+export function bevelGradient(background: string = TILE_BG.navy): Array<[number, string]> {
   const light = luminance(background) > 0.6;
-  return [
-    `inset 1.5px 1.5px 0 ${light ? "rgba(0,0,0,0.10)" : "rgba(255,255,255,0.45)"}`,
-    `inset -1.5px -1.5px 0 ${light ? "rgba(0,0,0,0.22)" : "rgba(0,0,0,0.38)"}`,
-    "inset 0 0 0 1px rgba(0,0,0,0.25)",
-    "0 2px 5px rgba(0,0,0,0.45)",
-  ].join(", ");
+  // A raised white face cannot get brighter than white, so a light field shows its
+  // depth entirely in shadow — the lit side merely shaded less. Same reasoning as
+  // `bevelMetrics`, expressed as a run instead of a pair.
+  return light
+    ? [
+        [0, "rgba(0,0,0,0.03)"],
+        [0.42, "rgba(0,0,0,0.09)"],
+        [0.58, "rgba(0,0,0,0.16)"],
+        [1, "rgba(0,0,0,0.28)"],
+      ]
+    : [
+        [0, "rgba(255,255,255,0.55)"],
+        [0.42, "rgba(255,255,255,0.14)"],
+        [0.58, "rgba(0,0,0,0.14)"],
+        [1, "rgba(0,0,0,0.44)"],
+      ];
+}
+
+/**
+ * The bevel gradient's AXIS, as start and end points inside the box.
+ *
+ * Not simply corner-to-corner. A diagonal is right for a square badge, but the top
+ * and bottom bars are four times wider than they are tall, and on those a
+ * corner-to-corner run is overwhelmingly horizontal — it lit the left end of the
+ * banner and shaded the right, when what a bevel must do is light the top edge and
+ * shade the bottom one whatever the box's proportions.
+ *
+ * So the horizontal lean is scaled by how square the box is: a square badge keeps a
+ * proper diagonal, a wide bar goes almost vertical, and everything between is
+ * proportional. Both ends stay inside the box, so no part of the band clamps to a
+ * flat end colour.
+ */
+export function bevelAxis(x: number, y: number, w: number, h: number) {
+  const squareness = Math.min(w, h) / Math.max(w, h);
+  // The run always spans the FULL height, so the top edge is lit and the bottom edge
+  // shaded no matter the proportions. Only the sideways lean varies, and it is
+  // measured against the height — never the width, or a wide bar's own length
+  // dominates the axis and the gradient turns into a left-to-right wash.
+  //
+  // Squared rather than linear because the sideways drift a lean introduces grows
+  // with the box's width: on a square this is a true corner-to-corner diagonal, and
+  // it falls away fast enough that a 6:1 banner stays visibly top-lit.
+  const lean = (h * squareness * squareness) / 2;
+  const cx = x + w / 2;
+  return { x0: cx - lean, y0: y, x1: cx + lean, y1: y + h };
+}
+
+/** The same run as a CSS `linear-gradient(...)`, on the axis `bevelAxis` describes. */
+export function bevelGradientCss(
+  background: string = TILE_BG.navy,
+  w: number = 1,
+  h: number = 1,
+): string {
+  const a = bevelAxis(0, 0, w, h);
+  // CSS gradient angles run clockwise from "to top", which is what atan2(dx, dy) gives.
+  const deg = (Math.atan2(a.x1 - a.x0, -(a.y1 - a.y0)) * 180) / Math.PI;
+  const stops = bevelGradient(background)
+    .map(([at, colour]) => `${colour} ${(at * 100).toFixed(0)}%`)
+    .join(", ");
+  return `linear-gradient(${deg.toFixed(1)}deg, ${stops})`;
+}
+
+/**
+ * Every number the on-screen chrome needs, derived from the SAME functions the
+ * canvas uses, so the preview and the printed sheet cannot drift.
+ *
+ * They had drifted badly. The screen path hardcoded a 3px corner radius, a 1px
+ * brass ring flush to the edge and a 1.5px bevel, while the canvas scaled all three
+ * off the tile's short side. At print size that is a 36px radius and a 21px rim; on
+ * screen it was a couple of pixels of grey. The chrome was not missing from the
+ * builder, it was there at a size nobody could see — which is why the exported file
+ * looked right and the thing you were designing in did not.
+ */
+export function tileEdgeCss(
+  size: number,
+  background: string = TILE_BG.navy,
+  /** The box's real proportions, so the bevel's lean matches the canvas. Defaults to
+   *  square, which is every badge; the bars pass their actual width and height. */
+  boxW: number = size,
+  boxH: number = size,
+) {
+  const bevel = bevelMetrics(size, size, background);
+  const rim = rimMetrics(size, size);
+  return {
+    radius: bevel.radius,
+    rimInset: rim.inset,
+    rimWidth: rim.width,
+    rimRadius: rim.radius,
+    bevelWidth: bevel.thickness,
+    bevelRadius: Math.max(1, bevel.radius - rim.inset - rim.width),
+    bevelGradient: bevelGradientCss(background, boxW, boxH),
+    brassGradient: brassGradientCss(),
+    /** Hairline against the neighbouring badge, plus the lift off the frame. */
+    outerShadow: [
+      "inset 0 0 0 1px rgba(0,0,0,0.25)",
+      `0 ${Math.max(1, Math.round(size * 0.012))}px ${Math.max(2, Math.round(size * 0.035))}px rgba(0,0,0,0.45)`,
+    ].join(", "),
+  };
 }
 
 // ─── Brass rim + cast shadow ────────────────────────────────────────────────
@@ -134,12 +241,40 @@ export const BRASS = {
  */
 export function rimMetrics(w: number, h: number) {
   const short = Math.min(w, h);
+  // The inset is what makes the rim read as a rim. Flush against the edge (it used
+  // to be 0.012, which rounds to a pixel or two) it looks like the tile was simply
+  // printed with a gold outline. Set back far enough to leave a visible margin of
+  // field OUTSIDE it, the eye reads a metal ring sitting on a surface.
+  const inset = Math.max(1, Math.round(short * 0.032));
+  const width = Math.max(1, Math.round(short * 0.018));
   return {
-    width: Math.max(1, Math.round(short * 0.018)),
-    /** Sits just INSIDE the tile edge so the stroke is not half-clipped away. */
-    inset: Math.max(1, Math.round(short * 0.012)),
-    radius: Math.max(2, Math.round(short * 0.06)),
+    width,
+    inset,
+    /** Concentric with the outer corner: the outer radius less how far we came in. */
+    radius: Math.max(2, Math.round(short * RADIUS_RATIO) - inset),
   };
+}
+
+/**
+ * How far in from the tile edge the CONTENT may start — past the rim, past the
+ * bevel, plus a little air.
+ *
+ * Text was being cut into by the bevel because the two were sized independently:
+ * padding at 6% of the short edge against a bevel band at 5.5% of it left half a
+ * percent of clearance, so descenders ran straight into the shaded lip and the
+ * banner read as a sticker with something printed over it. Deriving the padding
+ * from the chrome instead of guessing alongside it makes that impossible.
+ */
+export function chromeInset(w: number, h: number, background: string = TILE_BG.navy): number {
+  const rim = rimMetrics(w, h);
+  const bevel = bevelMetrics(w, h, background);
+  const air = Math.round(Math.min(w, h) * 0.035);
+  return rim.inset + rim.width + bevel.thickness + air;
+}
+
+/** The brass run as a CSS gradient, on the same upper-left light axis as the canvas. */
+export function brassGradientCss(): string {
+  return `linear-gradient(135deg, ${BRASS.light} 0%, ${BRASS.mid} 50%, ${BRASS.dark} 100%)`;
 }
 
 /**
@@ -167,9 +302,27 @@ export function artShadowCss(size: number): string {
   return `drop-shadow(${a.offsetX.toFixed(1)}px ${a.offsetY.toFixed(1)}px ${a.blur.toFixed(1)}px ${a.color})`;
 }
 
-/** CSS twin of the brass rim — an inset ring on the tile itself. */
-export function rimCss(): string {
-  return `inset 0 0 0 1px ${BRASS.mid}, inset 1px 1px 0 1px ${BRASS.light}33, inset -1px -1px 0 1px ${BRASS.dark}55`;
+/** A flat colour expressed as a CSS image, for use as a `ringCss` fill. */
+export function solidFill(colour: string): string {
+  return `linear-gradient(${colour}, ${colour})`;
+}
+
+/**
+ * A gradient ring, as CSS, for an element whose border is `width` and transparent.
+ *
+ * The two-background trick: `fill` paints the padding box, the gradient paints the
+ * border box, so the gradient shows only in the border itself. A ring drawn this
+ * way keeps the element's `border-radius`, which `border-image` does not — and a
+ * rounded rim that squares off at the corners is exactly the tell we are trying to
+ * remove.
+ *
+ * `fill` MUST be opaque. It is the only thing masking the gradient away from the
+ * middle, so a transparent fill does not produce a thin ring — it floods the whole
+ * element with the gradient. Passing `transparent` here to let a parent's gloss
+ * show through turned both banners solid gold.
+ */
+export function ringCss(fill: string, gradient: string): string {
+  return `${fill} padding-box, ${gradient} border-box`;
 }
 
 // ─── Shared panel chrome ────────────────────────────────────────────────────

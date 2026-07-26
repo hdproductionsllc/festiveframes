@@ -59,7 +59,10 @@ import { getPiece } from "@/data/sets";
 import {
   BRASS,
   artShadow,
+  bevelAxis,
+  bevelGradient,
   bevelMetrics,
+  chromeInset,
   glossStops,
   rimMetrics,
   tileBackground,
@@ -96,13 +99,19 @@ export function panelBleedBox(rc: PanelRect, tilePx: number, bleedPx: number) {
 /**
  * Draw the faux bevel that makes a printed tile read as a raised snap-in badge.
  *
- * A single light source from the upper-left: a highlight inset along the top and
- * left edges, a shade along the bottom and right, and a hairline round the whole
- * thing to keep the badge crisp against its neighbour. Drawn as trapezoids (the
- * corners mitre at 45 degrees) so adjacent edges meet cleanly instead of overlapping
- * into a darker corner blob.
+ * The band is the area between two rounded rectangles — the tile's outer contour
+ * and the same contour brought inward — filled with one gradient running from the
+ * upper-left light source to the lower-right shade.
  *
- * Called INSIDE the tile's clip, so it follows the rounded corner for free.
+ * It used to be four flat trapezoids, which mitred at 45 degrees. That put a hard
+ * diagonal seam across every corner while the brass rim beside it curved, and no
+ * amount of colour tuning hides a straight line crossing a round one. Filling a
+ * contour-following band removes the seam entirely: there are no corner joins to
+ * misalign, because there are no separate pieces.
+ *
+ * Layered from the outside in: hairline, brass rim, then the bevel inside the rim.
+ * The bevel sits INSIDE so the rim reads as the tile's machined edge with the lip
+ * behind it, rather than the two fighting over the same few pixels as before.
  */
 function drawBevel(
   ctx: CanvasRenderingContext2D,
@@ -111,21 +120,9 @@ function drawBevel(
   w: number,
   h: number,
   m: ReturnType<typeof bevelMetrics>,
+  background: string,
 ): void {
-  const t = m.thickness;
-  const tri = (pts: [number, number][], fill: string) => {
-    ctx.beginPath();
-    ctx.moveTo(pts[0][0], pts[0][1]);
-    for (const [px, py] of pts.slice(1)) ctx.lineTo(px, py);
-    ctx.closePath();
-    ctx.fillStyle = fill;
-    ctx.fill();
-  };
-  // Top and left catch the light; bottom and right fall away.
-  tri([[x, y], [x + w, y], [x + w - t, y + t], [x + t, y + t]], m.highlight);
-  tri([[x, y], [x + t, y + t], [x + t, y + h - t], [x, y + h]], m.highlight);
-  tri([[x, y + h], [x + t, y + h - t], [x + w - t, y + h - t], [x + w, y + h]], m.shade);
-  tri([[x + w, y], [x + w, y + h], [x + w - t, y + h - t], [x + w - t, y + t]], m.shade);
+  const rim = rimMetrics(w, h);
 
   // Hairline outline — stops two adjacent badges from bleeding into one shape.
   ctx.beginPath();
@@ -134,26 +131,41 @@ function drawBevel(
   ctx.lineWidth = 1;
   ctx.stroke();
 
-  // BRASS rim, last and thin. Stroked with a gradient along the same upper-left
-  // light axis as the bevel, because a flat gold line reads as a yellow stroke
-  // while a bright-to-dark run reads as metal.
-  const rim = rimMetrics(w, h);
+  // BRASS rim, thin. Stroked with a gradient along the same upper-left light axis
+  // as the bevel, because a flat gold line reads as a yellow stroke while a
+  // bright-to-dark run reads as metal.
   const g = ctx.createLinearGradient(x, y, x + w, y + h);
   g.addColorStop(0, BRASS.light);
   g.addColorStop(0.5, BRASS.mid);
   g.addColorStop(1, BRASS.dark);
   ctx.beginPath();
-  roundRect(
-    ctx,
-    x + rim.inset,
-    y + rim.inset,
-    w - rim.inset * 2,
-    h - rim.inset * 2,
-    rim.radius,
-  );
+  roundRect(ctx, x + rim.inset, y + rim.inset, w - rim.inset * 2, h - rim.inset * 2, rim.radius);
   ctx.strokeStyle = g;
   ctx.lineWidth = rim.width;
   ctx.stroke();
+
+  // The bevel band, just inside the rim. Two concentric rounded rects in ONE path
+  // filled "evenodd" gives the ring; the inner one is the hole.
+  const bx = x + rim.inset + rim.width;
+  const by = y + rim.inset + rim.width;
+  const bw = w - (rim.inset + rim.width) * 2;
+  const bh = h - (rim.inset + rim.width) * 2;
+  if (bw <= 0 || bh <= 0) return;
+  const t = Math.min(m.thickness, Math.floor(Math.min(bw, bh) / 2));
+  if (t <= 0) return;
+  const outerR = Math.max(0, m.radius - rim.inset - rim.width);
+
+  ctx.save();
+  ctx.beginPath();
+  roundRectPath(ctx, bx, by, bw, bh, outerR);
+  roundRectPath(ctx, bx + t, by + t, bw - t * 2, bh - t * 2, Math.max(0, outerR - t));
+  ctx.clip("evenodd");
+  const ax = bevelAxis(bx, by, bw, bh);
+  const bg = ctx.createLinearGradient(ax.x0, ax.y0, ax.x1, ax.y1);
+  for (const [at, colour] of bevelGradient(background)) bg.addColorStop(at, colour);
+  ctx.fillStyle = bg;
+  ctx.fillRect(bx, by, bw, bh);
+  ctx.restore();
 }
 
 // ── The design, passed in explicitly (NOT read from any store) ────────────────
@@ -261,18 +273,27 @@ export function schoolBannerRect(
 // ─── Small canvas helpers (copied from compose-frame; NOT imported to keep it
 //     untouched). Kept intentionally identical so the two proofs read the same. ──
 
-function roundRect(
+/** Append a rounded rect to the CURRENT path without starting a new one, so two of
+ *  them can be combined into a ring and filled or clipped "evenodd". */
+function roundRectPath(
   ctx: CanvasRenderingContext2D,
   x: number, y: number, w: number, h: number, r: number,
 ) {
   const rr = Math.max(0, Math.min(r, w / 2, h / 2));
-  ctx.beginPath();
   ctx.moveTo(x + rr, y);
   ctx.arcTo(x + w, y, x + w, y + h, rr);
   ctx.arcTo(x + w, y + h, x, y + h, rr);
   ctx.arcTo(x, y + h, x, y, rr);
   ctx.arcTo(x, y, x + w, y, rr);
   ctx.closePath();
+}
+
+function roundRect(
+  ctx: CanvasRenderingContext2D,
+  x: number, y: number, w: number, h: number, r: number,
+) {
+  ctx.beginPath();
+  roundRectPath(ctx, x, y, w, h, r);
 }
 
 /** Object-fit cover|contain + a center scale, into a rect. Reads natural OR intrinsic
@@ -377,9 +398,11 @@ function drawTextBlock(
   cfg: BottomBarConfig,
   x: number, y: number, w: number, h: number,
 ) {
+  const bevel = bevelMetrics(w, h, cfg.backgroundColor);
   ctx.save();
-  ctx.beginPath();
-  ctx.rect(x, y, w, h);
+  // Rounded like the badges, not square. A square-cornered bar carrying a rounded
+  // brass rim was the loudest mismatch between the bars and the badges.
+  roundRect(ctx, x, y, w, h, bevel.radius);
   ctx.clip();
   // Banners wear the SAME chrome as the badges — gloss gradient, bevel and brass
   // rim — because in the mock the bars and the badges read as one system. A flat
@@ -390,9 +413,11 @@ function drawTextBlock(
   grad.addColorStop(1, gBot);
   ctx.fillStyle = grad;
   ctx.fillRect(x, y, w, h);
-  drawBevel(ctx, x, y, w, h, bevelMetrics(w, h, cfg.backgroundColor));
+  drawBevel(ctx, x, y, w, h, bevel, cfg.backgroundColor);
 
-  const pad = Math.min(w, h) * SECTION_PAD_RATIO;
+  // Clear the chrome before the text starts. Derived from the chrome itself rather
+  // than guessed alongside it, so the bevel can never cut into a descender again.
+  const pad = Math.max(Math.min(w, h) * SECTION_PAD_RATIO, chromeInset(w, h, cfg.backgroundColor));
   const contentW = Math.max(1, w - pad * 2);
   const contentH = Math.max(1, h - pad * 2);
   const headline = cfg.text ?? "";
@@ -537,7 +562,7 @@ export function drawSchoolFrame(
     }
     // Faux bevel LAST, so it sits over the art and reads as the badge's moulding.
     // Still inside the clip, so it follows the rounded corner.
-    drawBevel(ctx, slot.x, slot.y, w, h, bevel);
+    drawBevel(ctx, slot.x, slot.y, w, h, bevel, field);
     ctx.restore();
   }
 

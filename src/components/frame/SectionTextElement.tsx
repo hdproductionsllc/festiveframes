@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { BottomBarConfig } from "@/lib/types";
 import { bannerBands } from "@/lib/utils/banner-tiers";
+import { chromeInset, glossStops, ringCss, tileEdgeCss } from "@/lib/utils/tile-theme";
 
 // A section's TEXT rendered as a MULTI-LINE block that honors `\n` line breaks and
 // works on a wide top/bottom bar AND a tall/narrow side panel (wing).
@@ -81,9 +82,20 @@ export function SectionTextElement({
   const letterSpacing = config.letterSpacing ?? 0;
   const fill = config.fontSize ?? 1;
 
-  // Symmetric px padding on both axes (keyed off the short edge so a narrow wing
-  // doesn't lose most of its height to padding). Content box the text must fit in.
-  const pad = Math.min(width, height) * PAD_RATIO;
+  // The bar wears the SAME chrome as a badge — gloss, brass rim, bevel — because on
+  // the frame they sit side by side and a flat bar next to a moulded badge is what
+  // made the thing read as assembled from parts.
+  const short = Math.min(width, height);
+  const edge = tileEdgeCss(short, config.backgroundColor, width, height);
+  const [glossTop, glossBottom] = glossStops(config.backgroundColor);
+  // Opaque on purpose — this is what masks the rim and bevel gradients away from the
+  // middle of the bar. See `ringCss`.
+  const gloss = `linear-gradient(180deg, ${glossTop}, ${glossBottom})`;
+
+  // Padding must CLEAR the chrome, not merely coexist with it. At 6% of the short
+  // edge against a 5.5% bevel the text ran straight into the shaded lip and read as
+  // interrupted, so take whichever is larger.
+  const pad = Math.max(short * PAD_RATIO, chromeInset(width, height, config.backgroundColor));
   const contentW = Math.max(1, width - pad * 2);
   const contentH = Math.max(1, height - pad * 2);
 
@@ -133,19 +145,54 @@ export function SectionTextElement({
       style={{
         width: "100%",
         height: "100%",
-        background: config.backgroundColor,
-        color: config.textColor,
-        display: "flex",
-        flexDirection: "column",
-        alignItems: align,
-        justifyContent: "center",
-        gap: tagline ? contentH * 0.06 : 0,
+        // Not flat colour: the gloss run is what makes the bar read as enamel rather
+        // than printed paper, and it is the same run the print path fills.
+        background: gloss,
+        borderRadius: edge.radius,
+        boxShadow: edge.outerShadow,
+        padding: edge.rimInset,
         overflow: "hidden",
-        padding: pad,
       }}
     >
-      <div style={lineStyle(headlineFont)}>{text}</div>
-      {tagline && <div style={lineStyle(taglineFont)}>{tagline}</div>}
+      <div
+        style={{
+          width: "100%",
+          height: "100%",
+          border: `${edge.rimWidth}px solid transparent`,
+          borderRadius: edge.rimRadius,
+          background: ringCss(gloss, edge.brassGradient),
+        }}
+      >
+        <div
+          style={{
+            width: "100%",
+            height: "100%",
+            border: `${edge.bevelWidth}px solid transparent`,
+            borderRadius: edge.bevelRadius,
+            background: ringCss(gloss, edge.bevelGradient),
+          }}
+        >
+          <div
+            style={{
+              width: "100%",
+              height: "100%",
+              color: config.textColor,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: align,
+              justifyContent: "center",
+              gap: tagline ? contentH * 0.06 : 0,
+              overflow: "hidden",
+              // The rim and bevel borders already ate part of the inset; pad by the
+              // remainder so the total clearance matches `pad` exactly.
+              padding: Math.max(0, pad - edge.rimInset - edge.rimWidth - edge.bevelWidth),
+            }}
+          >
+            <div style={lineStyle(headlineFont)}>{text}</div>
+            {tagline && <div style={lineStyle(taglineFont)}>{tagline}</div>}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

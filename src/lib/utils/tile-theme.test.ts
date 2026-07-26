@@ -5,8 +5,12 @@ import {
   luminance,
   tileBackground,
   bevelMetrics,
-  bevelBoxShadow,
+  bevelGradient,
+  chromeInset,
   rimMetrics,
+  ringCss,
+  solidFill,
+  tileEdgeCss,
   artShadow,
   artShadowCss,
 } from "./tile-theme";
@@ -79,13 +83,104 @@ describe("bevelMetrics", () => {
   });
 });
 
-describe("bevelBoxShadow", () => {
-  it("mirrors the printed bevel: inset highlight top-left, shade bottom-right", () => {
-    const dark = bevelBoxShadow(TILE_BG.navy);
-    expect(dark).toContain("inset 1.5px 1.5px 0 rgba(255,255,255");
-    expect(dark).toContain("inset -1.5px -1.5px 0 rgba(0,0,0");
-    // And adapts on a light field, exactly like the printed bevel.
-    expect(bevelBoxShadow(TILE_BG.white)).not.toContain("rgba(255,255,255");
+describe("bevelGradient — the run that replaced the mitred trapezoids", () => {
+  const alpha = (c: string) => Number(c.match(/[\d.]+\)$/)?.[0].slice(0, -1) ?? 0);
+
+  it("runs lit to shaded along the light axis", () => {
+    const stops = bevelGradient(TILE_BG.navy);
+    expect(stops[0][0]).toBe(0);
+    expect(stops[stops.length - 1][0]).toBe(1);
+    expect(stops[0][1]).toContain("255,255,255"); // lit corner
+    expect(stops[stops.length - 1][1]).toContain("0,0,0"); // shaded corner
+  });
+
+  it("holds the middle stops close so the band reads faceted, not domed", () => {
+    const stops = bevelGradient(TILE_BG.navy);
+    const mid = stops.filter(([at]) => at > 0 && at < 1).map(([at]) => at);
+    expect(mid.length).toBeGreaterThanOrEqual(2);
+    // The roll from lit to shaded happens over a short run in the middle.
+    expect(Math.max(...mid) - Math.min(...mid)).toBeLessThan(0.35);
+  });
+
+  it("shows depth entirely in shadow on a light field — a white face cannot brighten", () => {
+    for (const [, colour] of bevelGradient(TILE_BG.white)) {
+      expect(colour).not.toContain("255,255,255");
+    }
+  });
+
+  it("darkens monotonically on a light field", () => {
+    const a = bevelGradient(TILE_BG.white).map(([, c]) => alpha(c));
+    for (let i = 1; i < a.length; i++) expect(a[i]).toBeGreaterThan(a[i - 1]);
+  });
+});
+
+describe("tileEdgeCss — the builder's chrome, which used to be invisible", () => {
+  it("SCALES with the tile instead of the old fixed 1px/1.5px/3px", () => {
+    const small = tileEdgeCss(60, TILE_BG.navy);
+    const big = tileEdgeCss(600, TILE_BG.navy);
+    expect(big.radius).toBeGreaterThan(small.radius);
+    expect(big.rimWidth).toBeGreaterThan(small.rimWidth);
+    expect(big.bevelWidth).toBeGreaterThan(small.bevelWidth);
+    expect(big.rimInset).toBeGreaterThan(small.rimInset);
+  });
+
+  it("carries the SAME numbers the canvas draws, so preview and print agree", () => {
+    const size = 600;
+    const edge = tileEdgeCss(size, TILE_BG.navy);
+    expect(edge.radius).toBe(bevelMetrics(size, size, TILE_BG.navy).radius);
+    expect(edge.rimWidth).toBe(rimMetrics(size, size).width);
+    expect(edge.rimInset).toBe(rimMetrics(size, size).inset);
+    expect(edge.bevelWidth).toBe(bevelMetrics(size, size, TILE_BG.navy).thickness);
+  });
+
+  it("nests the radii inward so each ring stays concentric", () => {
+    const edge = tileEdgeCss(600, TILE_BG.navy);
+    expect(edge.rimRadius).toBeLessThan(edge.radius);
+    expect(edge.bevelRadius).toBeLessThan(edge.rimRadius);
+    expect(edge.bevelRadius).toBeGreaterThan(0);
+  });
+
+  it("never degenerates to a negative or zero ring on a tiny tile", () => {
+    const edge = tileEdgeCss(8, TILE_BG.navy);
+    expect(edge.rimWidth).toBeGreaterThanOrEqual(1);
+    expect(edge.bevelWidth).toBeGreaterThanOrEqual(1);
+    expect(edge.bevelRadius).toBeGreaterThanOrEqual(1);
+  });
+});
+
+describe("ringCss", () => {
+  it("paints the fill on the padding box and the gradient on the border box", () => {
+    const css = ringCss(solidFill("#1B2A4A"), "linear-gradient(135deg, #F0D488, #7C5E15)");
+    expect(css).toContain("padding-box");
+    expect(css).toContain("border-box");
+    // The fill must come FIRST, or the gradient is painted over by it.
+    expect(css.indexOf("padding-box")).toBeLessThan(css.indexOf("border-box"));
+  });
+
+  it("solidFill produces an opaque image — the thing that masks the ring inward", () => {
+    // A transparent fill does not thin the ring, it floods the element: the brass
+    // gradient covers the whole border box and both banners render solid gold. This
+    // only showed up in a browser, so it is pinned here.
+    expect(solidFill("#1B2A4A")).toBe("linear-gradient(#1B2A4A, #1B2A4A)");
+    expect(solidFill("#1B2A4A")).not.toContain("transparent");
+  });
+});
+
+describe("chromeInset — why the bevel stopped cutting into banner text", () => {
+  it("clears the rim AND the bevel, with air to spare", () => {
+    const [w, h] = [1200, 400];
+    const rim = rimMetrics(w, h);
+    const bevel = bevelMetrics(w, h);
+    expect(chromeInset(w, h)).toBeGreaterThan(rim.inset + rim.width + bevel.thickness);
+  });
+
+  it("beats the old 6%-of-short-edge padding that left half a percent of clearance", () => {
+    const [w, h] = [1200, 400];
+    expect(chromeInset(w, h)).toBeGreaterThan(Math.min(w, h) * 0.06);
+  });
+
+  it("scales with the box, so a one-row top bar is not given a print-sized margin", () => {
+    expect(chromeInset(1200, 300)).toBeLessThan(chromeInset(1200, 600));
   });
 });
 

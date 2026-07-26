@@ -1,7 +1,7 @@
 "use client";
 
 import { getPiece } from "@/data/sets";
-import { artShadowCss, bevelBoxShadow, rimCss, tileBackground } from "@/lib/utils/tile-theme";
+import { artShadowCss, ringCss, solidFill, tileBackground, tileEdgeCss } from "@/lib/utils/tile-theme";
 import { TileArtwork, hasCustomArtwork, canDieCut } from "@/components/tiles/TileArtwork";
 import { useDesignStore } from "@/stores/design-store";
 
@@ -50,38 +50,77 @@ export function PlacedTileView({ pieceId, width, height, animate, image }: Place
 
   const size = Math.min(width, height);
   const isDieCut = dieCut && canDieCut(pieceId);
+  const field = tileBackground(piece);
+  const edge = tileEdgeCss(size, field);
 
+  const art = piece.artworkUrl ? (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={piece.artworkUrl}
+      alt={piece.name}
+      // Cast shadow from the ART onto the field — the same two-layer read the
+      // print path draws. Only works because the art is cut out to transparency.
+      style={{
+        width: "100%",
+        height: "100%",
+        objectFit: "cover",
+        filter: isDieCut ? undefined : artShadowCss(size),
+      }}
+      draggable={false}
+    />
+  ) : hasCustomArtwork(pieceId) ? (
+    <TileArtwork pieceId={pieceId} size={size} />
+  ) : null;
+
+  if (isDieCut) {
+    return (
+      <div
+        className={`overflow-hidden flex items-center justify-center ${animate ? "animate-tile-snap" : ""}`}
+        style={{ width, height, filter: "drop-shadow(0 2px 3px rgba(0,0,0,0.5))" }}
+      >
+        {art}
+      </div>
+    );
+  }
+
+  // Three layers, matching the print path outward-in: the field carrying the outer
+  // hairline and lift, the inset brass ring, then the bevel band around the art.
+  // Nested rather than stacked box-shadows because the rim and the bevel are now
+  // real gradients following the corner, which an inset shadow cannot express.
   return (
     <div
-      className={`rounded-[3px] overflow-hidden flex items-center justify-center ${animate ? "animate-tile-snap" : ""}`}
+      className={`overflow-hidden flex items-center justify-center ${animate ? "animate-tile-snap" : ""}`}
       style={{
         width,
         height,
-        // Same two answers the PRINT path uses (tile-theme), so the preview and the
-        // sheet cannot disagree: the standard field colour, and the raised bevel edge.
-        backgroundColor: isDieCut ? "transparent" : tileBackground(piece),
-        boxShadow: isDieCut ? "none" : `${rimCss()}, ${bevelBoxShadow(tileBackground(piece))}`,
-        filter: isDieCut ? "drop-shadow(0 2px 3px rgba(0,0,0,0.5))" : undefined,
+        backgroundColor: field,
+        borderRadius: edge.radius,
+        boxShadow: edge.outerShadow,
+        padding: edge.rimInset,
       }}
     >
-      {piece.artworkUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={piece.artworkUrl}
-          alt={piece.name}
-          // Cast shadow from the ART onto the field — the same two-layer read the
-          // print path draws. Only works because the art is cut out to transparency.
+      <div
+        style={{
+          width: "100%",
+          height: "100%",
+          border: `${edge.rimWidth}px solid transparent`,
+          borderRadius: edge.rimRadius,
+          background: ringCss(solidFill(field), edge.brassGradient),
+        }}
+      >
+        <div
           style={{
             width: "100%",
             height: "100%",
-            objectFit: "cover",
-            filter: isDieCut ? undefined : artShadowCss(size),
+            overflow: "hidden",
+            border: `${edge.bevelWidth}px solid transparent`,
+            borderRadius: edge.bevelRadius,
+            background: ringCss(solidFill(field), edge.bevelGradient),
           }}
-          draggable={false}
-        />
-      ) : hasCustomArtwork(pieceId) ? (
-        <TileArtwork pieceId={pieceId} size={size} />
-      ) : null}
+        >
+          {art}
+        </div>
+      </div>
     </div>
   );
 }
