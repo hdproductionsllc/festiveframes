@@ -72,7 +72,6 @@ import {
   glossStops,
   insetRadii,
   NO_CORNERS,
-  TILE_BG,
   type CornerRadii,
   rimMetrics,
   textEmboss,
@@ -190,101 +189,10 @@ function drawBevel(
   ctx.restore();
 }
 
-/**
- * The plate opening's pixel rect, derived from the cells the grid calls plate.
- * Null when a config has no opening at all.
- */
-function plateRect(
-  grid: ReturnType<typeof buildGrid>,
-  tileSize: number,
-): { x: number; y: number; w: number; h: number } | null {
-  let minRow = Infinity, maxRow = -Infinity, minCol = Infinity, maxCol = -Infinity;
-  for (let row = 0; row < grid.rows; row++) {
-    for (let col = 0; col < grid.cols; col++) {
-      if (!grid.isPlate(row, col)) continue;
-      if (row < minRow) minRow = row;
-      if (row > maxRow) maxRow = row;
-      if (col < minCol) minCol = col;
-      if (col > maxCol) maxCol = col;
-    }
-  }
-  if (minRow === Infinity) return null;
-  return {
-    x: minCol * tileSize,
-    y: minRow * tileSize,
-    w: (maxCol - minCol + 1) * tileSize,
-    h: (maxRow - minRow + 1) * tileSize,
-  };
-}
-
-/** How far the lip reaches in over the plate, as a fraction of one cell. */
+/** How far the bars reach in over the plate, as a fraction of one cell. */
 const PLATE_LIP_RATIO = 0.16;
-/** Corner radius of the opening, as a fraction of one cell. */
+/** Corner radius of the plate opening, as a fraction of one cell. */
 const PLATE_LIP_RADIUS_RATIO = 0.55;
-
-/**
- * The tapered lip around the plate opening — the frame's INNER outline.
- *
- * A real frame is not a flat sheet with a rectangular hole punched in it. Its
- * material carries on a little way over the plate and falls away in a chamfer, and
- * the opening's corners are generously rounded. That inner outline is half of what
- * makes a frame read as a moulded part: the eye gets a second concentric contour to
- * follow, and the taper catches light along it.
- *
- * This is REAL PRINTED MATERIAL, not decoration. The rest of the plate opening is
- * left blank on purpose — the customer's own plate fills it and ink there would be
- * wasted — but this band is the top and bottom pieces genuinely extending inward,
- * so it belongs on the sheet.
- *
- * Drawn as a ring: the plate rect grown outward to meet the tiles, with a
- * round-cornered hole punched through it, filled along the same upper-left light
- * axis as every other bevel so the whole frame is lit from one place.
- */
-function drawPlateLip(
-  ctx: CanvasRenderingContext2D,
-  rc: { x: number; y: number; w: number; h: number },
-  tileSize: number,
-  background: string,
-): void {
-  const lip = Math.max(1, Math.round(tileSize * PLATE_LIP_RATIO));
-  const radius = Math.max(2, Math.round(tileSize * PLATE_LIP_RADIUS_RATIO));
-  const innerW = rc.w - lip * 2;
-  const innerH = rc.h - lip * 2;
-  if (innerW <= 0 || innerH <= 0) return;
-
-  ctx.save();
-  // Ring = the opening, minus the smaller round-cornered opening inside it.
-  ctx.beginPath();
-  ctx.rect(rc.x, rc.y, rc.w, rc.h);
-  roundRectPath(ctx, rc.x + lip, rc.y + lip, innerW, innerH, radius);
-  ctx.clip("evenodd");
-
-  // The material itself, then the taper over it.
-  ctx.fillStyle = background;
-  ctx.fillRect(rc.x, rc.y, rc.w, rc.h);
-
-  const ax = bevelAxis(rc.x, rc.y, rc.w, rc.h);
-  const grad = ctx.createLinearGradient(ax.x0, ax.y0, ax.x1, ax.y1);
-  // Reversed against a badge's bevel on purpose: this face turns DOWN into the
-  // opening rather than up out of it, so the lit and shaded sides swap. Lighting it
-  // the same way would make the plate look raised out of the frame.
-  for (const [at, colour] of bevelGradient(background)) grad.addColorStop(1 - at, colour);
-  ctx.fillStyle = grad;
-  ctx.fillRect(rc.x, rc.y, rc.w, rc.h);
-  ctx.restore();
-
-  // Brass along the opening's edge, the same machined line the badges carry.
-  const rim = rimMetrics(tileSize, tileSize, tileSize);
-  const g = ctx.createLinearGradient(rc.x, rc.y, rc.x + rc.w, rc.y + rc.h);
-  g.addColorStop(0, BRASS.dark);
-  g.addColorStop(0.5, BRASS.mid);
-  g.addColorStop(1, BRASS.light);
-  ctx.beginPath();
-  roundRectPath(ctx, rc.x + lip, rc.y + lip, innerW, innerH, radius);
-  ctx.strokeStyle = g;
-  ctx.lineWidth = rim.width;
-  ctx.stroke();
-}
 
 // ── The design, passed in explicitly (NOT read from any store) ────────────────
 export interface SchoolDesign {
@@ -529,11 +437,12 @@ function drawTextBlock(
   /** One grid cell — keeps the bar's edge identical to the badges' and to the
    *  other bar, regardless of how many rows tall the panel is. */
   unit: number,
+  /** Per-corner radii. The plate-facing corners are opened right up when this bar
+   *  carries the frame's inner lip, so the bar's own brass rim and bevel follow that
+   *  contour instead of a separate band being drawn over it. */
+  radii: CornerRadii = cornerRadii(unit, NO_CORNERS),
 ) {
   const bevel = bevelMetrics(w, h, cfg.backgroundColor, unit);
-  // A banner never reaches a frame corner on this geometry — the wings do, and they
-  // run the full height on both sides. Ordinary radii all round.
-  const radii = cornerRadii(unit, NO_CORNERS);
   ctx.save();
   // Rounded like the badges, not square. A square-cornered bar carrying a rounded
   // brass rim was the loudest mismatch between the bars and the badges.
@@ -736,15 +645,6 @@ export function drawSchoolFrame(
     ctx.restore();
   }
 
-  // 3b) The frame's INNER outline: a tapered lip of real material reaching in over
-  //     the plate's edge, with the opening's corners rounded. Drawn after the tiles
-  //     so it sits on top of the cells that border the opening — the lip IS their
-  //     inward extension, not a separate part.
-  {
-    const rc = plateRect(grid, m.tileSize);
-    if (rc) drawPlateLip(ctx, rc, m.tileSize, TILE_BG.navy);
-  }
-
   // 4) Section panels (school builder) — TEXT or IMAGE. One direct-print piece over
   //    the whole panel's bounding box (which OWNS its corners — see panelOf). Tiles
   //    under it were skipped above.
@@ -757,16 +657,35 @@ export function drawSchoolFrame(
     if (sec.mode === "text" && !sectionSupportsText(id)) continue;
     const box = sectionBounds(id, frameSlots, config);
     if (!box) continue;
+    // The frame's INNER outline. Rather than laying a separate band over the plate's
+    // edge — which reads as a third part with a border of its own — the top and
+    // bottom bars are themselves grown a little way over the opening, and the
+    // corners that face it are opened right up. The bar's existing rim and bevel
+    // then follow that contour for free, because it is the bar's own outline.
+    //
+    // This is real printed material: the bar genuinely extends inward.
+    const lip = Math.max(1, Math.round(m.tileSize * PLATE_LIP_RATIO));
+    const openR = Math.max(2, Math.round(m.tileSize * PLATE_LIP_RADIUS_RATIO));
+    const plain = cornerRadii(m.tileSize, NO_CORNERS);
+    let rc = box;
+    let radii = plain;
+    if (id === "top") {
+      rc = { ...box, height: box.height + lip };
+      radii = { ...plain, bl: openR, br: openR };
+    } else if (id === "bottom") {
+      rc = { ...box, y: box.y - lip, height: box.height + lip };
+      radii = { ...plain, tl: openR, tr: openR };
+    }
     if (sec.mode === "text" && sec.text) {
-      drawTextBlock(ctx, sec.text, box.x, box.y, box.width, box.height, m.tileSize);
+      drawTextBlock(ctx, sec.text, rc.x, rc.y, rc.width, rc.height, m.tileSize, radii);
     } else if (sec.mode === "image") {
       const img = images.sections.get(id);
       ctx.save();
-      roundRect(ctx, box.x, box.y, box.width, box.height, 3);
+      roundRect(ctx, rc.x, rc.y, rc.width, rc.height, radii);
       ctx.clip();
       ctx.fillStyle = "#ffffff";
-      ctx.fillRect(box.x, box.y, box.width, box.height);
-      if (img) drawFit(ctx, img, box.x, box.y, box.width, box.height, sec.imageFit ?? "cover", 1);
+      ctx.fillRect(rc.x, rc.y, rc.width, rc.height);
+      if (img) drawFit(ctx, img, rc.x, rc.y, rc.width, rc.height, sec.imageFit ?? "cover", 1);
       ctx.restore();
     }
   }
