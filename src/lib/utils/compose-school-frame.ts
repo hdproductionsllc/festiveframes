@@ -41,6 +41,7 @@ import { buildGrid } from "@/lib/utils/slot-generator";
 import {
   coveredBySnappets,
   frameCorners,
+  occupiedCoords,
   tileSpan,
   visibleAnchorSlots,
 } from "@/lib/utils/snappet";
@@ -189,11 +190,8 @@ function drawBevel(
   ctx.restore();
 }
 
-/** How far the bars reach in over the plate, as a fraction of one cell. */
+/** How far a side rail reaches in over the plate, as a fraction of one cell. */
 const PLATE_LIP_RATIO = 0.16;
-/** Corner radius of the plate opening, as a fraction of one cell. */
-const PLATE_LIP_RADIUS_RATIO = 0.55;
-
 // ── The design, passed in explicitly (NOT read from any store) ────────────────
 export interface SchoolDesign {
   frameConfig: FrameConfig;
@@ -582,8 +580,28 @@ export function drawSchoolFrame(
     if (!tile) continue;
 
     const span = tileSpan(tile);
-    const w = span.cols * m.tileSize;
+    let w = span.cols * m.tileSize;
     const h = span.rows * m.tileSize;
+
+    // The frame's INNER lip. A side rail that borders the plate opening reaches a
+    // little way in over it, which is what gives the opening a frame of its own
+    // rather than a punched hole. It lives on the RAILS, not on the bars: the bars
+    // already carry their own thickness, so growing those would only eat into the
+    // opening without adding an edge anywhere the eye follows.
+    //
+    // Real printed material — the rail's own footprint extending inward — so it
+    // wears the rail's rim and bevel with no separate part to align.
+    const lip = Math.max(1, Math.round(m.tileSize * PLATE_LIP_RATIO));
+    const anchorAt = grid.coordOf(slot.id);
+    let x = slot.x;
+    if (anchorAt) {
+      const cells = occupiedCoords(anchorAt, span);
+      // Which side of this footprint the opening lies on.
+      const facesRight = cells.some((c) => grid.isPlate(c.row, c.col + 1));
+      const facesLeft = cells.some((c) => grid.isPlate(c.row, c.col - 1));
+      if (facesRight) w += lip;
+      if (facesLeft) { x -= lip; w += lip; }
+    }
 
     ctx.save();
     const piece0 = !tile.image ? getPiece(tile.pieceId) : undefined;
@@ -596,7 +614,7 @@ export function drawSchoolFrame(
       m.tileSize,
       anchorCoord ? frameCorners(grid, anchorCoord, span) : NO_CORNERS,
     );
-    roundRect(ctx, slot.x, slot.y, w, h, radii);
+    roundRect(ctx, x, slot.y, w, h, radii);
     ctx.clip();
     // The FIELD behind the art. Previously hard-coded white, which silently
     // disagreed with the on-screen tile for any piece with transparent art — and
@@ -604,11 +622,11 @@ export function drawSchoolFrame(
     // badges. `tileBackground` is the single answer both renderers now use.
     const piece = piece0;
     ctx.fillStyle = field;
-    ctx.fillRect(slot.x, slot.y, w, h);
+    ctx.fillRect(x, slot.y, w, h);
     {
       if (tile.image) {
         const img = images.snappets.get(slot.id);
-        if (img) drawFit(ctx, img, slot.x, slot.y, w, h, "cover", 1);
+        if (img) drawFit(ctx, img, x, slot.y, w, h, "cover", 1);
       } else {
         const art = piece?.artworkUrl ? images.pieces.get(piece.artworkUrl) : undefined;
         // Art sits ON the field at its own aspect; the field fills the rest. Where
@@ -634,14 +652,14 @@ export function drawSchoolFrame(
           // the field simply shows either side of it, which is what the field is
           // for. (Uploaded photos keep cover: they are meant to fill their frame,
           // and an aspect change routes through the re-crop modal instead.)
-          drawFit(ctx, art, slot.x, slot.y, w, h, "contain", 1);
+          drawFit(ctx, art, x, slot.y, w, h, "contain", 1);
           ctx.restore();
         }
       }
     }
     // Faux bevel LAST, so it sits over the art and reads as the badge's moulding.
     // Still inside the clip, so it follows the rounded corner.
-    drawBevel(ctx, slot.x, slot.y, w, h, bevel, field, m.tileSize, radii);
+    drawBevel(ctx, x, slot.y, w, h, bevel, field, m.tileSize, radii);
     ctx.restore();
   }
 
@@ -657,25 +675,10 @@ export function drawSchoolFrame(
     if (sec.mode === "text" && !sectionSupportsText(id)) continue;
     const box = sectionBounds(id, frameSlots, config);
     if (!box) continue;
-    // The frame's INNER outline. Rather than laying a separate band over the plate's
-    // edge — which reads as a third part with a border of its own — the top and
-    // bottom bars are themselves grown a little way over the opening, and the
-    // corners that face it are opened right up. The bar's existing rim and bevel
-    // then follow that contour for free, because it is the bar's own outline.
-    //
-    // This is real printed material: the bar genuinely extends inward.
-    const lip = Math.max(1, Math.round(m.tileSize * PLATE_LIP_RATIO));
-    const openR = Math.max(2, Math.round(m.tileSize * PLATE_LIP_RADIUS_RATIO));
-    const plain = cornerRadii(m.tileSize, NO_CORNERS);
-    let rc = box;
-    let radii = plain;
-    if (id === "top") {
-      rc = { ...box, height: box.height + lip };
-      radii = { ...plain, bl: openR, br: openR };
-    } else if (id === "bottom") {
-      rc = { ...box, y: box.y - lip, height: box.height + lip };
-      radii = { ...plain, tl: openR, tr: openR };
-    }
+    // The bars keep their own thickness — the frame's inner lip lives on the SIDE
+    // rails (see the tile loop), so growing these would only eat into the opening.
+    const rc = box;
+    const radii = cornerRadii(m.tileSize, NO_CORNERS);
     if (sec.mode === "text" && sec.text) {
       drawTextBlock(ctx, sec.text, rc.x, rc.y, rc.width, rc.height, m.tileSize, radii);
     } else if (sec.mode === "image") {
