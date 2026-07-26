@@ -30,14 +30,17 @@ import {
 import {
   canPlace,
   coveredBySnappets,
+  growUndersizedBadges,
   hasAnySpan,
   isMultiCell,
+  minSpanFor,
   panelSnappetPlacement,
   tileSpan,
   visibleAnchorSlots,
   UPLOAD_PIECE_ID,
   UPLOAD_SET_ID,
 } from "@/lib/utils/snappet";
+import { getPiece } from "@/data/sets";
 import { deleteFullRes } from "@/lib/utils/image-store";
 import { repairSections, sectionSupportsText, sectionSupportsTiles } from "@/lib/utils/sections";
 import { MAX_HISTORY_DEPTH } from "@/lib/constants/frame";
@@ -1450,6 +1453,22 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
         // saved after the toggle was removed. Merge runs on every hydrate, so the
         // repair is guaranteed. `sectionSupportsText` is the same source of truth the
         // UI and the renderer use.
+        // Grow any badge saved below its floor. The 2x2 minimum governs the DROP
+        // and the RESIZE, so tiles already in a design — and anything Fill All or
+        // Random wrote cell-by-cell — stayed 1x1 and the rule never reached them.
+        // Conservative by construction: nothing grows if it would evict a neighbour.
+        if (merged.slots && merged.frameConfig) {
+          const grid = buildGrid(merged.frameConfig);
+          merged.slots = growUndersizedBadges(
+            {
+              grid,
+              slots: merged.slots,
+              sections: merged.sections ?? {},
+              barCovered: new Set(coveredSlotIds(merged.textBars ?? [])),
+            },
+            (pieceId) => minSpanFor(getPiece(pieceId)),
+          );
+        }
         if (merged.sections) {
           merged.sections = repairSections(merged.sections);
           // Refresh the SEEDED banner font. A section's font is persisted, so the

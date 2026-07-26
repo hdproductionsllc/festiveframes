@@ -13,6 +13,7 @@ import {
   spanLadder,
   minSpanFor,
   MIN_ART_SPAN,
+  growUndersizedBadges,
   suggestSnappetSize,
   grabOffsetIn,
   anchorIdFor,
@@ -974,5 +975,47 @@ describe("MIN_ART_SPAN — badges never shrink below 2x2", () => {
     })!;
     expect(drop.valid).toBe(true);
     expect({ cols: drop.cols, rows: drop.rows }).toEqual({ cols: 2, rows: 2 });
+  });
+});
+
+describe("growUndersizedBadges — a floor introduced later still reaches saved tiles", () => {
+  const artMin = (pieceId: string): TileSpan =>
+    pieceId.startsWith("hs:") ? MIN_ART_SPAN : { cols: 1, rows: 1 };
+
+  it("grows a 1x1 badge saved before the floor existed", () => {
+    const slots: Record<string, PlacedTile> = {
+      [schoolGrid.cellAt(2, 0)!.id]: { pieceId: "hs:basketball", setId: "hs" },
+    };
+    const out = growUndersizedBadges(ctx({ slots }), artMin);
+    expect(out[schoolGrid.cellAt(2, 0)!.id].span).toEqual(MIN_ART_SPAN);
+  });
+
+  it("leaves a piece whose floor is already 1x1 completely alone", () => {
+    const slots: Record<string, PlacedTile> = {
+      [schoolGrid.cellAt(2, 0)!.id]: { pieceId: "school:solid-navy", setId: "school" },
+    };
+    expect(growUndersizedBadges(ctx({ slots }), artMin)).toBe(slots); // same object
+  });
+
+  it("REFUSES to grow when doing so would evict a neighbour", () => {
+    // Growing must never silently delete work. A badge boxed in by neighbours stays
+    // small rather than eating them.
+    const slots: Record<string, PlacedTile> = {
+      [schoolGrid.cellAt(2, 0)!.id]: { pieceId: "hs:basketball", setId: "hs" },
+      [schoolGrid.cellAt(2, 1)!.id]: { pieceId: "school:solid-gold", setId: "school" },
+      [schoolGrid.cellAt(3, 0)!.id]: { pieceId: "school:solid-gold", setId: "school" },
+    };
+    const out = growUndersizedBadges(ctx({ slots }), artMin);
+    expect(out[schoolGrid.cellAt(2, 0)!.id].span).toBeUndefined(); // untouched
+  });
+
+  it("refuses where the bigger footprint is simply illegal", () => {
+    // The top strip is one row: a 2x2 cannot seat, so the badge is left as it is
+    // rather than being forced somewhere it does not fit.
+    const slots: Record<string, PlacedTile> = {
+      "frame:top-5": { pieceId: "hs:basketball", setId: "hs" },
+    };
+    const out = growUndersizedBadges(ctx({ slots }), artMin);
+    expect(out["frame:top-5"].span).toBeUndefined();
   });
 });
