@@ -582,7 +582,14 @@ export function drawSchoolFrame(
           ctx.shadowBlur = sh.blur;
           ctx.shadowOffsetX = sh.offsetX;
           ctx.shadowOffsetY = sh.offsetY;
-          drawFit(ctx, art, slot.x, slot.y, w, h, "cover", 1);
+          // CONTAIN, not cover. A badge is a mark on a field, and cover crops
+          // whatever does not match the footprint's aspect — so a square logo
+          // resized to 2x1 lost its top and bottom, which is the worst possible
+          // half of a lockup to remove. Contained, the whole mark stays inside and
+          // the field simply shows either side of it, which is what the field is
+          // for. (Uploaded photos keep cover: they are meant to fill their frame,
+          // and an aspect change routes through the re-crop modal instead.)
+          drawFit(ctx, art, slot.x, slot.y, w, h, "contain", 1);
           ctx.restore();
         }
       }

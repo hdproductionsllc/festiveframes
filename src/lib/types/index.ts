@@ -74,6 +74,19 @@ export interface FrameConfig {
   widthInches: number;
   heightInches: number;
   tileSizeInches: number;
+  /**
+   * The smallest footprint a badge may occupy on THIS frame.
+   *
+   * A property of the product, not of the piece. The school cell is 0.991in and
+   * nothing reads at that size — artwork, a club logo or a photo alike — so every
+   * path that seats a tile floors here: drag-drop, tap-to-place, Fill All, Random
+   * and photo upload. Absent (the /build ring) means 1x1, which is that frame's
+   * entire premise.
+   *
+   * The earlier attempt keyed this off `piece.defaultSpan`, which only ever lifted
+   * Becky's artwork because nothing else carries that field.
+   */
+  minTileSpan?: TileSpan;
   topSlots: number;
   bottomSlots: number;
   leftSlots: number;

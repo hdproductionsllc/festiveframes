@@ -95,6 +95,9 @@ export const SCHOOL_FRAME_CONFIG: FrameConfig = getWingFrameConfig(
     // shortfall against the plate is hidden by the frame overlapping the plate's
     // margin, exactly as the ring already does on /build.
     widthInches: 12 * DEFAULT_FRAME_CONFIG.tileSizeInches, // 11.892"
+    // Every badge on this frame is at least 2x2. One 0.991in cell is unreadable for
+    // artwork and a thumbnail for a photo.
+    minTileSpan: { cols: 2, rows: 2 },
     // School frame: top rail spans the full width (over the wings), and the bottom
     // is 2 rows tall. Both are opt-in flags — /build never sets them.
     fullWidthTopBar: true,

@@ -68,9 +68,12 @@ function autoSizes(data: Record<string, unknown> | undefined): boolean {
 }
 
 /** The smallest footprint this drag may settle at — see `minSpanFor`. */
-function dragMinSpan(data: Record<string, unknown> | undefined): TileSpan | undefined {
+function dragMinSpan(
+  data: Record<string, unknown> | undefined,
+  floor: TileSpan | undefined,
+): TileSpan | undefined {
   const pieceId = data?.pieceId as string | undefined;
-  return pieceId ? minSpanFor(getPiece(pieceId)) : undefined;
+  return pieceId ? minSpanFor(getPiece(pieceId), floor) : undefined;
 }
 
 /**
@@ -207,6 +210,9 @@ export function DndProvider({
   onBannerPreviewChange,
   onSnappetPreviewChange,
 }: DndProviderProps) {
+  // The frame owns its floor (see FrameConfig.minTileSpan) — one source of truth
+  // that every seating path reads, rather than a prop threaded per call site.
+  const minTileSpan = useDesignStore((s) => s.frameConfig.minTileSpan);
   const [dragPieceId, setDragPieceId] = useState<string | null>(null);
   const [dragKind, setDragKind] = useState<
     "tile" | "placed-tile" | "textbar" | "placed-textbar" | null
@@ -382,7 +388,7 @@ export function DndProvider({
         setCue(
           null,
           null,
-          resolveDrop(overId, span, grab, data?.slotId as string | undefined, autoSizes(data), dragMinSpan(data)),
+          resolveDrop(overId, span, grab, data?.slotId as string | undefined, autoSizes(data), dragMinSpan(data, minTileSpan)),
         );
         return;
       }
@@ -390,7 +396,7 @@ export function DndProvider({
       // Tile drags: drive the single gliding drop indicator via the over slot id.
       setCue(overId?.startsWith("frame:") ? overId : null, null);
     },
-    [setCue, textBars, bottomBar, qrCode, frameConfig, dragBarId, resolveDrop]
+    [setCue, textBars, bottomBar, qrCode, frameConfig, dragBarId, resolveDrop, minTileSpan]
   );
 
   const handleDragEnd = useCallback(
@@ -441,7 +447,7 @@ export function DndProvider({
         grab,
         data?.slotId as string | undefined,
         autoSizes(data), // palette drags auto-size; moves keep the size the user chose
-        dragMinSpan(data),
+        dragMinSpan(data, minTileSpan),
       );
 
       if (data?.type === "placed-tile") {
@@ -494,6 +500,7 @@ export function DndProvider({
       soundEnabled,
       setCue,
       resolveDrop,
+      minTileSpan,
     ]
   );
 

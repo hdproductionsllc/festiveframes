@@ -103,8 +103,14 @@ export function useSnappetUpload(): SnappetUpload {
     pendingAspect.current = aspect;
     const grid = buildGrid(frameConfig);
     const ctx = { grid, slots, sections, barCovered: new Set(coveredSlotIds(textBars)) };
-    const placement = panelSnappetPlacement(ctx, sectionId, aspect, { allowEvict: true });
-    const span = placement?.span ?? { cols: 1, rows: 1 };
+    // The SAME floor the commit below uses, so the crop's aspect target matches the
+    // footprint the photo actually lands at. Sizing the crop for 1x1 and then placing
+    // a 2x2 would hand back a crop of the wrong shape.
+    const placement = panelSnappetPlacement(ctx, sectionId, aspect, {
+      allowEvict: true,
+      minSpan: frameConfig.minTileSpan,
+    });
+    const span = placement?.span ?? frameConfig.minTileSpan ?? { cols: 1, rows: 1 };
     // Every grid column is exactly one tile wide (the grid invariant), so the snappet's
     // physical size is just span × tile — the crop's aspect target + the gate denominator.
     setCropTarget({
@@ -126,11 +132,15 @@ export function useSnappetUpload(): SnappetUpload {
     // Moderation integration point: user prints MUST be gated by a real server-side
     // vision check before production. No-op today (it does not fake an approval).
     void reviewUploadedImage(result.fullResBlob);
-    placeImageSnappet(target, {
-      imageUrl: result.previewUrl,
-      fullResId: id,
-      sourceAspect: pendingAspect.current,
-    });
+    placeImageSnappet(
+      target,
+      {
+        imageUrl: result.previewUrl,
+        fullResId: id,
+        sourceAspect: pendingAspect.current,
+      },
+      frameConfig.minTileSpan,
+    );
     setCropFile(null);
     setCropTarget(null);
     setTarget(null);
