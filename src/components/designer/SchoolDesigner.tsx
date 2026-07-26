@@ -28,6 +28,7 @@ import { FrameCanvas, type FrameCanvasHandle } from "@/components/frame/FrameCan
 import { TilePalette } from "@/components/tiles/TilePalette";
 import { SCHOOL_SURFACED_SET_IDS } from "@/data/sets";
 import { SectionControls } from "./SectionControls";
+import { BuildStamp } from "./BuildStamp";
 import { SectionEditor } from "./SectionEditor";
 import { UploadPhotoButton } from "./UploadPhotoButton";
 import { PanelWidthToggle } from "./PanelWidthToggle";
@@ -366,6 +367,9 @@ export function SchoolDesigner() {
             <UploadPhotoButton />
             <PanelWidthToggle />
             <SectionControls />
+            <div className="px-1 pt-1 text-right">
+              <BuildStamp />
+            </div>
             <TilePalette surfacedSetIds={SCHOOL_SURFACED_SET_IDS} />
           </div>
 

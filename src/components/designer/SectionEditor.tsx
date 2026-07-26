@@ -1,7 +1,7 @@
 "use client";
 
 import { useDesignStore } from "@/stores/design-store";
-import { SECTION_LABELS } from "@/lib/utils/sections";
+import { SECTION_LABELS, sectionSupportsText, sectionSupportsTiles } from "@/lib/utils/sections";
 import { SCHOOL_COLLEGIATE_FONTS, SCHOOL_OTHER_FONTS } from "@/lib/constants/frame";
 import { SCHOOL_PHRASE_GROUPS } from "@/data/school-phrases";
 import { useSnappetUpload } from "./useSnappetUpload";
@@ -22,6 +22,7 @@ export function SectionEditor() {
   const selectedSectionId = useDesignStore((s) => s.selectedSectionId);
   const sections = useDesignStore((s) => s.sections);
   const setSectionText = useDesignStore((s) => s.setSectionText);
+  const setSectionMode = useDesignStore((s) => s.setSectionMode);
   // Upload → crop → snappet flow (shared with the prominent Upload button).
   const { begin, cropModal } = useSnappetUpload();
 
@@ -44,9 +45,26 @@ export function SectionEditor() {
 
   return (
     <div className="bsk-panel-pink space-y-4 rounded-xl border border-surface-700/50 bg-surface-800/50 p-4">
-      <h3 className="text-sm font-extrabold uppercase tracking-wide text-[#1e1b17]">
-        {label} — {isText ? "Text" : "Art"}
-      </h3>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className="text-sm font-extrabold uppercase tracking-wide text-[#1e1b17]">
+          {label} — {isText ? "Text" : "Art"}
+        </h3>
+        {/* The mode switch lives HERE rather than on the section card. Top and bottom
+            are text banners by default and that is what they usually stay; putting the
+            switch on the card made it the loudest thing in the panel and made the
+            wings (which have no switch, because art is all they do) look disabled by
+            comparison. Changing a banner to badges is deliberate, so it sits with the
+            rest of this panel's settings. */}
+        {sectionSupportsText(selectedSectionId) && sectionSupportsTiles(selectedSectionId) && (
+          <button
+            type="button"
+            onClick={() => setSectionMode(selectedSectionId, isText ? "tiles" : "text")}
+            className="rounded-md border-2 border-[#1e1b17] bg-white px-2 py-1 text-[11px] font-extrabold uppercase tracking-wide text-[#1e1b17] shadow-[2px_2px_0_#1e1b17] transition-all active:translate-y-0.5 active:scale-95"
+          >
+            {isText ? "Use badges instead" : "Use a text banner"}
+          </button>
+        )}
+      </div>
 
       {isText ? (
         <div className="space-y-3 rounded-2xl border-2 border-[#1e1b17] bg-white/70 p-3.5 shadow-[3px_3px_0_#1e1b17]">

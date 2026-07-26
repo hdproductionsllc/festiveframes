@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { slotSuppressed, panelSuppressed, sectionBounds, repairSections } from "./sections";
+import {
+  slotSuppressed,
+  panelSuppressed,
+  sectionBounds,
+  repairSections,
+  sectionSupportsTiles,
+} from "./sections";
 import { panelOf } from "./panels";
 import { buildGrid } from "./slot-generator";
 import { DEFAULT_FRAME_CONFIG, SCHOOL_FRAME_CONFIG } from "@/lib/constants/frame";
@@ -132,6 +138,32 @@ describe("clearAll returns the frame to how it ARRIVES", () => {
     store.getState().placeTile("frame:top-3", "july4th:star-red", "july4th");
     store.getState().clearAll();
     expect(store.getState().sections).toEqual({});
+  });
+});
+
+describe("sectionSupportsTiles — the top strip cannot hold a badge", () => {
+  it("allows badges everywhere EXCEPT the top", () => {
+    // A badge floors at 2x2 (MIN_ART_SPAN) and the top strip is one row tall, so no
+    // badge can seat there. The bottom banner is two rows, so it can.
+    expect(sectionSupportsTiles("top")).toBe(false);
+    expect(sectionSupportsTiles("bottom")).toBe(true);
+    expect(sectionSupportsTiles("wing-left")).toBe(true);
+    expect(sectionSupportsTiles("wing-right")).toBe(true);
+  });
+
+  it("forces a top set to tiles back to text, keeping any copy already there", () => {
+    const out = repairSections({
+      top: { mode: "tiles", text: { text: "MY SCHOOL" } },
+    } as Record<string, { mode: string; text?: { text: string } }>);
+    expect(out.top.mode).toBe("text");
+    expect(out.top.text?.text).toBe("MY SCHOOL"); // not discarded
+  });
+
+  it("leaves the bottom banner free to be either", () => {
+    const asTiles = { bottom: { mode: "tiles" } };
+    expect(repairSections(asTiles)).toBe(asTiles);
+    const asText = { bottom: { mode: "text" } };
+    expect(repairSections(asText)).toBe(asText);
   });
 });
 
