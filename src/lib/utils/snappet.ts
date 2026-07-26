@@ -747,3 +747,48 @@ export function anchorIdFor(
   if (!hasAnySpan(slots)) return null;
   return coveredBySnappets(slots, grid).get(slotId) ?? null;
 }
+
+/**
+ * Grow any placed badge that sits below its floor up to that floor.
+ *
+ * A 2x2 minimum only governs the DROP and the RESIZE. Tiles already in a design -
+ * and anything Fill All / Random wrote cell-by-cell - stay at whatever size they
+ * were saved at, so a rule introduced later never reaches them. This is the same
+ * shape of problem as a default that only applies to new designs.
+ *
+ * Deliberately conservative: a tile grows ONLY if the bigger footprint is legal AND
+ * evicts nothing. Growing over a neighbour would silently delete work the user did,
+ * which is far worse than leaving one badge small. Anything that cannot grow
+ * cleanly is left exactly as it is.
+ *
+ * Returns the SAME object when nothing changed, so a normal hydrate does no work.
+ */
+export function growUndersizedBadges(
+  ctx: PlacementContext,
+  minFor: (pieceId: string) => TileSpan,
+): Record<string, PlacedTile> {
+  const { slots, grid } = ctx;
+  let changed = false;
+  const out: Record<string, PlacedTile> = {};
+  for (const [id, tile] of Object.entries(slots)) {
+    const span = tileSpan(tile);
+    const min = minFor(tile.pieceId);
+    const anchor = grid.coordOf(id);
+    if (!anchor || (span.cols >= min.cols && span.rows >= min.rows)) {
+      out[id] = tile;
+      continue;
+    }
+    const target: TileSpan = {
+      cols: Math.max(span.cols, min.cols),
+      rows: Math.max(span.rows, min.rows),
+    };
+    const verdict = canPlace(ctx, anchor, target, id);
+    if (verdict.ok && verdict.evicts.length === 0) {
+      out[id] = { ...tile, span: target };
+      changed = true;
+    } else {
+      out[id] = tile;
+    }
+  }
+  return changed ? out : slots;
+}

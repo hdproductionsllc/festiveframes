@@ -1,5 +1,6 @@
 "use client";
 
+import { minSpanFor } from "@/lib/utils/snappet";
 import { useDesignStore } from "@/stores/design-store";
 import { usePaletteStore } from "@/stores/palette-store";
 import { useUIStore } from "@/stores/ui-store";
@@ -25,12 +26,14 @@ export function QuickActions({ surfacedSetIds }: QuickActionsProps = {}) {
   const pieces = getSetPieces(
     surfacedSetIds ? resolveSurfacedSetId(activeSetId, surfacedSetIds) : activeSetId
   );
-  // Fill All / Random place cell-by-cell (1x1), so a piece that is MEANINGLESS at
-  // 1x1 would get squished — the calibration tiles, which mark `spanRequired`.
-  // Filtering on that rather than on `defaultSpan` keeps art that merely PREFERS a
-  // bigger footprint (Becky's square high-school pieces, which read fine small) in
-  // the pool, so auto-fill still reaches the real collection.
-  const fillablePieces = pieces.filter((p) => !p.spanRequired);
+  // Fill All / Random write cells one at a time at 1x1, so the pool is exactly the
+  // pieces whose FLOOR is 1x1 (see `minSpanFor`). Artwork floors at 2x2 because it
+  // is unreadable smaller, so filling with it would produce precisely the 1x1 badges
+  // that floor exists to prevent — auto-fill is for the solids and simple icons.
+  const fillablePieces = pieces.filter((p) => {
+    const min = minSpanFor(p);
+    return min.cols === 1 && min.rows === 1;
+  });
 
   const sfx = (name: SoundName) => { if (soundEnabled) playSound(name); };
 
@@ -39,7 +42,8 @@ export function QuickActions({ surfacedSetIds }: QuickActionsProps = {}) {
     // that REQUIRES its footprint can't fill single cells, so fall back to the first
     // fillable piece and always do something obvious instead of squishing it.
     const selected = selectedPieceId ? pieces.find((p) => p.id === selectedPieceId) : null;
-    const pieceId = (selected && !selected.spanRequired ? selected.id : fillablePieces[0]?.id) ?? null;
+    const selectedFills = selected ? fillablePieces.includes(selected) : false;
+    const pieceId = (selectedFills ? selected!.id : fillablePieces[0]?.id) ?? null;
     if (!pieceId) return;
     const setId = pieceId.split(":")[0];
     fillAll(pieceId, setId);
