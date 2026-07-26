@@ -360,7 +360,10 @@ export function SchoolDesigner() {
             in the bounded left rail, the frame + its editor fit the viewport without a
             long stack pushing the frame out of view. On MOBILE it collapses to one
             column: tools rail (1) -> frame + editor (2). */}
-        <main className="flex-1 grid grid-cols-1 lg:grid-cols-[340px_minmax(0,1fr)] gap-4 p-4 mx-auto w-full max-w-[1560px] items-start">
+        {/* `lg:items-stretch` so the right column fills the row's height even when the
+            tools rail is the taller side. Without it the column ends where its own
+            content does, and the sticky frame below has no room left to stick in. */}
+        <main className="flex-1 grid grid-cols-1 lg:grid-cols-[340px_minmax(0,1fr)] gap-4 p-4 mx-auto w-full max-w-[1560px] items-start lg:items-stretch">
           {/* LEFT tools rail. Palette LAST so it sits directly above the frame on mobile
               (the drag/tap source next to its target). */}
           <div className="order-1 lg:order-none min-w-0 flex flex-col gap-4">
@@ -376,7 +379,13 @@ export function SchoolDesigner() {
           {/* RIGHT column — frame preview + the selected section's editor, stacked in one
               cell so the editor sits directly under the frame (mirrors /build). */}
           <div className="order-2 lg:order-none flex flex-col gap-4 min-w-0">
-            <div className="w-full flex flex-col gap-3">
+            {/* The frame STAYS PUT while the tools rail scrolls past it. The rail is
+                the long side now — 51 school tiles — so with everything in normal
+                flow, picking a tile and dropping it on the frame meant scrolling up
+                and down between the two. Sticky rather than a bounded, scrolling
+                palette because an overflow container would clip the "● Placing"
+                badge that pops above the top row of tiles. */}
+            <div className="w-full flex flex-col gap-3 lg:sticky lg:top-4 lg:z-20">
               <div className="relative">
                 <ArmedBanner placement="frame" />
                 <FrameCanvas
