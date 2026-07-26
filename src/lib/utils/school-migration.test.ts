@@ -180,3 +180,31 @@ describe("migrateSchoolDesign (retired image mode → tiles)", () => {
     expect(out.sections.top.mode).toBe("text"); // and the defaults still land
   });
 });
+
+describe("migrateSchoolDesign (side panels can no longer hold text)", () => {
+  it("converts a WING stuck in text mode back to tiles", () => {
+    // Text bars were once allowed on every panel. They are a top/bottom affordance
+    // now, so the toggle no longer renders on the wings — leaving anyone whose saved
+    // design has a wing in text mode with a text panel and no control to undo it.
+    const out = migrateSchoolDesign({
+      slots: {},
+      frameConfig: SCHOOL_FRAME_CONFIG,
+      sections: {
+        "wing-left": { mode: "text", text: { text: "STRANDED" } },
+        "wing-right": { mode: "text", text: { text: "ALSO STRANDED" } },
+      },
+    }) as { sections: Record<string, { mode: string }> };
+    expect(out.sections["wing-left"].mode).toBe("tiles");
+    expect(out.sections["wing-right"].mode).toBe("tiles");
+  });
+
+  it("leaves TOP and BOTTOM text alone — those panels legitimately hold it", () => {
+    const out = migrateSchoolDesign({
+      slots: {},
+      frameConfig: SCHOOL_FRAME_CONFIG,
+      sections: { top: { mode: "text", text: { text: "KEEP ME" } } },
+    }) as { sections: Record<string, { mode: string; text?: { text: string } }> };
+    expect(out.sections.top.mode).toBe("text");
+    expect(out.sections.top.text?.text).toBe("KEEP ME");
+  });
+});

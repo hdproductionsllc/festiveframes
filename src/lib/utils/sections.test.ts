@@ -98,3 +98,32 @@ describe("sectionBounds — unions the PANEL cells, incl. corners", () => {
     expect(topBox.x).toBeGreaterThan(corner.x); // top box starts to the right of the corner
   });
 });
+
+describe("clearAll leaves a genuinely blank frame", () => {
+  it("blanks the banner WORDS but keeps the section in text mode", async () => {
+    const { createDesignStore } = await import("@/stores/design-store");
+    const { SCHOOL_DEFAULT_SECTIONS } = await import("@/lib/constants/defaults");
+    const store = createDesignStore("test-clear-all", {
+      sections: SCHOOL_DEFAULT_SECTIONS,
+    });
+    const s0 = store.getState();
+    expect(s0.sections.top?.text?.text).toBeTruthy(); // seeded copy is there
+
+    s0.placeTile("frame:top-3", "school:star", "school");
+    expect(Object.keys(store.getState().slots).length).toBe(1);
+
+    store.getState().clearAll();
+    const s1 = store.getState();
+    expect(Object.keys(s1.slots).length).toBe(0);
+    expect(s1.textBars).toEqual([]);
+    // The words are gone...
+    expect(s1.sections.top?.text?.text).toBe("");
+    expect(s1.sections.bottom?.text?.text).toBe("");
+    expect(s1.sections.bottom?.text?.tagline).toBe("");
+    // ...but the bar is still a TEXT bar, ready to type into.
+    expect(s1.sections.top?.mode).toBe("text");
+    expect(s1.sections.top?.text?.fontFamily).toBe(
+      SCHOOL_DEFAULT_SECTIONS.top.text.fontFamily,
+    );
+  });
+});

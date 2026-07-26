@@ -874,14 +874,31 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
         },
 
         clearAll: () => {
-          set((state) =>
-            withHistory(state, {
+          set((state) => {
+            // Clear must actually leave a BLANK frame. It used to drop only slots and
+            // textBars, so the school builder's top/bottom banners survived it and
+            // there was no way back to empty — you cleared, and the seeded copy was
+            // still sitting there.
+            //
+            // Blank the WORDS, keep the section's mode and styling: someone clearing
+            // a design wants the content gone, not the bar they deliberately switched
+            // to text mode. /build carries no sections, so this is a no-op there.
+            const sections = Object.fromEntries(
+              Object.entries(state.sections).map(([id, sec]) => [
+                id,
+                sec && sec.mode === "text" && sec.text
+                  ? { ...sec, text: { ...sec.text, text: "", tagline: "" } }
+                  : sec,
+              ]),
+            ) as typeof state.sections;
+            return withHistory(state, {
               slots: {},
               textBars: [],
               selectedBarId: null,
+              sections,
               updatedAt: Date.now(),
-            })
-          );
+            });
+          });
         },
 
         applyPreset: (preset) => {
