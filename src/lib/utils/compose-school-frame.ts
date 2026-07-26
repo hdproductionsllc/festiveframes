@@ -72,6 +72,7 @@ import {
   glossStops,
   insetRadii,
   NO_CORNERS,
+  TILE_BG,
   type CornerRadii,
   rimMetrics,
   textEmboss,
@@ -187,6 +188,100 @@ function drawBevel(
   ctx.fillStyle = bg;
   ctx.fillRect(bx, by, bw, bh);
   ctx.restore();
+}
+
+/** Radius of the plate opening's corner fillets, as a fraction of one cell. */
+const OPENING_FILLET_RATIO = 0.42;
+
+/**
+ * Round off the plate opening's four square corners.
+ *
+ * ONLY the corners. Every straight edge of the opening stays exactly where it is —
+ * the bars keep their thickness and the rails keep theirs. What gets added is the
+ * small wedge of negative space at each corner, the bit between the square corner
+ * and the curve a moulded frame would have there. Sharp corners are what read as
+ * unfinished; filling just those four notches buys the rounded opening without
+ * moving anything else.
+ *
+ * Three earlier attempts moved edges instead — a band over the opening, then the
+ * bars grown down and up, then the rails grown inward — and all three changed the
+ * opening's size, which was never the problem.
+ *
+ * Each wedge is the corner square minus a quarter-disc, so its inner boundary is a
+ * true arc that meets both straight edges tangentially and leaves no seam.
+ */
+function drawOpeningCorners(
+  ctx: CanvasRenderingContext2D,
+  rc: { x: number; y: number; w: number; h: number },
+  tileSize: number,
+  background: string,
+): void {
+  const r = Math.max(2, Math.round(tileSize * OPENING_FILLET_RATIO));
+  if (r * 2 > rc.w || r * 2 > rc.h) return;
+
+  const corners: Array<{ cx: number; cy: number; sx: number; sy: number }> = [
+    { cx: rc.x + r, cy: rc.y + r, sx: rc.x, sy: rc.y }, // top-left
+    { cx: rc.x + rc.w - r, cy: rc.y + r, sx: rc.x + rc.w - r, sy: rc.y }, // top-right
+    { cx: rc.x + rc.w - r, cy: rc.y + rc.h - r, sx: rc.x + rc.w - r, sy: rc.y + rc.h - r },
+    { cx: rc.x + r, cy: rc.y + rc.h - r, sx: rc.x, sy: rc.y + rc.h - r }, // bottom-left
+  ];
+
+  const rim = rimMetrics(tileSize, tileSize, tileSize);
+  for (const c of corners) {
+    ctx.save();
+    // The wedge: the corner square, with the quarter-disc punched out.
+    ctx.beginPath();
+    ctx.rect(c.sx, c.sy, r, r);
+    ctx.arc(c.cx, c.cy, r, 0, Math.PI * 2);
+    ctx.clip("evenodd");
+
+    ctx.fillStyle = background;
+    ctx.fillRect(c.sx, c.sy, r, r);
+    // Same upper-left light as everything else, so the corner belongs to the parts
+    // it sits between rather than looking like a patch.
+    const ax = bevelAxis(c.sx, c.sy, r, r);
+    const grad = ctx.createLinearGradient(ax.x0, ax.y0, ax.x1, ax.y1);
+    for (const [at, colour] of bevelGradient(background)) grad.addColorStop(at, colour);
+    ctx.fillStyle = grad;
+    ctx.fillRect(c.sx, c.sy, r, r);
+    ctx.restore();
+
+    // Brass along the arc, continuing the machined line the neighbouring parts carry.
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(c.sx, c.sy, r, r);
+    ctx.clip();
+    ctx.beginPath();
+    ctx.arc(c.cx, c.cy, r, 0, Math.PI * 2);
+    ctx.strokeStyle = BRASS.mid;
+    ctx.lineWidth = rim.width;
+    ctx.stroke();
+    ctx.restore();
+  }
+}
+
+/** The plate opening's pixel rect, from the cells the grid itself calls plate. */
+function plateRect(
+  grid: ReturnType<typeof buildGrid>,
+  tileSize: number,
+): { x: number; y: number; w: number; h: number } | null {
+  let minRow = Infinity, maxRow = -Infinity, minCol = Infinity, maxCol = -Infinity;
+  for (let row = 0; row < grid.rows; row++) {
+    for (let col = 0; col < grid.cols; col++) {
+      if (!grid.isPlate(row, col)) continue;
+      if (row < minRow) minRow = row;
+      if (row > maxRow) maxRow = row;
+      if (col < minCol) minCol = col;
+      if (col > maxCol) maxCol = col;
+    }
+  }
+  if (minRow === Infinity) return null;
+  return {
+    x: minCol * tileSize,
+    y: minRow * tileSize,
+    w: (maxCol - minCol + 1) * tileSize,
+    h: (maxRow - minRow + 1) * tileSize,
+  };
 }
 
 // ── The design, passed in explicitly (NOT read from any store) ────────────────
@@ -637,6 +732,13 @@ export function drawSchoolFrame(
     // Still inside the clip, so it follows the rounded corner.
     drawBevel(ctx, slot.x, slot.y, w, h, bevel, field, m.tileSize, radii);
     ctx.restore();
+  }
+
+  // 3b) Round off the plate opening's four square corners — the negative-space
+  //     wedges only. Every straight edge of the opening stays where it is.
+  {
+    const rc = plateRect(grid, m.tileSize);
+    if (rc) drawOpeningCorners(ctx, rc, m.tileSize, TILE_BG.navy);
   }
 
   // 4) Section panels (school builder) — TEXT or IMAGE. One direct-print piece over
