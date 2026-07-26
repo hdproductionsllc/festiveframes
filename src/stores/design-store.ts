@@ -39,7 +39,7 @@ import {
   UPLOAD_SET_ID,
 } from "@/lib/utils/snappet";
 import { deleteFullRes } from "@/lib/utils/image-store";
-import { sectionSupportsText } from "@/lib/utils/sections";
+import { repairSections, sectionSupportsText } from "@/lib/utils/sections";
 import { MAX_HISTORY_DEPTH } from "@/lib/constants/frame";
 
 // ── Multi-cell snappets ──────────────────────────────────────────────────────
@@ -1434,6 +1434,18 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
       },
       merge: (persisted, current) => {
         const merged = { ...current, ...(persisted as object) } as DesignState;
+        // Text belongs to the top/bottom banners only. A design saved while the side
+        // panels still allowed text keeps a wing in text mode, and the Tiles/Text
+        // toggle no longer renders there — so the panel reads as locked to text with
+        // no control anywhere to free it.
+        //
+        // This lives in MERGE, not in `migrate`. Zustand only calls migrate when the
+        // persisted VERSION is older than the current one, so a blob already at the
+        // current version never sees it — which is exactly the case for anyone who
+        // saved after the toggle was removed. Merge runs on every hydrate, so the
+        // repair is guaranteed. `sectionSupportsText` is the same source of truth the
+        // UI and the renderer use.
+        if (merged.sections) merged.sections = repairSections(merged.sections);
         // Owned geometry is not user data — the persisted copy is a cache of the
         // product's shape at the time of the last save, so the live definition wins.
         // (The persisted DESIGN is untouched; only the frame it sits on is refreshed.)

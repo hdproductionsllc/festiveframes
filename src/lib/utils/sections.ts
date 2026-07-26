@@ -28,6 +28,32 @@ export function sectionSupportsText(id: SectionId): boolean {
   return id === "top" || id === "bottom";
 }
 
+/**
+ * Force any section that may NOT hold text out of text mode.
+ *
+ * Text bars were once allowed on every panel; they are a top/bottom affordance now,
+ * so the Tiles/Text toggle no longer renders on the wings. A design saved before
+ * that change keeps a wing in text mode and there is no control anywhere to free it
+ * — the panel reads as permanently locked to text.
+ *
+ * Returns the SAME object when nothing needs fixing, so callers can skip a write.
+ */
+export function repairSections<T extends Partial<Record<SectionId, { mode?: string }>>>(
+  sections: T,
+): T {
+  let changed = false;
+  const out: Record<string, unknown> = {};
+  for (const [id, sec] of Object.entries(sections)) {
+    if (sec?.mode === "text" && !sectionSupportsText(id as SectionId)) {
+      out[id] = { mode: "tiles" };
+      changed = true;
+    } else {
+      out[id] = sec;
+    }
+  }
+  return changed ? (out as T) : sections;
+}
+
 /** Bounding box (px) of a section = the union of the rects of every slot the PANEL
  *  owns (resolved by `panelOf` on each slot's grid coord — NOT by zone, so the box
  *  covers the panel's corners too). Null when the panel has no slots. */

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { slotSuppressed, panelSuppressed, sectionBounds } from "./sections";
+import { slotSuppressed, panelSuppressed, sectionBounds, repairSections } from "./sections";
 import { panelOf } from "./panels";
 import { buildGrid } from "./slot-generator";
 import { DEFAULT_FRAME_CONFIG, SCHOOL_FRAME_CONFIG } from "@/lib/constants/frame";
@@ -125,5 +125,37 @@ describe("clearAll leaves a genuinely blank frame", () => {
     expect(s1.sections.top?.text?.fontFamily).toBe(
       SCHOOL_DEFAULT_SECTIONS.top.text.fontFamily,
     );
+  });
+});
+
+describe("repairSections — frees a side panel stuck in text mode", () => {
+  it("converts a WING out of text mode", () => {
+    const out = repairSections({
+      "wing-left": { mode: "text" },
+      "wing-right": { mode: "text" },
+    });
+    expect(out["wing-left"].mode).toBe("tiles");
+    expect(out["wing-right"].mode).toBe("tiles");
+  });
+
+  it("leaves TOP and BOTTOM text alone — those panels legitimately hold it", () => {
+    const input = { top: { mode: "text" }, bottom: { mode: "text" } };
+    expect(repairSections(input)).toBe(input); // same object: nothing to fix
+  });
+
+  it("returns the SAME object when nothing needs repair, so hydrate can skip a write", () => {
+    const input = { "wing-left": { mode: "tiles" }, top: { mode: "text" } };
+    expect(repairSections(input)).toBe(input);
+  });
+
+  it("repairs only the offending panel, preserving its neighbours", () => {
+    const out = repairSections({
+      "wing-left": { mode: "text" },
+      top: { mode: "text" },
+      "wing-right": { mode: "tiles" },
+    });
+    expect(out["wing-left"].mode).toBe("tiles");
+    expect(out.top.mode).toBe("text");
+    expect(out["wing-right"].mode).toBe("tiles");
   });
 });
