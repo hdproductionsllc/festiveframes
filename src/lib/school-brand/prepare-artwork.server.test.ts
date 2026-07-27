@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
+  checkSvgBytes,
   decodeRaster,
   decodeVector,
   finishCandidate,
@@ -194,6 +195,44 @@ describe("decodeRaster — the refusals all happen before a decoder is touched",
     if (r.ok) return;
     expect(r.reason).toBe("too-large");
     expect(20000 * 20000).toBeGreaterThan(MAX_SOURCE_PIXELS);
+  });
+});
+
+describe("the SVG-file branch honours the same allowlist (constraint 2)", () => {
+  // REGRESSION. `kind` is decided from the URL alone — `/logo.svg` is an `svg-file`
+  // whatever the host actually sends — so this branch reached `decodeVector` without
+  // ever consulting the sniffer. Measured against the installed @napi-rs/canvas
+  // 1.0.1: `loadImage` on a complete little-endian TIFF exits the process with 139
+  // (SIGSEGV), and it still exits 139 after the `TextDecoder` round-trip this branch
+  // performs, because "II*\0" is ASCII and survives it intact. A signal is not an
+  // exception, so the route's try/catch never sees it and the container dies.
+  const tiff = Uint8Array.from([0x49, 0x49, 0x2a, 0x00, 8, 0, 0, 0, 0, 0, 0, 0]);
+
+  it("refuses TIFF bytes served from a .svg address", () => {
+    const gate = checkSvgBytes(tiff, "image/svg+xml"); // lying content-type, ignored
+    expect(gate.ok).toBe(false);
+    if (gate.ok) return;
+    expect(gate.format).toBe("tiff");
+    expect(gate.detail).toMatch(/TIFF/);
+  });
+
+  it("refuses every other named binary container in the SVG slot", () => {
+    const png = Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+    const ico = Uint8Array.from([0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x20, 0x20]);
+    const bmp = Uint8Array.from([0x42, 0x4d, 0x36, 0x00, 0x00, 0x00, 0x00, 0x00]);
+    for (const b of [png, ico, bmp]) expect(checkSvgBytes(b).ok).toBe(false);
+  });
+
+  it("still admits real SVG, including the shapes the 256-byte sniff window misses", () => {
+    const enc = (s: string) => new TextEncoder().encode(s);
+    // Plain, XML-declared, and — the reason `unknown` stays allowed — one whose
+    // opening tag is pushed past the sniff window by a licence comment. Illustrator
+    // and Inkscape both emit that preamble, so refusing it would cost real crests.
+    const plain = '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"/>';
+    const declared = `<?xml version="1.0"?>${plain}`;
+    const buried = `<!-- ${"licence ".repeat(60)} -->\n${plain}`;
+    expect(buried.indexOf("<svg")).toBeGreaterThan(256); // the window really is missed
+    for (const s of [plain, declared, buried]) expect(checkSvgBytes(enc(s)).ok).toBe(true);
   });
 });
 
