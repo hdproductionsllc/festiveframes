@@ -180,6 +180,51 @@
   box-shadow: inset 0 1px 3px rgba(16, 18, 28, 0.05);
   padding: 16px;
 }
+
+/* ── The frame's height cap ────────────────────────────────────────────────
+   The frame is ASPECT-LOCKED and sized from its own width, so the only way to
+   promise it fits the window is to cap the width. Both numbers come from the
+   component as custom properties — `--ff-frame-aspect` from the live frame
+   config, `--ff-stage-room` from the viewport less the page chrome — because
+   a hard-coded aspect here would silently start clipping the day the frame's
+   geometry changes.
+
+   It lives in CSS rather than in the inline style it replaced because the two
+   breakpoints want different answers, and an inline style cannot hold a media
+   query. */
+.ff-stage-cap {
+  max-width: calc(var(--ff-stage-room, 60vh) * var(--ff-frame-aspect, 1.75));
+}
+
+/* ── MOBILE: the frame is DOCKED to the top of the screen ──────────────────
+   On a phone the builder was a tall single column with the tools rail first,
+   so the product — the thing being designed — was off-screen until you
+   scrolled, and gone again the moment you reached for a tile. The frame now
+   comes first in the source order AND pins to the top, so it is the one thing
+   always in view while the palette, the editor and the pickers scroll beneath
+   it.
+
+   Beneath, not over: the dock is opaque and outranks the content below it, the
+   opposite of the desktop arrangement where the editor sits in its own pane
+   and the two never meet. On a phone there is no room to show both, and a
+   pinned preview you scroll UNDER is the whole point of pinning it.
+
+   A third of the screen is the budget. Much more and there is nothing left to
+   scroll; much less and the badges are too small to judge — and since the cap
+   is in vh, a phone held in landscape gets a proportionally shorter frame
+   instead of one that fills the screen. */
+@media (max-width: 1023px) {
+  .ff-stage-cap {
+    max-width: calc(34vh * var(--ff-frame-aspect, 1.75));
+  }
+
+  .ff-frame-dock {
+    background: var(--ff-canvas);
+    /* Softens the seam where content disappears under the dock. Without it the
+       scroll reads as content being cut off rather than passing behind. */
+    box-shadow: 0 6px 12px -8px rgba(16, 18, 28, 0.35);
+  }
+}
 @media (min-width: 1024px) {
   .ff-stage { padding: 24px; }
 }

@@ -336,7 +336,7 @@ export function SchoolDesigner() {
           parents deciding whether to spend money. */}
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--ff-line)] bg-[var(--ff-card)] px-4 py-2.5">
         <h1 className="ff-h1">School Frame</h1>
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-2">
           <span className="ff-label hidden sm:block">Plate</span>
           <StateSelector theme="header" />
           {/* Two actions, ONE of them primary. Exporting a file is the power-user
@@ -348,7 +348,13 @@ export function SchoolDesigner() {
             title="Download a print-ready image of your frame"
             className="ff-btn ff-btn-secondary ff-btn-sm shrink-0"
           >
-            {exporting ? "Rendering..." : "Export print file"}
+            {exporting ? (
+              "Rendering..."
+            ) : (
+              <>
+                Export<span className="hidden sm:inline"> print file</span>
+              </>
+            )}
           </button>
           <button
             type="button"
@@ -357,7 +363,13 @@ export function SchoolDesigner() {
             title="Send your finished design to our team"
             className="ff-btn ff-btn-primary ff-btn-sm shrink-0"
           >
-            {submitting ? "Sending..." : "Send my design"}
+            {submitting ? (
+              "Sending..."
+            ) : (
+              <>
+                Send<span className="hidden sm:inline"> my</span> design
+              </>
+            )}
           </button>
         </div>
       </header>
@@ -502,7 +514,7 @@ export function SchoolDesigner() {
               2 tiles per side panel — the roomy-margin option — so the control only
               ever offered a worse answer. `PanelWidthToggle` and the underlying
               `setWingColumns` are intact for when a second size is a real product. */}
-          <div className="order-1 lg:order-none min-w-0 flex flex-col gap-4">
+          <div className="order-3 lg:order-none min-w-0 flex flex-col gap-4">
             {/* Brand import leads the rail, ABOVE the palette. It is the once-per-design
                 first move — paste the school's website, take the crest and the name —
                 and everything below it is what you reach for repeatedly afterwards. It
@@ -542,8 +554,8 @@ export function SchoolDesigner() {
 
               Mobile keeps ordinary flow: one column, no pinning, no nested scroll — a
               pinned frame on a phone leaves nowhere to type. */}
-          <div className="order-2 lg:order-none flex flex-col gap-6 min-w-0 lg:sticky lg:top-3 lg:h-[calc(100vh-1.5rem)]">
-            <div className="w-full flex flex-col gap-3 lg:shrink-0">
+          <div className="contents lg:flex lg:order-none lg:flex-col lg:gap-6 lg:min-w-0 lg:sticky lg:top-3 lg:h-[calc(100vh-1.5rem)]">
+            <div className="ff-frame-dock order-1 min-w-0 flex flex-col gap-3 sticky top-0 z-30 -mx-4 px-4 pt-2 pb-2 lg:static lg:order-none lg:z-auto lg:w-full lg:mx-0 lg:px-0 lg:pt-0 lg:pb-0 lg:shrink-0">
               {/* THE STAGE. The one zone on the page darker than its neighbours
                   (1.19:1 below the canvas, 1.28:1 below the cards) — everything else
                   is white or near-white, so the eye goes to the single tonal break
@@ -554,12 +566,15 @@ export function SchoolDesigner() {
                   `relative` MUST stay: the frame-side ArmedBanner is absolutely
                   positioned against this element. */}
               <div
-                className="ff-stage relative mx-auto w-full"
-                style={{
-                  maxWidth: `calc((100vh - ${STAGE_VIEWPORT_RESERVE_PX}px) * ${
-                    editorOpen ? STAGE_EDITING_SHARE : 1
-                  } * ${frameAspect})`,
-                }}
+                className="ff-stage ff-stage-cap relative mx-auto w-full"
+                style={
+                  {
+                    "--ff-frame-aspect": frameAspect,
+                    "--ff-stage-room": `calc((100vh - ${STAGE_VIEWPORT_RESERVE_PX}px) * ${
+                      editorOpen ? STAGE_EDITING_SHARE : 1
+                    })`,
+                  } as React.CSSProperties
+                }
               >
                 <ArmedBanner placement="frame" />
                 <FrameCanvas
@@ -580,7 +595,7 @@ export function SchoolDesigner() {
                 content, and the pane would push the column past the viewport instead
                 of scrolling — the clipped-editor bug in a new costume. `-mx-1 px-1`
                 keeps panel focus rings from being shaved off by the overflow. */}
-            <div className="relative z-10 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:-mx-1 lg:px-1">
+            <div className="order-2 min-w-0 relative z-10 lg:order-none lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:-mx-1 lg:px-1">
               <SectionEditor />
             </div>
           </div>
