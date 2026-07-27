@@ -446,6 +446,52 @@ export function textEmboss(fontPx: number, textColour: string) {
       offsetY: Math.max(1, fontPx * 0.035),
       colour: "rgba(0,0,0,0.45)",
     },
+    /**
+     * The MERROW — the tight overlock border stitched around the edge of a chenille
+     * varsity letter. Drawn as a stroke UNDER the fill, so the letterform keeps its
+     * own weight and the border sits outside it the way thread does around felt.
+     *
+     * Two passes, not one: an outer thread in the accent colour and an inner dark
+     * seat between thread and felt. Without the seat the outline reads as a cartoon
+     * keyline — the gap is what makes it look stitched onto something rather than
+     * drawn around it.
+     *
+     * Sized off the font, like every other edge number in this file, so a 6:1 banner
+     * and a one-row bar carry the same physical thread weight.
+     */
+    merrow: {
+      width: Math.max(2, fontPx * 0.075),
+      seat: Math.max(1, fontPx * 0.028),
+      /** Gold thread on dark type, a dark thread on light type — always a contrast. */
+      thread: lightText ? BRASS.mid : BRASS.light,
+      seatColour: "rgba(0,0,0,0.55)",
+    },
+  };
+}
+
+/**
+ * A chenille varsity letter is FELT, not metal: the edge is soft and the body has a
+ * nap that scatters light instead of returning a hard specular line. So the embroidered
+ * treatment deliberately softens the emboss it inherits — a crisp bevel on top of a
+ * merrow border reads as plastic, which is the exact look the brass rim already owns.
+ *
+ * Returns the same shape as `textEmboss` so the two are interchangeable at the call
+ * site and the renderers do not branch.
+ */
+export function textChenille(fontPx: number, textColour: string) {
+  const base = textEmboss(fontPx, textColour);
+  return {
+    ...base,
+    depth: base.depth * 0.55,
+    highlight: "rgba(255,255,255,0.22)",
+    shade: "rgba(0,0,0,0.30)",
+    shadow: {
+      ...base.shadow,
+      // Felt sits proud of the panel and drops a softer, longer shadow than engraving.
+      blur: Math.max(2, fontPx * 0.14),
+      offsetY: Math.max(1, fontPx * 0.055),
+      colour: "rgba(0,0,0,0.5)",
+    },
   };
 }
 
