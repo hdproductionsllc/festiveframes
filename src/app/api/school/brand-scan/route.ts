@@ -411,19 +411,21 @@ export async function POST(request: Request): Promise<NextResponse> {
   }
   profile = mergeProfiles(profile, extraProfiles);
 
-  // ── WHAT IS ALREADY PUBLICLY KNOWN ──
+  // ── LAST RESORT: WHAT IS ALREADY PUBLICLY KNOWN ──
   //
-  // Everything above reads the page. That is the right primary source — it reflects
-  // the school's brand as it is today — but it only works when the page declares its
-  // palette somewhere a parser can reach, and plenty of real sites do not. A
-  // university front page keeps its colours in a hashed bundle; a JS-rendered theme
-  // never lands in the HTML at all. Meanwhile the fact itself is public: anyone can
-  // tell you Northwestern is purple.
+  // Everything above reads the page — its stylesheets, and (see `colorWordsInText`)
+  // its own prose. Between them those cover the great majority of real sites for
+  // free, deterministically, and with no way to invent an answer.
   //
-  // So this fills the GAPS the page left, and only the gaps. Page-derived candidates
-  // keep their confidence and stay ahead of it; a school whose site already said
-  // "navy and gold" is not overruled by recall. It runs at all only when something is
-  // actually missing, which keeps it off the common path entirely.
+  // This is what is left: a site that declares its palette nowhere a parser can
+  // reach AND never writes it down in words. A hashed CSS bundle with a JS-rendered
+  // theme and no "our school colors are…" sentence anywhere. Meanwhile the fact
+  // itself is public — anyone can tell you Northwestern is purple — so rather than
+  // give up, ask.
+  //
+  // It is the LAST source consulted and the lowest-ranked, on purpose. It costs a
+  // paid API call and is the only source here that can be confidently wrong, so it
+  // runs only when the two free ones have both come up empty.
   const needsColors = profile.colors.length === 0;
   const needsMascot = profile.mascots.length === 0;
   if (needsColors || needsMascot) {

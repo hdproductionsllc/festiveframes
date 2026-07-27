@@ -530,6 +530,74 @@ function isNeutral(hex: string): boolean {
   return sat < 0.12 || lum > 0.93 || lum < 0.06;
 }
 
+/**
+ * Colour WORDS, as schools actually write them.
+ *
+ * Deliberately not the CSS named-colour list: `purple` in CSS is #800080, a colour
+ * no school uses, and half the CSS names (`peru`, `thistle`) never appear on a
+ * school site. These are the shades that show up on real gym walls, with hex values
+ * chosen to look like the ink a school would actually print.
+ *
+ * Multi-word entries must be matched BEFORE their single-word parts, or "vegas
+ * gold" matches as plain "gold" — hence the length sort where this is used.
+ */
+const COLOR_WORDS: ReadonlyArray<readonly [string, string]> = [
+  ["columbia blue", "#9BDDFF"], ["carolina blue", "#4B9CD3"], ["royal blue", "#1E3A8A"],
+  ["light blue", "#7EC8E3"], ["powder blue", "#B0E0E6"], ["sky blue", "#87CEEB"],
+  ["navy blue", "#1B2A4A"], ["vegas gold", "#C5B358"], ["old gold", "#CFB53B"],
+  ["athletic gold", "#FFB81C"], ["forest green", "#1B4D3E"], ["kelly green", "#2E8B57"],
+  ["hunter green", "#355E3B"], ["dark green", "#1B4D3E"], ["burnt orange", "#CC5500"],
+  ["cardinal red", "#8C1D40"], ["brick red", "#8B2500"], ["dark red", "#8B1A1A"],
+  ["light gray", "#C8CBD0"], ["light grey", "#C8CBD0"],
+  ["navy", "#1B2A4A"], ["maroon", "#6E1F2E"], ["crimson", "#9E1B32"], ["scarlet", "#B02020"],
+  ["cardinal", "#8C1D40"], ["burgundy", "#6E1F2E"], ["purple", "#4E2A84"],
+  ["violet", "#5B2C8D"], ["gold", "#C9A227"], ["orange", "#E36414"], ["teal", "#0F5C6B"],
+  ["turquoise", "#30A5A5"], ["green", "#1B6B3A"], ["blue", "#1B4C9B"], ["red", "#B3202C"],
+  ["yellow", "#F3C518"], ["silver", "#C0C0C0"], ["black", "#111111"], ["white", "#FFFFFF"],
+  ["gray", "#808080"], ["grey", "#808080"], ["brown", "#5A3A22"], ["pink", "#D64C8B"],
+];
+
+/** "school colors", "colours are", "team colors" — the phrase that introduces them. */
+const COLOR_PHRASE =
+  /\b(?:school|team|official|our)?\s*colou?rs?\s*(?:are|:|of|include)?\s*([^.!?\n]{0,80})/gi;
+
+/**
+ * Colours a page states IN WORDS.
+ *
+ * This existed as a gap for a long time and it is embarrassing in hindsight: the
+ * scanner read stylesheets to infer that a school was purple, while the page said
+ * "our school colors are purple and white" in plain English a few hundred bytes
+ * away. A site whose palette lives in a hashed CSS bundle or a JS-rendered theme
+ * defeats every other colour source here and loses nothing to this one.
+ *
+ * Scoped to the sentence following a "colors are" phrase rather than scanning the
+ * whole document, because a page mentioning "the red barn" in a news item is not
+ * declaring a brand colour. That scoping is the entire reason this can be trusted
+ * at a confidence above raw frequency.
+ */
+export function colorWordsInText(text: string): { hex: string; word: string }[] {
+  // Longest first: "vegas gold" must win over "gold" on the same characters.
+  const byLength = [...COLOR_WORDS].sort((a, b) => b[0].length - a[0].length);
+  const out: { hex: string; word: string }[] = [];
+  const seen = new Set<string>();
+
+  for (const m of text.matchAll(COLOR_PHRASE)) {
+    let clause = ` ${m[1].toLowerCase()} `;
+    for (const [word, hex] of byLength) {
+      if (!clause.includes(` ${word} `) && !clause.includes(` ${word},`) &&
+          !clause.includes(` ${word}.`) && !clause.includes(` ${word}&`)) continue;
+      // Consume the match so a longer name cannot be re-counted as its own suffix.
+      clause = clause.split(word).join(" ");
+      if (seen.has(hex)) continue;
+      seen.add(hex);
+      out.push({ hex, word });
+    }
+    // Two or three colours is a scheme; a run of eight is a paint chart.
+    if (out.length >= 4) break;
+  }
+  return out.slice(0, 4);
+}
+
 export function extractColors(scan: PageScan): ColorCandidate[] {
   const raw: RawColor[] = [];
   const push = (value: string, confidence: number, source: string, why?: string) => {
@@ -596,6 +664,14 @@ export function extractColors(scan: PageScan): ColorCandidate[] {
         push(value.split(/\s+/)[0], 0.58, "inline:chrome-background", `Inline style on <${tag.name}>`);
       }
     }
+  }
+
+  // 3b. The page SAYING its colours, in words. Ranked above frequency and below a
+  //     named brand property: a sentence that reads "our school colors are purple
+  //     and white" is a deliberate statement of the palette, but it names a shade
+  //     rather than the school's exact ink, so a declared hex still wins.
+  for (const { hex, word } of colorWordsInText(scan.text)) {
+    push(hex, 0.66, "text:stated-colors", `The page says its colours are "${word}"`);
   }
 
   // 4. Raw frequency across all stylesheets — the floor. Weak on its own, but it is
