@@ -1384,7 +1384,41 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
         },
 
         setTileFieldColor: (hex) => {
-          set({ tileFieldColor: hex, updatedAt: Date.now() });
+          // The banners take it TOO. It is one background colour as far as anyone
+          // looking at the frame is concerned, and applying it to the badges while the
+          // two text bars kept their old colour made the frame read as two products.
+          //
+          // WRITTEN THROUGH rather than layered as another live override: a banner's
+          // colour is a real, editable field in the section editor, so overriding it
+          // at render time would leave that control looking broken. This sets it, and
+          // a later edit there simply wins. Clearing the override (`null`) therefore
+          // leaves the banners where they are — there is no prior value to restore,
+          // and silently reverting a colour the user may since have chosen is worse
+          // than leaving it.
+          set((state) => {
+            if (!hex) return { tileFieldColor: hex, updatedAt: Date.now() };
+            let touched = false;
+            const sections = { ...state.sections };
+            for (const [id, sec] of Object.entries(sections)) {
+              if (!sec?.text || sec.text.backgroundColor === hex) continue;
+              sections[id as SectionId] = { ...sec, text: { ...sec.text, backgroundColor: hex } };
+              touched = true;
+            }
+            const textBars = state.textBars.map((b) =>
+              b.config.backgroundColor === hex
+                ? b
+                : { ...b, config: { ...b.config, backgroundColor: hex } },
+            );
+            const barsTouched = textBars.some((b, i) => b !== state.textBars[i]);
+            return {
+              tileFieldColor: hex,
+              ...(touched ? { sections } : {}),
+              ...(barsTouched ? { textBars } : {}),
+              // The draft config for the NEXT banner, so a bar added later matches.
+              bottomBar: { ...state.bottomBar, backgroundColor: hex },
+              updatedAt: Date.now(),
+            };
+          });
         },
 
         setRimColor: (hex) => {

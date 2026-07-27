@@ -64,6 +64,7 @@ import { getPiece } from "@/data/sets";
 import {
   BRASS,
   rimRamp,
+  artInset,
   tileField,
   artShadow,
   bevelAxis,
@@ -730,8 +731,11 @@ export function drawSchoolFrame(
           // every badge's art collided with its own edge. The two renderers must
           // agree on where art may live, or trimmed art previews clean and prints
           // dirty.
-          const rim = rimMetrics(w, h, m.tileSize);
-          const chrome = rim.inset + rim.width + bevel.thickness;
+          // Plus AIR. Inset to exactly the bevel's inner edge, art that runs out to
+          // its own bounding box — a rounded-square patch, a crest with a border —
+          // met the shaded band with nothing between them and read as cut into.
+          // `artInset` is the one answer both renderers ask for, so they cannot drift.
+          const chrome = artInset(w, h, field, m.tileSize);
           drawFit(ctx, art, slot.x + chrome, slot.y + chrome, w - chrome * 2, h - chrome * 2, "contain", 1);
           ctx.restore();
         }

@@ -17,6 +17,7 @@ import {
   tileEdgeCss,
   artShadow,
   artShadowCss,
+  artInset,
   rimRamp,
   tileField,
   textChenille,
@@ -421,5 +422,45 @@ describe("the rim override reaches the lettering, not only the edge", () => {
     const css = textChenilleCss(60, "#FFFFFF", "#8C1D40");
     expect(css.WebkitTextStroke).toContain(rimRamp("#8C1D40").mid);
     expect(textChenilleCss(60, "#FFFFFF").WebkitTextStroke).toContain(BRASS.mid);
+  });
+});
+
+describe("artInset — the one answer both renderers ask for", () => {
+  const CELL = 300;
+
+  it("clears the whole chrome AND leaves air, so art never touches the bevel", () => {
+    // The bug: art was inset to exactly `rim.inset + rim.width + bevel.thickness`, so
+    // anything drawn out to its own bounding box met the shaded band with nothing in
+    // between and read as cut into.
+    const bg = TILE_BG.navy;
+    const rim = rimMetrics(CELL, CELL, CELL);
+    const bevel = bevelMetrics(CELL, CELL, bg, CELL);
+    const chrome = rim.inset + rim.width + bevel.thickness;
+    expect(artInset(CELL, CELL, bg, CELL)).toBeGreaterThan(chrome);
+  });
+
+  it("costs the art almost nothing — the point is a gap, not a margin", () => {
+    // A 2x2 badge: both sides of air together stay under 4% of its width.
+    const w = CELL * 2;
+    const bg = TILE_BG.navy;
+    const chrome =
+      rimMetrics(w, w, CELL).inset + rimMetrics(w, w, CELL).width + bevelMetrics(w, w, bg, CELL).thickness;
+    const air = artInset(w, w, bg, CELL) - chrome;
+    expect((air * 2) / w).toBeLessThan(0.04);
+  });
+
+  it("is measured against the CELL, so a 3x3 badge keeps the same gap as a 1x1", () => {
+    const bg = TILE_BG.navy;
+    expect(artInset(CELL * 3, CELL * 3, bg, CELL)).toBe(artInset(CELL, CELL, bg, CELL));
+  });
+
+  it("never rounds the air away to nothing on a small tile", () => {
+    const bg = TILE_BG.navy;
+    const tiny = 24;
+    const chrome =
+      rimMetrics(tiny, tiny, tiny).inset +
+      rimMetrics(tiny, tiny, tiny).width +
+      bevelMetrics(tiny, tiny, bg, tiny).thickness;
+    expect(artInset(tiny, tiny, bg, tiny)).toBeGreaterThanOrEqual(chrome + 1);
   });
 });

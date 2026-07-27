@@ -147,3 +147,27 @@ describe("two school colours get the jobs they can actually do", () => {
     expect(kit.tileFieldColor).toBe(kit.frameColor);
   });
 });
+
+describe("one background, not two", () => {
+  // The banners used to take `primary` while the badges took the darker of the pair,
+  // so a school whose primary is the LIGHTER colour got light banners and dark badges
+  // and the frame read as two designs sharing a plate.
+  it("gives the banners the SAME surface as the badges when primary is the LIGHT one", () => {
+    const kit = buildBrandKit(profile({ colors: [cc("#F0C05A", 9), cc("#1B2A4A", 4)] }))!;
+    expect(kit.top.backgroundColor).toBe(kit.tileFieldColor);
+    expect(kit.bottom.backgroundColor).toBe(kit.tileFieldColor);
+    expect(kit.tileFieldColor).toBe("#1B2A4A"); // the darker of the pair
+    expect(kit.rimColor).toBe("#F0C05A"); // the lighter carries the rim
+  });
+
+  it("holds when primary is already the dark one", () => {
+    const kit = buildBrandKit(profile({ colors: [cc("#1B2A4A", 9), cc("#F0C05A", 4)] }))!;
+    expect(kit.top.backgroundColor).toBe(kit.tileFieldColor);
+    expect(kit.bottom.backgroundColor).toBe(kit.tileFieldColor);
+  });
+
+  it("keeps the banner TEXT legible on the surface it actually sits on", () => {
+    const kit = buildBrandKit(profile({ colors: [cc("#F0C05A", 9), cc("#1B2A4A", 4)] }))!;
+    expect(luminance(kit.top.textColor!)).toBeGreaterThan(luminance(kit.top.backgroundColor!));
+  });
+});

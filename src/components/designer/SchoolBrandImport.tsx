@@ -499,8 +499,8 @@ export function SchoolBrandImport() {
                 Use this school&apos;s branding
               </button>
               <p className="ff-help mt-1">
-                Recolours the frame, the badges and the rim, and sets both banners.
-                Change anything after.
+                One background behind the badges and both banners, the school&apos;s
+                lighter colour on the rim and the lettering. Change anything after.
               </p>
             </div>
           )}

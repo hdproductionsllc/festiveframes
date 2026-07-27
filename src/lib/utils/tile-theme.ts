@@ -395,6 +395,38 @@ export function chromeInset(
   return rim.inset + rim.width + bevel.thickness + air;
 }
 
+/**
+ * Air between the chrome and the ARTWORK, as a fraction of one cell.
+ *
+ * Smaller than the text's 0.035: type needs room to breathe around descenders, while
+ * a badge wants to be as big as it can be. This is the minimum that stops art TOUCHING
+ * the bevel, which is what the owner was seeing — art was inset to exactly the bevel's
+ * inner edge, so anything drawn out to its own bounding box (a rounded-square patch,
+ * a crest with a border) met the shaded band with no gap and read as cut into.
+ *
+ * At 0.018 of a cell it costs under 4% of a 2x2 badge's width across both sides.
+ */
+export const ART_AIR_RATIO = 0.018;
+
+/**
+ * How far in from a tile's edge its ARTWORK may start.
+ *
+ * The ONE answer both renderers ask for. They each used to compute it — the print path
+ * added up `rim.inset + rim.width + bevel.thickness` inline, the builder nested three
+ * borders — which is exactly the arrangement that lets two renderers drift a pixel
+ * apart and ship art that previews clean and prints dirty.
+ */
+export function artInset(
+  w: number,
+  h: number,
+  background: string = TILE_BG.navy,
+  unit: number = Math.min(w, h),
+): number {
+  const rim = rimMetrics(w, h, unit);
+  const bevel = bevelMetrics(w, h, background, unit);
+  return rim.inset + rim.width + bevel.thickness + Math.max(1, Math.round(unit * ART_AIR_RATIO));
+}
+
 /** The brass run as a CSS gradient, on the same upper-left light axis as the canvas. */
 /**
  * The rim's three-stop ramp — brass by default, or a school colour standing in for it.

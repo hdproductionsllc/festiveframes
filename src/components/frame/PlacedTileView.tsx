@@ -2,6 +2,7 @@
 
 import { getPiece } from "@/data/sets";
 import {
+  artInset,
   artShadowCss,
   cornerRadii,
   insetRadii,
@@ -89,6 +90,13 @@ export function PlacedTileView({
   const field = tileField(piece, tileFieldColor);
   const edge = tileEdgeCss(size, field, width, height, unit ?? size, rimColor);
   const radii = cornerRadii(unit ?? size, corners ?? NO_CORNERS);
+  // The gap between the bevel and the art, taken from the SAME helper the print path
+  // uses so the two agree by construction: what artInset reserves in total, less the
+  // three rings the nested boxes above already account for.
+  const artAir = Math.max(
+    0,
+    artInset(width, height, field, unit ?? size) - edge.rimInset - edge.rimWidth - edge.bevelWidth,
+  );
   const rimRadii = insetRadii(radii, edge.rimInset);
   const bevelRadii = insetRadii(rimRadii, edge.rimWidth);
 
@@ -158,6 +166,12 @@ export function PlacedTileView({
             border: `${edge.bevelWidth}px solid transparent`,
             borderRadius: radiusCss(bevelRadii),
             background: ringCss(solidFill(field), edge.bevelGradient),
+            // AIR between the bevel and the art, the same gap the print path leaves.
+            // Without it the art's box ended exactly at the bevel's inner edge, so
+            // anything drawn out to its own bounds met the shaded band with nothing
+            // in between and read as cut into. Derived from `artInset` rather than
+            // restated, so the two renderers cannot drift.
+            padding: artAir,
           }}
         >
           {art}

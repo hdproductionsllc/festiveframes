@@ -125,7 +125,10 @@ export function buildBrandKit(profile: BrandSource): SchoolBrandKit | null {
   const motto = best(profile.mottos);
   if (!mascot && !motto) return null; // a one-banner kit reads as broken, not minimal
 
-  const textColor = bannerTextOn(primary.hex);
+  // The BANNERS take the same surface colour as the badges — see below. They used to
+  // take `primary` while the badges took the darker of the pair, so whenever primary
+  // was the lighter colour the frame came back with light banners and dark badges and
+  // read as two designs sharing a plate. One background, one scheme.
   // A body identical to the banners hides them; a body unrelated to them looks like
   // two designs. Secondary if the school has one, else primary pushed away from the
   // banners — down on a light primary, and only slightly down on a dark one, since
@@ -143,9 +146,11 @@ export function buildBrandKit(profile: BrandSource): SchoolBrandKit | null {
   const frameColor = darker;
   const tileFieldColor = darker;
   const rimColor = lighter;
+  // Recomputed against the surface it actually sits on, not against `primary`.
+  const textColor = bannerTextOn(darker);
   notes.push(
     pair
-      ? `surfaces ${darker} (darker of the pair), rim ${lighter} (lighter)`
+      ? `surfaces ${darker} (darker of the pair, banners included), rim ${lighter} (lighter)`
       : `surfaces ${darker} + rim ${lighter}, both derived from the one colour found`,
   );
   // With a mascot: the classic gym-wall stack — HOME OF THE / LONGHORNS — with the
@@ -165,11 +170,11 @@ export function buildBrandKit(profile: BrandSource): SchoolBrandKit | null {
     frameColor,
     tileFieldColor,
     rimColor,
-    top: { text: top, backgroundColor: primary.hex, textColor },
+    top: { text: top, backgroundColor: darker, textColor },
     bottom: {
       text: headline,
       ...(tagline !== undefined ? { tagline } : {}),
-      backgroundColor: primary.hex,
+      backgroundColor: darker,
       textColor,
     },
     notes,

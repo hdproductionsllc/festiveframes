@@ -879,3 +879,44 @@ describe("uploads as reusable palette pieces", () => {
     expect(Array.isArray(store.getState().uploads)).toBe(true);
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+describe("the background override reaches the BANNERS too", () => {
+  // It is one background colour as far as anyone looking at the frame is concerned.
+  // Recolouring the badges while the two text bars kept their old colour made the
+  // frame read as two products bolted together.
+  it("writes the colour into every section's banner", () => {
+    const store = makeStore(SCHOOL_FRAME_CONFIG);
+    store.getState().setSectionMode("bottom", "text");
+    store.getState().setSectionText("bottom", { text: "WILDCATS" });
+    store.getState().setTileFieldColor("#8C1D40");
+    expect(store.getState().sections.bottom?.text?.backgroundColor).toBe("#8C1D40");
+    expect(store.getState().tileFieldColor).toBe("#8C1D40");
+  });
+
+  it("sets the DRAFT banner too, so a bar added later matches", () => {
+    const store = makeStore(SCHOOL_FRAME_CONFIG);
+    store.getState().setTileFieldColor("#8C1D40");
+    expect(store.getState().bottomBar.backgroundColor).toBe("#8C1D40");
+  });
+
+  it("leaves the banners alone on RESET — there is no prior value to restore", () => {
+    // Reverting to a colour the user may since have chosen by hand is worse than
+    // leaving what is there; the section editor's own picker still wins either way.
+    const store = makeStore(SCHOOL_FRAME_CONFIG);
+    store.getState().setSectionMode("bottom", "text");
+    store.getState().setTileFieldColor("#8C1D40");
+    store.getState().setTileFieldColor(null);
+    expect(store.getState().tileFieldColor).toBeNull();
+    expect(store.getState().sections.bottom?.text?.backgroundColor).toBe("#8C1D40");
+  });
+
+  it("is a no-op on the sections object when nothing changes", () => {
+    const store = makeStore(SCHOOL_FRAME_CONFIG);
+    store.getState().setSectionMode("bottom", "text");
+    store.getState().setTileFieldColor("#8C1D40");
+    const before = store.getState().sections;
+    store.getState().setTileFieldColor("#8C1D40");
+    expect(store.getState().sections).toBe(before); // same object → no render churn
+  });
+});

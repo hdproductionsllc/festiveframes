@@ -96,8 +96,8 @@ export function FrameColorPicker() {
           disagree does not read as a scheme, it reads as a mistake. */}
       <div className="mt-3 space-y-2 border-t pt-3" style={{ borderColor: "var(--ff-line, rgba(30,27,23,0.15))" }}>
         <SwatchRow
-          label="Badges"
-          hint="Behind every tile"
+          label="Background"
+          hint="Behind every badge, and the banners"
           value={tileFieldColor}
           onChange={setTileFieldColor}
           fallback={solidFill(TILE_BG.navy)}
