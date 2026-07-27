@@ -329,7 +329,12 @@ export function rimMetrics(w: number, h: number, unit: number = Math.min(w, h)) 
   // printed with a gold outline. Set back far enough to leave a visible margin of
   // field OUTSIDE it, the eye reads a metal ring sitting on a surface.
   const inset = Math.max(1, Math.round(unit * 0.032));
-  const width = Math.max(1, Math.round(unit * 0.018));
+  // 0.028 of a cell, up from 0.018. At the old weight the operator's verdict on a
+  // printed part was that it registered as a hairline in the hand — on screen it
+  // reads fine, but a premium edge you can actually see is the point of having one.
+  // Still comfortably under the 3% ceiling the tests hold it to, which is what keeps
+  // it a machined edge rather than a gold frame.
+  const width = Math.max(1, Math.round(unit * 0.028));
   return {
     width,
     inset,

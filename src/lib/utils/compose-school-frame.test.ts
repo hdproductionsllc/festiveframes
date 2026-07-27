@@ -8,6 +8,7 @@ import {
   schoolBannerRect,
   schoolRenderMetrics,
   drawSchoolFrame,
+  backFillTransparent,
   panelBleedBox,
   SCHOOL_PRINT_DPI,
   SCHOOL_PANEL_BLEED_INCHES,
@@ -194,6 +195,91 @@ describe("drawSchoolFrame (node-canvas render of a seeded design)", () => {
     // Write the sample artifact ONLY when asked, so the committed test stays portable.
     const out = process.env.SCHOOL_SAMPLE_OUT;
     if (out) writeFileSync(out, png);
+  });
+});
+
+describe("print backing — nothing reaches the printer transparent", () => {
+  const bottomBar: PlacedTextBar = {
+    id: "tb-1",
+    row: "bottom",
+    startIndex: 0,
+    widthUnits: 8,
+    config: barConfig(),
+    qr: false,
+  };
+  const design: SchoolDesign = {
+    frameConfig: SCHOOL_FRAME_CONFIG,
+    slots: {
+      "frame:wing-left-0": { pieceId: "x:none", setId: "x" } as PlacedTile,
+      "frame:top-5": { pieceId: "x:none", setId: "x", span: { cols: 2, rows: 1 } } as PlacedTile,
+    },
+    textBars: [bottomBar],
+    qrCode: { enabled: false, url: "", size: 0 },
+    plateState: "MO",
+    sections: {},
+  };
+  const bundle = (): SchoolImageBundle => ({
+    plate: null, pieces: new Map(), snappets: new Map(), sections: new Map(), qr: null,
+  });
+
+  it("leaves NO transparent or partial-alpha pixel anywhere in the render", () => {
+    // The defect this closes is one only the operator could see: a badge is a rounded
+    // rectangle, so the seams and corners between badges carried no ink and the bare
+    // snappet showed through on the printed part. Most of the frame is empty in this
+    // seeded design, which is exactly what makes it a good test — every empty cell,
+    // every seam and the whole margin must still come back opaque.
+    const { width: W, height: H } = schoolCanvasSize(SCHOOL_FRAME_CONFIG, 75); // small = fast
+    const canvas = createCanvas(W, H);
+    const ctx = canvas.getContext("2d") as unknown as CanvasRenderingContext2D;
+    drawSchoolFrame(ctx, design, bundle(), W);
+
+    const data = (ctx as unknown as SKRSContext2D).getImageData(0, 0, W, H).data;
+    let open = 0;
+    let partial = 0;
+    for (let i = 3; i < data.length; i += 4) {
+      if (data[i] === 0) open++;
+      else if (data[i] < 255) partial++;
+    }
+    expect(open, "fully transparent pixels").toBe(0);
+    // Partial alpha matters just as much: a half-covered edge pixel composites onto
+    // whatever is behind it, so on the part it fringes toward the substrate colour.
+    expect(partial, "partial-alpha pixels").toBe(0);
+  });
+
+  it("paints the backing UNDER the art, never over it", () => {
+    // destination-over is load-bearing. Painted the other way round this would be a
+    // black rectangle, and every test above it would still pass.
+    const { width: W, height: H } = schoolCanvasSize(SCHOOL_FRAME_CONFIG, 75);
+    const canvas = createCanvas(W, H);
+    const ctx = canvas.getContext("2d") as unknown as CanvasRenderingContext2D;
+    drawSchoolFrame(ctx, design, bundle(), W);
+    const napi = ctx as unknown as SKRSContext2D;
+
+    const m = schoolRenderMetrics(SCHOOL_FRAME_CONFIG, W);
+    // The banner keeps its own colour...
+    const br = schoolBannerRect(bottomBar, m);
+    const bannerPx = napi.getImageData(Math.round(br.x + 3), Math.round(br.y + 3), 1, 1).data;
+    expect([bannerPx[0], bannerPx[1], bannerPx[2]]).toEqual([34, 68, 170]);
+    // ...and a placed tile's white field survives untouched.
+    const inset = Math.round(m.tileSize * 0.5);
+    const fieldPx = napi.getImageData(inset, inset, 1, 1).data;
+    expect([fieldPx[0], fieldPx[1], fieldPx[2]]).toEqual([255, 255, 255]);
+    // An EMPTY cell prints nothing, so it is backing colour — the frame's far bottom
+    // -right corner is outside every panel of this seeded design.
+    const emptyPx = napi.getImageData(W - 2, H - 2, 1, 1).data;
+    expect([emptyPx[0], emptyPx[1], emptyPx[2], emptyPx[3]]).toEqual([0, 0, 0, 255]);
+  });
+
+  it("backFillTransparent is a no-op over already-opaque pixels", () => {
+    const c = createCanvas(4, 4);
+    const x = c.getContext("2d") as unknown as CanvasRenderingContext2D;
+    x.fillStyle = "#ff0000";
+    x.fillRect(0, 0, 2, 4); // left half red, right half untouched
+    backFillTransparent(x, 4, 4);
+    const d = (x as unknown as SKRSContext2D).getImageData(0, 0, 4, 4).data;
+    expect([d[0], d[1], d[2], d[3]]).toEqual([255, 0, 0, 255]); // red survives
+    const right = (x as unknown as SKRSContext2D).getImageData(3, 0, 1, 1).data;
+    expect([right[0], right[1], right[2], right[3]]).toEqual([0, 0, 0, 255]); // filled
   });
 });
 

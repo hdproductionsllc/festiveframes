@@ -244,6 +244,18 @@ describe("brass rim", () => {
     expect(rimMetrics(1000, 200).width).toBe(rimMetrics(200, 200).width);
   });
 
+  it("is heavy enough to READ on the printed part, not just on screen", () => {
+    // The floor exists because of a verdict on a physical sample: at 1.8% of a cell
+    // the rim registered as a hairline in the hand, however good it looked on a
+    // monitor. Paired with the ceiling above, this brackets the rim into the band
+    // that reads as a machined edge at arm's length.
+    const m = rimMetrics(1000, 1000);
+    expect(m.width / 1000).toBeGreaterThanOrEqual(0.025);
+    // At true print scale — one 0.991in cell at 300 DPI — that is a rim you can
+    // actually see rather than a one-pixel line.
+    expect(rimMetrics(297, 297).width).toBeGreaterThanOrEqual(7);
+  });
+
   it("insets the stroke so it is not half-clipped by the tile edge", () => {
     const m = rimMetrics(400, 400);
     expect(m.inset).toBeGreaterThanOrEqual(1);

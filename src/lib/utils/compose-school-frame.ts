@@ -71,9 +71,11 @@ import {
   cornerRadii,
   glossStops,
   insetRadii,
+  luminance,
   NO_CORNERS,
   type CornerRadii,
   rimMetrics,
+  shift,
   textEmboss,
   tileBackground,
 } from "@/lib/utils/tile-theme";
@@ -145,6 +147,24 @@ function drawBevel(
   ctx.lineWidth = 1;
   ctx.stroke();
 
+  // The SURROUND, outside the rim. A shade darker than the field so the brass has
+  // something to sit against: with the same field colour on both sides the rim reads
+  // as a line printed on a flat surface, and with the surround dropped the eye reads
+  // the rim as standing proud of a recess. Filled as a ring from the tile edge in to
+  // the rim's OUTER edge, so it never encroaches on the metal.
+  const surroundTo = rim.inset - rim.width / 2;
+  if (surroundTo > 0) {
+    ctx.save();
+    ctx.beginPath();
+    roundRectPath(ctx, x, y, w, h, radii);
+    roundRectPath(ctx, x + surroundTo, y + surroundTo, w - surroundTo * 2, h - surroundTo * 2,
+      insetRadii(radii, surroundTo));
+    ctx.clip("evenodd");
+    ctx.fillStyle = shift(background, luminance(background) > 0.5 ? -0.10 : -0.22);
+    ctx.fillRect(x, y, w, h);
+    ctx.restore();
+  }
+
   // BRASS rim, thin. Stroked with a gradient along the same upper-left light axis
   // as the bevel, because a flat gold line reads as a yellow stroke while a
   // bright-to-dark run reads as metal.
@@ -165,16 +185,24 @@ function drawBevel(
   ctx.lineWidth = rim.width;
   ctx.stroke();
 
-  // The bevel band, just inside the rim. Two concentric rounded rects in ONE path
-  // filled "evenodd" gives the ring; the inner one is the hole.
-  const bx = x + rim.inset + rim.width;
-  const by = y + rim.inset + rim.width;
-  const bw = w - (rim.inset + rim.width) * 2;
-  const bh = h - (rim.inset + rim.width) * 2;
+  // The bevel band, FLUSH against the inside of the rim.
+  //
+  // A canvas stroke straddles its path: `lineWidth` is centred on it, so the brass
+  // actually spans `inset ± width/2`, and its inner edge is at `inset + width/2`.
+  // Starting the bevel at `inset + width` — the natural-looking arithmetic, and what
+  // this did — therefore left a band of bare field exactly half the rim wide between
+  // the metal and the bevel. At the old hairline rim that was a pixel and invisible;
+  // once the rim was beefed up it became an obvious gap, and it made the two rings
+  // read as unrelated decorations rather than one machined edge.
+  const rimTo = rim.inset + rim.width / 2;
+  const bx = x + rimTo;
+  const by = y + rimTo;
+  const bw = w - rimTo * 2;
+  const bh = h - rimTo * 2;
   if (bw <= 0 || bh <= 0) return;
   const t = Math.min(m.thickness, Math.floor(Math.min(bw, bh) / 2));
   if (t <= 0) return;
-  const outerR = insetRadii(radii, rim.inset + rim.width);
+  const outerR = insetRadii(radii, rimTo);
 
   ctx.save();
   ctx.beginPath();
@@ -671,6 +699,61 @@ export function drawSchoolFrame(
     const rect = schoolBannerRect(bar, m);
     drawTextBar(ctx, bar, rect.x, rect.y, rect.width, rect.height, images.qr);
   }
+
+  // 6) BACKING. Every transparent pixel gets opaque black behind it.
+  //
+  // A badge is a rounded rectangle, so where two of them meet the corners leave a
+  // small lens with no ink in it, and the same is true of the gaps between panels
+  // and anywhere the art itself is transparent. On screen that reads as the frame
+  // body showing through and looks fine. On the PRINTED part it is the bare
+  // snappet/panel underneath, and the operator sees it bleeding through at every
+  // seam.
+  //
+  // `destination-over` paints only where nothing has been drawn yet, so this is the
+  // whole fix in one pass: full-alpha pixels are untouched, partial-alpha edges
+  // composite down onto black instead of onto whatever the substrate happens to be,
+  // and every hole is closed with ink. No per-badge geometry, so it cannot get the
+  // corner cases wrong the way a per-badge pad did — an earlier attempt at this used
+  // a square pad reaching 1mm past each badge and squared off the frame's outer
+  // corner radius, which is exactly the sort of thing a shape-aware fix invites.
+  //
+  // Deliberately LAST, after every layer, and deliberately the whole canvas rather
+  // than the frame silhouette: the panel files are cropped out of this canvas, and a
+  // printed part with an opaque ground is what stops the substrate reading through.
+  // Height is derived, not passed: the caller sizes the canvas from the same two
+  // numbers, so recomputing here keeps the backing exactly the canvas and avoids a
+  // signature change on a function four call sites already use.
+  backFillTransparent(ctx, canvasWidth, getRenderHeightInches(config) * m.scale);
+}
+
+/** The colour painted behind every transparent pixel on the print path. Black so the
+ *  substrate cannot read through, and so partial-alpha edges darken into a defined
+ *  line rather than fringing toward whatever the panel happens to be. */
+export const PRINT_BACKING_COLOR = "#000000";
+
+/**
+ * Fill every not-yet-painted pixel of `ctx` with the backing colour, leaving what is
+ * already drawn exactly as it is.
+ *
+ * Separate and exported so a test can assert the invariant that matters — after this
+ * runs, NOTHING in the output is transparent — without re-deriving the composite mode.
+ */
+export function backFillTransparent(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+): void {
+  const prev = ctx.globalCompositeOperation;
+  ctx.globalCompositeOperation = "destination-over";
+  ctx.fillStyle = PRINT_BACKING_COLOR;
+  // OVERSHOOT by a pixel on each axis. The caller sizes the canvas with Math.round on
+  // both dimensions independently, while callers of this derive one of them by
+  // multiplying a scale — so the fill can land a fraction of a pixel short and leave
+  // the last row or column half-covered. A half-covered row is exactly the fringe
+  // this function exists to prevent, and it cost a whole bottom row before the test
+  // caught it. The canvas clips to its own bounds, so overshooting is free.
+  ctx.fillRect(0, 0, Math.ceil(width) + 1, Math.ceil(height) + 1);
+  ctx.globalCompositeOperation = prev;
 }
 
 // ─── Browser entry point ─────────────────────────────────────────────────────
