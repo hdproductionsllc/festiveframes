@@ -23,10 +23,14 @@
 //      @napi-rs/canvas — a correctly-sized, fully-opaque black silhouette that
 //      passes every QC check we own. Refused at SOURCE level before ranking, and
 //      again at PIXEL level after rendering.
-//   2. TIFF and ICO SEGFAULT the decoder (exit 139). A signal, not an exception:
-//      nothing to catch, and in a serverless container it takes every concurrent
-//      request with it. `/favicon.ico` is a candidate source, so it is a format we
-//      will actually be handed. Magic-byte ALLOWLIST, applied before any decoder.
+//   2. TIFF SEGFAULTS the decoder outright (exit 139). ICO is subtler and the
+//      subtlety nearly got the block reverted: a WELL-FORMED ICO decodes fine, but
+//      a truncated one exits 139, garbage exits 139, and absurd dimensions exit 132
+//      on a SkBitmap assert. Telling a good ICO from a bad one requires decoding it,
+//      which is the thing that kills the process — a signal, not an exception, and
+//      in a shared container it takes every concurrent request with it.
+//      `/favicon.ico` is a candidate source by definition. Magic-byte ALLOWLIST,
+//      applied before any decoder.
 //   3. 10 MP of RGBA through analyzeArtwork + repairArtwork measured +480 MB.
 //      Dimensions come from the container header before anything is allocated,
 //      decodes are capped at 4 MP, and candidates are processed SEQUENTIALLY.
@@ -126,6 +130,13 @@ const SECOND_HOP_PAGES = 3;
 /** Tighter than the entry page's timeout: a slow subpage is an opportunity cost,
  *  not the user's actual request. */
 const SECOND_HOP_TIMEOUT_MS = 5_000;
+
+/** Linked stylesheets fetched for CSS-background logos and brand colours. Themes
+ *  compile to one or two files; four covers a theme plus an override sheet. */
+const MAX_STYLESHEETS = 4;
+/** A stylesheet is a means to an end. Small cap — theme CSS is big, and we only ever
+ *  regex it for `url(...)` and hex colours. */
+const MAX_CSS_BYTES = 512 * 1024;
 
 // ─── response ────────────────────────────────────────────────────────────────
 
@@ -323,7 +334,36 @@ export async function POST(request: Request): Promise<NextResponse> {
   // ── parse (pure) ──
   // `page.finalUrl` rather than the submitted URL, so relative asset paths resolve
   // against where the bytes actually came from after redirects.
-  let profile = parseSchoolPage(html, page.finalUrl);
+  // ── LINKED STYLESHEETS ──
+  //
+  // Fetched before parsing, because a theme's compiled CSS is where two things hide
+  // that the markup does not have: a header crest set as a `background-image`, and
+  // the real brand palette. `collectLogoCandidates` has always looked for CSS
+  // backgrounds — but only in inline `<style>`, which on a CMS site is a reset sheet
+  // and nothing else. On the first real scan the school's mark was nowhere in the
+  // HTML at all, which is what sent me looking here.
+  const cssTexts: string[] = [];
+  try {
+    const sheets = scanTags(html, "link")
+      .filter((t) => /(^|\s)stylesheet(\s|$)/i.test(t.attrs.rel ?? ""))
+      .map((t) => resolveHtmlUrl(t.attrs.href ?? "", page.finalUrl))
+      .filter((u): u is string => !!u)
+      .slice(0, MAX_STYLESHEETS);
+    for (const href of sheets) {
+      const css = await fetchGuarded(href, {
+        maxBytes: MAX_CSS_BYTES,
+        timeoutMs: SECOND_HOP_TIMEOUT_MS,
+        accept: "text/css,*/*;q=0.5",
+      });
+      if (css.ok && css.status >= 200 && css.status < 300) {
+        cssTexts.push(new TextDecoder("utf-8", { fatal: false }).decode(css.bytes));
+      }
+    }
+  } catch {
+    // A stylesheet we cannot read costs us a possible logo, never the scan.
+  }
+
+  let profile = parseSchoolPage(html, page.finalUrl, cssTexts);
 
   // ── the SECOND HOP ──
   //

@@ -311,3 +311,46 @@ describe("collectLogoCandidates picks the largest srcset entry over src", () => 
     expect(urls).not.toContain("https://school.org/logo-150.png");
   });
 });
+
+describe("upgradeCandidateUrl — Cloudinary path transforms (the Marquette case)", () => {
+  it("strips the transformation SEGMENT from a real Finalsite URL", () => {
+    // Finalsite delivers through Cloudinary, so the resize is a path segment rather
+    // than a query string — the shape the first version of this function could not
+    // see. This exact URL served 512px on marquette.rsdmo.org.
+    expect(
+      upgradeCandidateUrl(
+        "https://resources.finalsite.net/images/f_auto,q_auto,t_image_size_2/v1686857649/rsdmoorg/ahvbswfpl2h9pzw89rbd/High_Marquette_Color.png",
+      ),
+    ).toBe(
+      "https://resources.finalsite.net/images/v1686857649/rsdmoorg/ahvbswfpl2h9pzw89rbd/High_Marquette_Color.png",
+    );
+  });
+
+  it("handles a plain Cloudinary delivery URL", () => {
+    expect(
+      upgradeCandidateUrl("https://res.cloudinary.com/demo/image/upload/w_300,h_200,c_fill/v1/sample.jpg"),
+    ).toBe("https://res.cloudinary.com/demo/image/upload/v1/sample.jpg");
+  });
+
+  it("leaves a DIRECTORY that merely contains an underscore alone", () => {
+    // The conservative half. `/assets/logo_final/` is a folder, and stripping it
+    // would 404 every image on such a host — a far worse failure than not upgrading.
+    expect(upgradeCandidateUrl("https://s.org/assets/logo_final/crest.png")).toBeNull();
+    expect(upgradeCandidateUrl("https://s.org/wp-content/uploads/crest.png")).toBeNull();
+  });
+});
+
+describe("scanPage reads EXTERNAL css (the CSS-background blind spot)", () => {
+  it("finds a header crest declared in a linked stylesheet", () => {
+    // The markup has no <img> for the crest at all — the case that made a real scan
+    // return two staff photos and a favicon.
+    const html = `<html><head><link rel="stylesheet" href="/theme.css"></head><body><header class="site-header"></header></body></html>`;
+    const css = `.site-header .logo{background-image:url("/img/crest-800.png");}`;
+    const withCss = scanPage(html, "https://school.org/", [css]);
+    const urls = collectLogoCandidates(withCss).map((c) => c.url);
+    expect(urls).toContain("https://school.org/img/crest-800.png");
+    // ...and without the stylesheet, it is invisible. This is the regression that
+    // matters: the collector was never broken, it was never given the CSS.
+    expect(collectLogoCandidates(scanPage(html, "https://school.org/"))).toHaveLength(0);
+  });
+});
