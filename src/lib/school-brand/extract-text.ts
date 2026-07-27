@@ -370,6 +370,28 @@ export const MASCOT_LEXICON: readonly string[] = [
   "Oaks", "Redwoods", "Pines", "Cardinals", "Chargers", "Chieftains",
 ];
 
+/**
+ * Words that are part of a mascot's name rather than the next word in the sentence.
+ *
+ * "Home of the Golden Eagles" is two words; "Home of the Nanooks since 1932" is one,
+ * and an unconditional two-word capture returns "Nanooks Since" — which it did, on
+ * the first run of this test. Requiring the SECOND word to be capitalised is not
+ * enough either: "Home of the Eagles Marching Band" is two capitals and one mascot.
+ * So the second word is only taken when the first is a known modifier.
+ */
+const MASCOT_MODIFIERS = new Set([
+  "golden", "fighting", "sea", "red", "blue", "green", "black", "white", "silver",
+  "mighty", "little", "flying", "thunder", "war", "big", "wild", "rough", "iron",
+  "purple", "orange", "scarlet", "crimson", "royal", "night",
+]);
+
+function joinMascotWords(first: string, second: string | undefined): string {
+  const a = collapse(first);
+  const b = collapse(second ?? "");
+  if (!b) return a;
+  return MASCOT_MODIFIERS.has(a.toLowerCase()) ? `${a} ${b}` : a;
+}
+
 /** "Wildcats" → ["wildcats", "wildcat"]. Plural-only lexicon, both forms matched. */
 function mascotForms(canonical: string): string[] {
   const lower = canonical.toLowerCase();
@@ -400,9 +422,9 @@ export function extractMascots(scan: PageScan): TextCandidate[] {
   //    is the one source that works for mascots no lexicon will ever contain — the
   //    Nanooks, the Pretzels, the Fighting Artichokes are all real.
   for (const m of text.matchAll(
-    /\bhome (?:of|to) the\s+(?:fighting\s+)?([A-Za-z][A-Za-z'’-]*(?:\s+[A-Za-z][A-Za-z'’-]*)?)/gi,
+    /\bhome (?:of|to) the\s+(?:fighting\s+)?([A-Za-z][A-Za-z'’-]*)(\s+[A-Za-z][A-Za-z'’-]*)?/gi,
   )) {
-    push(m[1], 0.92, "phrase:home-of-the", `Matched "${collapse(m[0])}"`);
+    push(joinMascotWords(m[1], m[2]), 0.92, "phrase:home-of-the", `Matched "${collapse(m[0])}"`);
   }
   // `[Gg]o` rather than the /i flag: the capture has to stay case-SENSITIVE so it
   // only takes a capitalised word. With /i on the whole pattern this matched

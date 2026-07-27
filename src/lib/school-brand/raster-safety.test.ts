@@ -35,6 +35,9 @@ describe("sniffImageFormat — the shield against the decoder segfault", () => {
     for (const b of [TIFF_LE, TIFF_BE, ICO]) {
       const r = sniffImageFormat(b);
       expect(r.decodable).toBe(false);
+      // Narrow explicitly: `reason` lives only on the refusal arms of the union, and
+      // reading it off the bare result is a type error rather than a runtime one.
+      if (r.decodable) throw new Error("expected a refusal");
       expect(r.reason).toMatch(/SIGSEGV/);
     }
     expect(sniffImageFormat(TIFF_LE).format).toBe("tiff");
