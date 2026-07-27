@@ -141,6 +141,14 @@ export type BrandScanResponse =
       emptyState: SchoolProfile["emptyState"];
       /** True when a budget stopped us early, so the picker can say "showing 4 of 9". */
       truncated: boolean;
+      /**
+       * Candidates discarded at RANKING time, before any fetch — vendor marks, SVGs
+       * that would print black. Returned because leaving them out made the "what we
+       * found" list a half-answer: a scan that located the crest and then dropped it
+       * looked identical to one that never saw it, which is the exact ambiguity that
+       * cost a debugging round on a real site.
+       */
+      dropped: { url: string; kind: string; reason: string }[];
       robots: { checked: boolean; matchedAgent: string };
     }
   | { ok: false; outcome: PageOutcome; copy: OutcomeCopy }
@@ -508,6 +516,11 @@ export async function POST(request: Request): Promise<NextResponse> {
       empty,
       emptyState,
       truncated,
+      dropped: profile.droppedLogos.slice(0, 12).map((d) => ({
+        url: d.url,
+        kind: d.kind,
+        reason: d.dropped ?? "dropped",
+      })),
       robots: { checked: robots.checked, matchedAgent: robots.matchedAgent },
     },
     {

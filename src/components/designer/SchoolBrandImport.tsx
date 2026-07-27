@@ -96,6 +96,10 @@ type Phase =
        *  "nothing works" can always be turned into "here is what it found". */
       candidates: ScanCandidate[];
       rejected: RejectedCandidate[];
+      /** Discarded before any fetch — vendor marks, print-black SVGs. Without these
+       *  the list cannot distinguish "never saw the crest" from "saw it and dropped
+       *  it", which is the distinction that matters when a scan comes back empty. */
+      dropped: { url: string; kind: string; reason: string }[];
     }
   | {
       kind: "results";
@@ -197,6 +201,7 @@ export function SchoolBrandImport() {
         // owner debugging a scan, and for anyone wondering whether we even looked.
         candidates: data.candidates,
         rejected: data.rejected,
+        dropped: data.dropped ?? [],
       });
       return;
     }
@@ -414,10 +419,13 @@ export function SchoolBrandImport() {
               only diagnostic available for a site the developer cannot reach: the
               shape of these URLs says which collector is still blind. */}
           {phase.kind === "empty" &&
-            (phase.candidates.length > 0 || phase.rejected.length > 0) && (
+            (phase.candidates.length > 0 ||
+              phase.rejected.length > 0 ||
+              phase.dropped.length > 0) && (
               <details className="mt-2 border-t-2 border-[#1e1b17]/15 pt-1.5">
                 <summary className="cursor-pointer text-[11px] font-extrabold uppercase tracking-wide text-[#1e1b17]/75">
-                  What we found ({phase.candidates.length + phase.rejected.length})
+                  What we found (
+                  {phase.candidates.length + phase.rejected.length + phase.dropped.length})
                 </summary>
                 <ul className="mt-1.5 space-y-1.5">
                   {phase.candidates.map((c, i) => (
@@ -431,6 +439,14 @@ export function SchoolBrandImport() {
                         : (c.qc.findings[0]?.message ?? "not usable")}
                       <span className="block break-all font-mono text-[9px] text-[#1e1b17]/45">
                         {shortUrl(c.url) || `${c.kind} (inline)`}
+                      </span>
+                    </li>
+                  ))}
+                  {phase.dropped.map((d, i) => (
+                    <li key={`d${i}`} className="text-[10px] leading-snug text-[#1e1b17]/75">
+                      <span className="font-bold">skipped: {d.reason}</span>
+                      <span className="block break-all font-mono text-[9px] text-[#1e1b17]/45">
+                        {shortUrl(d.url) || `${d.kind} (inline)`}
                       </span>
                     </li>
                   ))}

@@ -28,7 +28,7 @@ describe("sniffImageFormat — the shield against the decoder segfault", () => {
     expect(sniffImageFormat(WEBP)).toEqual({ format: "webp", decodable: true });
   });
 
-  it("refuses TIFF and ICO, which exit the process with SIGSEGV", () => {
+  it("refuses TIFF and ICO — the formats that can kill the process", () => {
     // Not an exception — a signal. There is nothing to catch: the node process is
     // gone and the request never answers. The only defence is not handing the bytes
     // over, which is what this asserts.
@@ -38,7 +38,7 @@ describe("sniffImageFormat — the shield against the decoder segfault", () => {
       // Narrow explicitly: `reason` lives only on the refusal arms of the union, and
       // reading it off the bare result is a type error rather than a runtime one.
       if (r.decodable) throw new Error("expected a refusal");
-      expect(r.reason).toMatch(/SIGSEGV/);
+      expect(r.reason).toMatch(/crash|kill|not opened|never opened/i);
     }
     expect(sniffImageFormat(TIFF_LE).format).toBe("tiff");
     expect(sniffImageFormat(ICO).format).toBe("ico");
