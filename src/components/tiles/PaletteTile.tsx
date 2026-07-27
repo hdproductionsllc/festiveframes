@@ -6,6 +6,7 @@ import { usePaletteStore } from "@/stores/palette-store";
 import { useUIStore } from "@/stores/ui-store";
 import { useDesignStore } from "@/stores/design-store";
 import { TileArtwork, hasCustomArtwork, canDieCut } from "./TileArtwork";
+import { tileField } from "@/lib/utils/tile-theme";
 import { playSound } from "@/lib/utils/sound";
 
 interface PaletteTileProps {
@@ -23,6 +24,7 @@ export function PaletteTile({ piece, size = "md", demo = false }: PaletteTilePro
   const selectPiece = usePaletteStore((s) => s.selectPiece);
   const soundEnabled = useUIStore((s) => s.soundEnabled);
   const dieCut = useDesignStore((s) => s.dieCut);
+  const tileFieldColor = useDesignStore((s) => s.tileFieldColor);
 
   const isSelected = selectedPieceId === piece.id;
   const hasArt = hasCustomArtwork(piece.id);
@@ -119,7 +121,10 @@ export function PaletteTile({ piece, size = "md", demo = false }: PaletteTilePro
         style={{
           width: art,
           height: art,
-          backgroundColor: isDieCut ? "transparent" : piece.backgroundColor,
+          // The palette must show the SAME field the frame will paint, or picking a
+          // tile is a guess: with a school colour applied, a swatch still showing its
+          // designed navy is advertising a tile that no longer exists.
+          backgroundColor: isDieCut ? "transparent" : tileField(piece, tileFieldColor),
           filter: isDieCut ? "drop-shadow(0 1px 2px rgba(0,0,0,0.5))" : undefined,
         }}
       >

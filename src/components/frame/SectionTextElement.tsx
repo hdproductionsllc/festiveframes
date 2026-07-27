@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import type { BottomBarConfig } from "@/lib/types";
 import { bannerBands } from "@/lib/utils/banner-tiers";
 import { chromeInset, glossStops, ringCss, textChenilleCss, tileEdgeCss } from "@/lib/utils/tile-theme";
+import { useDesignStore } from "@/stores/design-store";
 
 // A section's TEXT rendered as a MULTI-LINE block that honors `\n` line breaks and
 // works on a wide top/bottom bar AND a tall/narrow side panel (wing).
@@ -81,6 +82,10 @@ export function SectionTextElement({
    *  the SAME edge instead of the taller one getting a band twice as thick. */
   unit?: number;
 }) {
+  // The rim override reaches TWO things on a banner: the moulded edge round the bar,
+  // and the merrow thread round the letters. They were both brass, so a school colour
+  // that replaced only one of them would leave gold outlining on a non-gold frame.
+  const rimColor = useDesignStore((s) => s.rimColor);
   const text = config.text ?? "";
   const fontFamily = config.fontFamily;
   const letterSpacing = config.letterSpacing ?? 0;
@@ -91,7 +96,7 @@ export function SectionTextElement({
   // made the thing read as assembled from parts.
   const short = Math.min(width, height);
   const cell = unit ?? short;
-  const edge = tileEdgeCss(short, config.backgroundColor, width, height, cell);
+  const edge = tileEdgeCss(short, config.backgroundColor, width, height, cell, rimColor);
   const [glossTop, glossBottom] = glossStops(config.backgroundColor);
   // Opaque on purpose — this is what masks the rim and bevel gradients away from the
   // middle of the bar. See `ringCss`.
@@ -150,7 +155,7 @@ export function SectionTextElement({
     // Chenille — the CSS twin of the canvas's merrow-stroke + softened emboss. Both
     // renderers must carry this or the builder and the print sheet drift, which is the
     // whole reason tile-theme exists.
-    ...textChenilleCss(fontPx, config.textColor),
+    ...textChenilleCss(fontPx, config.textColor, rimColor),
   });
 
   return (

@@ -100,10 +100,14 @@ const _assign: SchoolBrandKit["top"] extends Partial<import("@/lib/types").Botto
 void _assign;
 
 describe("frame body colour — the largest area of the product", () => {
-  it("uses the SECONDARY so the banners do not vanish into the body", () => {
+  it("takes the DARKER of the pair, so the lighter is free to carry the rim", () => {
+    // This asserted `secondary` before luminance-sorting existed. Rank said which
+    // colour was the more confident brand colour; it said nothing about which could
+    // be a surface and which could be an edge, and the rim is the one that breaks
+    // when you get it wrong.
     const kit = buildBrandKit(profile({}))!;
-    expect(kit.frameColor).toBe("#C9A34A");
-    expect(kit.frameColor).not.toBe(kit.top.backgroundColor);
+    expect(kit.frameColor).toBe("#8A1F2B");
+    expect(kit.rimColor).toBe("#C9A34A");
   });
 
   it("darkens the primary when the school has only one colour", () => {
@@ -112,5 +116,34 @@ describe("frame body colour — the largest area of the product", () => {
     // Related to the banners, and clearly separated from them.
     expect(kit.frameColor).not.toBe("#8A1F2B");
     expect(luminance(kit.frameColor)).toBeLessThan(luminance("#8A1F2B"));
+  });
+});
+
+describe("two school colours get the jobs they can actually do", () => {
+  it("assigns by LUMINANCE, not by the scan's confidence order", () => {
+    // The scan ranks by confidence, which says which is more likely a brand colour —
+    // not which can carry an edge. Here the DARK maroon is ranked first; if rank
+    // decided, it would end up on the rim and vanish against a maroon body.
+    const kit = buildBrandKit(profile({ colors: [cc("#8A1F2B", 5), cc("#C9A34A", 4)] }))!;
+    expect(kit.frameColor).toBe("#8A1F2B");
+    expect(kit.tileFieldColor).toBe("#8A1F2B");
+    expect(kit.rimColor).toBe("#C9A34A");
+    expect(luminance(kit.rimColor)).toBeGreaterThan(luminance(kit.frameColor));
+  });
+
+  it("still puts the lighter one on the rim when the ORDER is reversed", () => {
+    const kit = buildBrandKit(profile({ colors: [cc("#C9A34A", 5), cc("#8A1F2B", 4)] }))!;
+    expect(kit.rimColor).toBe("#C9A34A");
+    expect(kit.frameColor).toBe("#8A1F2B");
+  });
+
+  it("derives a pair from one colour when the school only has one", () => {
+    const kit = buildBrandKit(profile({ colors: [cc("#8A1F2B", 5)] }))!;
+    expect(luminance(kit.rimColor)).toBeGreaterThan(luminance(kit.frameColor));
+  });
+
+  it("badges share the body's colour, so the frame reads as one object", () => {
+    const kit = buildBrandKit(profile({}))!;
+    expect(kit.tileFieldColor).toBe(kit.frameColor);
   });
 });

@@ -53,6 +53,19 @@ export interface SchoolBrandKit {
    * separated from the banners sitting on it.
    */
   frameColor: string;
+  /** Painted behind every badge. The same surface colour as the body, so the frame
+   *  reads as one object rather than tiles floating on an unrelated ground. */
+  tileFieldColor: string;
+  /**
+   * Stands in for the BRASS rim — the LIGHTER of the school's two colours.
+   *
+   * Which one is lighter is decided by luminance, not by rank. The scan orders
+   * colours by confidence, and that order says which is more likely to be a brand
+   * colour, NOT which can carry an edge. A rim reads as metal because it runs
+   * bright-to-dark; a dark rim on a dark body simply disappears, so the pair has to
+   * be sorted by lightness before it is assigned.
+   */
+  rimColor: string;
   /**
    * Ready-to-apply SECTION text patches, matching the seeded design's own shape:
    * the top strip says "HOME OF THE", the bottom's headline carries the mascot and
@@ -117,9 +130,24 @@ export function buildBrandKit(profile: BrandSource): SchoolBrandKit | null {
   // two designs. Secondary if the school has one, else primary pushed away from the
   // banners — down on a light primary, and only slightly down on a dark one, since
   // darkening #101828 further just makes two blacks.
-  const frameColor =
-    secondary?.hex ?? shift(primary.hex, luminance(primary.hex) > 0.5 ? -0.45 : -0.3);
-  notes.push(`frame body ${frameColor}${secondary ? " (secondary)" : " (darkened primary)"}`);
+  // Schools almost always have two colours, and which is which matters more than
+  // which the scan ranked first. Sort the pair by LUMINANCE and give each the job it
+  // can actually do: the darker one becomes the surfaces (body and every badge
+  // field), the lighter one replaces the gold rim. Ranking alone would routinely put
+  // a navy on the rim, where it vanishes against a navy body.
+  const pair = secondary
+    ? [primary.hex, secondary.hex].sort((a, b) => luminance(a) - luminance(b))
+    : null;
+  const darker = pair ? pair[0] : shift(primary.hex, luminance(primary.hex) > 0.5 ? -0.45 : -0.3);
+  const lighter = pair ? pair[1] : shift(primary.hex, 0.45);
+  const frameColor = darker;
+  const tileFieldColor = darker;
+  const rimColor = lighter;
+  notes.push(
+    pair
+      ? `surfaces ${darker} (darker of the pair), rim ${lighter} (lighter)`
+      : `surfaces ${darker} + rim ${lighter}, both derived from the one colour found`,
+  );
   // With a mascot: the classic gym-wall stack — HOME OF THE / LONGHORNS — with the
   // school's name in the tagline tier, so all three identities are on the frame.
   // Without one: the name takes the headline and the motto the tagline, which is
@@ -135,6 +163,8 @@ export function buildBrandKit(profile: BrandSource): SchoolBrandKit | null {
     primary: primary.hex,
     secondary: secondary?.hex ?? null,
     frameColor,
+    tileFieldColor,
+    rimColor,
     top: { text: top, backgroundColor: primary.hex, textColor },
     bottom: {
       text: headline,

@@ -30,6 +30,10 @@ const PRESETS: ReadonlyArray<[string, string]> = [
 export function FrameColorPicker() {
   const frameColor = useDesignStore((s) => s.frameColor);
   const setFrameColor = useDesignStore((s) => s.setFrameColor);
+  const tileFieldColor = useDesignStore((s) => s.tileFieldColor);
+  const setTileFieldColor = useDesignStore((s) => s.setTileFieldColor);
+  const rimColor = useDesignStore((s) => s.rimColor);
+  const setRimColor = useDesignStore((s) => s.setRimColor);
   const current = frameColor || DEFAULT_FRAME_COLOR;
 
   return (
@@ -86,6 +90,83 @@ export function FrameColorPicker() {
           })}
         </div>
       </div>
+
+      {/* THE OTHER TWO SURFACES. Kept in one panel rather than three scattered
+          controls, because they are one decision: a frame whose body, badges and rim
+          disagree does not read as a scheme, it reads as a mistake. */}
+      <div className="mt-3 space-y-2 border-t pt-3" style={{ borderColor: "var(--ff-line, rgba(30,27,23,0.15))" }}>
+        <SwatchRow
+          label="Badges"
+          hint="Behind every tile"
+          value={tileFieldColor}
+          onChange={setTileFieldColor}
+          resetLabel="Each tile's own"
+        />
+        <SwatchRow
+          label="Rim"
+          hint="Replaces the gold edge"
+          value={rimColor}
+          onChange={setRimColor}
+          resetLabel="Gold"
+        />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * One overridable colour with a reset. `null` is a real state here, not an empty
+ * string: it means "keep the designed default" (each tile's own field, or the brass),
+ * which is different from having chosen a colour that happens to match.
+ */
+function SwatchRow({
+  label,
+  hint,
+  value,
+  onChange,
+  resetLabel,
+}: {
+  label: string;
+  hint: string;
+  value: string | null;
+  onChange: (hex: string | null) => void;
+  resetLabel: string;
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <label
+        className="relative h-7 w-7 shrink-0 cursor-pointer overflow-hidden rounded-[var(--ff-radius-sm,6px)] border"
+        style={{
+          background: value ?? "transparent",
+          backgroundImage: value
+            ? undefined
+            : "linear-gradient(45deg,rgba(0,0,0,.12) 25%,transparent 25%,transparent 75%,rgba(0,0,0,.12) 75%)",
+          backgroundSize: value ? undefined : "8px 8px",
+          borderColor: "var(--ff-line, #1e1b17)",
+        }}
+        title={`Choose a ${label.toLowerCase()} colour`}
+      >
+        <input
+          type="color"
+          value={value ?? "#1B2A4A"}
+          onChange={(e) => onChange(e.target.value)}
+          aria-label={`${label} colour`}
+          className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+        />
+      </label>
+      <div className="min-w-0 flex-1">
+        <p className="text-[12px] font-semibold leading-tight text-[var(--ff-ink,#1e1b17)]">{label}</p>
+        <p className="ff-help leading-tight">{hint}</p>
+      </div>
+      {value && (
+        <button
+          type="button"
+          onClick={() => onChange(null)}
+          className="ff-btn ff-btn-secondary shrink-0 px-2 py-1 text-[11px]"
+        >
+          {resetLabel}
+        </button>
+      )}
     </div>
   );
 }

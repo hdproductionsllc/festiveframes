@@ -9,6 +9,7 @@ import {
   ringCss,
   solidFill,
   tileBackground,
+  tileField,
   tileEdgeCss,
   NO_CORNERS,
   type CornerFlags,
@@ -50,6 +51,8 @@ export function PlacedTileView({
   corners,
 }: PlacedTileViewProps) {
   const dieCut = useDesignStore((s) => s.dieCut);
+  const tileFieldColor = useDesignStore((s) => s.tileFieldColor);
+  const rimColor = useDesignStore((s) => s.rimColor);
 
   // Uploaded art: render the image itself, sized to the snappet rect. `cover` fills
   // the footprint at the image's aspect; a native-aspect placement (the default on
@@ -81,8 +84,10 @@ export function PlacedTileView({
 
   const size = Math.min(width, height);
   const isDieCut = dieCut && canDieCut(pieceId);
-  const field = tileBackground(piece);
-  const edge = tileEdgeCss(size, field, width, height, unit ?? size);
+  // Both overrides come from the design, so the swatch you pick, the tile on the
+  // frame and the printed sheet cannot disagree.
+  const field = tileField(piece, tileFieldColor);
+  const edge = tileEdgeCss(size, field, width, height, unit ?? size, rimColor);
   const radii = cornerRadii(unit ?? size, corners ?? NO_CORNERS);
   const rimRadii = insetRadii(radii, edge.rimInset);
   const bevelRadii = insetRadii(rimRadii, edge.rimWidth);

@@ -17,6 +17,11 @@ import {
   tileEdgeCss,
   artShadow,
   artShadowCss,
+  rimRamp,
+  tileField,
+  textChenille,
+  merrowThread,
+  textChenilleCss,
 } from "./tile-theme";
 
 describe("luminance", () => {
@@ -338,5 +343,83 @@ describe("frame-corner rounding — the whole frame as one part", () => {
 
   it("emits border-radius in CSS's own order: tl tr br bl", () => {
     expect(radiusCss({ tl: 1, tr: 2, br: 3, bl: 4 })).toBe("1px 2px 3px 4px");
+  });
+});
+
+// ─── The school-colour overrides ────────────────────────────────────────────
+//
+// Three surfaces were hard-coded to the product's own palette — the tile field, the
+// brass rim, and the merrow thread round banner lettering. A school scan can now
+// replace all three, and the thing these tests actually protect is that they move
+// TOGETHER: a frame with a vegas-gold rim and brass-gold lettering reads as two
+// products bolted together, which is exactly the bug that shipped once.
+
+describe("rimRamp", () => {
+  it("is the brass when nothing overrides it", () => {
+    expect(rimRamp()).toBe(BRASS);
+    expect(rimRamp(null)).toBe(BRASS);
+  });
+
+  it("runs bright-to-dark, which is the only reason a rim reads as metal", () => {
+    const r = rimRamp("#8C1D40");
+    expect(luminance(r.light)).toBeGreaterThan(luminance(r.mid));
+    expect(luminance(r.mid)).toBeGreaterThan(luminance(r.dark));
+  });
+
+  it("keeps the chosen colour as the body, not just as an influence", () => {
+    expect(rimRamp("#8C1D40").mid).toBe("#8C1D40");
+  });
+});
+
+describe("tileField", () => {
+  const dark = { backgroundColor: TILE_BG.navy };
+  const light = { backgroundColor: TILE_BG.white };
+
+  it("leaves the designed field alone when nothing overrides it", () => {
+    expect(tileField(dark)).toBe(tileBackground(dark));
+  });
+
+  it("takes the override on a dark-field piece", () => {
+    expect(tileField(dark, "#8C1D40")).toBe("#8C1D40");
+  });
+
+  it("tints rather than floods a LIGHT-field piece, so its art stays legible", () => {
+    // The light-field pieces are drawn as dark art on near-white. Flooding them with a
+    // dark school colour turns them into a dark shape on a dark field — invisible.
+    const f = tileField(light, "#1B2A4A");
+    expect(f).not.toBe("#1B2A4A");
+    expect(luminance(f)).toBeGreaterThan(luminance("#1B2A4A"));
+  });
+});
+
+describe("the rim override reaches the lettering, not only the edge", () => {
+  it("threads the merrow with the override instead of the brass", () => {
+    const plain = textChenille(60, "#FFFFFF");
+    const school = textChenille(60, "#FFFFFF", "#8C1D40");
+    expect(plain.merrow.thread).toBe(BRASS.mid);
+    expect(school.merrow.thread).toBe(rimRamp("#8C1D40").mid);
+  });
+
+  it("keeps the dark-type case on the LIGHT stop, so the thread still contrasts", () => {
+    const school = textChenille(60, "#111111", "#8C1D40");
+    expect(school.merrow.thread).toBe(rimRamp("#8C1D40").light);
+    expect(luminance(school.merrow.thread)).toBeGreaterThan(luminance("#8C1D40"));
+  });
+
+  it("is a straight substitution — the school colour lands on the gold's own stop", () => {
+    const silver = "#D9DCE1";
+    expect(merrowThread("#FFFFFF", silver)).toBe(rimRamp(silver).mid);
+    expect(merrowThread("#111111", silver)).toBe(rimRamp(silver).light);
+  });
+
+  it("leaves the BRASS thread exactly where every existing frame was designed", () => {
+    expect(merrowThread("#FFFFFF")).toBe(BRASS.mid);
+    expect(merrowThread("#111111")).toBe(BRASS.light);
+  });
+
+  it("carries into the CSS twin, or the builder and the print sheet drift", () => {
+    const css = textChenilleCss(60, "#FFFFFF", "#8C1D40");
+    expect(css.WebkitTextStroke).toContain(rimRamp("#8C1D40").mid);
+    expect(textChenilleCss(60, "#FFFFFF").WebkitTextStroke).toContain(BRASS.mid);
   });
 });

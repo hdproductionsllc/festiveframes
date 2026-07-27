@@ -167,6 +167,8 @@ export function SchoolBrandImport() {
   const setSectionText = useDesignStore((s) => s.setSectionText);
   const setSectionMode = useDesignStore((s) => s.setSectionMode);
   const setFrameColor = useDesignStore((s) => s.setFrameColor);
+  const setTileFieldColor = useDesignStore((s) => s.setTileFieldColor);
+  const setRimColor = useDesignStore((s) => s.setRimColor);
 
   // The EXISTING upload flow, untouched. `begin` opens the aspect-locked crop modal
   // with its live print-resolution gate and commits through `placeImageSnappet` at the
@@ -310,6 +312,11 @@ export function SchoolBrandImport() {
     // area of the product, and recolouring only the banners was the gap that made
     // "use this school" feel like it had barely done anything.
     setFrameColor(k.frameColor);
+    // The BADGE fields and the RIM too. Recolouring the body alone left every tile on
+    // its own navy chip and the rim still gold, so the frame was the school's colour
+    // everywhere except the parts you actually look at.
+    setTileFieldColor(k.tileFieldColor);
+    setRimColor(k.rimColor);
     // Mode before text: the top bar cannot hold tiles, so `sectionSupportsTiles` has
     // to have run before the write rather than after it.
     setSectionMode("top", "text");
@@ -475,8 +482,9 @@ export function SchoolBrandImport() {
                 />
                 <span
                   aria-hidden
-                  className="h-6 w-6 shrink-0 rounded-[var(--ff-radius-sm,6px)] border"
-                  style={{ background: phase.kit.primary, borderColor: "var(--ff-line,#1e1b17)" }}
+                  title="Rim"
+                  className="h-6 w-6 shrink-0 rounded-full border"
+                  style={{ background: phase.kit.rimColor, borderColor: "var(--ff-line,#1e1b17)" }}
                 />
                 <p className="min-w-0 flex-1 truncate text-[12px] font-semibold text-[var(--ff-ink,#1e1b17)]">
                   {phase.kit.schoolName}
@@ -491,7 +499,8 @@ export function SchoolBrandImport() {
                 Use this school&apos;s branding
               </button>
               <p className="ff-help mt-1">
-                Recolours the frame and sets both banners. Change anything after.
+                Recolours the frame, the badges and the rim, and sets both banners.
+                Change anything after.
               </p>
             </div>
           )}

@@ -263,6 +263,22 @@ interface DesignState {
    * Absent on a design saved before this existed, so every read defaults.
    */
   frameColor: string;
+  /**
+   * School colour painted behind every badge, overriding each piece's own field.
+   *
+   * Recolouring the body alone left every badge on its own navy chip, so the frame
+   * was the school's colour everywhere except the parts you look at. `null` keeps
+   * each piece's designed field. See `tileField` for why a light-field piece gets a
+   * pale tint rather than the colour itself.
+   */
+  tileFieldColor: string | null;
+  /**
+   * School colour standing in for the BRASS rim. `null` keeps the gold.
+   *
+   * Meant for the LIGHTER of a school's two colours: a rim reads as metal because it
+   * runs bright-to-dark, so a dark rim on a dark body simply vanishes.
+   */
+  rimColor: string | null;
   slots: Record<string, PlacedTile>;
   bottomBar: BottomBarConfig; // draft for the NEXT text bar to be placed
   qrCode: QRCodeConfig;
@@ -383,6 +399,10 @@ interface DesignState {
   setPlateState: (abbr: string) => void;
   /** Recolour the frame body. `#rrggbb`. */
   setFrameColor: (hex: string) => void;
+  /** Recolour every badge's field. `null` restores each piece's own. */
+  setTileFieldColor: (hex: string | null) => void;
+  /** Replace the brass rim's colour. `null` restores the gold. */
+  setRimColor: (hex: string | null) => void;
   /** Replace the ENTIRE design in one shot (restoring a saved design). Resets
    *  history so undo doesn't cross the load boundary. */
   loadDesign: (design: LoadableDesign) => void;
@@ -409,6 +429,8 @@ export type LoadableDesign = Partial<
     | "designName"
     | "plateState"
     | "frameColor"
+    | "tileFieldColor"
+    | "rimColor"
     | "slots"
     | "textBars"
     | "bottomBar"
@@ -613,6 +635,8 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
         designName: "My Frame Design",
         plateState: "MO",
         frameColor: DEFAULT_FRAME_COLOR,
+        tileFieldColor: null,
+        rimColor: null,
         slots: {},
         bottomBar: { ...DEFAULT_BOTTOM_BAR },
         qrCode: { ...DEFAULT_QR_CODE },
@@ -1297,6 +1321,14 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
           set({ frameColor: hex, updatedAt: Date.now() });
         },
 
+        setTileFieldColor: (hex) => {
+          set({ tileFieldColor: hex, updatedAt: Date.now() });
+        },
+
+        setRimColor: (hex) => {
+          set({ rimColor: hex, updatedAt: Date.now() });
+        },
+
         setPlateState: (abbr) => {
           set({ plateState: abbr, updatedAt: Date.now() });
         },
@@ -1309,6 +1341,8 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
             designName: design.designName ?? "My Frame Design",
             plateState: design.plateState ?? "MO",
             frameColor: design.frameColor ?? DEFAULT_FRAME_COLOR,
+            tileFieldColor: design.tileFieldColor ?? null,
+            rimColor: design.rimColor ?? null,
             slots: design.slots ? { ...design.slots } : {},
             textBars: Array.isArray(design.textBars)
               ? design.textBars.map((b) => ({ ...b, config: { ...b.config } }))
@@ -1506,6 +1540,8 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
       partialize: (state) => ({
         designName: state.designName,
         frameColor: state.frameColor,
+        tileFieldColor: state.tileFieldColor,
+        rimColor: state.rimColor,
         plateState: state.plateState,
         slots: state.slots,
         textBars: state.textBars,

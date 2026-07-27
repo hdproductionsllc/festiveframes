@@ -63,6 +63,8 @@ import { bannerBands } from "@/lib/utils/banner-tiers";
 import { getPiece } from "@/data/sets";
 import {
   BRASS,
+  rimRamp,
+  tileField,
   artShadow,
   bevelAxis,
   bevelGradient,
@@ -137,6 +139,8 @@ function drawBevel(
   unit: number,
   /** Per-corner radii — wide where the badge faces the frame's outside. */
   radii: CornerRadii,
+  /** School colour standing in for the brass, or null for gold. */
+  rimColor?: string | null,
 ): void {
   const rim = rimMetrics(w, h, unit);
 
@@ -168,10 +172,11 @@ function drawBevel(
   // BRASS rim, thin. Stroked with a gradient along the same upper-left light axis
   // as the bevel, because a flat gold line reads as a yellow stroke while a
   // bright-to-dark run reads as metal.
+  const ramp = rimRamp(rimColor);
   const g = ctx.createLinearGradient(x, y, x + w, y + h);
-  g.addColorStop(0, BRASS.light);
-  g.addColorStop(0.5, BRASS.mid);
-  g.addColorStop(1, BRASS.dark);
+  g.addColorStop(0, ramp.light);
+  g.addColorStop(0.5, ramp.mid);
+  g.addColorStop(1, ramp.dark);
   ctx.beginPath();
   roundRect(
     ctx,
@@ -222,6 +227,10 @@ export interface SchoolDesign {
   frameConfig: FrameConfig;
   /** Frame body colour. Absent on a design saved before it existed. */
   frameColor?: string;
+  /** School colour behind every badge, or null/absent for each piece's own field. */
+  tileFieldColor?: string | null;
+  /** School colour standing in for the brass rim, or null/absent for gold. */
+  rimColor?: string | null;
   slots: Record<string, PlacedTile>;
   textBars: PlacedTextBar[];
   qrCode: QRCodeConfig;
@@ -391,6 +400,8 @@ function drawTextBar(
   bar: PlacedTextBar,
   x: number, y: number, w: number, h: number,
   qrImg: DrawableImage | null,
+  /** School colour standing in for the brass merrow thread round the lettering. */
+  rimColor?: string | null,
 ) {
   const cfg = bar.config;
   ctx.save();
@@ -415,7 +426,7 @@ function drawTextBar(
   {
     const bx = x + w / 2;
     const by = y + h / 2 + h * 0.04;
-    const em = textChenille(fontPx, cfg.textColor);
+    const em = textChenille(fontPx, cfg.textColor, rimColor);
     ctx.lineJoin = "round";
     ctx.miterLimit = 2;
 
@@ -493,6 +504,8 @@ function drawTextBlock(
   /** One grid cell — keeps the bar's edge identical to the badges' and to the
    *  other bar, regardless of how many rows tall the panel is. */
   unit: number,
+  /** School colour standing in for the brass, so the bars match the badges. */
+  rimColor?: string | null,
 ) {
   const bevel = bevelMetrics(w, h, cfg.backgroundColor, unit);
   // A banner never reaches a frame corner on this geometry — the wings do, and they
@@ -512,7 +525,7 @@ function drawTextBlock(
   grad.addColorStop(1, gBot);
   ctx.fillStyle = grad;
   ctx.fillRect(x, y, w, h);
-  drawBevel(ctx, x, y, w, h, bevel, cfg.backgroundColor, unit, radii);
+  drawBevel(ctx, x, y, w, h, bevel, cfg.backgroundColor, unit, radii, rimColor);
 
   // Clear the chrome before the text starts. Derived from the chrome itself rather
   // than guessed alongside it, so the bevel can never cut into a descender again.
@@ -660,7 +673,7 @@ export function drawSchoolFrame(
 
     ctx.save();
     const piece0 = !tile.image ? getPiece(tile.pieceId) : undefined;
-    const field = piece0 ? tileBackground(piece0) : "#ffffff";
+    const field = piece0 ? tileField(piece0, design.tileFieldColor) : "#ffffff";
     const bevel = bevelMetrics(w, h, field, m.tileSize);
     // Open up whichever corners face the frame's OUTSIDE, so the whole assembly
     // reads as one rounded part rather than a grid of separately-rounded squares.
@@ -726,7 +739,7 @@ export function drawSchoolFrame(
     }
     // Faux bevel LAST, so it sits over the art and reads as the badge's moulding.
     // Still inside the clip, so it follows the rounded corner.
-    drawBevel(ctx, slot.x, slot.y, w, h, bevel, field, m.tileSize, radii);
+    drawBevel(ctx, slot.x, slot.y, w, h, bevel, field, m.tileSize, radii, design.rimColor);
     ctx.restore();
   }
 
@@ -743,7 +756,7 @@ export function drawSchoolFrame(
     const box = sectionBounds(id, frameSlots, config);
     if (!box) continue;
     if (sec.mode === "text" && sec.text) {
-      drawTextBlock(ctx, sec.text, box.x, box.y, box.width, box.height, m.tileSize);
+      drawTextBlock(ctx, sec.text, box.x, box.y, box.width, box.height, m.tileSize, design.rimColor);
     } else if (sec.mode === "image") {
       const img = images.sections.get(id);
       ctx.save();
@@ -760,7 +773,7 @@ export function drawSchoolFrame(
   //    + base bottom row).
   for (const bar of textBars) {
     const rect = schoolBannerRect(bar, m);
-    drawTextBar(ctx, bar, rect.x, rect.y, rect.width, rect.height, images.qr);
+    drawTextBar(ctx, bar, rect.x, rect.y, rect.width, rect.height, images.qr, design.rimColor);
   }
 
   // 6) BACKING. Every transparent pixel gets opaque black behind it.

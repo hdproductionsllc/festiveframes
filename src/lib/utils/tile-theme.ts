@@ -56,6 +56,34 @@ export function tileBackground(piece: Pick<TilePiece, "backgroundColor">): strin
   return own && luminance(own) > 0.6 ? TILE_BG.white : TILE_BG.navy;
 }
 
+/**
+ * A tile's field once a SCHOOL COLOUR override is in play.
+ *
+ * Recolouring the frame body alone was not enough — every badge still sat on its own
+ * navy chip, so a Marquette frame was Marquette-coloured everywhere except the parts
+ * you actually look at. This is the one decision both renderers and the palette call,
+ * so the swatch you pick, the tile on the frame and the printed sheet cannot disagree.
+ *
+ * It is NOT a blanket replacement, and that is the whole subtlety. Some art is drawn
+ * DARK for a light field — a black chess knight, navy line-work — and painting a dark
+ * school colour behind it makes it vanish. So the override preserves the light/dark
+ * RELATIONSHIP the artist chose: a piece whose own field was light gets a pale tint of
+ * the school colour, everything else gets the colour itself. The frame still reads as
+ * one scheme, and nothing becomes invisible to make it.
+ */
+export function tileField(
+  piece: Pick<TilePiece, "backgroundColor">,
+  override?: string | null,
+): string {
+  const own = tileBackground(piece);
+  if (!override) return own;
+  const wantsLight = luminance(own) > 0.6;
+  if (!wantsLight) return override;
+  // A pale wash of the school colour: obviously theirs, still light enough that dark
+  // art reads. `shift` toward white rather than a fixed grey, so it stays in-hue.
+  return shift(override, luminance(override) > 0.6 ? 0.25 : 0.82);
+}
+
 // ─── Faux bevel ─────────────────────────────────────────────────────────────
 
 /**
@@ -278,6 +306,8 @@ export function tileEdgeCss(
   /** ONE grid cell on screen, so the edge is the same width on a 1x1 badge, a 3x3
    *  badge, the one-row top bar and the two-row bottom panel. */
   unit: number = size,
+  /** School colour standing in for the brass rim, or null for gold. */
+  rimColor?: string | null,
 ) {
   const bevel = bevelMetrics(boxW, boxH, background, unit);
   const rim = rimMetrics(boxW, boxH, unit);
@@ -289,7 +319,7 @@ export function tileEdgeCss(
     bevelWidth: bevel.thickness,
     bevelRadius: Math.max(1, bevel.radius - rim.inset - rim.width),
     bevelGradient: bevelGradientCss(background, boxW, boxH),
-    brassGradient: brassGradientCss(),
+    brassGradient: brassGradientCss(rimColor),
     /** Hairline against the neighbouring badge, plus the lift off the frame. */
     outerShadow: [
       "inset 0 0 0 1px rgba(0,0,0,0.25)",
@@ -366,8 +396,43 @@ export function chromeInset(
 }
 
 /** The brass run as a CSS gradient, on the same upper-left light axis as the canvas. */
-export function brassGradientCss(): string {
-  return `linear-gradient(135deg, ${BRASS.light} 0%, ${BRASS.mid} 50%, ${BRASS.dark} 100%)`;
+/**
+ * The rim's three-stop ramp — brass by default, or a school colour standing in for it.
+ *
+ * The gold rim is the product's signature edge, and on a school frame the owner
+ * wanted the option to spend that signature on the school instead. Schools almost
+ * always have TWO colours, and the LIGHTER of the pair is the one that can carry it:
+ * a rim is read as metal because it runs bright-to-dark, so a dark navy rim on a dark
+ * navy body disappears while a gold or silver or vegas-gold one reads as an edge.
+ *
+ * A ramp rather than a flat colour for the same reason the brass is a ramp: a single
+ * hex reads as a coloured line drawn round the tile, and a bright-to-dark run reads
+ * as a machined edge catching the light.
+ */
+export function rimRamp(override?: string | null): { light: string; mid: string; dark: string } {
+  if (!override) return BRASS;
+  return {
+    light: shift(override, 0.42),
+    mid: override,
+    dark: shift(override, -0.42),
+  };
+}
+
+/**
+ * The thread colour for the merrow border round banner lettering — the letterman-jacket
+ * outline. Straight substitution: wherever the gold was, the school colour goes, on the
+ * SAME stop of the SAME ramp the brass used.
+ */
+export function merrowThread(textColour: string, rimColor?: string | null): string {
+  const ramp = rimRamp(rimColor);
+  // Light type takes the body stop, dark type the lit one — the brass rule, unchanged,
+  // so a frame with no override is byte-identical to the one that shipped.
+  return luminance(textColour) > 0.6 ? ramp.mid : ramp.light;
+}
+
+export function brassGradientCss(override?: string | null): string {
+  const r = rimRamp(override);
+  return `linear-gradient(135deg, ${r.light} 0%, ${r.mid} 50%, ${r.dark} 100%)`;
 }
 
 /**
@@ -432,8 +497,12 @@ export function ringCss(fill: string, gradient: string): string {
  * `depth` stays a fraction of the font size, not a fixed pixel: at 1px a headline
  * looks flat and a tagline looks smeared.
  */
-export function textEmboss(fontPx: number, textColour: string) {
+export function textEmboss(fontPx: number, textColour: string, rimColor?: string | null) {
   const lightText = luminance(textColour) > 0.6;
+  // The merrow thread is the SAME metal as the rim, so it takes the same override.
+  // A frame whose badge edges are vegas gold and whose lettering is still brass reads
+  // as two different products bolted together.
+  const thread = merrowThread(textColour, rimColor);
   return {
     depth: Math.max(1, fontPx * 0.022),
     // Light type cannot get lighter, so its depth comes almost entirely from the
@@ -462,8 +531,8 @@ export function textEmboss(fontPx: number, textColour: string) {
     merrow: {
       width: Math.max(2, fontPx * 0.075),
       seat: Math.max(1, fontPx * 0.028),
-      /** Gold thread on dark type, a dark thread on light type — always a contrast. */
-      thread: lightText ? BRASS.mid : BRASS.light,
+      /** Chosen for CONTRAST against the type — see `merrowThread`. */
+      thread,
       seatColour: "rgba(0,0,0,0.55)",
     },
   };
@@ -478,8 +547,8 @@ export function textEmboss(fontPx: number, textColour: string) {
  * Returns the same shape as `textEmboss` so the two are interchangeable at the call
  * site and the renderers do not branch.
  */
-export function textChenille(fontPx: number, textColour: string) {
-  const base = textEmboss(fontPx, textColour);
+export function textChenille(fontPx: number, textColour: string, rimColor?: string | null) {
+  const base = textEmboss(fontPx, textColour, rimColor);
   return {
     ...base,
     depth: base.depth * 0.55,
@@ -504,12 +573,12 @@ export function textChenille(fontPx: number, textColour: string) {
  * the innermost text-shadow ring instead, which is close enough at banner sizes and
  * is the only option that does not need a duplicated DOM node per line.
  */
-export function textChenilleCss(fontPx: number, textColour: string): {
+export function textChenilleCss(fontPx: number, textColour: string, rimColor?: string | null): {
   textShadow: string;
   WebkitTextStroke: string;
   paintOrder: "stroke fill";
 } {
-  const e = textChenille(fontPx, textColour);
+  const e = textChenille(fontPx, textColour, rimColor);
   const d = e.depth.toFixed(2);
   const s = e.shadow;
   const seat = (e.merrow.seat / 2).toFixed(2);
