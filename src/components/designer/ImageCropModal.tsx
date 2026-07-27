@@ -315,7 +315,7 @@ export function ImageCropModal({ file, targetInches, panelLabel, onCancel, onCon
             type="button"
             onClick={onCancel}
             aria-label="Close"
-            className="ff-btn ff-btn-secondary grid h-7 w-7 place-items-center p-0"
+            className="ff-btn ff-btn-secondary ff-btn-icon"
           >
             <svg
               aria-hidden

@@ -76,7 +76,7 @@ export function SectionEditor() {
               rows={selectedSectionId === "bottom" ? 2 : 3}
               onChange={(e) => setSectionText(selectedSectionId, { text: e.target.value.slice(0, MAX_CHARS) })}
               placeholder={selectedSectionId === "bottom" ? "GO WILDCATS" : "School name,\nslogan,\nyear..."}
-              className="ff-field w-full resize-none text-[15px] leading-tight"
+              className="ff-field w-full resize-none leading-tight"
             />
           </label>
 

@@ -113,7 +113,7 @@ export function SnappetSizeControl() {
           aria-label={`Shrink ${label === "W" ? "width" : "height"}`}
           disabled={belowMin || !seatable(dec.cols, dec.rows)}
           onClick={() => apply(dec.cols, dec.rows)}
-          className="ff-btn ff-btn-secondary grid h-8 w-8 place-items-center p-0"
+          className="ff-btn ff-btn-secondary ff-btn-icon-lg"
         >
           <StepIcon dir="minus" />
         </button>
@@ -123,7 +123,7 @@ export function SnappetSizeControl() {
           aria-label={`Grow ${label === "W" ? "width" : "height"}`}
           disabled={!seatable(inc.cols, inc.rows)}
           onClick={() => apply(inc.cols, inc.rows)}
-          className="ff-btn ff-btn-secondary grid h-8 w-8 place-items-center p-0"
+          className="ff-btn ff-btn-secondary ff-btn-icon-lg"
         >
           <StepIcon dir="plus" />
         </button>

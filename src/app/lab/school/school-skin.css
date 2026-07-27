@@ -259,7 +259,30 @@
   border-color: var(--ff-line);
   cursor: not-allowed;
 }
+
+/* SIZE MODIFIERS LIVE HERE, NOT AT THE CALL SITE.
+   `.ff-btn` and a Tailwind utility like `p-0` or `grid` have the SAME specificity
+   (0,1,0), so which one wins is decided by stylesheet order — and this file loads
+   after globals.css, so `.ff-btn` silently beats every utility the call site adds.
+   That is not theoretical: the crop modal's close button was written
+   `ff-btn ff-btn-secondary grid h-7 w-7 place-items-center p-0`, `.ff-btn` won on
+   both `display` and `padding`, and the 28px button was left with a 4px content box
+   — which shrank its 16px flex-item ✕ down to TWO PIXELS WIDE. On screen it read as
+   an empty rounded square, and it took a 6x nearest-neighbour crop to see at all.
+   So: any dimension a button variant needs is a class in here. */
 .ff-btn-sm { padding: 5px 10px; font-size: 12px; }
+/* Square, icon-only. `place-items` is irrelevant — the flex centring above does it. */
+.ff-btn-icon { width: 28px; height: 28px; padding: 0; }
+.ff-btn-icon-lg { width: 32px; height: 32px; padding: 0; }
+.ff-btn-block { width: 100%; padding-top: 10px; padding-bottom: 10px; }
+
+/* The second half of that bug: an inline SVG inside a flex button is a flex ITEM,
+   and flex items shrink. Every icon in the re-skin is a fixed 16px (14px in a
+   stepper) and must stay one. */
+.ff-btn svg,
+.ff-chip svg {
+  flex: none;
+}
 
 /* A genuine pill — dismiss chips and phrase chips only. */
 .ff-chip {
@@ -411,9 +434,28 @@
    `border-brand-gold/60` are NOT in build-skin.css either — they resolve to the
    globals `#FFD700`, so each needs its own selector. */
 .build-skin.school-skin .bg-brand-gold\/15 { background-color: var(--ff-sunk) !important; }
-.build-skin.school-skin .border-brand-gold\/60 { border-color: var(--ff-line) !important; }
-.build-skin.school-skin [data-tour="tiles"] .font-extrabold { font-weight: 500 !important; }
-.build-skin.school-skin [data-tour="tiles"] p { letter-spacing: 0 !important; }
+.build-skin.school-skin [data-tour="tiles"] .border-brand-gold\/60 {
+  border-color: var(--ff-line) !important;
+  border-width: 1px !important;
+}
+/* Both palette hints — the desktop one-liner and the mobile pill. They were 12px/600
+   and 13px/800; an instruction you read once should not be set heavier than the
+   headings. `p` is a safe anchor inside the palette: PaletteTile and ArmedBanner
+   both use spans, so these two elements are the only paragraphs in here. */
+.build-skin.school-skin [data-tour="tiles"] p {
+  font-weight: 400 !important;
+  font-size: 12px !important;
+  letter-spacing: 0 !important;
+}
+/* The mobile tray's Tools/Done toggle. `rounded-full` on a rectangular action button
+   is a sticker-era tic — 999px is reserved for genuine pills. */
+.build-skin.school-skin [data-tour="tiles"] button[aria-expanded] {
+  border-radius: var(--ff-radius) !important;
+  border: 1px solid var(--ff-line-strong) !important;
+  background-color: var(--ff-card) !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+}
 
 /* ── QuickActions (shared) — Fill All / Random / Mirror / Clear / Undo / Redo ──
    Four saturated fills (blue, purple, pink, red) plus a cream, each with a 2px ink

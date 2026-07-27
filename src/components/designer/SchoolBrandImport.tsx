@@ -593,7 +593,7 @@ export function SchoolBrandImport() {
                     key={id}
                     type="button"
                     onClick={() => choosePanel(placing.file, placing.aspect, id)}
-                    className="ff-btn ff-btn-secondary py-3"
+                    className="ff-btn ff-btn-secondary ff-btn-block"
                   >
                     {SECTION_LABELS[id]}
                   </button>

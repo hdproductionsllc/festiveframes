@@ -92,7 +92,7 @@ export function UploadPhotoButton() {
           is the reliable pattern: tapping the label opens the picker AND the native
           label→input link fires `change` on selection. A `display:none` input opens
           the picker but often never fires `change` on iOS — the tap looked dead. */}
-      <label className="ff-btn ff-btn-primary w-full cursor-pointer py-2.5">
+      <label className="ff-btn ff-btn-primary ff-btn-block cursor-pointer">
         <input
           type="file"
           accept="image/*"
@@ -147,7 +147,7 @@ export function UploadPhotoButton() {
                   key={id}
                   type="button"
                   onClick={() => choosePanel(phase.file, phase.aspect, id)}
-                  className="ff-btn ff-btn-secondary py-3"
+                  className="ff-btn ff-btn-secondary ff-btn-block"
                 >
                   {SECTION_LABELS[id]}
                 </button>
