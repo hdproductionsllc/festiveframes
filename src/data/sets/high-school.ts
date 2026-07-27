@@ -86,6 +86,71 @@ export const highSchoolSet: TileSet = {
   // Ordered so related activities sit together in one flat palette:
   // athletics → academic/competition clubs → arts & media → student government.
   pieces: [
+    // ─── EMBROIDERED PATCH series ──────────────────────────────
+    //
+    // Generated art, cut from a magenta chroma field by chroma-plane keying with the
+    // measured backdrop un-multiplied out of every partial-alpha pixel — so the edges
+    // carry no matte and the gold merrow border survives intact on any field colour.
+    // The merrow border is the series' unifier: it echoes the badge's own brass rim,
+    // so a patch and the frame read as one product rather than a sticker on a part.
+    //
+    // These lead the palette because they are the current quality bar; the flat
+    // originals below stay until they are replaced in kind.
+    {
+      id: `${H}:soccer-patch`,
+      setId: H,
+      name: "Soccer (patch)",
+      artworkUrl: `${A}/soccer-patch.png`,
+      emoji: "⚽",
+      backgroundColor: NAVY,
+      defaultSpan: PREFERRED,
+    },
+    {
+      id: `${H}:football-patch`,
+      setId: H,
+      name: "Football (patch)",
+      artworkUrl: `${A}/football-patch.png`,
+      emoji: "🏈",
+      backgroundColor: NAVY,
+      defaultSpan: PREFERRED,
+    },
+    {
+      id: `${H}:basketball-patch`,
+      setId: H,
+      name: "Basketball (patch)",
+      artworkUrl: `${A}/basketball-patch.png`,
+      emoji: "🏀",
+      backgroundColor: NAVY,
+      defaultSpan: PREFERRED,
+    },
+    {
+      id: `${H}:volleyball-patch`,
+      setId: H,
+      name: "Volleyball (patch)",
+      artworkUrl: `${A}/volleyball-patch.png`,
+      emoji: "🏐",
+      backgroundColor: NAVY,
+      defaultSpan: PREFERRED,
+    },
+    {
+      id: `${H}:softball-patch`,
+      setId: H,
+      name: "Softball (patch)",
+      artworkUrl: `${A}/softball-patch.png`,
+      emoji: "🥎",
+      backgroundColor: NAVY,
+      defaultSpan: PREFERRED,
+    },
+    {
+      id: `${H}:baseball-patch`,
+      setId: H,
+      name: "Baseball (patch)",
+      artworkUrl: `${A}/baseball-patch.png`,
+      emoji: "⚾",
+      backgroundColor: NAVY,
+      defaultSpan: PREFERRED,
+    },
+
     // ─── Athletics ─────────────────────────────────────────────
     {
       id: `${H}:basketball`,
