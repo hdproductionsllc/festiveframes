@@ -77,7 +77,6 @@ import {
   rimMetrics,
   shift,
   textChenille,
-  threadStitch,
   tileBackground,
 } from "@/lib/utils/tile-theme";
 import { getFullRes } from "@/lib/utils/image-store";
@@ -323,74 +322,6 @@ export function schoolBannerRect(
 // ─── Small canvas helpers (copied from compose-frame; NOT imported to keep it
 //     untouched). Kept intentionally identical so the two proofs read the same. ──
 
-
-/**
- * A repeating SATIN-STITCH swatch, as a canvas pattern to fill letter faces with.
- *
- * Built at 45 degrees in a square tile of side `pitch`, which is the one angle that
- * tiles seamlessly from a square without trigonometry: the corner-to-corner line
- * leaves matching half-stitches on all four edges. Three copies are drawn — the line
- * itself plus one wrapped each way — so the stitches meeting at a tile boundary line
- * up instead of stepping.
- *
- * Returns null when the environment has no canvas to build a swatch on, and callers
- * fall back to a flat fill. A missing texture is a lesser failure than a crash, and
- * this runs in node (tests, @napi-rs) as well as the browser.
- */
-function threadFill(
-  ctx: CanvasRenderingContext2D,
-  fontPx: number,
-  textColour: string,
-): CanvasPattern | null {
-  const t = threadStitch(fontPx, textColour);
-  const p = t.pitch;
-  try {
-    const make = createSwatch(ctx, p);
-    if (!make) return null;
-    const sctx = make.getContext("2d") as unknown as CanvasRenderingContext2D;
-    if (!sctx) return null;
-
-    // Base is the shadowed valley; the ridge is painted on top of it.
-    sctx.fillStyle = t.shadow;
-    sctx.fillRect(0, 0, p, p);
-    sctx.strokeStyle = t.highlight;
-    sctx.lineWidth = t.ridge;
-    sctx.lineCap = "butt";
-    for (const off of [-p, 0, p]) {
-      sctx.beginPath();
-      sctx.moveTo(off, 0);
-      sctx.lineTo(off + p, p);
-      sctx.stroke();
-    }
-    return ctx.createPattern(make as unknown as CanvasImageSource, "repeat");
-  } catch {
-    return null;
-  }
-}
-
-/**
- * An offscreen square canvas, in whichever environment we are running in.
- *
- * The browser gets `document.createElement`. Node does not have one, and importing
- * `@napi-rs/canvas` here would drag a native module into the browser bundle — so it
- * builds one from the CLASS OF THE CANVAS WE WERE HANDED. `ctx.canvas.constructor` is
- * `Canvas` under @napi-rs and takes (width, height), which is the only way to get a
- * second surface without either an import or a signature change to `drawSchoolFrame`.
- * Anything unexpected throws and the caller falls back to a flat fill.
- */
-function createSwatch(ctx: CanvasRenderingContext2D, size: number): HTMLCanvasElement | null {
-  if (typeof document !== "undefined") {
-    const c = document.createElement("canvas");
-    c.width = size;
-    c.height = size;
-    return c;
-  }
-  const Ctor = (ctx.canvas as unknown as { constructor: new (w: number, h: number) => unknown })
-    ?.constructor;
-  if (typeof Ctor !== "function") return null;
-  return new Ctor(size, size) as HTMLCanvasElement;
-}
-
 /** Append a rounded rect to the CURRENT path without starting a new one, so two of
  *  them can be combined into a ring and filled or clipped "evenodd". */
 /** A single radius, or one per corner so a badge can open up only the corners that
@@ -505,9 +436,7 @@ function drawTextBar(
     ctx.fillStyle = em.highlight;
     ctx.fillText(text, bx - em.depth, by - em.depth);
 
-    // The FACE, filled with satin stitch. Falls back to flat colour when the
-    // environment cannot build a swatch — a missing texture beats a crash.
-    ctx.fillStyle = threadFill(ctx, fontPx, cfg.textColor) ?? cfg.textColor;
+    ctx.fillStyle = cfg.textColor;
     ctx.fillText(text, bx, by);
   }
   try { (ctx as CanvasRenderingContext2D & { letterSpacing?: string }).letterSpacing = "0px"; } catch { /* unsupported */ }
@@ -646,7 +575,7 @@ function drawTextBlock(
       ctx.fillStyle = em.highlight;
       ctx.fillText(ln, tx - em.depth, ty - em.depth);
 
-      ctx.fillStyle = threadFill(ctx, fontPx, cfg.textColor) ?? cfg.textColor;
+      ctx.fillStyle = cfg.textColor;
       ctx.fillText(ln, tx, ty);
       ty += lineBox;
     }

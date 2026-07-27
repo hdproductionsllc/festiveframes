@@ -31,7 +31,6 @@ import dns from "node:dns/promises";
 import net from "node:net";
 
 import { sniffImageFormat, type SniffResult } from "./raster-safety";
-import type { PageOutcome } from "./types";
 
 // ─── the truthful identity we present ────────────────────────────────────────
 
@@ -534,46 +533,6 @@ export async function fetchGuarded(
     return { ok: false, failure: { kind: "network" } };
   } finally {
     clearTimeout(timer);
-  }
-}
-
-/**
- * Map a transport-level failure onto the pure taxonomy (constraint 6).
- *
- * Lives here rather than in the route because it is the one piece of the taxonomy
- * that is ABOUT the guard, and because a route handler cannot be unit-tested in
- * this sandbox while a plain function can. Every branch is a decision worth
- * arguing with:
- *
- *   - `guard` → `unreachable`. THE ONE OPAQUE MESSAGE. It covers both "DNS did not
- *     resolve" and "that address is 10.0.0.5 and we will not touch it", identically,
- *     because two different sentences would turn this endpoint into an
- *     internal-network scanner: submit a URL, read the error text, learn what is
- *     listening behind our firewall. It also covers a REDIRECT hop the guard
- *     refused, which is the same leak by a slower route.
- *   - `too-many-redirects` → `unreachable`. A redirect loop is indistinguishable
- *     from a broken address to the person who pasted it, and naming it would invite
- *     a retry that loops identically.
- *   - `network` → `unreachable`. A dropped connection is genuinely ambiguous; we do
- *     not know whether the host exists.
- *   - `timeout` → `timeout`, carrying the ms so the copy can quote it. Kept separate
- *     from `unreachable` on purpose: a school site that is merely slow is the single
- *     most common non-success here, and it is the one case where "try again" is
- *     honest advice rather than a button that cannot work.
- *   - `too-large` → `not-html`. Slightly lossy and chosen deliberately: 2 MB of
- *     something is not a school home page, and "that link isn't a web page" points
- *     the user at the right fix (paste the home page) where a size number would not.
- */
-export function outcomeForFailure(failure: FetchFailure): PageOutcome {
-  switch (failure.kind) {
-    case "timeout":
-      return { kind: "timeout", ms: failure.ms };
-    case "too-large":
-      return { kind: "not-html", contentType: "a page too large to read" };
-    case "guard":
-    case "network":
-    case "too-many-redirects":
-      return { kind: "unreachable" };
   }
 }
 

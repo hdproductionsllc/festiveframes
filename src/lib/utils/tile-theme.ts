@@ -478,42 +478,6 @@ export function textEmboss(fontPx: number, textColour: string) {
  * Returns the same shape as `textEmboss` so the two are interchangeable at the call
  * site and the renderers do not branch.
  */
-/**
- * Geometry for the SATIN-STITCH thread that fills a letter's face.
- *
- * Pure numbers only — the actual swatch is painted by whichever renderer asks, because
- * a canvas pattern and a CSS repeating-linear-gradient are different objects built from
- * the same description. Keeping the description here is what stops the two drifting.
- *
- * Sized off the FONT, not the bar: thread is a physical thing, so the stitch pitch has
- * to be the same on a one-row banner and a two-row one, exactly like the rim and the
- * bevel. A pitch that scaled with the panel would read as a different fabric per bar.
- *
- * 45 degrees is not arbitrary. A square tile of side `pitch` with a line corner to
- * corner repeats seamlessly at 45 and at no other angle without trigonometry in the
- * tiling, so this is the one direction that costs nothing to make continuous. It also
- * runs across the upper-left light axis rather than along it, so each stitch catches a
- * different amount of the key light and the face reads as ribbed instead of striped.
- */
-export function threadStitch(fontPx: number, textColour: string) {
-  const light = luminance(textColour) > 0.6;
-  return {
-    /** Centre-to-centre spacing of one stitch, px. */
-    pitch: Math.max(2, Math.round(fontPx * 0.055)),
-    /** How wide the lit ridge is within that pitch. */
-    ridge: Math.max(1, Math.round(fontPx * 0.055 * 0.45)),
-    angleDeg: 45,
-    /**
-     * Contrast is deliberately LOW. The letter still has to read as one colour from
-     * arm's length — the thread is a surface quality, not a pattern, and at the ~8%
-     * that looked right in a 300 DPI render it survives print while staying invisible
-     * as stripes. Light type darkens (it cannot get brighter); dark type does both.
-     */
-    highlight: light ? shift(textColour, -0.05) : shift(textColour, 0.14),
-    shadow: light ? shift(textColour, -0.13) : shift(textColour, -0.10),
-  };
-}
-
 export function textChenille(fontPx: number, textColour: string) {
   const base = textEmboss(fontPx, textColour);
   return {
