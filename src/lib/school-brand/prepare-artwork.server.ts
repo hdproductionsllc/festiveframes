@@ -157,6 +157,34 @@ const reject = (c: LogoCandidate, reason: string, detail: string): PrepareResult
   rejected: { url: c.url, kind: c.kind, reason, detail },
 });
 
+/**
+ * May these downloaded bytes be treated as SVG source?
+ *
+ * Pure, exported and separately tested because the branch it guards cannot be: the
+ * SVG-file path needs a real fetch, and every CONNECT in this sandbox is answered
+ * "403". The rule is the part worth pinning; see the long note at its call site in
+ * `prepareCandidate` for the SIGSEGV it prevents.
+ */
+export function checkSvgBytes(
+  bytes: Uint8Array,
+  contentType?: string,
+): { ok: true } | { ok: false; format: string; detail: string } {
+  const verdict = sniffImageType(bytes, contentType);
+  // `!verdict.decode && verdict.svg` — the sniffer placed it as SVG text.
+  if (!verdict.decode && verdict.svg) return { ok: true };
+  // Text we could not place. Allowed on purpose: `sniffImageFormat` only looks for
+  // `<svg` in the first 256 bytes, and a real Illustrator export can open with a
+  // licence comment or a DTD that pushes the tag past that window, so demanding a
+  // positive SVG verdict would refuse legitimate crests. Nothing binary lands here —
+  // every crashing container has its own magic bytes and is named above.
+  if (verdict.sniff.format === "unknown") return { ok: true };
+  return {
+    ok: false,
+    format: verdict.sniff.format,
+    detail: `This .svg address served ${verdict.sniff.format.toUpperCase()} instead, which is not on the decoder allowlist.`,
+  };
+}
+
 /** Encode a canvas to a PNG data URL, reporting the byte cost so budgets can be kept. */
 function encode(canvas: Canvas): PreparedImage {
   const buf = canvas.toBuffer("image/png");
@@ -437,6 +465,31 @@ export async function prepareCandidate(c: LogoCandidate): Promise<PrepareResult>
     }
 
     if (c.kind === "svg-file") {
+      // ── the allowlist has to run HERE TOO (constraint 2) ──
+      //
+      // MEASURED, and it was a live process kill. `kind` is decided from the URL
+      // alone (`/\.svg$/` in `collectLogoCandidates`), never from the bytes, so a
+      // host that answers `/logo.svg` with a TIFF — directly, or via a redirect —
+      // took this branch and reached `decodeVector` without ever passing
+      // `sniffImageType`. Verified against the installed @napi-rs/canvas 1.0.1:
+      // a complete little-endian TIFF handed to `loadImage` exits the process with
+      // 139 (SIGSEGV), and it STILL exits 139 after the `TextDecoder` round-trip
+      // below, because "II*\0" is pure ASCII and survives it intact while the body
+      // turns into replacement characters. The route's try/catch cannot help — a
+      // signal is not an exception — so the whole request, and every other request
+      // sharing the container, dies. That is precisely the failure the allowlist
+      // exists to prevent, and the raster branch was the only branch honouring it.
+      //
+      // The test is "did the sniffer positively identify BINARY", not "did it say
+      // svg". `sniffImageFormat` only recognises SVG from the first 256 bytes, and a
+      // real Illustrator file can open with a long comment or a DTD that pushes
+      // `<svg` past that window — demanding a positive `svg` verdict would refuse
+      // legitimate crests. `unknown` therefore stays allowed (it is text we could not
+      // place, which `svgRenderRisks` and `loadImage` handle between them); anything
+      // the sniffer NAMES is a binary container that has no business in an SVG slot.
+      const gate = checkSvgBytes(res.bytes, res.contentType);
+      if (!gate.ok) return reject(c, "undecodable-format", gate.detail);
+
       // SVG is text, so for a LINKED file the risk scan can only run on the
       // downloaded bytes — which is why the source-level gate cannot live entirely
       // in the pure package, and why it is repeated here rather than trusted from

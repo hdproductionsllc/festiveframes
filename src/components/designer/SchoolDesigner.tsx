@@ -30,6 +30,7 @@ import { SCHOOL_SURFACED_SET_IDS } from "@/data/sets";
 import { SectionControls } from "./SectionControls";
 import { SectionEditor } from "./SectionEditor";
 import { UploadPhotoButton } from "./UploadPhotoButton";
+import { SchoolBrandImport } from "./SchoolBrandImport";
 import { SnappetRecropModal } from "./SnappetRecropModal";
 import { SnappetSizeControl } from "./SnappetSizeControl";
 import { ArmedBanner } from "@/components/tiles/ArmedBanner";
@@ -431,6 +432,17 @@ export function SchoolDesigner() {
               ever offered a worse answer. `PanelWidthToggle` and the underlying
               `setWingColumns` are intact for when a second size is a real product. */}
           <div className="order-1 lg:order-none min-w-0 flex flex-col gap-4">
+            {/* Brand import leads the rail, ABOVE the palette. It is the once-per-design
+                first move — paste the school's website, take the crest and the name —
+                and everything below it is what you reach for repeatedly afterwards. It
+                would be invisible under a 42vh scrolling palette, and a step you take
+                first should not be the one you have to scroll to find.
+
+                It PLACES NOTHING itself: an "Add to frame" tap builds a File from the
+                candidate's full-res PNG and hands it to the same `useSnappetUpload.begin`
+                that UploadPhotoButton calls, so the aspect-locked crop, the live DPI
+                gate and the 2x2 minTileSpan floor all still apply. */}
+            <SchoolBrandImport />
             <TilePalette surfacedSetIds={SCHOOL_SURFACED_SET_IDS} />
             <UploadPhotoButton />
             <SectionControls />

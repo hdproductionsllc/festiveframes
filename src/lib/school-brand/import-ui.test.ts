@@ -27,7 +27,7 @@ import {
   candidateFileName,
   candidateNotes,
   dataUrlToFile,
-  dataUrlToFile as _dataUrlToFile,
+  groupBannerFills,
   isAddable,
   isSubmittableUrl,
   performableActions,
@@ -36,8 +36,6 @@ import {
 import { buildEmptyState, describeOutcome, parseSchoolPage } from "./index";
 import type { PrepareResult, ScanCandidate } from "./prepare-artwork.server";
 import type { PageOutcome, TextCandidate } from "./types";
-
-void _dataUrlToFile;
 
 // ─── fixtures ────────────────────────────────────────────────────────────────
 
@@ -287,9 +285,56 @@ describe("candidateNotes", () => {
     expect(n.repairs).toHaveLength(1);
   });
 
-  it("names the alt text in the title so a parent can match it to their own screen", () => {
-    expect(candidateNotes(candidate()).title).toContain("Lincoln High School logo");
-    expect(candidateNotes(candidate({ alt: undefined })).title).toBe("Logo image");
+  // Regression: the card renders two-up in a 340px rail, so `Logo image — "Lincoln
+  // High School logo"` on one line truncated to `LOGO IMAGE — "LIN…` and threw away
+  // the only part that tells two crests apart. Found by looking at the rendered page.
+  it("keeps the kind short and the alt on its own field", () => {
+    const n = candidateNotes(candidate());
+    expect(n.title).toBe("Logo image");
+    expect(n.alt).toBe("Lincoln High School logo");
+    expect(candidateNotes(candidate({ alt: undefined })).alt).toBeNull();
+    expect(candidateNotes(candidate({ alt: "   " })).alt).toBeNull();
+  });
+
+  it("keeps every kind label short enough for a 150px card line", () => {
+    const kinds: ScanCandidate["kind"][] = [
+      "inline-svg",
+      "svg-file",
+      "raster",
+      "css-background",
+      "favicon",
+      "unknown",
+    ];
+    for (const kind of kinds) {
+      // ~20 characters is what fits before the 10px uppercase line ellipsises.
+      expect(candidateNotes(candidate({ kind, alt: undefined })).title.length, kind).toBeLessThanOrEqual(20);
+    }
+  });
+});
+
+describe("groupBannerFills", () => {
+  const fills = () =>
+    bannerFills({
+      names: [text("Lincoln High School", 0.82), text("Lincoln High School District 21", 0.6)],
+      mascots: [text("Eagles", 0.71)],
+      mottos: [text("Excellence in every classroom", 0.55)],
+    });
+
+  it("says the destination once per group, not once per chip", () => {
+    const groups = groupBannerFills(fills());
+    expect(groups.map((g) => g.kind)).toEqual(["name", "mascot", "motto"]);
+    expect(groups[0].fills).toHaveLength(2);
+    expect(groups[0].label).toBe("School name");
+    expect(groups[0].hint).toBe("→ Top bar");
+  });
+
+  it("keeps every fill — grouping re-shapes, it does not filter", () => {
+    const flat = fills();
+    expect(groupBannerFills(flat).flatMap((g) => g.fills)).toEqual(flat);
+  });
+
+  it("handles nothing", () => {
+    expect(groupBannerFills([])).toEqual([]);
   });
 });
 

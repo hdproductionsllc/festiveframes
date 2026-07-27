@@ -186,6 +186,14 @@ export function plainFinding(f: QcFinding): string {
 export interface CandidateNotes {
   /** Card title. What this thing IS, as far as we can tell. */
   title: string;
+  /**
+   * The page's own alt text, on its own line. SEPARATE from `title` after looking at
+   * the rendered card: two cards sit side by side in a 340px rail, so a combined
+   * `Logo image — "Lincoln High School logo"` truncated to `LOGO IMAGE — "LIN…` and
+   * threw away the only part that tells two candidates apart. Kind on one line, the
+   * school's own words on the next.
+   */
+  alt: string | null;
   /** `PNG 512 × 512 · 258 DPI on a 2" badge`. Facts, no judgement. */
   spec: string;
   /** One-line verdict. Always present, addable or not. */
@@ -200,14 +208,20 @@ export interface CandidateNotes {
   repairs: string[];
 }
 
-/** Where a candidate came from, in words a parent can check against their own screen. */
+/**
+ * Where a candidate came from, in words a parent can check against their own screen.
+ *
+ * Kept SHORT on purpose. These render as the first line of a card in a two-column grid
+ * inside a 340px rail — about 150px of text — so "Logo from the page background"
+ * truncates to "LOGO FROM THE PAGE B…" and says nothing. Two or three words each.
+ */
 const KIND_TITLE: Record<ScanCandidate["kind"], string> = {
-  "inline-svg": "Logo drawn into the page",
-  "svg-file": "Logo (vector file)",
+  "inline-svg": "Inline logo",
+  "svg-file": "Vector logo",
   raster: "Logo image",
-  "css-background": "Logo from the page background",
+  "css-background": "Background logo",
   favicon: "Browser-tab icon",
-  unknown: "Image from the page",
+  unknown: "Page image",
 };
 
 export function candidateNotes(c: ScanCandidate): CandidateNotes {
@@ -231,7 +245,6 @@ export function candidateNotes(c: ScanCandidate): CandidateNotes {
   }
 
   const alt = (c.alt ?? "").trim();
-  const title = alt ? `${KIND_TITLE[c.kind]} — “${alt}”` : KIND_TITLE[c.kind];
 
   // A favicon is 32px or 64px and will always be blocked; saying so up front is
   // kinder than letting the DPI number be the explanation.
@@ -251,7 +264,16 @@ export function candidateNotes(c: ScanCandidate): CandidateNotes {
         : "Prints, but softer than we'd like."
     : blockers[0];
 
-  return { title, spec, verdict, addable, blockers, cautions, repairs: c.qc.repairs };
+  return {
+    title: KIND_TITLE[c.kind],
+    alt: alt || null,
+    spec,
+    verdict,
+    addable,
+    blockers,
+    cautions,
+    repairs: c.qc.repairs,
+  };
 }
 
 // ─── constraint 6: every state ends somewhere the user can go ────────────────
@@ -421,6 +443,34 @@ export function bannerFills(
     ...fillsFor("mascot", profile.mascots),
     ...fillsFor("motto", profile.mottos),
   ];
+}
+
+export interface BannerFillGroup {
+  kind: BannerFill["kind"];
+  label: string;
+  hint: string;
+  fills: BannerFill[];
+}
+
+/**
+ * The same chips, with the heading said once instead of once per chip.
+ *
+ * Added after looking at the rendered panel: two name candidates produced two chips
+ * each stamped "SCHOOL NAME → TOP BAR", which reads as two different controls that
+ * happen to be labelled the same rather than as one choice with two answers. The
+ * heading is a property of the GROUP — same destination, same field — so it belongs
+ * above the group.
+ *
+ * Order and membership are `bannerFills`'s, untouched; this only re-shapes it.
+ */
+export function groupBannerFills(fills: readonly BannerFill[]): BannerFillGroup[] {
+  const groups: BannerFillGroup[] = [];
+  for (const f of fills) {
+    const last = groups[groups.length - 1];
+    if (last && last.kind === f.kind) last.fills.push(f);
+    else groups.push({ kind: f.kind, label: f.label, hint: f.hint, fills: [f] });
+  }
+  return groups;
 }
 
 // ─── the URL field ───────────────────────────────────────────────────────────

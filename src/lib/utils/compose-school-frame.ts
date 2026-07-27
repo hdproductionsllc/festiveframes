@@ -705,7 +705,19 @@ export function drawSchoolFrame(
           // the field simply shows either side of it, which is what the field is
           // for. (Uploaded photos keep cover: they are meant to fill their frame,
           // and an aspect change routes through the re-crop modal instead.)
-          drawFit(ctx, art, slot.x, slot.y, w, h, "contain", 1);
+          //
+          // INSET past the chrome — rim inset + rim width + bevel thickness, the
+          // same three rings the builder nests its <img> inside. Drawn at the full
+          // tile rect, art reached under the rim to the tile edge, and because the
+          // bevel is painted after with translucent shading, it landed ON the art
+          // instead of framing it. Invisible while the art files carried their own
+          // generous margins; the moment they were trimmed to their true bounds,
+          // every badge's art collided with its own edge. The two renderers must
+          // agree on where art may live, or trimmed art previews clean and prints
+          // dirty.
+          const rim = rimMetrics(w, h, m.tileSize);
+          const chrome = rim.inset + rim.width + bevel.thickness;
+          drawFit(ctx, art, slot.x + chrome, slot.y + chrome, w - chrome * 2, h - chrome * 2, "contain", 1);
           ctx.restore();
         }
       }
