@@ -47,7 +47,7 @@ import {
   performableActions,
   type BannerFill,
 } from "@/lib/school-brand/import-ui";
-import type { ScanCandidate } from "@/lib/school-brand/prepare-artwork.server";
+import type { ScanCandidate, RejectedCandidate } from "@/lib/school-brand/prepare-artwork.server";
 import { useDesignStore } from "@/stores/design-store";
 import { SECTION_LABELS } from "@/lib/utils/sections";
 import type { SectionId } from "@/lib/types";
@@ -88,7 +88,15 @@ type Phase =
   /** The scan produced a verdict we could not use. `copy` is the route's, not ours. */
   | { kind: "failed"; copy: OutcomeCopy }
   /** The scan ran and found nothing printable. THE MOST LIKELY SUCCESSFUL OUTCOME. */
-  | { kind: "empty"; copy: OutcomeCopy; fills: BannerFill[] }
+  | {
+      kind: "empty";
+      copy: OutcomeCopy;
+      fills: BannerFill[];
+      /** What was actually fetched and measured. Rendered behind a disclosure so
+       *  "nothing works" can always be turned into "here is what it found". */
+      candidates: ScanCandidate[];
+      rejected: RejectedCandidate[];
+    }
   | {
       kind: "results";
       candidates: ScanCandidate[];
@@ -103,6 +111,19 @@ type Placing =
   | { kind: "reading" }
   | { kind: "choose"; file: File; aspect: number; panels: SectionId[] }
   | { kind: "full" };
+
+/** Path + filename of a URL, for the diagnostic list. Full URLs wrap to four lines
+ *  in a 340px rail and bury the part that identifies the file. */
+function shortUrl(url: string): string {
+  if (!url) return "";
+  try {
+    const u = new URL(url);
+    const tail = u.pathname.split("/").filter(Boolean).slice(-2).join("/");
+    return (tail || u.pathname) + (u.search ? u.search.slice(0, 40) : "");
+  } catch {
+    return url.slice(0, 60);
+  }
+}
 
 export function SchoolBrandImport() {
   const frameConfig = useDesignStore((s) => s.frameConfig);
@@ -171,6 +192,11 @@ export function SchoolBrandImport() {
         // The text is still worth keeping even when no artwork survived — a page with
         // a 180px crest usually still names the school, and that is half the banner.
         fills,
+        // Kept, not discarded. The route measured every one of these; throwing the
+        // measurements away is what made "nothing prints" unanswerable — for the
+        // owner debugging a scan, and for anyone wondering whether we even looked.
+        candidates: data.candidates,
+        rejected: data.rejected,
       });
       return;
     }
@@ -378,6 +404,48 @@ export function SchoolBrandImport() {
               </button>
             )}
           </div>
+
+          {/* WHAT WE ACTUALLY FOUND.
+              "Nothing on this page prints" is an assertion the user has no way to
+              check, and the route already measured every one of these — the sizes
+              were being computed and thrown away. Behind a disclosure so the normal
+              path stays one sentence, but one click from "it doesn't work" to the
+              filename and the pixel size of each thing we looked at. It is also the
+              only diagnostic available for a site the developer cannot reach: the
+              shape of these URLs says which collector is still blind. */}
+          {phase.kind === "empty" &&
+            (phase.candidates.length > 0 || phase.rejected.length > 0) && (
+              <details className="mt-2 border-t-2 border-[#1e1b17]/15 pt-1.5">
+                <summary className="cursor-pointer text-[11px] font-extrabold uppercase tracking-wide text-[#1e1b17]/75">
+                  What we found ({phase.candidates.length + phase.rejected.length})
+                </summary>
+                <ul className="mt-1.5 space-y-1.5">
+                  {phase.candidates.map((c, i) => (
+                    <li key={`c${i}`} className="text-[10px] leading-snug text-[#1e1b17]/75">
+                      <span className="font-bold">
+                        {c.fullRes.width}×{c.fullRes.height}
+                      </span>
+                      {" — "}
+                      {c.resolution.blocked
+                        ? `${Math.round(c.resolution.dpi)} DPI at 2in, needs 200`
+                        : (c.qc.findings[0]?.message ?? "not usable")}
+                      <span className="block break-all font-mono text-[9px] text-[#1e1b17]/45">
+                        {shortUrl(c.url) || `${c.kind} (inline)`}
+                      </span>
+                    </li>
+                  ))}
+                  {phase.rejected.map((r, i) => (
+                    <li key={`r${i}`} className="text-[10px] leading-snug text-[#1e1b17]/75">
+                      <span className="font-bold">{r.reason}</span>
+                      {r.detail ? ` — ${r.detail}` : ""}
+                      <span className="block break-all font-mono text-[9px] text-[#1e1b17]/45">
+                        {shortUrl(r.url) || `${r.kind} (inline)`}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            )}
         </div>
       )}
 
