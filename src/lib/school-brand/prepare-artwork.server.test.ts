@@ -10,6 +10,8 @@ import {
 } from "./prepare-artwork.server";
 import { MAX_DECODE_PIXELS, PREVIEW_MAX_PX } from "./raster-safety";
 import { MIN_BADGE_PIXELS } from "./rank-candidates";
+import { parseSchoolPage } from "./index";
+import { EDLIO_PAGE } from "./__fixtures__/edlio-page";
 import type { LogoCandidate } from "./types";
 import type { Pixels } from "@/lib/utils/artwork-qc";
 
@@ -270,10 +272,10 @@ describe("the resolution gate (constraint 5)", () => {
     // user could walk into and not walk out of: this module called a 300px logo
     // usable, the picker offered it, the crop modal refused it, and there was no
     // third screen. `MIN_DPI` is now literally `BLOCK_DPI`; both are consulted.
-    const under = finishCandidate(candidate(), solid(MIN_BADGE_PIXELS - 8, MIN_BADGE_PIXELS - 8), {
+    const under = finishCandidate(candidate(), mark(MIN_BADGE_PIXELS - 8, MIN_BADGE_PIXELS - 8), {
       isVector: false,
     });
-    const over = finishCandidate(candidate(), solid(MIN_BADGE_PIXELS + 8, MIN_BADGE_PIXELS + 8), {
+    const over = finishCandidate(candidate(), mark(MIN_BADGE_PIXELS + 8, MIN_BADGE_PIXELS + 8), {
       isVector: false,
     });
     expect(under.ok && under.candidate.usable).toBe(false);
@@ -283,7 +285,7 @@ describe("the resolution gate (constraint 5)", () => {
   });
 
   it("never blocks vector art, which has no pixels to be short of", () => {
-    const r = finishCandidate(candidate(), solid(120, 120), { isVector: true });
+    const r = finishCandidate(candidate(), mark(120, 120), { isVector: true });
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     expect(r.candidate.resolution.blocked).toBe(false);
@@ -325,6 +327,30 @@ describe("QC repairs are reported and re-measured", () => {
     expect(r.candidate.qc.repairs.join(" ")).toMatch(/background/i);
     // The finding is gone from the RE-analysis, which is the point of re-measuring.
     expect(r.candidate.qc.findings.some((f) => f.code === "background-opaque")).toBe(false);
+  });
+});
+
+describe("the crashing format is genuinely reachable from ranking", () => {
+  it("a real fixture ranks /favicon.ico as a candidate this route would fetch", async () => {
+    // This is the join between the pure ranker and the guard, and it is why the
+    // allowlist is not defensive programming. `collectLogoCandidates` deliberately
+    // keeps favicons — an apple-touch-icon is often 180px and occasionally 512px, and
+    // "too small to print" is more useful to the user than a page that looks like it
+    // has no logo. The consequence is that `/favicon.ico` reaches the fetch loop on a
+    // completely ordinary school page, and ICO is one of the two formats measured to
+    // exit the process with SIGSEGV. Without the sniffer, this candidate takes the
+    // container down and every concurrent request with it.
+    const profile = parseSchoolPage(EDLIO_PAGE, "https://lincolnhigh.org/");
+    const ico = profile.logos.find((l) => l.url.endsWith("/favicon.ico"));
+    expect(ico, "the fixture should still rank a .ico candidate").toBeDefined();
+
+    // And the bytes that candidate would return are refused before any decoder runs.
+    const icoBytes = new Uint8Array(32);
+    icoBytes.set([0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x20, 0x20], 0);
+    const r = await decodeRaster(icoBytes, "image/x-icon");
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.detail).toMatch(/SIGSEGV/);
   });
 });
 
