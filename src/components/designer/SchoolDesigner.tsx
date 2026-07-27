@@ -449,13 +449,7 @@ export function SchoolDesigner() {
               Ordinary flow: the frame renders at its natural size, the editor sits
               below it with `gap-6` of clear margin, and the page scrolls. */}
           <div className="order-2 lg:order-none flex flex-col gap-6 min-w-0">
-            <div className="w-full flex flex-col gap-3 lg:min-h-0">
-              {/* Bound the WIDTH, because the frame is width-driven and a bare
-                  max-height would just clip it. The school frame is 13.874in x 7.928in
-                  — exactly 1.75:1 — so 91vh of width is 52vh of height, which always leaves
-                  the editor most of the remaining half a viewport. The column also
-                  scrolls, so on a short window the tail of a tall editor stays reachable
-                  instead of being clipped by the sticky box's own max-height. */}
+            <div className="w-full flex flex-col gap-3">
               <div className="relative mx-auto w-full">
                 <ArmedBanner placement="frame" />
                 <FrameCanvas
