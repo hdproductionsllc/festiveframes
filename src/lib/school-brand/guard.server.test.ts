@@ -222,7 +222,7 @@ describe("sniffImageType — the shield against the decoder SIGSEGV", () => {
       expect(v.decode).toBe(false);
       if (v.decode) throw new Error("expected a refusal");
       expect(v.svg).toBe(false);
-      if (!v.svg) expect(v.reason).toMatch(/SIGSEGV/);
+      if (!v.svg) expect(v.reason).toMatch(/crash|kill|not opened|never opened/i);
     }
   });
 

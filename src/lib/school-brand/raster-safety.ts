@@ -76,13 +76,29 @@ export function sniffImageFormat(bytes: Uint8Array): SniffResult {
       reason: "TIFF crashes the image decoder (SIGSEGV), so it is never opened.",
     };
   }
-  // ICO/CUR: 00 00 01 00 / 00 00 02 00. THE OTHER SEGFAULT — and the one that
-  // matters most in practice, because `/favicon.ico` is a candidate source.
+  // ICO/CUR: 00 00 01 00 / 00 00 02 00. Blocked, and the reason is subtler than the
+  // TIFF one above — worth stating exactly, because a reviewer who tests only the
+  // happy path will conclude this block is unnecessary and be wrong.
+  //
+  // A WELL-FORMED ICO decodes fine: a 16x16 32bpp icon through `loadImage` returns
+  // a normal image, exit 0. It is the MALFORMED ones that are fatal, and each fails
+  // differently — measured against the installed @napi-rs/canvas:
+  //   truncated (directory points past EOF)  -> exit 139 (SIGSEGV)
+  //   header + garbage body                  -> exit 139 (SIGSEGV)
+  //   absurd declared dimensions (65535 sq)  -> exit 132, SkBitmap fatal assert
+  //
+  // Which means the format cannot be admitted on a "just decode it and catch the
+  // error" basis: telling a good ICO from a bad one requires decoding it, and
+  // decoding a bad one is the thing that kills the process. There is no exception to
+  // catch — a signal takes every concurrent request in the container with it, and
+  // `/favicon.ico` is a candidate source we are handed by definition, from a host
+  // chosen by whoever pasted the URL.
   if (at(0) === 0x00 && at(1) === 0x00 && (at(2) === 0x01 || at(2) === 0x02) && at(3) === 0x00) {
     return {
       format: "ico",
       decodable: false,
-      reason: "ICO crashes the image decoder (SIGSEGV), so it is never opened.",
+      reason:
+        "ICO is not opened: a malformed one crashes the decoder outright, and telling a good one from a bad one would mean decoding it first.",
     };
   }
   if (matches(0x42, 0x4d)) {

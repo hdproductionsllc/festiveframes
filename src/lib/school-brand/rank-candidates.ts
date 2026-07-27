@@ -469,7 +469,7 @@ export function scoreLogoCandidate(
   else if (/\.webp(\?|#|$)/.test(url)) score += 3;
   else if (/\.jpe?g(\?|#|$)/.test(url)) score -= 8; // no alpha → guaranteed matte fringe
   else if (/\.gif(\?|#|$)/.test(url)) score -= 12; // palette → `palette-quantized`
-  else if (/\.ico(\?|#|$)/.test(url)) score -= 40; // SIGSEGVs the decoder; see raster-safety
+  else if (/\.ico(\?|#|$)/.test(url)) score -= 40; // a malformed one crashes the decoder; see raster-safety
 
   return score;
 }

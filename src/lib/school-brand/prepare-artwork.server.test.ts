@@ -160,7 +160,7 @@ describe("vector rasterisation size", () => {
 describe("decodeRaster — the refusals all happen before a decoder is touched", () => {
   const bytes = (...v: number[]) => Uint8Array.from(v);
 
-  it("refuses ICO and TIFF, the two formats that exit the process with SIGSEGV", async () => {
+  it("refuses ICO and TIFF — the formats that can kill the process", async () => {
     const ico = bytes(0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x20, 0x20, 0, 0, 0, 0, 0, 0, 0, 0);
     const tiff = bytes(0x49, 0x49, 0x2a, 0x00, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
     for (const b of [ico, tiff]) {
@@ -168,7 +168,7 @@ describe("decodeRaster — the refusals all happen before a decoder is touched",
       expect(r.ok).toBe(false);
       if (r.ok) continue;
       expect(r.reason).toBe("undecodable-format");
-      expect(r.detail).toMatch(/SIGSEGV/);
+      expect(r.detail).toMatch(/crash|kill|not opened|never opened/i);
     }
   });
 
@@ -389,7 +389,7 @@ describe("the crashing format is genuinely reachable from ranking", () => {
     const r = await decodeRaster(icoBytes, "image/x-icon");
     expect(r.ok).toBe(false);
     if (r.ok) return;
-    expect(r.detail).toMatch(/SIGSEGV/);
+    expect(r.detail).toMatch(/crash|kill|not opened|never opened/i);
   });
 });
 
