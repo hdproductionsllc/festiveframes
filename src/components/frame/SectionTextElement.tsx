@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import type { BottomBarConfig } from "@/lib/types";
 import { bannerBands } from "@/lib/utils/banner-tiers";
-import { chromeInset, glossStops, ringCss, textEmbossCss, tileEdgeCss } from "@/lib/utils/tile-theme";
+import { chromeInset, glossStops, ringCss, textChenilleCss, tileEdgeCss } from "@/lib/utils/tile-theme";
 
 // A section's TEXT rendered as a MULTI-LINE block that honors `\n` line breaks and
 // works on a wide top/bottom bar AND a tall/narrow side panel (wing).
@@ -147,8 +147,10 @@ export function SectionTextElement({
     letterSpacing,
     whiteSpace: "pre", // honor \n only — never soft-wrap (keeps the fit exact)
     textAlign: config.textAlign,
-    // Raised, not printed on — the CSS twin of the canvas's three-pass emboss.
-    textShadow: textEmbossCss(fontPx, config.textColor),
+    // Chenille — the CSS twin of the canvas's merrow-stroke + softened emboss. Both
+    // renderers must carry this or the builder and the print sheet drift, which is the
+    // whole reason tile-theme exists.
+    ...textChenilleCss(fontPx, config.textColor),
   });
 
   return (

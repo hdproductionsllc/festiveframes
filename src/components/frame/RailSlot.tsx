@@ -272,6 +272,8 @@ function PlacedTileCell({
   const wings = useDesignStore((s) => s.frameConfig.wings);
   const soundEnabled = useUIStore((s) => s.soundEnabled);
   const selectSnappet = useUIStore((s) => s.selectSnappet);
+  const selectBar = useDesignStore((s) => s.selectBar);
+  const selectSection = useDesignStore((s) => s.selectSection);
   const [showRemove, setShowRemove] = useState(false);
   const [poofing, setPoofing] = useState(false);
 
@@ -324,7 +326,17 @@ function PlacedTileCell({
     // handles (multi-cell) and the size-stepper control. /build has no wings, so this
     // stays multi-cell-only there and its behavior is unchanged. stopPropagation above
     // keeps the frame's deselect-on-empty-click from firing.
-    if (wings || isMultiCell(span)) selectSnappet(slotId);
+    if (wings || isMultiCell(span)) {
+      // Picking up a tile CLOSES whatever editor was open, the mirror of `selectBar`
+      // and `selectSection` dismissing this. Making it one-directional was not enough:
+      // if a section editor was already open and you then tapped a tile, nothing
+      // changed selection on that side, so the fixed-position size control simply
+      // appeared on top of the open editor — the same symptom, reached the other way
+      // round.
+      selectBar(null);
+      selectSection(null);
+      selectSnappet(slotId);
+    }
   };
 
   const handleRemove = (e: React.MouseEvent) => {

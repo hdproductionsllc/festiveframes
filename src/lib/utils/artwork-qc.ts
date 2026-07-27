@@ -1,4 +1,5 @@
 import type { TileSpan } from "@/lib/types";
+import { BLOCK_DPI, TARGET_DPI as PRINT_TARGET_DPI } from "@/lib/utils/print-resolution";
 
 // ─── Artwork quality control ────────────────────────────────────────────────
 //
@@ -71,10 +72,19 @@ export interface QcReport {
   findings: QcFinding[];
 }
 
-/** Below this the art cannot be printed at the size asked of it. */
-export const MIN_DPI = 150;
+/**
+ * Below this the art cannot be printed at the size asked of it.
+ *
+ * This is `BLOCK_DPI` from `print-resolution`, IMPORTED rather than restated. The two
+ * used to disagree — 150 here, 200 there — and the gap was a dead end the user could
+ * walk into and not walk out of: a 300x300 logo measures 151 DPI at the 2x2 footprint,
+ * so this module called it usable and the UI offered it, and then the crop modal (which
+ * gates on `BLOCK_DPI`) refused it with no path forward. Whatever this module is willing
+ * to call usable has to be something the rest of the pipeline will actually accept.
+ */
+export const MIN_DPI = BLOCK_DPI;
 /** Below this it prints, but softly. */
-export const TARGET_DPI = 300;
+export const TARGET_DPI = PRINT_TARGET_DPI;
 /** Fraction of pixels that must be opaque before the background counts as baked in. */
 const OPAQUE_LIMIT = 0.95;
 /** RGB distance between edge and art means that reads as a matte rather than noise. */

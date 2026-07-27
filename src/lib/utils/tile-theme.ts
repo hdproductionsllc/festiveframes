@@ -446,6 +446,86 @@ export function textEmboss(fontPx: number, textColour: string) {
       offsetY: Math.max(1, fontPx * 0.035),
       colour: "rgba(0,0,0,0.45)",
     },
+    /**
+     * The MERROW — the tight overlock border stitched around the edge of a chenille
+     * varsity letter. Drawn as a stroke UNDER the fill, so the letterform keeps its
+     * own weight and the border sits outside it the way thread does around felt.
+     *
+     * Two passes, not one: an outer thread in the accent colour and an inner dark
+     * seat between thread and felt. Without the seat the outline reads as a cartoon
+     * keyline — the gap is what makes it look stitched onto something rather than
+     * drawn around it.
+     *
+     * Sized off the font, like every other edge number in this file, so a 6:1 banner
+     * and a one-row bar carry the same physical thread weight.
+     */
+    merrow: {
+      width: Math.max(2, fontPx * 0.075),
+      seat: Math.max(1, fontPx * 0.028),
+      /** Gold thread on dark type, a dark thread on light type — always a contrast. */
+      thread: lightText ? BRASS.mid : BRASS.light,
+      seatColour: "rgba(0,0,0,0.55)",
+    },
+  };
+}
+
+/**
+ * A chenille varsity letter is FELT, not metal: the edge is soft and the body has a
+ * nap that scatters light instead of returning a hard specular line. So the embroidered
+ * treatment deliberately softens the emboss it inherits — a crisp bevel on top of a
+ * merrow border reads as plastic, which is the exact look the brass rim already owns.
+ *
+ * Returns the same shape as `textEmboss` so the two are interchangeable at the call
+ * site and the renderers do not branch.
+ */
+export function textChenille(fontPx: number, textColour: string) {
+  const base = textEmboss(fontPx, textColour);
+  return {
+    ...base,
+    depth: base.depth * 0.55,
+    highlight: "rgba(255,255,255,0.22)",
+    shade: "rgba(0,0,0,0.30)",
+    shadow: {
+      ...base.shadow,
+      // Felt sits proud of the panel and drops a softer, longer shadow than engraving.
+      blur: Math.max(2, fontPx * 0.14),
+      offsetY: Math.max(1, fontPx * 0.055),
+      colour: "rgba(0,0,0,0.5)",
+    },
+  };
+}
+
+/**
+ * CSS twin of `textChenille` — the merrow border as a `-webkit-text-stroke` plus the
+ * softened emboss as a `text-shadow` stack.
+ *
+ * Returns BOTH properties because CSS gives you exactly one text stroke, and the
+ * canvas draws two (gold thread, then a dark seat inside it). The seat is faked with
+ * the innermost text-shadow ring instead, which is close enough at banner sizes and
+ * is the only option that does not need a duplicated DOM node per line.
+ */
+export function textChenilleCss(fontPx: number, textColour: string): {
+  textShadow: string;
+  WebkitTextStroke: string;
+  paintOrder: "stroke fill";
+} {
+  const e = textChenille(fontPx, textColour);
+  const d = e.depth.toFixed(2);
+  const s = e.shadow;
+  const seat = (e.merrow.seat / 2).toFixed(2);
+  return {
+    // `paint-order: stroke fill` is load-bearing: without it the stroke is painted
+    // OVER the glyph and eats half the letterform's weight, exactly the way it would
+    // on canvas if you stroked after filling.
+    paintOrder: "stroke fill",
+    WebkitTextStroke: `${e.merrow.width.toFixed(2)}px ${e.merrow.thread}`,
+    textShadow: [
+      // The dark seat between thread and felt, as a tight ring.
+      `0 0 ${seat}px ${e.merrow.seatColour}`,
+      `${-e.depth.toFixed(2)}px ${-e.depth.toFixed(2)}px 0 ${e.highlight}`,
+      `${d}px ${d}px 0 ${e.shade}`,
+      `${s.offsetX.toFixed(2)}px ${s.offsetY.toFixed(2)}px ${s.blur.toFixed(2)}px ${s.colour}`,
+    ].join(", "),
   };
 }
 

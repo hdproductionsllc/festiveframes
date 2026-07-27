@@ -440,16 +440,27 @@ export function SchoolDesigner() {
           </div>
 
           {/* RIGHT column — frame preview + the selected section's editor, stacked in one
-              cell so the editor sits directly under the frame (mirrors /build). */}
-          <div className="order-2 lg:order-none flex flex-col gap-4 min-w-0">
-            {/* The frame STAYS PUT while the tools rail scrolls past it. The rail is
-                the long side now — 51 school tiles — so with everything in normal
-                flow, picking a tile and dropping it on the frame meant scrolling up
-                and down between the two. Sticky rather than a bounded, scrolling
-                palette because an overflow container would clip the "● Placing"
-                badge that pops above the top row of tiles. */}
-            <div className="w-full flex flex-col gap-3 lg:sticky lg:top-4 lg:z-20">
-              <div className="relative">
+              cell so the editor sits directly under the frame (mirrors /build).
+
+              The WHOLE COLUMN is sticky, not the frame inside it. Making just the frame
+              sticky is what put the design on top of the text-bar editor: the editor is
+              its next sibling, so scrolling down slid the editor into the band the
+              pinned frame occupied — and a `position: sticky` element paints above a
+              STATIC sibling whatever the DOM order, so dropping its z-index changed
+              nothing. Measured at 196px of overlap.
+
+              Sticking the column instead keeps the frame and the editor in normal flow
+              WITH RESPECT TO EACH OTHER, so they cannot overlap by construction; the
+              pair simply stays put together while the tall tools rail scrolls past.
+              `self-start` so the sticky box is its content's height rather than being
+              stretched by the grid row, which is what makes sticky a no-op. */}
+          <div className="order-2 lg:order-none flex flex-col gap-4 min-w-0 lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100vh-2rem)]">
+            <div className="w-full flex flex-col gap-3 lg:min-h-0">
+              {/* Bound the WIDTH, because the frame is width-driven and a bare
+                  max-height would just clip it. The school frame is 13.874in x 7.928in
+                  — exactly 1.75:1 — so 105vh of width is 60vh of height, matching the
+                  cap above. Centred so the column's spare width goes to both sides. */}
+              <div className="relative mx-auto w-full lg:max-w-[105vh]">
                 <ArmedBanner placement="frame" />
                 <FrameCanvas
                   ref={canvasRef}
