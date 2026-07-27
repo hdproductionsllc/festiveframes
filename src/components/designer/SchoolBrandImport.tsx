@@ -49,6 +49,7 @@ import {
 } from "@/lib/school-brand/import-ui";
 import type { ScanCandidate, RejectedCandidate } from "@/lib/school-brand/prepare-artwork.server";
 import { useDesignStore } from "@/stores/design-store";
+import type { ColorCandidate } from "@/lib/school-brand/types";
 import { buildBrandKit, type SchoolBrandKit } from "@/lib/school-brand/apply-brand";
 import { SECTION_LABELS } from "@/lib/utils/sections";
 import type { SectionId } from "@/lib/types";
@@ -98,6 +99,8 @@ type Phase =
       candidates: ScanCandidate[];
       rejected: RejectedCandidate[];
       kit: SchoolBrandKit | null;
+      /** Every colour the scan pulled off the page, kit or no kit. See the strip. */
+      colors: ColorCandidate[];
       /** Discarded before any fetch — vendor marks, print-black SVGs. Without these
        *  the list cannot distinguish "never saw the crest" from "saw it and dropped
        *  it", which is the distinction that matters when a scan comes back empty. */
@@ -110,6 +113,7 @@ type Phase =
       rejected: number;
       truncated: boolean;
       kit: SchoolBrandKit | null;
+      colors: ColorCandidate[];
     };
 
 /** The "where should it go?" hand-off, shared by Add-a-candidate and Upload-a-photo. */
@@ -241,6 +245,7 @@ export function SchoolBrandImport() {
         rejected: data.rejected,
         dropped: data.dropped ?? [],
         kit,
+        colors: data.profile.colors ?? [],
       });
       return;
     }
@@ -252,6 +257,7 @@ export function SchoolBrandImport() {
       rejected: data.rejected.length,
       truncated: data.truncated,
       kit,
+      colors: data.profile.colors ?? [],
     });
   };
 
@@ -479,6 +485,7 @@ export function SchoolBrandImport() {
               outcome too: the artwork failing says nothing about whether we know the
               school's name, mascot and colours, and on a real site those survived
               while every image was too small to print. */}
+          {phase.kind === "empty" && <ColorStrip colors={phase.colors} />}
           {phase.kind === "empty" && phase.kit && (
             <div className="ff-panel mt-2.5 p-2.5">
               <div className="flex items-center gap-2">
@@ -582,6 +589,7 @@ export function SchoolBrandImport() {
               <CandidateCard key={`${c.url}-${i}`} candidate={c} onAdd={() => addCandidate(c)} />
             ))}
           </div>
+          <ColorStrip colors={phase.colors} />
         </div>
       )}
 
@@ -823,6 +831,46 @@ function CandidateCard({ candidate, onAdd }: { candidate: ScanCandidate; onAdd: 
         >
           {notes.addable ? "Add to frame" : "Too small"}
         </button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * WHAT THE SCAN SAW, in colour.
+ *
+ * The swatches used to live inside the kit block, so a scan whose kit was refused
+ * showed no colour anywhere — and "the panel is showing me no colours" is
+ * indistinguishable from "the scanner never found any". A school reported exactly
+ * that, and the colours had in fact been extracted perfectly; the kit was refusing
+ * for an unrelated reason and taking them down with it.
+ *
+ * So the palette reports itself, kit or no kit. It is a diagnostic before it is a
+ * feature: it turns "it didn't fetch the colours" into a sentence with an answer in
+ * it, for whoever is looking at a scan that went wrong.
+ */
+function ColorStrip({ colors }: { colors: ColorCandidate[] }) {
+  if (!colors.length) return null;
+  const shown = colors.slice(0, 6);
+  return (
+    <div className="mt-2">
+      <p className="ff-help mb-1">Colours found on the page</p>
+      <div className="flex flex-wrap items-center gap-1.5">
+        {shown.map((c) => (
+          <span
+            key={c.hex}
+            title={`${c.hex} — ${c.why ?? c.source} (${c.hits} declaration${c.hits === 1 ? "" : "s"})`}
+            className="inline-flex items-center gap-1.5 rounded-full border px-1.5 py-0.5 text-[11px]"
+            style={{ borderColor: "var(--ff-line, rgba(30,27,23,0.25))" }}
+          >
+            <span
+              aria-hidden
+              className="h-3.5 w-3.5 shrink-0 rounded-full border"
+              style={{ background: c.hex, borderColor: "var(--ff-line, rgba(30,27,23,0.35))" }}
+            />
+            <span className="font-mono text-[var(--ff-ink-2,#4b5058)]">{c.hex}</span>
+          </span>
+        ))}
       </div>
     </div>
   );
