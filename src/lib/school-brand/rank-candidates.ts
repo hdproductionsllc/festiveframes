@@ -411,7 +411,7 @@ export function rankLogoCandidates(
       dropped.push({ ...candidate, dropped: "vendor-mark" });
       continue;
     }
-    const vendor = vendorVerdict(candidate, marker);
+    const vendor = vendorVerdict(candidate, vendorMarker);
     if (vendor) {
       dropped.push({ ...candidate, dropped: vendor });
       continue;

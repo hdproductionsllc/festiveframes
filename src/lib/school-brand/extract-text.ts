@@ -37,6 +37,18 @@ const SCHOOL_WORDS =
 const PAGE_FURNITURE =
   /^(home|homepage|welcome|welcome to|main|index|untitled|new page|our school|about|about us|menu|skip to (main )?content)$/i;
 
+/**
+ * CMS vendors, which are never the school's name.
+ *
+ * Needed because the footer credit is an <img alt="Edlio">, and the logo-alt rule
+ * reads exactly that kind of alt text — the first run of the Edlio fixture offered
+ * "Edlio" as the school's second-best name, at 0.40, one tap from being printed on
+ * a frame. The vendor drop in rank-candidates.ts protects the LOGO list; the name
+ * list needs its own, because a name candidate has no URL to blocklist.
+ */
+const VENDOR_NAME =
+  /^(edlio|finalsite|apptegy|thrillshare|blackboard|powerschool|schoolmessenger|parentsquare|peachjar|wordpress|squarespace|wix|weebly|google|facebook)\b/i;
+
 const collapse = (s: string): string => s.replace(/\s+/g, " ").trim();
 
 const normalizeKey = (s: string): string =>
@@ -159,6 +171,7 @@ export function extractSchoolNames(scan: PageScan): TextCandidate[] {
     const v = collapse(value);
     if (!v || v.length > 120) return;
     if (PAGE_FURNITURE.test(v)) return;
+    if (VENDOR_NAME.test(v)) return;
     out.push({ value: v, confidence: Math.max(0, Math.min(0.99, confidence)), source, why });
   };
 
@@ -391,7 +404,12 @@ export function extractMascots(scan: PageScan): TextCandidate[] {
   )) {
     push(m[1], 0.92, "phrase:home-of-the", `Matched "${collapse(m[0])}"`);
   }
-  for (const m of text.matchAll(/\bgo\s+([A-Z][A-Za-z'’-]{2,20})[!,.]/g)) {
+  // `[Gg]o` rather than the /i flag: the capture has to stay case-SENSITIVE so it
+  // only takes a capitalised word. With /i on the whole pattern this matched
+  // "go home." and offered "Home" as a mascot. Found by running it on the WordPress
+  // fixture, where a case-sensitive `\bgo` had silently missed "Go Wildcats!"
+  // entirely and let the weaker lexicon rule answer instead.
+  for (const m of text.matchAll(/\b[Gg]o\s+([A-Z][A-Za-z'’-]{2,20})[!,.]/g)) {
     push(m[1], 0.7, "phrase:go-x", `Matched "${collapse(m[0])}"`);
   }
   // "#EaglePride", "#GoEagles" — the hashtag is a deliberate brand statement.
