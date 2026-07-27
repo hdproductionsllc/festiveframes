@@ -417,12 +417,9 @@ export function SchoolDesigner() {
             in the bounded left rail, the frame + its editor fit the viewport without a
             long stack pushing the frame out of view. On MOBILE it collapses to one
             column: tools rail (1) -> frame + editor (2). */}
-        {/* `lg:items-stretch` so the right column fills the row's height even when the
-            tools rail is the taller side. Without it the column ends where its own
-            content does, and the sticky frame below has no room left to stick in. */}
         {/* `pt-0` deliberately: the frame is the subject of this page and should meet
             the chrome above it, not float below a band of dead space. */}
-        <main className="flex-1 grid grid-cols-1 lg:grid-cols-[340px_minmax(0,1fr)] gap-4 px-4 pb-4 pt-0 mx-auto w-full max-w-[1560px] items-start lg:items-stretch">
+        <main className="flex-1 grid grid-cols-1 lg:grid-cols-[340px_minmax(0,1fr)] gap-4 px-4 pb-4 pt-0 mx-auto w-full max-w-[1560px] items-start">
           {/* LEFT tools rail. The PALETTE leads: it is the thing you reach for first
               and on every subsequent action, so it gets the top of the rail. Upload and
               the section pickers follow, because you touch them once per design.
@@ -439,28 +436,21 @@ export function SchoolDesigner() {
             <SectionControls />
           </div>
 
-          {/* RIGHT column — frame preview + the selected section's editor, stacked in one
-              cell so the editor sits directly under the frame (mirrors /build).
+          {/* RIGHT column — frame preview, then the ONE active editor beneath it.
 
-              The WHOLE COLUMN is sticky, not the frame inside it. Making just the frame
-              sticky is what put the design on top of the text-bar editor: the editor is
-              its next sibling, so scrolling down slid the editor into the band the
-              pinned frame occupied — and a `position: sticky` element paints above a
-              STATIC sibling whatever the DOM order, so dropping its z-index changed
-              nothing. Measured at 196px of overlap.
+              NOTHING here is sticky, deliberately. Pinning the frame put the design on
+              top of the panel you type into: the editor is its sibling, so scrolling
+              slid the editor into the pinned frame's band, and a `position: sticky`
+              element paints above a STATIC sibling whatever the DOM order. Sticking the
+              whole column instead fixed the overlap but bought it with a height cap,
+              which on a short window clipped the editor or shrank the frame. Every
+              version traded one problem for another, so the pinning is simply gone.
 
-              Sticking the column instead keeps the frame and the editor in normal flow
-              WITH RESPECT TO EACH OTHER, so they cannot overlap by construction; the
-              pair simply stays put together while the tall tools rail scrolls past.
-              `self-start` so the sticky box is its content's height rather than being
-              stretched by the grid row, which is what makes sticky a no-op. */}
-          <div className="order-2 lg:order-none flex flex-col gap-4 min-w-0 lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100vh-2rem)]">
-            <div className="w-full flex flex-col gap-3 lg:min-h-0">
-              {/* Bound the WIDTH, because the frame is width-driven and a bare
-                  max-height would just clip it. The school frame is 13.874in x 7.928in
-                  — exactly 1.75:1 — so 105vh of width is 60vh of height, matching the
-                  cap above. Centred so the column's spare width goes to both sides. */}
-              <div className="relative mx-auto w-full lg:max-w-[105vh]">
+              Ordinary flow: the frame renders at its natural size, the editor sits
+              below it with `gap-6` of clear margin, and the page scrolls. */}
+          <div className="order-2 lg:order-none flex flex-col gap-6 min-w-0">
+            <div className="w-full flex flex-col gap-3">
+              <div className="relative mx-auto w-full">
                 <ArmedBanner placement="frame" />
                 <FrameCanvas
                   ref={canvasRef}
