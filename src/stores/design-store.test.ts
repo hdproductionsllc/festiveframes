@@ -177,7 +177,7 @@ describe("store-owned frame geometry (single-SKU builders)", () => {
     // The defect: SchoolDesigner's mount effect called loadDesign({slots:{}}) after
     // hydration, replacing the restored design with an empty one and persisting it.
     writeBlob({
-      slots: { "frame:top-0": { pieceId: "hs:basketball", setId: "hs" } },
+      slots: { "frame:top-0": { pieceId: "hs:basketball-patch", setId: "hs" } },
       textBars: [{ id: "tb1", config: { text: "Go Eagles" } }],
       designName: "Lincoln High",
       frameConfig: { ...SCHOOL_FRAME_CONFIG },
@@ -189,7 +189,7 @@ describe("store-owned frame geometry (single-SKU builders)", () => {
     });
 
     const s = store.getState();
-    expect(s.slots["frame:top-0"]?.pieceId).toBe("hs:basketball");
+    expect(s.slots["frame:top-0"]?.pieceId).toBe("hs:basketball-patch");
     expect(s.textBars).toHaveLength(1);
     expect(s.designName).toBe("Lincoln High");
   });
@@ -198,7 +198,7 @@ describe("store-owned frame geometry (single-SKU builders)", () => {
     // A blob saved under the OLD 3-wing-column school frame. The design survives;
     // the unprintable geometry does not.
     writeBlob({
-      slots: { "frame:top-0": { pieceId: "hs:basketball", setId: "hs" } },
+      slots: { "frame:top-0": { pieceId: "hs:basketball-patch", setId: "hs" } },
       frameConfig: { ...SCHOOL_FRAME_CONFIG, wingColumns: 3, widthInches: 11.892 },
     });
 
@@ -209,7 +209,7 @@ describe("store-owned frame geometry (single-SKU builders)", () => {
 
     expect(store.getState().frameConfig.wingColumns).toBe(SCHOOL_FRAME_CONFIG.wingColumns);
     expect(store.getState().frameConfig).toEqual(SCHOOL_FRAME_CONFIG);
-    expect(store.getState().slots["frame:top-0"]?.pieceId).toBe("hs:basketball");
+    expect(store.getState().slots["frame:top-0"]?.pieceId).toBe("hs:basketball-patch");
   });
 
   it("refreshes the seeded banner font on a design saved with the old one", () => {

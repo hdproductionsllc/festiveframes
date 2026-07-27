@@ -109,7 +109,7 @@ function buildPresets(): DesignPreset[] {
       id: `${S}:spirit-day`,
       name: "Spirit Day",
       description: "Team badges in navy and gold",
-      slots: cycle(["hs:basketball", "solid-gold", "hs:football", "solid-navy"]),
+      slots: cycle(["hs:basketball-patch", "solid-gold", "hs:football-patch", "solid-navy"]),
       bottomBar: { text: "GO TEAM", backgroundColor: NAVY, textColor: GOLD },
     },
     {

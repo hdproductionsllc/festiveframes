@@ -1003,7 +1003,7 @@ describe("growUndersizedBadges — a floor introduced later still reaches saved 
 
   it("grows a 1x1 badge saved before the floor existed", () => {
     const slots: Record<string, PlacedTile> = {
-      [schoolGrid.cellAt(2, 0)!.id]: { pieceId: "hs:basketball", setId: "hs" },
+      [schoolGrid.cellAt(2, 0)!.id]: { pieceId: "hs:basketball-patch", setId: "hs" },
     };
     const out = growUndersizedBadges(ctx({ slots }), artMin);
     expect(out[schoolGrid.cellAt(2, 0)!.id].span).toEqual(MIN_ART_SPAN);
@@ -1020,7 +1020,7 @@ describe("growUndersizedBadges — a floor introduced later still reaches saved 
     // Growing must never silently delete work. A badge boxed in by neighbours stays
     // small rather than eating them.
     const slots: Record<string, PlacedTile> = {
-      [schoolGrid.cellAt(2, 0)!.id]: { pieceId: "hs:basketball", setId: "hs" },
+      [schoolGrid.cellAt(2, 0)!.id]: { pieceId: "hs:basketball-patch", setId: "hs" },
       [schoolGrid.cellAt(2, 1)!.id]: { pieceId: "school:solid-gold", setId: "school" },
       [schoolGrid.cellAt(3, 0)!.id]: { pieceId: "school:solid-gold", setId: "school" },
     };
@@ -1032,7 +1032,7 @@ describe("growUndersizedBadges — a floor introduced later still reaches saved 
     // The top strip is one row: a 2x2 cannot seat, so the badge is left as it is
     // rather than being forced somewhere it does not fit.
     const slots: Record<string, PlacedTile> = {
-      "frame:top-5": { pieceId: "hs:basketball", setId: "hs" },
+      "frame:top-5": { pieceId: "hs:basketball-patch", setId: "hs" },
     };
     const out = growUndersizedBadges(ctx({ slots }), artMin);
     expect(out["frame:top-5"].span).toBeUndefined();
@@ -1163,11 +1163,11 @@ describe("panelSnappetPlacement — an uploaded photo is not a thumbnail", () =>
 });
 
 describe("dropUnknownPieces — a retired piece leaves no ghost", () => {
-  const known = (id: string) => id === "hs:basketball";
+  const known = (id: string) => id === "hs:basketball-patch";
 
   it("removes a tile whose piece no longer exists", () => {
     const slots = {
-      a: { pieceId: "hs:basketball", setId: "hs" },
+      a: { pieceId: "hs:basketball-patch", setId: "hs" },
       b: { pieceId: "school:star", setId: "school" }, // retired placeholder
     };
     const out = dropUnknownPieces(slots, known);
@@ -1175,7 +1175,7 @@ describe("dropUnknownPieces — a retired piece leaves no ghost", () => {
   });
 
   it("returns the SAME object when every piece still resolves", () => {
-    const slots = { a: { pieceId: "hs:basketball", setId: "hs" } };
+    const slots = { a: { pieceId: "hs:basketball-patch", setId: "hs" } };
     expect(dropUnknownPieces(slots, known)).toBe(slots);
   });
 
@@ -1188,7 +1188,7 @@ describe("dropUnknownPieces — a retired piece leaves no ghost", () => {
 });
 
 describe("blockFill — no holes, nothing off the frame", () => {
-  const pick = () => ({ pieceId: "hs:basketball", setId: "hs" });
+  const pick = () => ({ pieceId: "hs:basketball-patch", setId: "hs" });
   const wide = getWingFrameConfig(
     { ...SCHOOL_FRAME_CONFIG },
     SCHOOL_FRAME_CONFIG.tileSizeInches * 2,
