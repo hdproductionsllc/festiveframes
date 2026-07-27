@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { evaluateResolution } from "@/lib/utils/print-resolution";
 import {
   analyzeArtwork,
   repairArtwork,
@@ -86,11 +87,38 @@ describe("analyzeArtwork — resolution", () => {
   });
 
   it("warns — but still allows — art between the floor and the target", () => {
-    const px = blank(Math.round(200 * 0.991 * 2), Math.round(200 * 0.991 * 2), [10, 20, 30, 255]);
+    // Size DERIVED from the floor, not hard-coded. It used to be a literal 200 DPI,
+    // chosen when the floor was 150; when the floor rose to meet the crop modal's
+    // BLOCK_DPI the literal landed exactly ON it and the test broke for a reason that
+    // had nothing to do with what it is checking. Sit it a quarter above the floor and
+    // it keeps meaning "comfortably between the two thresholds" wherever they move.
+    const side = Math.round(MIN_DPI * 1.25 * 0.991 * 2);
+    const px = blank(side, side, [10, 20, 30, 255]);
     const r = analyzeArtwork(px, REQ);
     expect(r.effectiveDpi).toBeGreaterThan(MIN_DPI);
+    expect(r.effectiveDpi).toBeLessThan(TARGET_DPI);
     expect(r.findings.find((x) => x.code === "resolution-marginal")?.severity).toBe("warning");
     expect(isUsable(r)).toBe(true);
+  });
+
+  it("never calls usable anything the CROP MODAL will refuse", () => {
+    // The two gates used to disagree: 150 here, BLOCK_DPI=200 in print-resolution.
+    // A 300x300 logo measures ~151 DPI at the 2x2 footprint, so this module called it
+    // usable and the UI offered it as a good candidate — and then the crop modal
+    // blocked it with no way forward. A dead end presented as a success.
+    //
+    // Swept across the whole disputed band rather than spot-checked, because the bug
+    // was a RANGE, not a value.
+    for (let side = 260; side <= 460; side += 20) {
+      const r = analyzeArtwork(blank(side, side, [10, 20, 30, 255]), REQ);
+      const verdict = evaluateResolution(
+        { width: side, height: side },
+        { width: REQ.span.cols * REQ.tileSizeInches, height: REQ.span.rows * REQ.tileSizeInches },
+      );
+      if (isUsable(r)) {
+        expect(verdict.blocked, `${side}px: QC says usable but the crop modal blocks it`).toBe(false);
+      }
+    }
   });
 
   it("binds on the SHORT dimension — wide enough but short still prints short", () => {
