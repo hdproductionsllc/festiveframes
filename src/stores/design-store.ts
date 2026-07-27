@@ -52,6 +52,27 @@ import { getPiece } from "@/data/sets";
 import { deleteFullRes } from "@/lib/utils/image-store";
 import { repairSections, sectionSupportsText, sectionSupportsTiles } from "@/lib/utils/sections";
 import { MAX_HISTORY_DEPTH } from "@/lib/constants/frame";
+import { useUIStore } from "@/stores/ui-store";
+
+/**
+ * Close the floating snappet size control, if one is open.
+ *
+ * Editing a TEXT BAR or a SECTION and resizing a TILE are two different things to be
+ * doing, but they lived in two different stores — the bar/section selection here, the
+ * snappet selection in the UI store — and neither cleared the other. The size control
+ * is `position: fixed` at the bottom of the viewport, so a selection left behind sat
+ * on top of the text-bar editor and could not be scrolled away from: it looked like
+ * the float was simply stuck.
+ *
+ * Enforced in the two SETTERS rather than at the call sites, because there are four
+ * of those across the canvas, the section controls and the upload flow, and a fifth
+ * would inherit the bug. The dependency only goes this way — `ui-store` imports
+ * nothing from here, so there is no cycle.
+ */
+function dismissSnappetFloat(): void {
+  const ui = useUIStore.getState();
+  if (ui.selectedSnappetSlotId !== null) ui.selectSnappet(null);
+}
 
 // ── Multi-cell snappets ──────────────────────────────────────────────────────
 // A tile MAY carry a `span` and cover several grid cells (utils/snappet). The
@@ -1180,6 +1201,7 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
         },
 
         selectBar: (id) => {
+          if (id) dismissSnappetFloat();
           set({ selectedBarId: id });
         },
 
@@ -1324,6 +1346,7 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
         },
 
         selectSection: (id) => {
+          if (id) dismissSnappetFloat();
           set({ selectedSectionId: id });
         },
 

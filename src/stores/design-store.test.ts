@@ -18,6 +18,7 @@ vi.mock("@/lib/utils/image-store", () => ({
   deleteFullRes: vi.fn(async () => {}),
 }));
 import { deleteFullRes } from "@/lib/utils/image-store";
+import { useUIStore } from "@/stores/ui-store";
 
 // ─── localStorage stub ────────────────────────────────────────────────────────
 // The vitest environment is `node`, so there is no localStorage. persist reads it
@@ -746,5 +747,45 @@ describe("placeImageSnappet (uploaded art as a snappet)", () => {
       setId: "essentials",
     });
     expect("image" in store.getState().slots["frame:top-0"]).toBe(false);
+  });
+});
+
+describe("one editing context at a time (the stuck floating size control)", () => {
+  // The floating snappet size control is `position: fixed` at the bottom of the
+  // viewport. Its selection lived in the UI store while bar/section selection lives
+  // here, and neither cleared the other — so opening the text-bar editor left the
+  // float sitting on top of it, with no amount of scrolling able to move it.
+  //
+  // Pinned in the STORE, not the component: the rule is "these two selections are
+  // mutually exclusive", and there are four call sites that select a bar or a
+  // section across the canvas, the section controls and the upload flow.
+  beforeEach(() => {
+    useUIStore.getState().selectSnappet(null);
+  });
+
+  it("selecting a text bar dismisses a selected snappet", () => {
+    const store = makeStore(SCHOOL_FRAME_CONFIG);
+    useUIStore.getState().selectSnappet("frame:wing-left-2");
+    store.getState().selectBar("tb-1");
+    expect(useUIStore.getState().selectedSnappetSlotId).toBeNull();
+    expect(store.getState().selectedBarId).toBe("tb-1");
+  });
+
+  it("selecting a section dismisses a selected snappet", () => {
+    const store = makeStore(SCHOOL_FRAME_CONFIG);
+    useUIStore.getState().selectSnappet("frame:wing-left-2");
+    store.getState().selectSection("wing-right");
+    expect(useUIStore.getState().selectedSnappetSlotId).toBeNull();
+    expect(store.getState().selectedSectionId).toBe("wing-right");
+  });
+
+  it("CLEARING a bar or section leaves the snappet alone", () => {
+    // Deselecting is not "I am now editing something else", so it must not reach
+    // across and cancel a tile the user just picked up.
+    const store = makeStore(SCHOOL_FRAME_CONFIG);
+    useUIStore.getState().selectSnappet("frame:wing-left-2");
+    store.getState().selectBar(null);
+    store.getState().selectSection(null);
+    expect(useUIStore.getState().selectedSnappetSlotId).toBe("frame:wing-left-2");
   });
 });

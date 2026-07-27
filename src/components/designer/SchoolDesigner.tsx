@@ -28,10 +28,8 @@ import { FrameCanvas, type FrameCanvasHandle } from "@/components/frame/FrameCan
 import { TilePalette } from "@/components/tiles/TilePalette";
 import { SCHOOL_SURFACED_SET_IDS } from "@/data/sets";
 import { SectionControls } from "./SectionControls";
-import { BuildStamp } from "./BuildStamp";
 import { SectionEditor } from "./SectionEditor";
 import { UploadPhotoButton } from "./UploadPhotoButton";
-import { PanelWidthToggle } from "./PanelWidthToggle";
 import { SnappetRecropModal } from "./SnappetRecropModal";
 import { SnappetSizeControl } from "./SnappetSizeControl";
 import { ArmedBanner } from "@/components/tiles/ArmedBanner";
@@ -422,17 +420,23 @@ export function SchoolDesigner() {
         {/* `lg:items-stretch` so the right column fills the row's height even when the
             tools rail is the taller side. Without it the column ends where its own
             content does, and the sticky frame below has no room left to stick in. */}
-        <main className="flex-1 grid grid-cols-1 lg:grid-cols-[340px_minmax(0,1fr)] gap-4 p-4 mx-auto w-full max-w-[1560px] items-start lg:items-stretch">
-          {/* LEFT tools rail. Palette LAST so it sits directly above the frame on mobile
-              (the drag/tap source next to its target). */}
+        {/* `pt-0` deliberately: the frame is the subject of this page and should meet
+            the chrome above it, not float below a band of dead space. */}
+        <main className="flex-1 grid grid-cols-1 lg:grid-cols-[340px_minmax(0,1fr)] gap-4 px-4 pb-4 pt-0 mx-auto w-full max-w-[1560px] items-start lg:items-stretch">
+          {/* LEFT tools rail. The PALETTE leads: it is the thing you reach for first
+              and on every subsequent action, so it gets the top of the rail. Upload and
+              the section pickers follow, because you touch them once per design.
+              (It used to sit last, which put the most-used control furthest from the
+              top on desktop and buried it under two panels you rarely revisit.)
+
+              The side-panel width toggle is gone from the UI. The builder is locked to
+              2 tiles per side panel — the roomy-margin option — so the control only
+              ever offered a worse answer. `PanelWidthToggle` and the underlying
+              `setWingColumns` are intact for when a second size is a real product. */}
           <div className="order-1 lg:order-none min-w-0 flex flex-col gap-4">
-            <UploadPhotoButton />
-            <PanelWidthToggle />
-            <SectionControls />
-            <div className="px-1 pt-1 text-right">
-              <BuildStamp />
-            </div>
             <TilePalette surfacedSetIds={SCHOOL_SURFACED_SET_IDS} />
+            <UploadPhotoButton />
+            <SectionControls />
           </div>
 
           {/* RIGHT column — frame preview + the selected section's editor, stacked in one
