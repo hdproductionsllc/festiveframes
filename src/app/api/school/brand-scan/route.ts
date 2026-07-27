@@ -54,6 +54,8 @@ import {
   type PageOutcome,
   type SchoolProfile,
 } from "@/lib/school-brand";
+import { pickCrawlTargets } from "@/lib/school-brand/crawl-targets";
+import { mergeProfiles } from "@/lib/school-brand/merge-profiles";
 import {
   assertPublicUrl,
   checkUrlShape,
@@ -111,6 +113,13 @@ const MAX_RESPONSE_IMAGE_BYTES = 20 * 1024 * 1024;
  * could otherwise spend a minute. Four good candidates in 20 s beats six in 55.
  */
 const CANDIDATE_BUDGET_MS = 22_000;
+
+/** Second-hop pages fetched after the entry page (see the hop block below). Three
+ *  covers brand + athletics + one more without doubling the scan's feel. */
+const SECOND_HOP_PAGES = 3;
+/** Tighter than the entry page's timeout: a slow subpage is an opportunity cost,
+ *  not the user's actual request. */
+const SECOND_HOP_TIMEOUT_MS = 5_000;
 
 // ─── response ────────────────────────────────────────────────────────────────
 
@@ -300,7 +309,48 @@ export async function POST(request: Request): Promise<NextResponse> {
   // ── parse (pure) ──
   // `page.finalUrl` rather than the submitted URL, so relative asset paths resolve
   // against where the bytes actually came from after redirects.
-  const profile = parseSchoolPage(html, page.finalUrl);
+  let profile = parseSchoolPage(html, page.finalUrl);
+
+  // ── the SECOND HOP ──
+  //
+  // The first live scan of a real school site returned nothing usable, exactly as
+  // the product review predicted: a homepage header logo is a 150–300px convenience
+  // asset, below the print floor, while the marks worth printing live one click
+  // deeper — the athletics page, the brand/downloads page. So after the entry page,
+  // fetch a ranked handful of same-host identity/athletics links and MERGE their
+  // candidates in (evidence accumulation, not replacement — see merge-profiles.ts).
+  //
+  // Unconditional rather than only-when-empty: even when the homepage yields a
+  // usable logo, the athletics page frequently yields a better one, and "the scan
+  // found the good one" is the difference between a demo and a tool. Bounded hard:
+  // at most SECOND_HOP_PAGES same-host pages, each under the page guard, each
+  // robots-checked for ITS OWN path (rules are per-path, and consent to / is not
+  // consent to /athletics), and the whole hop abandoned once the candidate budget
+  // is half spent — the hop exists to feed the QC loop, not to starve it.
+  const hopStarted = Date.now();
+  const extraProfiles: SchoolProfile[] = [];
+  for (const t of pickCrawlTargets(html, page.finalUrl, SECOND_HOP_PAGES)) {
+    if (Date.now() - hopStarted > CANDIDATE_BUDGET_MS / 2) break;
+    try {
+      const hopUrl = new URL(t.url);
+      const hopRobots = await checkRobots(hopUrl);
+      if (!hopRobots.allowed) continue;
+      const hop = await fetchGuarded(t.url, {
+        maxBytes: MAX_PAGE_BYTES,
+        timeoutMs: SECOND_HOP_TIMEOUT_MS,
+        accept: "text/html,application/xhtml+xml;q=0.9,*/*;q=0.5",
+      });
+      if (!hop.ok || hop.status < 200 || hop.status >= 300) continue;
+      const hopHtml = new TextDecoder("utf-8", { fatal: false }).decode(hop.bytes);
+      if (!looksLikeHtml(hopHtml, hop.contentType)) continue;
+      extraProfiles.push(parseSchoolPage(hopHtml, hop.finalUrl));
+    } catch {
+      // A failed hop page is a lost opportunity, never a failed scan — the entry
+      // page already succeeded, and that is the page the user actually asked for.
+      continue;
+    }
+  }
+  profile = mergeProfiles(profile, extraProfiles);
 
   // ── fetch + QC the candidates, SEQUENTIALLY ──
   //
