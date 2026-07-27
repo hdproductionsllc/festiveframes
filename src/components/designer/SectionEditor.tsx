@@ -28,15 +28,12 @@ export function SectionEditor() {
 
   const sec = selectedSectionId ? sections[selectedSectionId] : undefined;
 
-  if (!selectedSectionId) {
-    return (
-      <div className="rounded-xl border border-surface-700/50 bg-surface-800/40 p-4 text-sm font-semibold text-surface-300">
-        Pick a section from the <span className="font-bold">Sections</span> panel to edit
-        it here — set it to <span className="text-[#ed5aa0]">Text</span>, or leave it on{" "}
-        <span className="text-[#3fb0e6]">Tiles</span> and use <span className="font-bold">Add art</span>.
-      </div>
-    );
-  }
+  // Nothing selected — render NOTHING. This used to be a paragraph explaining where
+  // the Sections panel is and what its two modes do, which is a help topic wearing an
+  // editor's clothes: it occupied the editor slot permanently, on every load, to
+  // narrate a control already visible a few inches away. An empty slot reads as "not
+  // yet", which is the truth, and it stops the builder opening on a wall of text.
+  if (!selectedSectionId) return null;
 
   const label = SECTION_LABELS[selectedSectionId];
   // Image mode is retired; a section with no explicit mode (just selected) is a

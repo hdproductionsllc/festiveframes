@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useDesignStore } from "@/stores/design-store";
 import { getPiece } from "@/data/sets";
@@ -29,6 +30,19 @@ export function SnappetSizeControl() {
   const textBars = useDesignStore((s) => s.textBars);
   const resizeTile = useDesignStore((s) => s.resizeTile);
   const removeTile = useDesignStore((s) => s.removeTile);
+
+  // ESCAPE closes it. The only other ways out were the Done and Remove buttons, and
+  // the bar is `position: fixed` — so if it ever covered what you were reaching for,
+  // the gesture that dismisses it was underneath the thing doing the covering.
+  // Declared BEFORE the early returns: hooks may not sit behind a condition.
+  useEffect(() => {
+    if (!selectedId) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") selectSnappet(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [selectedId, selectSnappet]);
 
   if (typeof document === "undefined") return null;
   if (!selectedId) return null;
