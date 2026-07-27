@@ -51,6 +51,10 @@ interface DndProviderProps {
  *  down the untouched single-cell path below. */
 function dragSpanOf(data: Record<string, unknown> | undefined): TileSpan {
   if (data?.type === "placed-tile") return tileSpan({ span: data.span as TileSpan });
+  // A palette drag that publishes its OWN span is an upload: it is not in the
+  // catalogue, so `getPiece` cannot answer for it. Catalogue tiles publish no span
+  // and fall through to exactly the lookup they always used.
+  if (data?.span) return tileSpan({ span: data.span as TileSpan });
   const pieceId = data?.pieceId as string | undefined;
   return tileSpan({ span: pieceId ? getPiece(pieceId)?.defaultSpan : undefined });
 }
@@ -63,6 +67,9 @@ function dragSpanOf(data: Record<string, unknown> | undefined): TileSpan {
  */
 function autoSizes(data: Record<string, unknown> | undefined): boolean {
   if (data?.type === "placed-tile") return false;
+  // An upload's span is a preference — the shape its crop was sized against — so it
+  // shrinks into a one-row banner rather than refusing the drop.
+  if (data?.image) return true;
   const pieceId = data?.pieceId as string | undefined;
   return pieceId ? !getPiece(pieceId)?.spanRequired : false;
 }

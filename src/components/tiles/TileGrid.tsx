@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { getSetPieces, resolveSurfacedSetId, SURFACED_SET_IDS } from "@/data/sets";
 import { usePaletteStore } from "@/stores/palette-store";
+import { useDesignStore } from "@/stores/design-store";
+import { uploadPiece } from "@/lib/utils/uploads";
 import { PaletteTile } from "./PaletteTile";
 
 interface TileGridProps {
@@ -21,6 +23,8 @@ interface TileGridProps {
 
 export function TileGrid({ variant = "grid", surfacedSetIds = SURFACED_SET_IDS }: TileGridProps) {
   const activeSetId = usePaletteStore((s) => s.activeSetId);
+  const uploads = useDesignStore((s) => s.uploads);
+  const removeUpload = useDesignStore((s) => s.removeUpload);
 
   // One-time drag demo: the first tile mimes a pick-up-and-drag on the visitor's
   // very first builder open (localStorage-gated), teaching that tiles are
@@ -52,6 +56,16 @@ export function TileGrid({ variant = "grid", surfacedSetIds = SURFACED_SET_IDS }
         className="flex gap-2 overflow-x-auto overflow-y-hidden pb-1 pt-3
           [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
       >
+        {/* Uploads lead the tray for the same reason they lead the grid — see below. */}
+        {uploads.map((art) => (
+          <PaletteTile
+            key={art.id}
+            piece={uploadPiece(art)}
+            size="lg"
+            upload={art}
+            onRemove={() => removeUpload(art.id)}
+          />
+        ))}
         {pieces.map((piece) => (
           <PaletteTile key={piece.id} piece={piece} size="lg" />
         ))}
@@ -60,10 +74,33 @@ export function TileGrid({ variant = "grid", surfacedSetIds = SURFACED_SET_IDS }
   }
 
   return (
-    <div className="grid grid-cols-4 gap-1.5">
-      {pieces.map((piece, i) => (
-        <PaletteTile key={piece.id} piece={piece} demo={demo && i === 0} />
-      ))}
+    <div>
+      {/* YOUR UPLOADS, above the catalogue.
+          An uploaded crest is the one badge on the frame that is actually theirs, and
+          it used to exist only as a placed tile — so putting a second copy on the
+          other wing meant uploading the same file again. Here it behaves like every
+          other badge: drag it on, tap-then-tap it on, as many times as you like.
+          First, not last, because it is the tile they came to place. */}
+      {uploads.length > 0 && (
+        <div className="mb-3">
+          <p className="ff-help mb-1.5 font-medium text-[var(--ff-ink-2,#4b5058)]">Your uploads</p>
+          <div className="grid grid-cols-4 gap-1.5">
+            {uploads.map((art) => (
+              <PaletteTile
+                key={art.id}
+                piece={uploadPiece(art)}
+                upload={art}
+                onRemove={() => removeUpload(art.id)}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+      <div className="grid grid-cols-4 gap-1.5">
+        {pieces.map((piece, i) => (
+          <PaletteTile key={piece.id} piece={piece} demo={demo && i === 0} />
+        ))}
+      </div>
     </div>
   );
 }

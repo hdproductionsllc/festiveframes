@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import type { FrameConfig, PlacedTile } from "@/lib/types";
 import { DEFAULT_FRAME_CONFIG, SCHOOL_FRAME_CONFIG, MAX_HISTORY_DEPTH } from "@/lib/constants/frame";
 import { getAllSlotIds, buildGrid } from "@/lib/utils/slot-generator";
+import { MAX_UPLOADS } from "@/lib/utils/uploads";
 import { migrateSchoolDesign } from "@/lib/utils/school-migration";
 import {
   DEFAULT_BOTTOM_BAR,
@@ -787,5 +788,94 @@ describe("one editing context at a time (the stuck floating size control)", () =
     store.getState().selectBar(null);
     store.getState().selectSection(null);
     expect(useUIStore.getState().selectedSnappetSlotId).toBe("frame:wing-left-2");
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+describe("uploads as reusable palette pieces", () => {
+  const grid = buildGrid(SCHOOL_FRAME_CONFIG);
+  const anchorId = grid.cellAt(0, 0)!.id;
+
+  const crest = {
+    name: "crest",
+    url: "data:image/png;base64,thumb",
+    fullResId: "fr-1",
+    aspect: 1,
+    span: { cols: 2, rows: 2 },
+  };
+
+  it("hands back a namespaced id whose SET segment is the reserved upload set", () => {
+    const store = makeStore(SCHOOL_FRAME_CONFIG);
+    const id = store.getState().addUpload(crest);
+    expect(id.startsWith("upload:")).toBe(true);
+    // Every place path derives the set from the id this way — see RailSlot/DndProvider.
+    expect(id.split(":")[0]).toBe("upload");
+  });
+
+  it("PLACES THE SAME UPLOAD TWICE — the whole point of the tray", () => {
+    const store = makeStore(SCHOOL_FRAME_CONFIG);
+    const id = store.getState().addUpload(crest);
+    const a = grid.cellAt(0, 0)!.id;
+    const b = grid.cellAt(0, 12)!.id;
+    store.getState().placeTile(a, id, "upload", { cols: 2, rows: 2 });
+    store.getState().placeTile(b, id, "upload", { cols: 2, rows: 2 });
+    const placed = Object.values(store.getState().slots).filter((t) => t.image);
+    expect(placed).toHaveLength(2);
+    for (const t of placed) {
+      // The stored record is byte-identical to what placeImageSnappet writes, so
+      // nothing downstream of placement can tell the two paths apart.
+      expect(t.pieceId).toBe("upload");
+      expect(t.setId).toBe("upload");
+      expect(t.image).toEqual({ url: crest.url, fullResId: "fr-1" });
+    }
+  });
+
+  it("resolves the art inside placeTile, so every gesture agrees", () => {
+    // The call sites (drag, tap, fill, random) pass only an id — if the lookup lived
+    // in one of them the others would place a tile with no art at all.
+    const store = makeStore(SCHOOL_FRAME_CONFIG);
+    const id = store.getState().addUpload(crest);
+    store.getState().placeTile(anchorId, id, "upload");
+    expect(store.getState().slots[anchorId].image?.url).toBe(crest.url);
+  });
+
+  it("leaves a CATALOGUE tile exactly as it was", () => {
+    const store = makeStore(SCHOOL_FRAME_CONFIG);
+    store.getState().addUpload(crest);
+    store.getState().placeTile(anchorId, "hs:soccer-ball", "hs");
+    expect(store.getState().slots[anchorId]).toEqual({ pieceId: "hs:soccer-ball", setId: "hs" });
+  });
+
+  it("keeps the newest and drops the oldest past the cap", () => {
+    // Each entry is a data URL in the persisted design; without a cap a session of
+    // trial-and-error uploads fills localStorage and the design stops saving.
+    const store = makeStore(SCHOOL_FRAME_CONFIG);
+    for (let i = 0; i < MAX_UPLOADS + 3; i++) {
+      store.getState().addUpload({ ...crest, name: `crest-${i}` });
+    }
+    const names = store.getState().uploads.map((u) => u.name);
+    expect(names).toHaveLength(MAX_UPLOADS);
+    expect(names[0]).toBe(`crest-${MAX_UPLOADS + 2}`); // newest first
+    expect(names).not.toContain("crest-0");
+  });
+
+  it("removing from the tray does NOT touch tiles already on the frame", () => {
+    // The tray is a source of art, not a live link. Deleting a swatch must never
+    // silently edit a design the customer has already laid out.
+    const store = makeStore(SCHOOL_FRAME_CONFIG);
+    const id = store.getState().addUpload(crest);
+    store.getState().placeTile(anchorId, id, "upload");
+    store.getState().removeUpload(id);
+    expect(store.getState().uploads).toHaveLength(0);
+    expect(store.getState().slots[anchorId].image?.url).toBe(crest.url);
+  });
+
+  it("survives a rehydrate — including a blob saved before uploads existed", () => {
+    // `merge` runs on EVERY hydrate; `migrate` only when the version is older. A blob
+    // already at the current version has no `uploads` key and would arrive undefined,
+    // which the palette would crash on.
+    const store = makeStore(SCHOOL_FRAME_CONFIG);
+    store.persist.rehydrate();
+    expect(Array.isArray(store.getState().uploads)).toBe(true);
   });
 });

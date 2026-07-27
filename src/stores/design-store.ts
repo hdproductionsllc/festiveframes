@@ -50,6 +50,12 @@ import {
 } from "@/lib/utils/snappet";
 import { getPiece } from "@/data/sets";
 import { deleteFullRes } from "@/lib/utils/image-store";
+import {
+  findUpload,
+  MAX_UPLOADS,
+  UPLOAD_ID_PREFIX,
+  type UploadedArt,
+} from "@/lib/utils/uploads";
 import { repairSections, sectionSupportsText, sectionSupportsTiles } from "@/lib/utils/sections";
 import { MAX_HISTORY_DEPTH } from "@/lib/constants/frame";
 
@@ -279,6 +285,15 @@ interface DesignState {
    * runs bright-to-dark, so a dark rim on a dark body simply vanishes.
    */
   rimColor: string | null;
+  /**
+   * Art the customer uploaded, kept as REUSABLE palette pieces.
+   *
+   * Uploading used to place the art once and forget it, so a crest on both wings
+   * meant uploading the same file twice. These entries are what the palette shows
+   * beside the catalogue badges; placing one is still an ordinary image-carrying
+   * tile, so nothing downstream of placement changes. See `lib/utils/uploads`.
+   */
+  uploads: UploadedArt[];
   slots: Record<string, PlacedTile>;
   bottomBar: BottomBarConfig; // draft for the NEXT text bar to be placed
   qrCode: QRCodeConfig;
@@ -305,6 +320,18 @@ interface DesignState {
    * is rejected; one that overlaps existing tiles REPLACES them.
    */
   placeTile: (slotId: string, pieceId: string, setId: string, span?: TileSpan) => void;
+  /**
+   * Remember an upload so it can be placed again later, and return its palette id.
+   *
+   * Capped at `MAX_UPLOADS`, oldest first — every preview is a data URL inside the
+   * persisted design, and localStorage is the budget that already raises the "storage
+   * is full" banner.
+   */
+  addUpload: (art: Omit<UploadedArt, "id"> & { id?: string }) => string;
+  /** Drop an upload from the palette. Tiles already placed from it stay placed —
+   *  they carry their own copy of the image, and removing art from the tray must
+   *  not silently edit the frame. */
+  removeUpload: (id: string) => void;
   /** Remove a tile by its ANCHOR id or by any cell its snappet covers. */
   removeTile: (slotId: string) => void;
   /**
@@ -431,6 +458,7 @@ export type LoadableDesign = Partial<
     | "frameColor"
     | "tileFieldColor"
     | "rimColor"
+    | "uploads"
     | "slots"
     | "textBars"
     | "bottomBar"
@@ -637,6 +665,7 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
         frameColor: DEFAULT_FRAME_COLOR,
         tileFieldColor: null,
         rimColor: null,
+        uploads: [],
         slots: {},
         bottomBar: { ...DEFAULT_BOTTOM_BAR },
         qrCode: { ...DEFAULT_QR_CODE },
@@ -657,7 +686,18 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
             // drift apart.
             const barCovered = new Set(coveredSlotIds(state.textBars));
             if (barCovered.has(slotId)) return state;
-            const placed: PlacedTile = { pieceId, setId };
+            // An UPLOAD placed from the palette resolves to the same record
+            // `placeImageSnappet` writes — the reserved piece identity plus the art
+            // itself. Done HERE rather than at the call sites so drag, tap-to-place,
+            // Fill All, Random and Mirror cannot disagree about what an upload is.
+            const art = findUpload(state.uploads, pieceId);
+            const placed: PlacedTile = art
+              ? {
+                  pieceId: UPLOAD_PIECE_ID,
+                  setId: UPLOAD_SET_ID,
+                  image: { url: art.url, fullResId: art.fullResId },
+                }
+              : { pieceId, setId };
             // Only a genuine multi-cell footprint carries a span — a 1x1 stays the
             // exact two-field record it has always been, so nothing about /build's
             // stored shape changes.
@@ -688,6 +728,28 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
               slots: newSlots,
               updatedAt: Date.now(),
             });
+          });
+        },
+
+        addUpload: (art) => {
+          const id = art.id ?? `${UPLOAD_ID_PREFIX}${crypto.randomUUID()}`;
+          set((state) => ({
+            // Newest FIRST: the palette's uploads row is read left to right, and the
+            // art you just added is the art you are about to place.
+            uploads: [{ ...art, id }, ...state.uploads.filter((u) => u.id !== id)].slice(
+              0,
+              MAX_UPLOADS,
+            ),
+            updatedAt: Date.now(),
+          }));
+          return id;
+        },
+
+        removeUpload: (id) => {
+          set((state) => {
+            const uploads = state.uploads.filter((u) => u.id !== id);
+            if (uploads.length === state.uploads.length) return state;
+            return { uploads, updatedAt: Date.now() };
           });
         },
 
@@ -1343,6 +1405,7 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
             frameColor: design.frameColor ?? DEFAULT_FRAME_COLOR,
             tileFieldColor: design.tileFieldColor ?? null,
             rimColor: design.rimColor ?? null,
+            uploads: Array.isArray(design.uploads) ? design.uploads.map((u) => ({ ...u })) : [],
             slots: design.slots ? { ...design.slots } : {},
             textBars: Array.isArray(design.textBars)
               ? design.textBars.map((b) => ({ ...b, config: { ...b.config } }))
@@ -1542,6 +1605,7 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
         frameColor: state.frameColor,
         tileFieldColor: state.tileFieldColor,
         rimColor: state.rimColor,
+        uploads: state.uploads,
         plateState: state.plateState,
         slots: state.slots,
         textBars: state.textBars,
@@ -1578,6 +1642,14 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
       },
       merge: (persisted, current) => {
         const merged = { ...current, ...(persisted as object) } as DesignState;
+        // A blob saved before uploads were reusable carries no `uploads` key, and the
+        // shallow spread above would then leave it `undefined` rather than falling
+        // back to the default — the palette would crash on the first `.map`. In MERGE
+        // and not `migrate`, because those blobs are already at the current version
+        // and migrate would never run for them. Same object when it is already an
+        // array, so a hydrate with nothing to fix does not churn renders.
+        if (!Array.isArray(merged.uploads)) merged.uploads = [];
+        else if (merged.uploads.length > MAX_UPLOADS) merged.uploads = merged.uploads.slice(0, MAX_UPLOADS);
         // Text belongs to the top/bottom banners only. A design saved while the side
         // panels still allowed text keeps a wing in text mode, and the Tiles/Text
         // toggle no longer renders there — so the panel reads as locked to text with

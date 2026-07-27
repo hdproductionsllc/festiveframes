@@ -2,7 +2,7 @@
 
 import { memo, useEffect, useRef, useState } from "react";
 import { useDroppable, useDraggable } from "@dnd-kit/core";
-import type { FrameSlot, PlacedTile, TileSpan } from "@/lib/types";
+import type { FrameSlot, PlacedTile, TilePiece, TileSpan } from "@/lib/types";
 import {
   frameCorners,
   grabOffsetIn,
@@ -15,6 +15,7 @@ import {
 import { buildGrid } from "@/lib/utils/slot-generator";
 import { coveredSlotIds } from "@/lib/utils/text-bar";
 import { getPiece } from "@/data/sets";
+import { findUpload } from "@/lib/utils/uploads";
 import { NO_CORNERS, type CornerFlags } from "@/lib/utils/tile-theme";
 import { PlacedTileView } from "./PlacedTileView";
 import { SparkleBurst } from "./SparkleBurst";
@@ -57,6 +58,7 @@ function RailSlotInner({ slot, placedTile, covered, spanWidth, spanHeight }: Rai
   const sections = useDesignStore((s) => s.sections);
   const textBars = useDesignStore((s) => s.textBars);
   const selectedPieceId = usePaletteStore((s) => s.selectedPieceId);
+  const uploads = useDesignStore((s) => s.uploads);
   const soundEnabled = useUIStore((s) => s.soundEnabled);
 
   // A festive snap+sparkle whenever a tile LANDS in this cell. Every place site
@@ -87,7 +89,13 @@ function RailSlotInner({ slot, placedTile, covered, spanWidth, spanHeight }: Rai
     // with no span at all, so every tap produced a 1x1 no matter what the frame's
     // floor said — and tap is the primary gesture on touch, the one the armed
     // banner tells you to use. Two gestures for one action must not disagree.
-    const piece = getPiece(selectedPieceId);
+    // An UPLOAD is not in the catalogue, so `getPiece` cannot answer for it — its
+    // footprint comes from the tray entry instead. Same shape either way, so the
+    // resolution below is identical for a crest and for a catalogue badge.
+    const art = findUpload(uploads, selectedPieceId);
+    const piece = art
+      ? ({ defaultSpan: art.span, spanRequired: false } as Pick<TilePiece, "defaultSpan" | "spanRequired">)
+      : getPiece(selectedPieceId);
     const drop = resolveSnappetDrop(
       {
         grid: buildGrid(frameConfig),

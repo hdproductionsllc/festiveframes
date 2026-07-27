@@ -2,12 +2,23 @@
 
 import type { CSSProperties } from "react";
 import { useDraggable } from "@dnd-kit/core";
+import type { TileSpan } from "@/lib/types";
 
-export function useDragTile(pieceId: string) {
+export function useDragTile(
+  pieceId: string,
+  /**
+   * Extra drag payload for a piece the catalogue does not hold — an UPLOAD.
+   * `getPiece` is the only place a drag can normally learn a piece's footprint or
+   * its art, and an upload is deliberately not in that map (see lib/utils/uploads),
+   * so it publishes both here instead. Omitted for every catalogue tile, which keeps
+   * their drag data byte-identical.
+   */
+  extra?: { span?: TileSpan; image?: { url: string; fullResId?: string } },
+) {
   const { attributes, listeners, setNodeRef, transform, isDragging } =
     useDraggable({
       id: `palette:${pieceId}`,
-      data: { pieceId, type: "tile" },
+      data: { pieceId, type: "tile", ...(extra?.span ? { span: extra.span } : {}), ...(extra?.image ? { image: extra.image } : {}) },
     });
 
   // Palette tiles drag the reliable way: the tile element itself follows the

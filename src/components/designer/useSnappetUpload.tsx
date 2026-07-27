@@ -9,7 +9,8 @@ import { coveredSlotIds } from "@/lib/utils/text-bar";
 import { panelSnappetPlacement } from "@/lib/utils/snappet";
 import { putFullRes } from "@/lib/utils/image-store";
 import { reviewUploadedImage } from "@/lib/utils/image-moderation";
-import type { FrameConfig, PlacedTile, PlacedTextBar, SectionId, SectionState } from "@/lib/types";
+import type { FrameConfig, PlacedTile, PlacedTextBar, SectionId, SectionState, TileSpan } from "@/lib/types";
+import { thumbnailDataUrl } from "@/lib/utils/uploads";
 import { ImageCropModal, type ImageCropResult } from "./ImageCropModal";
 
 // The one upload → crop → snappet flow, shared by the per-section "Add art" button
@@ -89,6 +90,7 @@ export function useSnappetUpload(): SnappetUpload {
   const sections = useDesignStore((s) => s.sections);
   const textBars = useDesignStore((s) => s.textBars);
   const placeImageSnappet = useDesignStore((s) => s.placeImageSnappet);
+  const addUpload = useDesignStore((s) => s.addUpload);
 
   // The file waiting to be cropped, plus the crop's aspect target (the SUGGESTED
   // snappet's physical size) and the panel it lands in. The aspect target makes the
@@ -97,6 +99,11 @@ export function useSnappetUpload(): SnappetUpload {
   const [cropTarget, setCropTarget] = useState<{ width: number; height: number } | null>(null);
   const [target, setTarget] = useState<SectionId | null>(null);
   const pendingAspect = useRef<number>(1);
+  // The footprint the crop was sized against, and the file's own name. Both ride
+  // along to the palette entry so a re-place reproduces the shape the user already
+  // approved instead of guessing a new one from the aspect.
+  const pendingSpan = useRef<TileSpan>({ cols: 1, rows: 1 });
+  const pendingName = useRef<string>("Upload");
 
   const begin = async (file: File, sectionId: SectionId, knownAspect?: number) => {
     const aspect = knownAspect ?? (await readImageAspect(file));
@@ -111,6 +118,8 @@ export function useSnappetUpload(): SnappetUpload {
       minSpan: frameConfig.minTileSpan,
     });
     const span = placement?.span ?? frameConfig.minTileSpan ?? { cols: 1, rows: 1 };
+    pendingSpan.current = span;
+    pendingName.current = file.name.replace(/\.[^.]+$/, "").slice(0, 40) || "Upload";
     // Every grid column is exactly one tile wide (the grid invariant), so the snappet's
     // physical size is just span × tile — the crop's aspect target + the gate denominator.
     setCropTarget({
@@ -132,6 +141,22 @@ export function useSnappetUpload(): SnappetUpload {
     // Moderation integration point: user prints MUST be gated by a real server-side
     // vision check before production. No-op today (it does not fake an approval).
     void reviewUploadedImage(result.fullResBlob);
+    // Into the TRAY as well as onto the frame. Placing it once was the whole flow,
+    // which meant a crest on both wings was the same file uploaded twice. It is added
+    // before the placement so the palette has it even if the panel turns out to be
+    // full and the placement is refused.
+    // A THUMBNAIL, not the crop preview. The preview is up to 1200px and measured at
+    // 4.1 MB as a data URL — putting a second copy of that in the persisted design
+    // pushed it straight past localStorage's quota, and the design then failed to
+    // save at all. Print is unaffected: it reads the full-res original from IndexedDB
+    // by `fullResId`, which every tile placed from this entry carries.
+    addUpload({
+      name: pendingName.current,
+      url: await thumbnailDataUrl(result.previewUrl),
+      fullResId: id,
+      aspect: pendingAspect.current,
+      span: pendingSpan.current,
+    });
     placeImageSnappet(
       target,
       {

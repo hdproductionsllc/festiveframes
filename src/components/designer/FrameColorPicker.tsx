@@ -1,7 +1,7 @@
 "use client";
 
 import { DEFAULT_FRAME_COLOR, useDesignStore } from "@/stores/design-store";
-import { TILE_BG, luminance } from "@/lib/utils/tile-theme";
+import { TILE_BG, brassGradientCss, luminance, solidFill } from "@/lib/utils/tile-theme";
 
 // ─── The frame BODY colour, as a global override ─────────────────────────────
 //
@@ -100,14 +100,16 @@ export function FrameColorPicker() {
           hint="Behind every tile"
           value={tileFieldColor}
           onChange={setTileFieldColor}
-          resetLabel="Each tile's own"
+          fallback={solidFill(TILE_BG.navy)}
+          fallbackLabel="Each tile's own"
         />
         <SwatchRow
           label="Rim"
-          hint="Replaces the gold edge"
+          hint="The edge round every badge and banner"
           value={rimColor}
           onChange={setRimColor}
-          resetLabel="Gold"
+          fallback={brassGradientCss()}
+          fallbackLabel="Gold"
         />
       </div>
     </div>
@@ -115,33 +117,38 @@ export function FrameColorPicker() {
 }
 
 /**
- * One overridable colour with a reset. `null` is a real state here, not an empty
- * string: it means "keep the designed default" (each tile's own field, or the brass),
- * which is different from having chosen a colour that happens to match.
+ * One overridable colour, showing WHAT IS IN EFFECT.
+ *
+ * `null` is a real state here, not an empty string: it means "keep the designed
+ * default" — each tile's own field, or the brass. It used to be drawn as a
+ * transparency checkerboard, which is the universal symbol for *nothing here*, so
+ * two working controls read as two broken ones. The swatch now paints the actual
+ * default it is standing in for (the brass ramp, the designed navy) and says so, so
+ * the control shows its current value the way the frame-colour swatch above it does.
  */
 function SwatchRow({
   label,
   hint,
   value,
   onChange,
-  resetLabel,
+  fallback,
+  fallbackLabel,
 }: {
   label: string;
   hint: string;
   value: string | null;
   onChange: (hex: string | null) => void;
-  resetLabel: string;
+  /** A CSS background painting the default this row falls back to. */
+  fallback: string;
+  /** What that default is called, shown beside the swatch while it is in force. */
+  fallbackLabel: string;
 }) {
   return (
     <div className="flex items-center gap-2">
       <label
         className="relative h-7 w-7 shrink-0 cursor-pointer overflow-hidden rounded-[var(--ff-radius-sm,6px)] border"
         style={{
-          background: value ?? "transparent",
-          backgroundImage: value
-            ? undefined
-            : "linear-gradient(45deg,rgba(0,0,0,.12) 25%,transparent 25%,transparent 75%,rgba(0,0,0,.12) 75%)",
-          backgroundSize: value ? undefined : "8px 8px",
+          background: value ? value : fallback,
           borderColor: "var(--ff-line, #1e1b17)",
         }}
         title={`Choose a ${label.toLowerCase()} colour`}
@@ -158,14 +165,19 @@ function SwatchRow({
         <p className="text-[12px] font-semibold leading-tight text-[var(--ff-ink,#1e1b17)]">{label}</p>
         <p className="ff-help leading-tight">{hint}</p>
       </div>
-      {value && (
+      {value ? (
         <button
           type="button"
           onClick={() => onChange(null)}
+          title={`Back to ${fallbackLabel.toLowerCase()}`}
           className="ff-btn ff-btn-secondary shrink-0 px-2 py-1 text-[11px]"
         >
-          {resetLabel}
+          Reset
         </button>
+      ) : (
+        // Not a button: there is nothing to undo yet. It names what the swatch is
+        // currently showing, so a gold chip reads as "gold, on purpose".
+        <span className="ff-help shrink-0 text-[11px]">{fallbackLabel}</span>
       )}
     </div>
   );

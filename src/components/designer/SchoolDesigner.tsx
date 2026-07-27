@@ -36,7 +36,11 @@ import { SnappetRecropModal } from "./SnappetRecropModal";
 import { SnappetSizeControl } from "./SnappetSizeControl";
 import { ArmedBanner } from "@/components/tiles/ArmedBanner";
 import { StateSelector } from "@/components/frame/StateSelector";
-import { SCHOOL_FRAME_CONFIG } from "@/lib/constants/frame";
+import {
+  SCHOOL_FRAME_CONFIG,
+  getRenderHeightInches,
+  getTotalWidthInches,
+} from "@/lib/constants/frame";
 import { SCHOOL_DEFAULT_SECTIONS } from "@/lib/constants/defaults";
 import { migrateSchoolDesign } from "@/lib/utils/school-migration";
 import type { BannerPreview } from "@/lib/types";
@@ -44,6 +48,31 @@ import type { SnappetPreview } from "@/lib/utils/snappet";
 
 /** The school builder's own persist key — its design never touches /build's. */
 export const SCHOOL_PERSIST_KEY = "festive-frames-school-v1";
+
+/**
+ * Vertical room the page chrome needs above and below the pinned frame — the header,
+ * the restore banner, and enough air that the frame does not sit flush against the
+ * window edges.
+ *
+ * It caps the STAGE's width (the frame is aspect-locked and sized from its width), so
+ * the whole frame stays inside the viewport when it pins instead of hanging its bottom
+ * off-screen. Deliberately generous: over-reserving shrinks the frame slightly, while
+ * under-reserving hides part of the product.
+ */
+const STAGE_VIEWPORT_RESERVE_PX = 190;
+
+/**
+ * The share of that room the frame keeps WHILE A SECTION EDITOR IS OPEN.
+ *
+ * With an editor open the two of them cannot both be full size on a laptop window —
+ * a full-height frame plus a full-height editor is more than the viewport holds, and
+ * something has to give. Every earlier attempt let the frame win and pushed the
+ * editor off the bottom, which is the overlap this float was torn out for. So the
+ * frame yields instead: it shrinks to a bit under two thirds, which is still the
+ * largest thing on the page, and the editor gets the rest without either covering
+ * the other.
+ */
+const STAGE_EDITING_SHARE = 0.62;
 
 /**
  * The one icon this file needs, drawn to the house spec for the re-skin: 24x24
@@ -77,6 +106,15 @@ export function SchoolDesigner() {
   const qrCode = useDesignStore((s) => s.qrCode);
   const plateState = useDesignStore((s) => s.plateState);
   const clearAll = useDesignStore((s) => s.clearAll);
+  // Whether the section editor is on screen — it is what the pinned frame has to
+  // make room for. See STAGE_EDITING_SHARE.
+  const editorOpen = useDesignStore((s) => s.selectedSectionId) != null;
+
+  // The frame's fixed width:height. The pinned stage is capped by HEIGHT (it must
+  // fit the window) but sized by WIDTH, so this is what converts one into the other.
+  // Read from the live config rather than hard-coded, so a geometry change cannot
+  // silently start clipping the frame.
+  const frameAspect = getTotalWidthInches(frameConfig) / getRenderHeightInches(frameConfig);
 
   const canvasRef = useRef<FrameCanvasHandle>(null);
   const storeApi = useDesignStoreApi();
@@ -482,20 +520,30 @@ export function SchoolDesigner() {
             <SectionControls />
           </div>
 
-          {/* RIGHT column — frame preview, then the ONE active editor beneath it.
+          {/* RIGHT column — the frame, pinned, with the editor in its own pane below.
 
-              NOTHING here is sticky, deliberately. Pinning the frame put the design on
-              top of the panel you type into: the editor is its sibling, so scrolling
-              slid the editor into the pinned frame's band, and a `position: sticky`
-              element paints above a STATIC sibling whatever the DOM order. Sticking the
-              whole column instead fixed the overlap but bought it with a height cap,
-              which on a short window clipped the editor or shrank the frame. Every
-              version traded one problem for another, so the pinning is simply gone.
+              THE FRAME FLOATS AGAIN, on desktop, and the three ways it failed before
+              are all addressed by the SHAPE of this column rather than traded against
+              each other:
 
-              Ordinary flow: the frame renders at its natural size, the editor sits
-              below it with `gap-6` of clear margin, and the page scrolls. */}
-          <div className="order-2 lg:order-none flex flex-col gap-6 min-w-0">
-            <div className="w-full flex flex-col gap-3">
+              1. Sticking the FRAME alone let the editor — a static sibling — slide up
+                 over it and swallow it whole. A float you scroll away from is not a
+                 float. So the whole COLUMN pins instead, and the frame keeps its place
+                 at the top of it.
+
+              2. Sticking the column previously CLIPPED the editor, because the column
+                 was capped to the viewport and the editor simply ran off the end. It
+                 now scrolls inside its own pane (`overflow-y-auto` under `min-h-0`),
+                 so a long panel is fully reachable and the frame never moves.
+
+              3. A frame taller than the window cannot pin usefully. It is aspect-locked
+                 and sized from its WIDTH, so the height cap is expressed as the
+                 max-width below, derived from the live geometry rather than guessed.
+
+              Mobile keeps ordinary flow: one column, no pinning, no nested scroll — a
+              pinned frame on a phone leaves nowhere to type. */}
+          <div className="order-2 lg:order-none flex flex-col gap-6 min-w-0 lg:sticky lg:top-3 lg:h-[calc(100vh-1.5rem)]">
+            <div className="w-full flex flex-col gap-3 lg:shrink-0">
               {/* THE STAGE. The one zone on the page darker than its neighbours
                   (1.19:1 below the canvas, 1.28:1 below the cards) — everything else
                   is white or near-white, so the eye goes to the single tonal break
@@ -505,7 +553,14 @@ export function SchoolDesigner() {
 
                   `relative` MUST stay: the frame-side ArmedBanner is absolutely
                   positioned against this element. */}
-              <div className="ff-stage relative mx-auto w-full">
+              <div
+                className="ff-stage relative mx-auto w-full"
+                style={{
+                  maxWidth: `calc((100vh - ${STAGE_VIEWPORT_RESERVE_PX}px) * ${
+                    editorOpen ? STAGE_EDITING_SHARE : 1
+                  } * ${frameAspect})`,
+                }}
+              >
                 <ArmedBanner placement="frame" />
                 <FrameCanvas
                   ref={canvasRef}
@@ -520,7 +575,14 @@ export function SchoolDesigner() {
                 />
               </div>
             </div>
-            <SectionEditor />
+            {/* The editor's OWN scroll pane. `min-h-0` is load-bearing: a flex child
+                defaults to `min-height: auto`, which refuses to shrink below its
+                content, and the pane would push the column past the viewport instead
+                of scrolling — the clipped-editor bug in a new costume. `-mx-1 px-1`
+                keeps panel focus rings from being shaved off by the overflow. */}
+            <div className="relative z-10 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:-mx-1 lg:px-1">
+              <SectionEditor />
+            </div>
           </div>
         </main>
       </DndProvider>
