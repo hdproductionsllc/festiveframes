@@ -58,7 +58,7 @@ import {
   type PageOutcome,
   type SchoolProfile,
 } from "@/lib/school-brand";
-import { pickCrawlTargets } from "@/lib/school-brand/crawl-targets";
+import { pickCrawlTargets, pickStylesheets } from "@/lib/school-brand/crawl-targets";
 import { mergeProfiles } from "@/lib/school-brand/merge-profiles";
 import {
   manifestIconCandidates,
@@ -131,9 +131,17 @@ const SECOND_HOP_PAGES = 3;
  *  not the user's actual request. */
 const SECOND_HOP_TIMEOUT_MS = 5_000;
 
-/** Linked stylesheets fetched for CSS-background logos and brand colours. Themes
- *  compile to one or two files; four covers a theme plus an override sheet. */
-const MAX_STYLESHEETS = 4;
+/**
+ * Linked stylesheets fetched for CSS-background logos and brand colours.
+ *
+ * Eight, not four, and RANKED rather than taken in document order. At four-in-order
+ * a real Finalsite page spent the entire budget on jQuery UI and friends, and the
+ * only thing the CSS pass contributed was `ui-icons_444444_256x240.png` — a library
+ * icon sprite offered to the user as a possible school crest. `pickStylesheets`
+ * sorts theme-ish names up and known vendor libraries down; the wider cap is so a
+ * CMS that enqueues six libraries before its own theme still reaches it.
+ */
+const MAX_STYLESHEETS = 8;
 /** A stylesheet is a means to an end. Small cap — theme CSS is big, and we only ever
  *  regex it for `url(...)` and hex colours. */
 const MAX_CSS_BYTES = 512 * 1024;
@@ -344,11 +352,7 @@ export async function POST(request: Request): Promise<NextResponse> {
   // HTML at all, which is what sent me looking here.
   const cssTexts: string[] = [];
   try {
-    const sheets = scanTags(html, "link")
-      .filter((t) => /(^|\s)stylesheet(\s|$)/i.test(t.attrs.rel ?? ""))
-      .map((t) => resolveHtmlUrl(t.attrs.href ?? "", page.finalUrl))
-      .filter((u): u is string => !!u)
-      .slice(0, MAX_STYLESHEETS);
+    const sheets = pickStylesheets(html, page.finalUrl, MAX_STYLESHEETS);
     for (const href of sheets) {
       const css = await fetchGuarded(href, {
         maxBytes: MAX_CSS_BYTES,
