@@ -49,6 +49,7 @@ import {
 } from "@/lib/school-brand/import-ui";
 import type { ScanCandidate, RejectedCandidate } from "@/lib/school-brand/prepare-artwork.server";
 import { useDesignStore } from "@/stores/design-store";
+import { buildBrandKit, type SchoolBrandKit } from "@/lib/school-brand/apply-brand";
 import { SECTION_LABELS } from "@/lib/utils/sections";
 import type { SectionId } from "@/lib/types";
 
@@ -96,6 +97,7 @@ type Phase =
        *  "nothing works" can always be turned into "here is what it found". */
       candidates: ScanCandidate[];
       rejected: RejectedCandidate[];
+      kit: SchoolBrandKit | null;
       /** Discarded before any fetch — vendor marks, print-black SVGs. Without these
        *  the list cannot distinguish "never saw the crest" from "saw it and dropped
        *  it", which is the distinction that matters when a scan comes back empty. */
@@ -107,6 +109,7 @@ type Phase =
       fills: BannerFill[];
       rejected: number;
       truncated: boolean;
+      kit: SchoolBrandKit | null;
     };
 
 /** The "where should it go?" hand-off, shared by Add-a-candidate and Upload-a-photo. */
@@ -163,6 +166,7 @@ export function SchoolBrandImport() {
   const selectSection = useDesignStore((s) => s.selectSection);
   const setSectionText = useDesignStore((s) => s.setSectionText);
   const setSectionMode = useDesignStore((s) => s.setSectionMode);
+  const setFrameColor = useDesignStore((s) => s.setFrameColor);
 
   // The EXISTING upload flow, untouched. `begin` opens the aspect-locked crop modal
   // with its live print-resolution gate and commits through `placeImageSnappet` at the
@@ -206,6 +210,12 @@ export function SchoolBrandImport() {
     }
 
     const fills = bannerFills(data.profile);
+    // BRANDING IS INDEPENDENT OF ARTWORK, and that distinction is the whole point: a
+    // page whose every image is a 180px web asset still names the school, names the
+    // mascot and declares its colours. Treating "no printable logo" as "the scan
+    // failed" threw all of that away — the frame could have been in the school's
+    // colours with its mascot on it, and instead the user got an apology.
+    const kit = buildBrandKit(data.profile);
     // `data.empty` is the route's own recount AFTER decoding, not the parse-time
     // guess: the profile could not know that all four surviving candidates turned out
     // to be 180px. Trusting `candidates.length` instead would show a grid of cards
@@ -228,6 +238,7 @@ export function SchoolBrandImport() {
         candidates: data.candidates,
         rejected: data.rejected,
         dropped: data.dropped ?? [],
+        kit,
       });
       return;
     }
@@ -238,6 +249,7 @@ export function SchoolBrandImport() {
       fills,
       rejected: data.rejected.length,
       truncated: data.truncated,
+      kit,
     });
   };
 
@@ -290,6 +302,22 @@ export function SchoolBrandImport() {
     setSectionText(f.section, { [f.field]: f.value });
     selectSection(f.section);
     setFilled(`${f.kind}:${f.value}`);
+  };
+
+  // ── apply the WHOLE brand in one stroke ──
+  const applyKit = (k: SchoolBrandKit) => {
+    // The BODY first, because it is the change you actually see: it is the largest
+    // area of the product, and recolouring only the banners was the gap that made
+    // "use this school" feel like it had barely done anything.
+    setFrameColor(k.frameColor);
+    // Mode before text: the top bar cannot hold tiles, so `sectionSupportsTiles` has
+    // to have run before the write rather than after it.
+    setSectionMode("top", "text");
+    setSectionText("top", k.top);
+    setSectionMode("bottom", "text");
+    setSectionText("bottom", k.bottom);
+    selectSection("bottom");
+    setFilled(`kit:${k.schoolName}`);
   };
 
   // ── the suggested next actions, filtered to what this panel can run ──
@@ -432,6 +460,41 @@ export function SchoolBrandImport() {
               </button>
             )}
           </div>
+
+          {/* THE ONE-STROKE APPLY, above the per-field chips. Offered on the EMPTY
+              outcome too: the artwork failing says nothing about whether we know the
+              school's name, mascot and colours, and on a real site those survived
+              while every image was too small to print. */}
+          {phase.kind === "empty" && phase.kit && (
+            <div className="ff-panel mt-2.5 p-2.5">
+              <div className="flex items-center gap-2">
+                <span
+                  aria-hidden
+                  className="h-6 w-6 shrink-0 rounded-[var(--ff-radius-sm,6px)] border"
+                  style={{ background: phase.kit.frameColor, borderColor: "var(--ff-line,#1e1b17)" }}
+                />
+                <span
+                  aria-hidden
+                  className="h-6 w-6 shrink-0 rounded-[var(--ff-radius-sm,6px)] border"
+                  style={{ background: phase.kit.primary, borderColor: "var(--ff-line,#1e1b17)" }}
+                />
+                <p className="min-w-0 flex-1 truncate text-[12px] font-semibold text-[var(--ff-ink,#1e1b17)]">
+                  {phase.kit.schoolName}
+                  {phase.kit.mascot ? ` · ${phase.kit.mascot}` : ""}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => applyKit(phase.kit!)}
+                className="ff-btn ff-btn-primary ff-btn-block mt-2"
+              >
+                Use this school&apos;s branding
+              </button>
+              <p className="ff-help mt-1">
+                Recolours the frame and sets both banners. Change anything after.
+              </p>
+            </div>
+          )}
 
           {/* WHAT WE ACTUALLY FOUND.
               "Nothing on this page prints" is an assertion the user has no way to

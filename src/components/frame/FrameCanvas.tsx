@@ -114,6 +114,7 @@ export const FrameCanvas = forwardRef<FrameCanvasHandle, FrameCanvasProps>(
     const snappetLayerRef = useRef<HTMLDivElement>(null);
     const textBars = useDesignStore((s) => s.textBars);
     const selectedBarId = useDesignStore((s) => s.selectedBarId);
+    const frameColor = useDesignStore((s) => s.frameColor);
     const selectBar = useDesignStore((s) => s.selectBar);
     // Sections (school builder). Empty on /build, so all section logic below is inert.
     const sections = useDesignStore((s) => s.sections);
@@ -365,7 +366,11 @@ export const FrameCanvas = forwardRef<FrameCanvasHandle, FrameCanvasProps>(
           style={{
             height: containerHeight || "auto",
             aspectRatio: containerHeight ? undefined : `${totalWidthInches} / ${frameConfig.heightInches + extraBottomRows * frameConfig.tileSizeInches}`,
-            background: "#111111",
+            // The frame BODY. Was a hard-coded #111111, which is why applying a
+            // school's branding could recolour the banners and nothing else — this is
+            // the largest single area of the product and therefore most of what makes
+            // it read as one school's rather than another's.
+            background: frameColor,
             // Signature sticker drop shadow at 50% opacity so the whole design
             // lifts off the workbench without being as heavy as a solid offset.
             boxShadow: "8px 8px 0 rgba(30,27,23,0.5)",

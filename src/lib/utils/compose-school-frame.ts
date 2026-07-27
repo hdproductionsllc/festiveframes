@@ -220,6 +220,8 @@ function drawBevel(
 // ── The design, passed in explicitly (NOT read from any store) ────────────────
 export interface SchoolDesign {
   frameConfig: FrameConfig;
+  /** Frame body colour. Absent on a design saved before it existed. */
+  frameColor?: string;
   slots: Record<string, PlacedTile>;
   textBars: PlacedTextBar[];
   qrCode: QRCodeConfig;
@@ -784,13 +786,19 @@ export function drawSchoolFrame(
   // Height is derived, not passed: the caller sizes the canvas from the same two
   // numbers, so recomputing here keeps the backing exactly the canvas and avoids a
   // signature change on a function four call sites already use.
-  backFillTransparent(ctx, canvasWidth, getRenderHeightInches(config) * m.scale);
+  backFillTransparent(ctx, canvasWidth, getRenderHeightInches(config) * m.scale, bodyColour(design));
 }
 
 /** The colour painted behind every transparent pixel on the print path. Black so the
  *  substrate cannot read through, and so partial-alpha edges darken into a defined
  *  line rather than fringing toward whatever the panel happens to be. */
 export const PRINT_BACKING_COLOR = "#000000";
+
+/** The design's frame-body colour, or the print default. A design saved before
+ *  `frameColor` existed has none, and every read has to survive that. */
+function bodyColour(design: SchoolDesign): string {
+  return design.frameColor || PRINT_BACKING_COLOR;
+}
 
 /**
  * Fill every not-yet-painted pixel of `ctx` with the backing colour, leaving what is
@@ -803,10 +811,11 @@ export function backFillTransparent(
   ctx: CanvasRenderingContext2D,
   width: number,
   height: number,
+  colour: string = PRINT_BACKING_COLOR,
 ): void {
   const prev = ctx.globalCompositeOperation;
   ctx.globalCompositeOperation = "destination-over";
-  ctx.fillStyle = PRINT_BACKING_COLOR;
+  ctx.fillStyle = colour;
   // OVERSHOOT by a pixel on each axis. The caller sizes the canvas with Math.round on
   // both dimensions independently, while callers of this derive one of them by
   // multiplying a scale — so the fill can land a fraction of a pixel short and leave

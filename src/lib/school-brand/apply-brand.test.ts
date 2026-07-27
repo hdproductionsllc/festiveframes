@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { buildBrandKit, bannerTextOn, type SchoolBrandKit } from "./apply-brand";
+import { luminance } from "@/lib/utils/tile-theme";
 import type { SchoolProfile, TextCandidate, ColorCandidate } from "./types";
 
 // The kit is the demo's most visible moment — paste a URL, watch the frame become
@@ -97,3 +98,19 @@ const _assign: SchoolBrandKit["top"] extends Partial<import("@/lib/types").Botto
   ? true
   : never = true;
 void _assign;
+
+describe("frame body colour — the largest area of the product", () => {
+  it("uses the SECONDARY so the banners do not vanish into the body", () => {
+    const kit = buildBrandKit(profile({}))!;
+    expect(kit.frameColor).toBe("#C9A34A");
+    expect(kit.frameColor).not.toBe(kit.top.backgroundColor);
+  });
+
+  it("darkens the primary when the school has only one colour", () => {
+    const kit = buildBrandKit(profile({ colors: [cc("#8A1F2B", 5)] }))!;
+    expect(kit.secondary).toBeNull();
+    // Related to the banners, and clearly separated from them.
+    expect(kit.frameColor).not.toBe("#8A1F2B");
+    expect(luminance(kit.frameColor)).toBeLessThan(luminance("#8A1F2B"));
+  });
+});

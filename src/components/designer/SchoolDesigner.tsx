@@ -28,6 +28,7 @@ import { FrameCanvas, type FrameCanvasHandle } from "@/components/frame/FrameCan
 import { TilePalette } from "@/components/tiles/TilePalette";
 import { SCHOOL_SURFACED_SET_IDS } from "@/data/sets";
 import { SectionControls } from "./SectionControls";
+import { FrameColorPicker } from "./FrameColorPicker";
 import { SectionEditor } from "./SectionEditor";
 import { UploadPhotoButton } from "./UploadPhotoButton";
 import { SchoolBrandImport } from "./SchoolBrandImport";
@@ -119,6 +120,7 @@ export function SchoolDesigner() {
       const s = storeApi.getState();
       const design = {
         frameConfig: s.frameConfig,
+        frameColor: s.frameColor,
         slots: s.slots,
         textBars: s.textBars,
         qrCode: s.qrCode,
@@ -191,6 +193,7 @@ export function SchoolDesigner() {
       const s = storeApi.getState();
       const design = {
         frameConfig: s.frameConfig,
+        frameColor: s.frameColor,
         slots: s.slots,
         textBars: s.textBars,
         qrCode: s.qrCode,
@@ -475,6 +478,7 @@ export function SchoolDesigner() {
             <SchoolBrandImport />
             <TilePalette surfacedSetIds={SCHOOL_SURFACED_SET_IDS} />
             <UploadPhotoButton />
+            <FrameColorPicker />
             <SectionControls />
           </div>
 

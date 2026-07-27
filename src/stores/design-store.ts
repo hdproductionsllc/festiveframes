@@ -52,6 +52,10 @@ import { getPiece } from "@/data/sets";
 import { deleteFullRes } from "@/lib/utils/image-store";
 import { repairSections, sectionSupportsText, sectionSupportsTiles } from "@/lib/utils/sections";
 import { MAX_HISTORY_DEPTH } from "@/lib/constants/frame";
+
+/** The frame body's colour before any school branding is applied — the matte black
+ *  the product ships as. Exported so both renderers and the reset path agree. */
+export const DEFAULT_FRAME_COLOR = "#111111";
 import { useUIStore } from "@/stores/ui-store";
 
 /**
@@ -247,6 +251,18 @@ interface DesignState {
   // Design data
   designName: string;
   plateState: string; // state abbreviation, e.g. "CA"
+  /**
+   * The FRAME BODY colour — the material the tiles sit on, and the largest single
+   * area of the product.
+   *
+   * It was a hard-coded `#111111` in one renderer and a hard-coded black in the
+   * other, which meant the school-branding scan could recolour the two banners and
+   * nothing else. Recolouring the body is what actually makes the frame read as a
+   * given school's, because it is most of what you see.
+   *
+   * Absent on a design saved before this existed, so every read defaults.
+   */
+  frameColor: string;
   slots: Record<string, PlacedTile>;
   bottomBar: BottomBarConfig; // draft for the NEXT text bar to be placed
   qrCode: QRCodeConfig;
@@ -365,6 +381,8 @@ interface DesignState {
   // Actions — meta
   setDesignName: (name: string) => void;
   setPlateState: (abbr: string) => void;
+  /** Recolour the frame body. `#rrggbb`. */
+  setFrameColor: (hex: string) => void;
   /** Replace the ENTIRE design in one shot (restoring a saved design). Resets
    *  history so undo doesn't cross the load boundary. */
   loadDesign: (design: LoadableDesign) => void;
@@ -388,7 +406,16 @@ interface DesignState {
 export type LoadableDesign = Partial<
   Pick<
     DesignState,
-    "designName" | "plateState" | "slots" | "textBars" | "bottomBar" | "qrCode" | "frameConfig" | "dieCut" | "sections"
+    | "designName"
+    | "plateState"
+    | "frameColor"
+    | "slots"
+    | "textBars"
+    | "bottomBar"
+    | "qrCode"
+    | "frameConfig"
+    | "dieCut"
+    | "sections"
   >
 >;
 
@@ -585,6 +612,7 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
         // Initial state
         designName: "My Frame Design",
         plateState: "MO",
+        frameColor: DEFAULT_FRAME_COLOR,
         slots: {},
         bottomBar: { ...DEFAULT_BOTTOM_BAR },
         qrCode: { ...DEFAULT_QR_CODE },
@@ -1265,6 +1293,10 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
           set({ designName: name, updatedAt: Date.now() });
         },
 
+        setFrameColor: (hex) => {
+          set({ frameColor: hex, updatedAt: Date.now() });
+        },
+
         setPlateState: (abbr) => {
           set({ plateState: abbr, updatedAt: Date.now() });
         },
@@ -1276,6 +1308,7 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
           set({
             designName: design.designName ?? "My Frame Design",
             plateState: design.plateState ?? "MO",
+            frameColor: design.frameColor ?? DEFAULT_FRAME_COLOR,
             slots: design.slots ? { ...design.slots } : {},
             textBars: Array.isArray(design.textBars)
               ? design.textBars.map((b) => ({ ...b, config: { ...b.config } }))
@@ -1472,6 +1505,7 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
       version: 7,
       partialize: (state) => ({
         designName: state.designName,
+        frameColor: state.frameColor,
         plateState: state.plateState,
         slots: state.slots,
         textBars: state.textBars,

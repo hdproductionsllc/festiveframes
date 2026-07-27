@@ -1,5 +1,5 @@
 import type { BottomBarConfig } from "@/lib/types";
-import { luminance } from "@/lib/utils/tile-theme";
+import { luminance, shift } from "@/lib/utils/tile-theme";
 import type { SchoolProfile, TextCandidate } from "./types";
 
 /**
@@ -43,6 +43,16 @@ export interface SchoolBrandKit {
   /** `#RRGGBB`. Primary carries the banners; secondary is offered for accents. */
   primary: string;
   secondary: string | null;
+  /**
+   * The FRAME BODY colour — the largest single area of the product, and the reason
+   * a school-branded frame reads as that school's at a glance.
+   *
+   * Not simply `primary`: the banners are primary, and a body in the same colour
+   * swallows them. So the body takes the SECONDARY when the school has a real one,
+   * and otherwise a darkened primary — related, obviously deliberate, and still
+   * separated from the banners sitting on it.
+   */
+  frameColor: string;
   /**
    * Ready-to-apply SECTION text patches, matching the seeded design's own shape:
    * the top strip says "HOME OF THE", the bottom's headline carries the mascot and
@@ -103,6 +113,13 @@ export function buildBrandKit(profile: BrandSource): SchoolBrandKit | null {
   if (!mascot && !motto) return null; // a one-banner kit reads as broken, not minimal
 
   const textColor = bannerTextOn(primary.hex);
+  // A body identical to the banners hides them; a body unrelated to them looks like
+  // two designs. Secondary if the school has one, else primary pushed away from the
+  // banners — down on a light primary, and only slightly down on a dark one, since
+  // darkening #101828 further just makes two blacks.
+  const frameColor =
+    secondary?.hex ?? shift(primary.hex, luminance(primary.hex) > 0.5 ? -0.45 : -0.3);
+  notes.push(`frame body ${frameColor}${secondary ? " (secondary)" : " (darkened primary)"}`);
   // With a mascot: the classic gym-wall stack — HOME OF THE / LONGHORNS — with the
   // school's name in the tagline tier, so all three identities are on the frame.
   // Without one: the name takes the headline and the motto the tagline, which is
@@ -117,6 +134,7 @@ export function buildBrandKit(profile: BrandSource): SchoolBrandKit | null {
     mascot: mascot?.value ?? null,
     primary: primary.hex,
     secondary: secondary?.hex ?? null,
+    frameColor,
     top: { text: top, backgroundColor: primary.hex, textColor },
     bottom: {
       text: headline,
