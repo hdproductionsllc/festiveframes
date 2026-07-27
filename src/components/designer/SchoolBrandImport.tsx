@@ -116,6 +116,32 @@ type Placing =
   | { kind: "choose"; file: File; aspect: number; panels: SectionId[] }
   | { kind: "full" };
 
+/**
+ * The check mark, as a line icon rather than a ✓ character. It is semi load-bearing
+ * in two places — it is the ONLY marker that a banner fill has been applied, and the
+ * only marker that a candidate was repaired — so it is replaced, not dropped. Same
+ * house spec as every other icon in the re-skin: 24x24 box, no fill, 1.5 stroke,
+ * round caps, 16px, `currentColor`.
+ */
+function CheckIcon() {
+  return (
+    <svg
+      aria-hidden
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="shrink-0"
+    >
+      <path d="M4.5 12.5l5 5 10-11" />
+    </svg>
+  );
+}
+
 /** Path + filename of a URL, for the diagnostic list. Full URLs wrap to four lines
  *  in a 340px rail and bury the part that identifies the file. */
 function shortUrl(url: string): string {
@@ -293,11 +319,12 @@ export function SchoolBrandImport() {
   const fills = phase.kind === "results" || phase.kind === "empty" ? phase.fills : [];
 
   return (
-    <div className="rounded-2xl border-2 border-[#1e1b17] bg-[#faf0d6] p-3 shadow-[3px_3px_0_#1e1b17]">
-      <h3 className="mb-1 flex items-center gap-2 text-sm font-extrabold uppercase tracking-wide text-[#1e1b17]">
-        <span aria-hidden>🏫</span> Get your school&apos;s branding
-      </h3>
-      <p className="mb-2.5 text-[11px] font-semibold leading-relaxed text-[#1e1b17]/65">
+    <div className="ff-panel p-3">
+      {/* The 🏫 is gone rather than swapped for a line icon: it was decoration in a
+          heading, and a heading that needs a picture to be understood has the wrong
+          words. Sentence case at 600 — the whole page tops out at 600. */}
+      <h3 className="ff-h2 mb-1">Get your school&apos;s branding</h3>
+      <p className="ff-help mb-2.5">
         Paste your school&apos;s website and we&apos;ll look for the crest, the name and
         the motto. Nothing is added until you pick it.
       </p>
@@ -327,14 +354,11 @@ export function SchoolBrandImport() {
           onChange={(e) => setUrl(e.target.value)}
           placeholder="lincolnhigh.org"
           aria-label="School website address"
-          className="min-w-0 flex-1 rounded-lg border-2 border-[#1e1b17]/20 bg-white px-2.5 py-2 text-sm font-bold text-[#1e1b17] placeholder:text-[#1e1b17]/35 focus:border-[#ed5aa0] focus:outline-none"
+          className="ff-field min-w-0 flex-1"
         />
-        <button
-          type="submit"
-          disabled={!canScan || scanning}
-          className="shrink-0 rounded-lg border-[3px] border-[#1e1b17] bg-[#ed5aa0] px-3 py-2 text-xs font-extrabold uppercase tracking-wide text-[#fff9ec] shadow-[3px_3px_0_#1e1b17] transition-all hover:brightness-105 active:translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-45 disabled:shadow-none"
-        >
-          {scanning ? "Scanning…" : "Scan"}
+        {/* Scan is the ONE primary action in this panel. */}
+        <button type="submit" disabled={!canScan || scanning} className="ff-btn ff-btn-primary shrink-0">
+          {scanning ? "Scanning..." : "Scan"}
         </button>
       </form>
 
@@ -343,18 +367,13 @@ export function SchoolBrandImport() {
           cap makes that non-negotiable), so this legitimately takes ten or twenty
           seconds on a slow school CDN and a silent spinner reads as a hang. */}
       {scanning && (
-        <div
-          role="status"
-          className="mt-2.5 rounded-xl border-2 border-[#1e1b17] bg-white px-3 py-2.5"
-        >
-          <p className="text-[11px] font-extrabold uppercase tracking-wide text-[#1e1b17]">
-            Reading the page…
-          </p>
-          <div className="mt-1.5 h-2 w-full overflow-hidden rounded-full border-2 border-[#1e1b17] bg-white">
-            <div className="ff-upload-bar h-full rounded-full bg-[#ed5aa0]" />
+        <div role="status" className="ff-well mt-2.5 px-3 py-2.5">
+          <p className="ff-label">Reading the page...</p>
+          <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-[var(--ff-line)]">
+            <div className="ff-upload-bar h-full rounded-full bg-[var(--ff-accent)]" />
           </div>
-          <p className="mt-1.5 text-[10px] font-semibold leading-relaxed text-[#1e1b17]/55">
-            We check each logo at print size one at a time — this can take a few
+          <p className="ff-micro mt-1.5">
+            We check each logo at print size one at a time - this can take a few
             seconds.
           </p>
         </div>
@@ -363,19 +382,23 @@ export function SchoolBrandImport() {
       {/* Failure and empty share a shape, because to the user they are the same
           moment: the scan is over and there is no crest on screen. What differs is the
           words and whether Retry can possibly work — both of which come from the
-          route's own taxonomy, not from here. */}
+          route's own taxonomy, not from here.
+
+          The two now differ in SURFACE as well as words: empty is a warning (the scan
+          ran; nothing printable came back) and failure is an error. They used to be
+          gold and white, which said nothing about which was which. */}
       {outcomeCopy && (
         <div
           role="status"
-          className={`mt-2.5 rounded-xl border-2 border-[#1e1b17] px-3 py-2.5 ${
-            phase.kind === "empty" ? "bg-[#f8c53b]" : "bg-white"
+          className={`mt-2.5 rounded-[10px] border border-[var(--ff-line)] px-3 py-2.5 ${
+            phase.kind === "empty" ? "bg-[var(--ff-warn-soft)]" : "bg-[var(--ff-danger-soft)]"
           }`}
         >
-          <p className="text-xs font-extrabold leading-snug text-[#1e1b17]">
+          <p className="text-[13px] font-semibold leading-snug text-[var(--ff-ink)]">
             {outcomeCopy.headline}
           </p>
           {outcomeCopy.detail && (
-            <p className="mt-1 text-[11px] font-semibold leading-relaxed text-[#1e1b17]/70">
+            <p className="mt-1 text-[12px] leading-relaxed text-[var(--ff-ink-2)]">
               {outcomeCopy.detail}
             </p>
           )}
@@ -392,7 +415,7 @@ export function SchoolBrandImport() {
                   key={a.id}
                   type="button"
                   onClick={() => runAction(a)}
-                  className="rounded-full border-2 border-[#1e1b17] bg-white px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-wide text-[#1e1b17] transition-all hover:bg-white/70 active:translate-y-0.5"
+                  className="ff-chip"
                 >
                   {a.label}
                 </button>
@@ -403,7 +426,7 @@ export function SchoolBrandImport() {
                 type="button"
                 onClick={() => void runScan()}
                 disabled={!canScan}
-                className="rounded-full border-2 border-[#1e1b17] bg-[#3fb0e6] px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-wide text-white transition-all hover:brightness-105 active:translate-y-0.5 disabled:opacity-45"
+                className="ff-chip ff-chip-on"
               >
                 Try again
               </button>
@@ -422,39 +445,39 @@ export function SchoolBrandImport() {
             (phase.candidates.length > 0 ||
               phase.rejected.length > 0 ||
               phase.dropped.length > 0) && (
-              <details className="mt-2 border-t-2 border-[#1e1b17]/15 pt-1.5">
-                <summary className="cursor-pointer text-[11px] font-extrabold uppercase tracking-wide text-[#1e1b17]/75">
+              <details className="mt-2 border-t border-[var(--ff-line)] pt-1.5">
+                <summary className="ff-label cursor-pointer">
                   What we found (
                   {phase.candidates.length + phase.rejected.length + phase.dropped.length})
                 </summary>
                 <ul className="mt-1.5 space-y-1.5">
                   {phase.candidates.map((c, i) => (
-                    <li key={`c${i}`} className="text-[10px] leading-snug text-[#1e1b17]/75">
+                    <li key={`c${i}`} className="ff-micro">
                       <span className="font-bold">
                         {c.fullRes.width}×{c.fullRes.height}
                       </span>
                       {" — "}
                       {c.resolution.blocked
-                        ? `${Math.round(c.resolution.dpi)} DPI at 2in, needs 200`
-                        : (c.qc.findings[0]?.message ?? "not usable")}
-                      <span className="block break-all font-mono text-[9px] text-[#1e1b17]/45">
+                        ? `${Math.round(c.resolution.dpi)} DPI at 2 inches, needs 200`
+                        : (c.qc.findings[0]?.message ?? "Not sharp enough to print")}
+                      <span className="ff-micro block break-all font-mono">
                         {shortUrl(c.url) || `${c.kind} (inline)`}
                       </span>
                     </li>
                   ))}
                   {phase.dropped.map((d, i) => (
-                    <li key={`d${i}`} className="text-[10px] leading-snug text-[#1e1b17]/75">
+                    <li key={`d${i}`} className="ff-micro">
                       <span className="font-bold">skipped: {d.reason}</span>
-                      <span className="block break-all font-mono text-[9px] text-[#1e1b17]/45">
+                      <span className="ff-micro block break-all font-mono">
                         {shortUrl(d.url) || `${d.kind} (inline)`}
                       </span>
                     </li>
                   ))}
                   {phase.rejected.map((r, i) => (
-                    <li key={`r${i}`} className="text-[10px] leading-snug text-[#1e1b17]/75">
+                    <li key={`r${i}`} className="ff-micro">
                       <span className="font-bold">{r.reason}</span>
                       {r.detail ? ` — ${r.detail}` : ""}
-                      <span className="block break-all font-mono text-[9px] text-[#1e1b17]/45">
+                      <span className="ff-micro block break-all font-mono">
                         {shortUrl(r.url) || `${r.kind} (inline)`}
                       </span>
                     </li>
@@ -470,7 +493,7 @@ export function SchoolBrandImport() {
           fixed. A card whose Add button is off always says why. */}
       {phase.kind === "results" && (
         <div className="mt-2.5 space-y-2">
-          <p className="text-[10px] font-extrabold uppercase tracking-wide text-[#1e1b17]/55">
+          <p className="ff-label">
             {phase.candidates.length === 1 ? "1 logo found" : `${phase.candidates.length} logos found`}
             {phase.truncated && " · showing the best ones"}
             {phase.rejected > 0 && ` · ${phase.rejected} skipped`}
@@ -487,10 +510,8 @@ export function SchoolBrandImport() {
           page whose crest is too small to print usually still names the school — and
           the name is half of what the frame is for. */}
       {fills.length > 0 && (
-        <div className="mt-2.5 rounded-xl border-2 border-[#1e1b17] bg-white px-3 py-2.5">
-          <p className="text-[10px] font-extrabold uppercase tracking-wide text-[#1e1b17]/55">
-            Tap to fill a banner
-          </p>
+        <div className="ff-well mt-2.5 px-3 py-2.5">
+          <p className="ff-label">Tap to fill a banner</p>
           {/* Grouped, so the destination is said ONCE per group. Two name candidates
               used to render as two chips each stamped "SCHOOL NAME → TOP BAR", which
               reads as two controls that happen to share a label rather than as one
@@ -498,8 +519,8 @@ export function SchoolBrandImport() {
           <div className="mt-1.5 space-y-2">
             {groupBannerFills(fills).map((g) => (
               <div key={g.kind}>
-                <p className="text-[9px] font-extrabold uppercase tracking-wide text-[#1e1b17]/45">
-                  {g.label} <span className="text-[#1e1b17]/35">{g.hint}</span>
+                <p className="ff-micro">
+                  {g.label} <span>{g.hint}</span>
                 </p>
                 <div className="mt-1 space-y-1">
                   {g.fills.map((f) => {
@@ -511,14 +532,14 @@ export function SchoolBrandImport() {
                         type="button"
                         onClick={() => applyFill(f)}
                         title={f.value}
-                        className={`block w-full rounded-lg border-2 border-[#1e1b17] px-2.5 py-1.5 text-left text-[12px] font-extrabold leading-tight transition-all active:translate-y-0.5 ${
+                        className={`block w-full rounded-[6px] border px-2.5 py-1.5 text-left text-[12px] font-medium leading-tight transition-colors ${
                           isFilled
-                            ? "bg-[#3fb0e6] text-white"
-                            : "bg-[#faf0d6] text-[#1e1b17] hover:brightness-105"
+                            ? "border-[var(--ff-accent)] bg-[var(--ff-accent)] text-white"
+                            : "border-[var(--ff-line-strong)] bg-[var(--ff-card)] text-[var(--ff-ink)] hover:bg-[var(--ff-sunk)]"
                         }`}
                       >
                         <span className="block truncate">
-                          {isFilled ? "✓ " : ""}
+                          {isFilled && <CheckIcon />}
                           {f.value}
                         </span>
                       </button>
@@ -528,7 +549,7 @@ export function SchoolBrandImport() {
               </div>
             ))}
           </div>
-          <p className="mt-1.5 text-[10px] font-semibold leading-relaxed text-[#1e1b17]/50">
+          <p className="ff-micro mt-1.5">
             These are our best guesses from the page — tap one, then edit it in the
             panel editor below.
           </p>
@@ -539,13 +560,11 @@ export function SchoolBrandImport() {
 
       {placing.kind === "reading" && (
         <Overlay>
-          <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 p-6">
-            <div className="w-full max-w-[320px] rounded-2xl border-[3px] border-[#1e1b17] bg-[#faf0d6] p-5 text-center shadow-[6px_6px_0_#1e1b17]">
-              <p className="mb-3 text-sm font-extrabold uppercase tracking-wide text-[#1e1b17]">
-                Loading your photo…
-              </p>
-              <div className="h-2.5 w-full overflow-hidden rounded-full border-2 border-[#1e1b17] bg-white">
-                <div className="ff-upload-bar h-full rounded-full bg-[#3fb0e6]" />
+          <div className="ff-school-portal ff-scrim fixed inset-0 z-[110] flex items-center justify-center p-6">
+            <div className="ff-modal w-full max-w-[320px] p-5 text-center">
+              <p className="ff-h2 mb-3">Loading your photo...</p>
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-[var(--ff-line)]">
+                <div className="ff-upload-bar h-full rounded-full bg-[var(--ff-accent)]" />
               </div>
             </div>
           </div>
@@ -555,20 +574,18 @@ export function SchoolBrandImport() {
       {placing.kind === "choose" && (
         <Overlay>
           <div
-            className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 p-6"
+            className="ff-school-portal ff-scrim fixed inset-0 z-[110] flex items-center justify-center p-6"
             role="dialog"
             aria-modal="true"
             onClick={() => setPlacing({ kind: "idle" })}
           >
             <div
-              className="w-full max-w-[360px] rounded-2xl border-[3px] border-[#1e1b17] bg-[#faf0d6] p-5 shadow-[6px_6px_0_#1e1b17]"
+              className="ff-modal w-full max-w-[360px] p-5"
               onClick={(e) => e.stopPropagation()}
             >
-              <h3 className="mb-1 text-sm font-extrabold uppercase tracking-wide text-[#1e1b17]">
-                Where should it go?
-              </h3>
-              <p className="mb-3 text-[11px] font-semibold text-[#1e1b17]/60">
-                Pick a spot — you can drag and resize it after.
+              <h3 className="ff-h2 mb-1">Where should it go?</h3>
+              <p className="ff-help mb-3">
+                Pick a spot - you can drag and resize it after.
               </p>
               <div className="grid grid-cols-2 gap-2">
                 {placing.panels.map((id) => (
@@ -576,7 +593,7 @@ export function SchoolBrandImport() {
                     key={id}
                     type="button"
                     onClick={() => choosePanel(placing.file, placing.aspect, id)}
-                    className="rounded-xl border-[3px] border-[#1e1b17] bg-[#3fb0e6] px-3 py-3 text-sm font-extrabold uppercase tracking-wide text-white shadow-[3px_3px_0_#1e1b17] transition-all hover:brightness-105 active:translate-y-0.5"
+                    className="ff-btn ff-btn-secondary py-3"
                   >
                     {SECTION_LABELS[id]}
                   </button>
@@ -585,7 +602,7 @@ export function SchoolBrandImport() {
               <button
                 type="button"
                 onClick={() => setPlacing({ kind: "idle" })}
-                className="mt-3 w-full rounded-lg border-2 border-[#1e1b17]/20 bg-white px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-[#1e1b17] hover:bg-white/70"
+                className="ff-btn ff-btn-secondary ff-btn-sm mt-3 w-full"
               >
                 Cancel
               </button>
@@ -595,9 +612,9 @@ export function SchoolBrandImport() {
       )}
 
       {placing.kind === "full" && (
-        <p className="mt-2 rounded-lg border-2 border-[#1e1b17] bg-white px-2.5 py-1.5 text-[11px] font-bold text-[#1e1b17]">
+        <p className="ff-well mt-2 px-2.5 py-1.5 text-[12px] text-[var(--ff-ink-2)]">
           Every panel is full or set to text. Clear a tile or switch a panel back to{" "}
-          <span className="font-extrabold">Badges</span>, then try again.
+          <span className="font-medium text-[var(--ff-ink)]">Badges</span>, then try again.
         </p>
       )}
 
@@ -626,9 +643,7 @@ function UploadChip({
 }) {
   return (
     <label
-      className={`cursor-pointer rounded-full border-2 border-[#1e1b17] px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-wide transition-all active:translate-y-0.5 ${
-        primary ? "bg-[#3fb0e6] text-white hover:brightness-105" : "bg-white text-[#1e1b17] hover:bg-white/70"
-      }`}
+      className={`ff-chip cursor-pointer ${primary ? "ff-chip-on" : ""}`}
     >
       <input
         type="file"
@@ -649,7 +664,7 @@ function CandidateCard({ candidate, onAdd }: { candidate: ScanCandidate; onAdd: 
   const notes = candidateNotes(candidate);
   return (
     <div
-      className={`flex flex-col rounded-xl border-2 border-[#1e1b17] bg-white p-2 ${
+      className={`flex flex-col rounded-[10px] border border-[var(--ff-line)] bg-[var(--ff-card)] p-2 ${
         notes.addable ? "" : "opacity-75"
       }`}
     >
@@ -657,10 +672,10 @@ function CandidateCard({ candidate, onAdd }: { candidate: ScanCandidate; onAdd: 
           A checkerboard behind it, because most of these are transparent PNGs and a
           white swatch on a white card is how you fail to notice a baked-in white box. */}
       <div
-        className="mb-1.5 flex h-20 items-center justify-center overflow-hidden rounded-lg border-2 border-[#1e1b17]/15"
+        className="mb-1.5 flex h-20 items-center justify-center overflow-hidden rounded-[6px] border border-[var(--ff-line)]"
         style={{
           backgroundImage:
-            "linear-gradient(45deg,#e6e1d4 25%,transparent 25%,transparent 75%,#e6e1d4 75%),linear-gradient(45deg,#e6e1d4 25%,transparent 25%,transparent 75%,#e6e1d4 75%)",
+            "linear-gradient(45deg,#eceae6 25%,transparent 25%,transparent 75%,#eceae6 75%),linear-gradient(45deg,#eceae6 25%,transparent 25%,transparent 75%,#eceae6 75%)",
           backgroundSize: "12px 12px",
           backgroundPosition: "0 0, 6px 6px",
           backgroundColor: "#fff",
@@ -675,7 +690,7 @@ function CandidateCard({ candidate, onAdd }: { candidate: ScanCandidate; onAdd: 
         />
       </div>
 
-      <p className="truncate text-[10px] font-extrabold uppercase tracking-wide text-[#1e1b17]/70">
+      <p className="ff-label truncate">
         {notes.title}
       </p>
       {/* The page's own alt text, on its own line and clamped to two. Combined with
@@ -683,23 +698,23 @@ function CandidateCard({ candidate, onAdd }: { candidate: ScanCandidate; onAdd: 
           which threw away the only part that tells two crests apart. */}
       {notes.alt && (
         <p
-          className="line-clamp-2 text-[10px] font-semibold leading-snug text-[#1e1b17]/55"
+          className="ff-micro line-clamp-2"
           title={notes.alt}
         >
           “{notes.alt}”
         </p>
       )}
-      <p className="text-[10px] font-semibold text-[#1e1b17]/45">{notes.spec}</p>
+      <p className="ff-micro">{notes.spec}</p>
       <p
-        className={`mt-1 text-[10px] font-bold leading-snug ${
-          notes.addable ? "text-[#1e1b17]/70" : "text-[#C8102E]"
+        className={`mt-1 text-[11px] leading-snug ${
+          notes.addable ? "text-[var(--ff-ink-2)]" : "text-[var(--ff-danger)]"
         }`}
       >
         {notes.verdict}
       </p>
 
       {notes.cautions.map((c) => (
-        <p key={c} className="mt-0.5 text-[10px] font-semibold leading-snug text-[#1e1b17]/55">
+        <p key={c} className="ff-micro mt-0.5">
           · {c}
         </p>
       ))}
@@ -709,10 +724,11 @@ function CandidateCard({ candidate, onAdd }: { candidate: ScanCandidate; onAdd: 
           edge pixels") so they go in the tooltip, not the card. */}
       {notes.repairs.length > 0 && (
         <p
-          className="mt-0.5 text-[10px] font-semibold leading-snug text-[#1e1b17]/45"
+          className="ff-micro mt-0.5 flex items-center gap-1"
           title={notes.repairs.join(" ")}
         >
-          ✓ Tidied up for print
+          <CheckIcon />
+          Cleaned up for print
         </p>
       )}
 
@@ -724,7 +740,7 @@ function CandidateCard({ candidate, onAdd }: { candidate: ScanCandidate; onAdd: 
           type="button"
           onClick={onAdd}
           disabled={!notes.addable}
-          className="w-full rounded-lg border-2 border-[#1e1b17] bg-[#3fb0e6] px-2 py-1.5 text-[11px] font-extrabold uppercase tracking-wide text-white shadow-[2px_2px_0_#1e1b17] transition-all hover:brightness-105 active:translate-y-0.5 disabled:cursor-not-allowed disabled:border-[#1e1b17]/25 disabled:bg-[#1e1b17]/10 disabled:text-[#1e1b17]/40 disabled:shadow-none"
+          className="ff-btn ff-btn-primary ff-btn-sm w-full"
         >
           {notes.addable ? "Add to frame" : "Too small"}
         </button>

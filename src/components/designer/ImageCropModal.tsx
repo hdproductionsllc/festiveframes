@@ -298,39 +298,51 @@ export function ImageCropModal({ file, targetInches, panelLabel, onCancel, onCon
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4"
+      className="ff-school-portal ff-scrim fixed inset-0 z-[100] flex items-center justify-center p-4"
       role="dialog"
       aria-modal="true"
       onClick={onCancel}
     >
       <div
-        className="w-full max-w-[560px] rounded-2xl border-[3px] border-[#1e1b17] bg-[#faf0d6] p-4 shadow-[6px_6px_0_#1e1b17]"
+        className="ff-modal w-full max-w-[560px] p-4"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-sm font-extrabold uppercase tracking-wide text-[#1e1b17]">
-            Crop for {panelLabel ?? "panel"}
-          </h3>
+          <h3 className="ff-h2">Crop for {panelLabel ?? "panel"}</h3>
+          {/* The ✕ is this button's only label, so it is replaced rather than
+              dropped. Same house spec as every other icon in the re-skin. */}
           <button
             type="button"
             onClick={onCancel}
             aria-label="Close"
-            className="rounded-lg border-2 border-[#1e1b17]/20 bg-white px-2 py-0.5 text-sm font-bold text-[#1e1b17] hover:bg-white/70"
+            className="ff-btn ff-btn-secondary grid h-7 w-7 place-items-center p-0"
           >
-            ✕
+            <svg
+              aria-hidden
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M6.5 6.5l11 11M17.5 6.5l-11 11" />
+            </svg>
           </button>
         </div>
 
         {loadError ? (
-          <p className="py-8 text-center text-sm font-bold text-[#C8102E]">
-            Sorry — that image couldn&apos;t be read. Try a JPG or PNG.
+          <p className="py-8 text-center text-[13px] text-[var(--ff-danger)]">
+            That image could not be read. Try a JPG or PNG.
           </p>
         ) : (
           <>
             {/* Crop viewport */}
             <div className="flex justify-center">
               <div
-                className="relative touch-none select-none overflow-hidden rounded-lg border-2 border-[#1e1b17] bg-[#1e1b17]"
+                className="relative touch-none select-none overflow-hidden rounded-[6px] border border-[var(--ff-line-strong)] bg-[var(--ff-ink)]"
                 style={{ width: viewport.w, height: viewport.h, cursor: "grab" }}
                 onPointerDown={onPointerDown}
                 onPointerMove={onPointerMove}
@@ -389,7 +401,7 @@ export function ImageCropModal({ file, targetInches, panelLabel, onCancel, onCon
 
             {/* Zoom control */}
             <div className="mt-3 flex items-center gap-3">
-              <span className="text-[11px] font-extrabold uppercase tracking-wide text-[#1e1b17]/60">Zoom</span>
+              <span className="ff-label">Zoom</span>
               <input
                 type="range"
                 min={1}
@@ -397,35 +409,35 @@ export function ImageCropModal({ file, targetInches, panelLabel, onCancel, onCon
                 step={0.01}
                 value={zoom}
                 onChange={(e) => applyZoom(Number(e.target.value), viewport.w / 2, viewport.h / 2)}
-                className="h-1.5 flex-1 cursor-pointer appearance-none rounded-full bg-[#1e1b17]/15
+                className="h-1.5 flex-1 cursor-pointer appearance-none rounded-full bg-[var(--ff-line)]
                   [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:appearance-none
                   [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white
-                  [&::-webkit-slider-thumb]:bg-[#ed5aa0] [&::-webkit-slider-thumb]:shadow-md"
+                  [&::-webkit-slider-thumb]:bg-[var(--ff-accent)] [&::-webkit-slider-thumb]:shadow-sm"
               />
               <button
                 type="button"
                 onClick={reset}
-                className="rounded-lg border-2 border-[#1e1b17]/20 bg-white px-2.5 py-1 text-xs font-bold text-[#1e1b17] hover:bg-white/70"
+                className="ff-btn ff-btn-secondary ff-btn-sm"
               >
                 Reset
               </button>
             </div>
 
             {/* Live resolution meter */}
-            <div className="mt-3 rounded-xl border-2 border-[#1e1b17]/15 bg-white/70 p-2.5">
+            <div className="ff-well mt-3 p-2.5">
               <div className="flex items-center justify-between">
-                <span className="flex items-center gap-1.5 text-xs font-extrabold text-[#1e1b17]">
+                <span className="flex items-center gap-1.5 text-[13px] font-semibold text-[var(--ff-ink)]">
                   <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: METER_COLOR[verdict.level] }} />
                   {copy.title}
                 </span>
-                <span className="text-[11px] font-semibold tabular-nums text-[#1e1b17]/60">
+                <span className="ff-micro tabular-nums">
                   ~{Math.round(verdict.dpi)} DPI · {Math.round(verdict.minSidePx)} px
                 </span>
               </div>
-              <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-[#1e1b17]/10">
+              <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-[var(--ff-line)]">
                 <div className="h-full rounded-full transition-all" style={{ width: `${meterPct}%`, backgroundColor: METER_COLOR[verdict.level] }} />
               </div>
-              <p className="mt-1 text-[11px] leading-snug text-[#1e1b17]/55">{copy.detail}</p>
+              <p className="ff-micro mt-1">{copy.detail}</p>
             </div>
 
             {/* Actions */}
@@ -433,7 +445,7 @@ export function ImageCropModal({ file, targetInches, panelLabel, onCancel, onCon
               <button
                 type="button"
                 onClick={onCancel}
-                className="rounded-xl border-2 border-[#1e1b17]/20 bg-white px-4 py-2 text-sm font-bold text-[#1e1b17] hover:bg-white/70"
+                className="ff-btn ff-btn-secondary"
               >
                 Cancel
               </button>
@@ -441,9 +453,9 @@ export function ImageCropModal({ file, targetInches, panelLabel, onCancel, onCon
                 type="button"
                 onClick={handleConfirm}
                 disabled={verdict.blocked || busy || !img}
-                className="rounded-xl border-[3px] border-[#1e1b17] bg-[#3fb0e6] px-4 py-2 text-sm font-extrabold uppercase tracking-wide text-white shadow-[3px_3px_0_#1e1b17] transition-all hover:brightness-105 active:translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-40"
+                className="ff-btn ff-btn-primary"
               >
-                {busy ? "Adding…" : verdict.blocked ? "Too low to print" : "Use this crop"}
+                {busy ? "Adding..." : verdict.blocked ? "Too low to print" : "Use this crop"}
               </button>
             </div>
           </>

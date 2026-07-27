@@ -20,6 +20,30 @@ import { minSpanFor, tileSpan, resolveSnappetResize } from "@/lib/utils/snappet"
 // footprint with the print-DPI gate. Same-aspect resizes (and all set pieces) commit
 // straight through. This is what makes an approved crop no longer feel "locked in".
 
+/**
+ * The stepper glyphs. These two are the most load-bearing icons on the page: − and +
+ * are the buttons' ONLY labels (the `aria-label` carries the meaning for screen
+ * readers, but a sighted user has nothing else). Drawn at 14px rather than the
+ * house 16px because they sit in a 32px square control alongside a number.
+ */
+function StepIcon({ dir }: { dir: "minus" | "plus" }) {
+  return (
+    <svg
+      aria-hidden
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d={dir === "plus" ? "M12 5.5v13M5.5 12h13" : "M5.5 12h13"} />
+    </svg>
+  );
+}
+
 export function SnappetSizeControl() {
   const selectedId = useUIStore((s) => s.selectedSnappetSlotId);
   const selectSnappet = useUIStore((s) => s.selectSnappet);
@@ -83,38 +107,36 @@ export function SnappetSizeControl() {
     const value = isW ? span.cols : span.rows;
     return (
       <div key={label} className="flex items-center gap-1.5">
-        <span className="w-3 text-[11px] font-extrabold text-[#1e1b17]/60">{label}</span>
+        <span className="ff-micro w-3">{label}</span>
         <button
           type="button"
           aria-label={`Shrink ${label === "W" ? "width" : "height"}`}
           disabled={belowMin || !seatable(dec.cols, dec.rows)}
           onClick={() => apply(dec.cols, dec.rows)}
-          className="grid h-8 w-8 place-items-center rounded-lg border-2 border-[#1e1b17] bg-white text-lg font-black leading-none text-[#1e1b17] shadow-[2px_2px_0_#1e1b17] active:translate-y-0.5 disabled:opacity-30 disabled:shadow-none"
+          className="ff-btn ff-btn-secondary grid h-8 w-8 place-items-center p-0"
         >
-          −
+          <StepIcon dir="minus" />
         </button>
-        <span className="w-5 text-center text-base font-extrabold tabular-nums text-[#1e1b17]">{value}</span>
+        <span className="w-5 text-center text-[13px] font-medium tabular-nums text-[var(--ff-ink)]">{value}</span>
         <button
           type="button"
           aria-label={`Grow ${label === "W" ? "width" : "height"}`}
           disabled={!seatable(inc.cols, inc.rows)}
           onClick={() => apply(inc.cols, inc.rows)}
-          className="grid h-8 w-8 place-items-center rounded-lg border-2 border-[#1e1b17] bg-[#3fb0e6] text-lg font-black leading-none text-white shadow-[2px_2px_0_#1e1b17] active:translate-y-0.5 disabled:opacity-30 disabled:shadow-none"
+          className="ff-btn ff-btn-secondary grid h-8 w-8 place-items-center p-0"
         >
-          +
+          <StepIcon dir="plus" />
         </button>
       </div>
     );
   };
 
   return createPortal(
-    <div className="fixed inset-x-0 bottom-0 z-[90] flex justify-center p-3 pointer-events-none">
-      <div className="pointer-events-auto flex w-full max-w-[440px] flex-wrap items-center justify-between gap-3 rounded-2xl border-[3px] border-[#1e1b17] bg-[#faf0d6] px-4 py-2.5 shadow-[4px_4px_0_#1e1b17]">
+    <div className="ff-school-portal fixed inset-x-0 bottom-0 z-[90] flex justify-center p-3 pointer-events-none">
+      <div className="ff-modal pointer-events-auto flex w-full max-w-[440px] flex-wrap items-center justify-between gap-3 px-4 py-2.5">
         <div className="flex items-center gap-2">
-          <span className="text-[11px] font-extrabold uppercase tracking-wide text-[#1e1b17]/70">
-            Size{isPhoto ? " (photo)" : ""}
-          </span>
-          <span className="rounded-md bg-[#1e1b17]/10 px-1.5 py-0.5 text-[11px] font-bold tabular-nums text-[#1e1b17]">
+          <span className="ff-label">Size{isPhoto ? " (photo)" : ""}</span>
+          <span className="rounded-[6px] bg-[var(--ff-sunk)] px-1.5 py-0.5 text-[12px] tabular-nums text-[var(--ff-ink)]">
             {span.cols}×{span.rows}
           </span>
         </div>
@@ -129,14 +151,14 @@ export function SnappetSizeControl() {
               removeTile(selectedId);
               selectSnappet(null);
             }}
-            className="rounded-lg border-2 border-[#1e1b17] bg-brand-red px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-wide text-white shadow-[2px_2px_0_#1e1b17] active:translate-y-0.5"
+            className="ff-btn ff-btn-danger ff-btn-sm"
           >
             Remove
           </button>
           <button
             type="button"
             onClick={() => selectSnappet(null)}
-            className="rounded-lg border-2 border-[#1e1b17] bg-white px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-wide text-[#1e1b17] shadow-[2px_2px_0_#1e1b17] active:translate-y-0.5"
+            className="ff-btn ff-btn-secondary ff-btn-sm"
           >
             Done
           </button>

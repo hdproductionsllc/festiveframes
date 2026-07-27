@@ -28,6 +28,31 @@ function Overlay({ children }: { children: React.ReactNode }) {
 //        → "where should it go?" PROMPT (pick a panel) → crop → placed snappet.
 // The photo lands as a snappet you can then drag anywhere and resize.
 
+/**
+ * The 📷 was this button's only glyph and the button is the discoverable entry point
+ * for the whole upload flow, so it is REPLACED rather than dropped. House spec:
+ * 24x24 box, no fill, 1.5 stroke, round caps and joins, 16px, `currentColor`.
+ */
+function ImageIcon() {
+  return (
+    <svg
+      aria-hidden
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M3 6.5A1.5 1.5 0 0 1 4.5 5h15A1.5 1.5 0 0 1 21 6.5v11a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5z" />
+      <path d="M3 15.5l4.5-4.5 4 4 3-3L21 17" />
+      <circle cx="8.5" cy="9" r="1.25" />
+    </svg>
+  );
+}
+
 type Phase =
   | { kind: "idle" }
   | { kind: "loading" }
@@ -62,16 +87,12 @@ export function UploadPhotoButton() {
   };
 
   return (
-    <div className="rounded-2xl border-2 border-[#1e1b17] bg-[#f8c53b] p-3 shadow-[3px_3px_0_#1e1b17]">
+    <div className="ff-panel p-3">
       {/* A <label> wrapping a visually-hidden (NOT display:none) input. On iOS this
           is the reliable pattern: tapping the label opens the picker AND the native
           label→input link fires `change` on selection. A `display:none` input opens
           the picker but often never fires `change` on iOS — the tap looked dead. */}
-      <label
-        className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-[3px]
-          border-[#1e1b17] bg-[#3fb0e6] px-4 py-3 text-base font-extrabold uppercase tracking-wide
-          text-white shadow-[3px_3px_0_#1e1b17] transition-all hover:brightness-105 active:translate-y-0.5"
-      >
+      <label className="ff-btn ff-btn-primary w-full cursor-pointer py-2.5">
         <input
           type="file"
           accept="image/*"
@@ -81,10 +102,10 @@ export function UploadPhotoButton() {
             e.target.value = ""; // let the same file be re-picked / re-cropped
           }}
         />
-        <span aria-hidden className="text-lg">📷</span>
+        <ImageIcon />
         Upload a photo
       </label>
-      <p className="mt-2 text-[11px] font-semibold leading-relaxed text-[#1e1b17]/70">
+      <p className="ff-help mt-2">
         Add your own photo, mascot, or logo. Pick where it goes, then drag it and pull
         the handles to resize.
       </p>
@@ -92,13 +113,11 @@ export function UploadPhotoButton() {
       {/* Loading overlay — immediate feedback while the phone decodes the photo. */}
       {phase.kind === "loading" && (
         <Overlay>
-        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 p-6">
-          <div className="w-full max-w-[320px] rounded-2xl border-[3px] border-[#1e1b17] bg-[#faf0d6] p-5 text-center shadow-[6px_6px_0_#1e1b17]">
-            <p className="mb-3 text-sm font-extrabold uppercase tracking-wide text-[#1e1b17]">
-              Loading your photo…
-            </p>
-            <div className="h-2.5 w-full overflow-hidden rounded-full border-2 border-[#1e1b17] bg-white">
-              <div className="ff-upload-bar h-full rounded-full bg-[#3fb0e6]" />
+        <div className="ff-school-portal ff-scrim fixed inset-0 z-[110] flex items-center justify-center p-6">
+          <div className="ff-modal w-full max-w-[320px] p-5 text-center">
+            <p className="ff-h2 mb-3">Loading your photo...</p>
+            <div className="h-1.5 w-full overflow-hidden rounded-full bg-[var(--ff-line)]">
+              <div className="ff-upload-bar h-full rounded-full bg-[var(--ff-accent)]" />
             </div>
           </div>
         </div>
@@ -109,20 +128,18 @@ export function UploadPhotoButton() {
       {phase.kind === "placing" && (
         <Overlay>
         <div
-          className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 p-6"
+          className="ff-school-portal ff-scrim fixed inset-0 z-[110] flex items-center justify-center p-6"
           role="dialog"
           aria-modal="true"
           onClick={() => setPhase({ kind: "idle" })}
         >
           <div
-            className="w-full max-w-[360px] rounded-2xl border-[3px] border-[#1e1b17] bg-[#faf0d6] p-5 shadow-[6px_6px_0_#1e1b17]"
+            className="ff-modal w-full max-w-[360px] p-5"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="mb-1 text-sm font-extrabold uppercase tracking-wide text-[#1e1b17]">
-              Where should it go?
-            </h3>
-            <p className="mb-3 text-[11px] font-semibold text-[#1e1b17]/60">
-              Pick a spot to place your photo — you can drag and resize it after.
+            <h3 className="ff-h2 mb-1">Where should it go?</h3>
+            <p className="ff-help mb-3">
+              Pick a spot to place your photo - you can drag and resize it after.
             </p>
             <div className="grid grid-cols-2 gap-2">
               {phase.panels.map((id) => (
@@ -130,9 +147,7 @@ export function UploadPhotoButton() {
                   key={id}
                   type="button"
                   onClick={() => choosePanel(phase.file, phase.aspect, id)}
-                  className="rounded-xl border-[3px] border-[#1e1b17] bg-[#3fb0e6] px-3 py-3 text-sm
-                    font-extrabold uppercase tracking-wide text-white shadow-[3px_3px_0_#1e1b17]
-                    transition-all hover:brightness-105 active:translate-y-0.5"
+                  className="ff-btn ff-btn-secondary py-3"
                 >
                   {SECTION_LABELS[id]}
                 </button>
@@ -141,8 +156,7 @@ export function UploadPhotoButton() {
             <button
               type="button"
               onClick={() => setPhase({ kind: "idle" })}
-              className="mt-3 w-full rounded-lg border-2 border-[#1e1b17]/20 bg-white px-3 py-1.5
-                text-xs font-bold uppercase tracking-wide text-[#1e1b17] hover:bg-white/70"
+              className="ff-btn ff-btn-secondary ff-btn-sm mt-3 w-full"
             >
               Cancel
             </button>
@@ -152,9 +166,9 @@ export function UploadPhotoButton() {
       )}
 
       {phase.kind === "full" && (
-        <p className="mt-2 rounded-lg border-2 border-[#1e1b17] bg-white px-2.5 py-1.5 text-[11px] font-bold text-[#1e1b17]">
+        <p className="ff-well mt-2 px-2.5 py-1.5 text-[12px] text-[var(--ff-ink-2)]">
           Every panel is full or set to text. Clear a tile or switch a panel back to{" "}
-          <span className="font-extrabold">Tiles</span>, then tap Upload again.
+          <span className="font-medium text-[var(--ff-ink)]">Badges</span>, then tap Upload again.
         </p>
       )}
 

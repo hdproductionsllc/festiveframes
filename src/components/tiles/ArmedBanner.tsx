@@ -59,7 +59,12 @@ export function ArmedBanner({ placement = "frame" }: { placement?: "frame" | "tr
       ref={bannerRef}
       role="status"
       aria-live="polite"
-      className={`flex items-center gap-2 rounded-xl border-2 border-[#1e1b17] bg-brand-gold
+      // `ff-armed` is an inert marker for the /lab/school re-skin — same reasoning
+      // as PaletteTile's `ff-ptile`: this banner sits directly on top of the frame,
+      // whose own controls use neighbouring arbitrary-value classes, so the school
+      // stylesheet anchors on a marker instead of doing selector archaeology next
+      // to the hero. It matches no rule outside school-skin.css.
+      className={`ff-armed flex items-center gap-2 rounded-xl border-2 border-[#1e1b17] bg-brand-gold
         px-3 py-2 text-center shadow-[3px_3px_0_#1e1b17] motion-safe:animate-tile-snap ${
           overlay
             ? "pointer-events-auto absolute left-1/2 top-1/2 z-20 w-[86%] max-w-md -translate-x-1/2 -translate-y-1/2"
@@ -69,14 +74,20 @@ export function ArmedBanner({ placement = "frame" }: { placement?: "frame" | "tr
       {showFinger && (
         <span
           aria-hidden
-          className="pointer-events-none absolute -bottom-7 left-1/2 -translate-x-1/2 text-3xl
+          // `ff-glyph` hides this on /lab/school only. It is already `aria-hidden`
+          // and purely decorative, so removing it costs the school page nothing —
+          // and a bouncing emoji finger is the loudest remaining craft-app signal
+          // anywhere near the frame. /build keeps the hint exactly as it was.
+          className="ff-glyph pointer-events-none absolute -bottom-7 left-1/2 -translate-x-1/2 text-3xl
             motion-safe:ff-finger-hint motion-reduce:hidden"
         >
           👆
         </span>
       )}
       <span className="flex-1 text-[13px] font-extrabold leading-snug text-[#1e1b17]">
-        👆 Now tap any spot on your frame to drop it — or drag a tile on.
+        {/* Leading glyph in a sentence that reads fine without it. The trailing
+            space is inside the hidden span so nothing is left dangling. */}
+        <span className="ff-glyph">👆 </span>Now tap any spot on your frame to drop it — or drag a tile on.
       </span>
       <button
         type="button"

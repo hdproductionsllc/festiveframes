@@ -24,10 +24,9 @@ export function SectionControls() {
   const selectSection = useDesignStore((s) => s.selectSection);
 
   return (
-    <div className="bsk-panel-blue rounded-xl border border-surface-700/50 bg-surface-800/50 p-4">
-      <h3 className="mb-3 flex items-center gap-2 text-sm font-extrabold uppercase tracking-wide text-[#1e1b17]">
-        <span aria-hidden>🧩</span> Sections
-      </h3>
+    <div className="ff-panel p-4">
+      {/* The 🧩 was decoration in a heading — dropped, not swapped. */}
+      <h3 className="ff-h2 mb-3">Sections</h3>
 
       {/* Laid out to MIRROR the frame, not as a flat list. Rendering SECTION_IDS
           into a 2-column grid put the cards at
@@ -45,14 +44,16 @@ export function SectionControls() {
             <div
               key={id}
               style={{ order: SECTION_LAYOUT_ORDER[id] }}
-              className={`rounded-lg border-2 p-2 transition-colors ${spanFull ? "col-span-2" : ""} ${
-                selected ? "border-[#f8c53b] bg-[#f8c53b]/15" : "border-[#1e1b17]/10 bg-white/40"
+              className={`rounded-[6px] border p-2 transition-colors ${spanFull ? "col-span-2" : ""} ${
+                selected
+                  ? "border-[var(--ff-accent)] bg-[var(--ff-accent-soft)]"
+                  : "border-[var(--ff-line)] bg-[var(--ff-sunk)]"
               }`}
             >
               <button
                 type="button"
                 onClick={() => selectSection(id)}
-                className="mb-1.5 block w-full text-left text-[11px] font-bold uppercase tracking-wide text-[#1e1b17]/70"
+                className="ff-label mb-1.5 block w-full text-left"
               >
                 {SECTION_LABELS[id]}
               </button>
@@ -63,7 +64,7 @@ export function SectionControls() {
                   deliberate act, so it now sits in the section editor with the rest
                   of that panel's settings. */}
               <div className="flex items-center justify-between gap-2">
-                <span className="text-[11px] font-semibold uppercase tracking-wide text-[#1e1b17]/50">
+                <span className="ff-micro">
                   {!sectionSupportsTiles(id)
                     ? "Text banner"
                     : sectionSupportsText(id)
@@ -75,7 +76,7 @@ export function SectionControls() {
                 <button
                   type="button"
                   onClick={() => selectSection(id)}
-                  className="rounded-md border-2 border-[#1e1b17] bg-[#3fb0e6] px-2 py-1 text-[11px] font-extrabold uppercase tracking-wide text-white shadow-[2px_2px_0_#1e1b17] transition-all active:translate-y-0.5 active:scale-95"
+                  className="ff-btn ff-btn-secondary ff-btn-sm"
                 >
                   {selected ? "Selected" : "Select"}
                 </button>
@@ -85,8 +86,8 @@ export function SectionControls() {
         })}
       </div>
 
-      <p className="mt-3 text-[11px] leading-relaxed text-[#1e1b17]/55">
-        The top bar is always a text banner — it is one tile tall, too short for a
+      <p className="ff-micro mt-3">
+        The top bar is always a text banner - it is one tile tall, too short for a
         badge to read. The bottom banner is two tall, so it can be either. The side
         panels hold badges and art. Select a panel to edit it below.
       </p>

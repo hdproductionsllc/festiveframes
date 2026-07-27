@@ -41,10 +41,10 @@ export function SectionEditor() {
   const isText = sec?.mode === "text";
 
   return (
-    <div className="bsk-panel-pink space-y-4 rounded-xl border border-surface-700/50 bg-surface-800/50 p-4">
+    <div className="ff-panel space-y-4 p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-sm font-extrabold uppercase tracking-wide text-[#1e1b17]">
-          {label} — {isText ? "Text" : "Art"}
+        <h3 className="ff-h2">
+          {label} - {isText ? "Text" : "Art"}
         </h3>
         {/* The mode switch lives HERE rather than on the section card. Top and bottom
             are text banners by default and that is what they usually stay; putting the
@@ -56,7 +56,7 @@ export function SectionEditor() {
           <button
             type="button"
             onClick={() => setSectionMode(selectedSectionId, isText ? "tiles" : "text")}
-            className="rounded-md border-2 border-[#1e1b17] bg-white px-2 py-1 text-[11px] font-extrabold uppercase tracking-wide text-[#1e1b17] shadow-[2px_2px_0_#1e1b17] transition-all active:translate-y-0.5 active:scale-95"
+            className="ff-btn ff-btn-secondary ff-btn-sm"
           >
             {isText ? "Use badges instead" : "Use a text banner"}
           </button>
@@ -64,19 +64,19 @@ export function SectionEditor() {
       </div>
 
       {isText ? (
-        <div className="space-y-3 rounded-2xl border-2 border-[#1e1b17] bg-white/70 p-3.5 shadow-[3px_3px_0_#1e1b17]">
+        <div className="ff-well space-y-3 p-3.5">
           <label className="block">
-            <span className="mb-1 block text-xs font-bold uppercase tracking-wide text-[#1e1b17]/70">
+            <span className="ff-label mb-1 block">
               {selectedSectionId === "bottom" ? "Headline" : "Text"}{" "}
-              <span className="font-semibold normal-case text-[#1e1b17]/45">— press Enter for a new line</span>
+              <span className="ff-micro">- press Enter for a new line</span>
             </span>
             <textarea
               value={sec.text?.text ?? ""}
               maxLength={MAX_CHARS}
               rows={selectedSectionId === "bottom" ? 2 : 3}
               onChange={(e) => setSectionText(selectedSectionId, { text: e.target.value.slice(0, MAX_CHARS) })}
-              placeholder={selectedSectionId === "bottom" ? "GO WILDCATS" : "School name,\nslogan,\nyear…"}
-              className="w-full resize-none rounded-lg border-2 border-[#1e1b17]/15 bg-white px-3 py-2.5 text-base font-bold leading-tight text-[#1e1b17] placeholder:text-[#1e1b17]/35 focus:border-[#ed5aa0] focus:outline-none"
+              placeholder={selectedSectionId === "bottom" ? "GO WILDCATS" : "School name,\nslogan,\nyear..."}
+              className="ff-field w-full resize-none text-[15px] leading-tight"
             />
           </label>
 
@@ -84,8 +84,8 @@ export function SectionEditor() {
               double-height bottom banner renders two tiers when this is filled. */}
           {selectedSectionId === "bottom" && (
             <label className="block">
-              <span className="mb-1 block text-xs font-bold uppercase tracking-wide text-[#1e1b17]/70">
-                Tagline <span className="font-semibold normal-case text-[#1e1b17]/45">— optional, smaller line underneath</span>
+              <span className="ff-label mb-1 block">
+                Tagline <span className="ff-micro">- optional, smaller line underneath</span>
               </span>
               <input
                 type="text"
@@ -93,7 +93,7 @@ export function SectionEditor() {
                 maxLength={MAX_CHARS}
                 onChange={(e) => setSectionText(selectedSectionId, { tagline: e.target.value.slice(0, MAX_CHARS) })}
                 placeholder="Est. 1998 · State Champions"
-                className="w-full rounded-lg border-2 border-[#1e1b17]/15 bg-white px-3 py-2 text-sm font-bold text-[#1e1b17] placeholder:text-[#1e1b17]/35 focus:border-[#ed5aa0] focus:outline-none"
+                className="ff-field w-full"
               />
             </label>
           )}
@@ -101,26 +101,21 @@ export function SectionEditor() {
           {/* School phrases — tap to fill (line breaks come in too). Grouped by category;
               {year} is already resolved, [MASCOT]/[#] are placeholders to overwrite. */}
           <div>
-            <span className="text-[11px] font-semibold text-[#1e1b17]/55">
-              Or tap a school phrase <span className="text-[#1e1b17]/40">— edit [MASCOT] / [#] after</span>:
-            </span>
+            {/* The trailing "— edit [MASCOT] / [#] after:" is gone. It explained a
+                convention the chips demonstrate on their own, in jargon, in the one
+                place a parent is already reading example text. */}
+            <span className="ff-label">Or tap a school phrase</span>
             <div className="mt-1.5 max-h-[11rem] space-y-2 overflow-y-auto pr-1">
               {SCHOOL_PHRASE_GROUPS.map((group) => (
                 <div key={group.category}>
-                  <span className="block text-[10px] font-extrabold uppercase tracking-wide text-[#1e1b17]/45">
-                    {group.category}
-                  </span>
+                  <span className="ff-micro block">{group.category}</span>
                   <div className="mt-1 flex flex-wrap gap-1.5">
                     {group.phrases.map((p) => (
                       <button
                         key={p}
                         type="button"
                         onClick={() => setSectionText(selectedSectionId, { text: p })}
-                        className={`rounded-full border-2 px-2.5 py-1 text-[12px] font-bold transition-all active:scale-95 ${
-                          sec.text?.text === p
-                            ? "border-[#1e1b17] bg-[#ed5aa0] text-white shadow-[2px_2px_0_#1e1b17]"
-                            : "border-[#1e1b17]/15 bg-white text-[#1e1b17] hover:border-[#ed5aa0] hover:bg-[#ed5aa0]/10"
-                        }`}
+                        className={`ff-chip ${sec.text?.text === p ? "ff-chip-on" : ""}`}
                       >
                         {p.replace(/\n/g, " / ")}
                       </button>
@@ -133,11 +128,11 @@ export function SectionEditor() {
 
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="block">
-              <span className="mb-1 block text-xs font-bold uppercase tracking-wide text-[#1e1b17]/70">Font</span>
+              <span className="ff-label mb-1 block">Font</span>
               <select
                 value={sec.text?.fontFamily ?? ""}
                 onChange={(e) => setSectionText(selectedSectionId, { fontFamily: e.target.value })}
-                className="w-full rounded-lg border-2 border-[#1e1b17]/15 bg-white px-3 py-2 text-sm font-semibold text-[#1e1b17] focus:border-[#ed5aa0] focus:outline-none"
+                className="ff-field w-full"
               >
                 <optgroup label="Collegiate">
                   {SCHOOL_COLLEGIATE_FONTS.map((f) => (
@@ -156,18 +151,18 @@ export function SectionEditor() {
               </select>
             </label>
             <div>
-              <span className="mb-1 block text-xs font-bold uppercase tracking-wide text-[#1e1b17]/70">Colors</span>
+              <span className="ff-label mb-1 block">Colors</span>
               <div className="flex items-center gap-3">
                 <Swatch label="Text" value={sec.text?.textColor ?? "#ffffff"} onChange={(v) => setSectionText(selectedSectionId, { textColor: v })} />
-                <Swatch label="Bg" value={sec.text?.backgroundColor ?? "#1B2A4A"} onChange={(v) => setSectionText(selectedSectionId, { backgroundColor: v })} />
+                <Swatch label="Background" value={sec.text?.backgroundColor ?? "#1B2A4A"} onChange={(v) => setSectionText(selectedSectionId, { backgroundColor: v })} />
               </div>
             </div>
           </div>
 
           <label className="block">
             <div className="mb-1 flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wide text-[#1e1b17]/70">Size</span>
-              <span className="text-xs font-semibold tabular-nums text-[#1e1b17]/70">
+              <span className="ff-label">Size</span>
+              <span className="ff-label tabular-nums">
                 {Math.round((sec.text?.fontSize ?? 1) * 100)}%
               </span>
             </div>
@@ -178,20 +173,18 @@ export function SectionEditor() {
               step={1}
               value={Math.round((sec.text?.fontSize ?? 1) * 100)}
               onChange={(e) => setSectionText(selectedSectionId, { fontSize: Number(e.target.value) / 100 })}
-              className="w-full h-1.5 cursor-pointer appearance-none rounded-full bg-[#1e1b17]/15
+              className="w-full h-1.5 cursor-pointer appearance-none rounded-full bg-[var(--ff-line)]
                 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:appearance-none
-                [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#ed5aa0]
-                [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white"
+                [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[var(--ff-accent)]
+                [&::-webkit-slider-thumb]:shadow-sm [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white"
             />
           </label>
         </div>
       ) : (
-        <div className="space-y-3 rounded-2xl border-2 border-[#1e1b17] bg-white/70 p-3.5 shadow-[3px_3px_0_#1e1b17]">
+        <div className="ff-well space-y-3 p-3.5">
           {/* <label> + visually-hidden (NOT display:none) input — reliable on iOS,
               where a display:none input opens the picker but never fires `change`. */}
-          <label
-            className="inline-flex cursor-pointer rounded-xl border-[3px] border-[#1e1b17] bg-[#3fb0e6] px-4 py-2 text-sm font-extrabold uppercase tracking-wide text-white shadow-[3px_3px_0_#1e1b17] transition-all hover:brightness-105 active:translate-y-0.5"
-          >
+          <label className="ff-btn ff-btn-primary cursor-pointer">
             <input
               type="file"
               accept="image/*"
@@ -205,9 +198,9 @@ export function SectionEditor() {
             Add art
           </label>
 
-          <p className="text-[11px] leading-relaxed text-[#1e1b17]/50">
+          <p className="ff-micro">
             Upload a photo, mascot, or logo for the {label.toLowerCase()}. It drops in
-            at a suggested size — a portrait lands tall, a landscape lands compact — then
+            at a suggested size - a portrait lands tall, a landscape lands compact - then
             drag it, pull the resize handles, or drag it off the frame to remove. A live
             meter checks it&apos;s sharp enough to print at that size.
           </p>
@@ -222,12 +215,12 @@ export function SectionEditor() {
 function Swatch({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
   return (
     <label className="flex items-center gap-1.5">
-      <span className="text-[11px] font-semibold text-[#1e1b17]/60">{label}</span>
+      <span className="ff-micro">{label}</span>
       <input
         type="color"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="h-7 w-9 cursor-pointer rounded border border-[#1e1b17]/20"
+        className="h-7 w-9 cursor-pointer rounded-[6px] border border-[var(--ff-line-strong)]"
       />
     </label>
   );

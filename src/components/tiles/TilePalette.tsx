@@ -91,7 +91,10 @@ function MobileTileTray({ surfacedSetIds }: TilePaletteProps) {
             className="shrink-0 rounded-full bg-surface-800 px-3 py-1.5 text-xs font-semibold
               text-surface-200 active:scale-95 transition-transform"
           >
-            {optionsOpen ? "Done" : "⚙ Tools"}
+            {/* The gear is the button's only glyph, so it is swapped rather than
+                dropped on /lab/school — see the note in QuickActions on why an
+                emoji in a JS string needs a class to be reachable. Inert on /build. */}
+            {optionsOpen ? "Done" : <span className="ff-glyph-wrap"><span className="ff-icon ff-i-sliders">⚙</span> Tools</span>}
           </button>
         </div>
       </div>

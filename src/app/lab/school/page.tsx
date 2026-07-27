@@ -9,22 +9,29 @@ import "../../builder-fonts.css";
 // low-contrast (unreadable headings). SchoolDesigner's root already has the `build-skin`
 // class — this makes the styles it targets actually load.
 import "../../build/build-skin.css";
+// The SCHOOL skin, imported AFTER build-skin.css so it shadows it. It never edits
+// that file — build-skin.css is a live-storefront stylesheet — and every rule in it
+// requires the `school-skin` class below, which exists on exactly this one element
+// in the whole codebase. See the header of school-skin.css for why that, rather
+// than route-scoped CSS loading, is what makes /build provably unreachable.
+import "./school-skin.css";
 import { SchoolBuilder } from "@/components/designer/SchoolDesigner";
 
-// Internal prototype of the SCHOOL / fundraising builder — a FORK of the real
-// license-plate builder (real drag-drop + text editor + plate), seeded with a
-// school frame config (wide 3-tile side panels via wings). Unlinked + noindex.
+// Prototype of the SCHOOL / fundraising builder — a FORK of the real license-plate
+// builder (real drag-drop + text editor + plate), seeded with a school frame config
+// (wide 3-tile side panels via wings). Unlinked + noindex.
 export const metadata: Metadata = {
-  title: "School Frame Builder — Internal Prototype",
+  title: "School Frame Builder",
   robots: { index: false, follow: false },
 };
 
 export default function SchoolFrameLabPage() {
   // `build-skin` on the PARENT (matching /build) so the descendant rules in
-  // build-skin.css (`.build-skin .workbench-bg` cream, `.build-skin .bsk-panel`, …)
-  // apply to SchoolDesigner's root and cards.
+  // build-skin.css (`.build-skin .bsk-panel`, the surface remaps, …) still resolve
+  // — the school skin shadows them rather than replacing them, so the base layer
+  // has to stay. `school-skin` is what every override selector keys off.
   return (
-    <div className="build-skin">
+    <div className="build-skin school-skin">
       <SchoolBuilder />
     </div>
   );

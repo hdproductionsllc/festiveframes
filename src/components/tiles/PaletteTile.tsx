@@ -57,7 +57,13 @@ export function PaletteTile({ piece, size = "md", demo = false }: PaletteTilePro
       {...listeners}
       onClick={handleClick}
       style={style}
-      className={`group relative cursor-grab active:cursor-grabbing ${size === "lg" ? "shrink-0" : ""} ${isDragging ? "opacity-50" : ""}`}
+      // `ff-ptile` is an inert marker for the /lab/school re-skin and nothing else.
+      // It exists because this component's armed state is painted with classes it
+      // SHARES with the frame itself — `shadow-[1px_1px_0_#1e1b17]` is also on
+      // RailSlot's on-frame ✕, and the frame is explicitly out of scope — so the
+      // school stylesheet anchors on this marker rather than on those class names.
+      // Matches no rule outside school-skin.css, which requires `.school-skin`.
+      className={`ff-ptile group relative cursor-grab active:cursor-grabbing ${size === "lg" ? "shrink-0" : ""} ${isDragging ? "opacity-50" : ""}`}
       title={
         isSelected
           ? `“${piece.name}” is ready — tap a spot on your frame to drop it`
@@ -74,7 +80,11 @@ export function PaletteTile({ piece, size = "md", demo = false }: PaletteTilePro
             uppercase leading-none tracking-wide text-[#1e1b17] shadow-[1px_1px_0_#1e1b17]
             motion-safe:animate-tile-snap"
         >
-          ● Placing
+          {/* The bullet is decorative — the badge shape and the accent tint already
+              carry "this tile is armed" — so /lab/school drops it. The trailing
+              space lives INSIDE the hidden span so no stray leading space survives
+              when it is hidden. /build renders "● Placing" unchanged. */}
+          <span className="ff-glyph">● </span>Placing
         </span>
       )}
       {/* Drag-grip affordance — the universal "pick me up" signal. Faintly present

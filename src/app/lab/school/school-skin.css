@@ -1,0 +1,573 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   /lab/school — the "clean and modern" skin.
+
+   WHAT THIS IS. The school builder is a FORK of /build and shares a lot of its
+   chrome (TilePalette, QuickActions, PaletteTile, ArmedBanner, StateSelector) and
+   its entire stylesheet, `build/build-skin.css` — the cartoon-sticker look. That
+   look reads as a children's craft app, which is the wrong register for a high
+   school parent making a $-decision. This file re-skins THIS PAGE ONLY: quiet
+   neutral surfaces, hairline borders, soft ambient shadows, one restrained accent.
+
+   THE ORGANISING PRINCIPLE: the FRAME PREVIEW is the hero. It is a navy-and-brass
+   product with embroidered patches and it is the only thing on the page allowed to
+   be visually rich. Everything in here exists to get out of its way. Concretely,
+   the reskin INVERTS the contrast ranking: today the ink-filled header bar was the
+   loudest object on screen at 15.11:1 and the 3px ink panel outlines were next;
+   after this file the header is a white bar with a hairline and the frame's navy on
+   the new stage is 11.10:1 — the strongest large object in view. That inversion is
+   the whole job, not a side effect of it.
+
+   ─── WHY EVERY SELECTOR IS WRITTEN `.build-skin.school-skin …` ───────────────
+   `build-skin.css` is imported by BOTH /build and this page, and it is a LIVE
+   STOREFRONT file — it may not be edited, so this file SHADOWS it instead. Two
+   rules make the shadowing safe:
+
+     1. SPECIFICITY. `build-skin.css` puts `!important` on nearly every
+        declaration. An equal-specificity `!important` rule would resolve by
+        bundler import ORDER, which is not something to bet a live storefront on.
+        `.build-skin.school-skin X` is (0,3,0) against its (0,2,0), so it wins on
+        specificity alone — and it still carries `!important` wherever the rule it
+        shadows has one, because an `!important` declaration can only be beaten by
+        another `!important` declaration regardless of specificity.
+
+     2. REACHABILITY. Every rule here requires the class `school-skin`, which
+        appears on exactly ONE element in the codebase (the /lab/school root). Even
+        if Next serves this stylesheet on /build — App Router CSS lifetime is not
+        something to depend on — ZERO rules can match there. The guarantee comes
+        from the selector, not from route-scoped loading, which is why it holds.
+
+   ─── THE ONE DELIBERATE EXCEPTION: the `.ff-*` primitives ────────────────────
+   The `.ff-panel` / `.ff-btn-*` / `.ff-field` / `.ff-stage` block below is NOT
+   scoped. It cannot be: five school-only components `createPortal` into
+   `document.body` (SchoolBrandImport, UploadPhotoButton, useSnappetUpload,
+   SnappetSizeControl, and ImageCropModal through the last two), so their DOM lands
+   OUTSIDE `.school-skin` and would inherit neither the variables nor any
+   descendant selector. Those portals carry `.ff-school-portal`, which re-declares
+   the variable block, and they use the same unscoped primitives as the in-tree
+   panels. This is safe for a different reason than the scoped rules: `ff-panel`,
+   `ff-btn-primary`, `ff-field`, `ff-stage`, `ff-glyph`, `ff-icon` and `ff-i-*` are
+   NOVEL class names that appear on no /build component at all, so there is nothing
+   on /build for them to hit. Grep before adding one to a shared file.
+
+   TRIED AND REJECTED — blanket utility hammers. The tempting one-liners
+   (`.build-skin.school-skin .uppercase { text-transform: none }`,
+   `… .border-2 { border-width: 1px }`, `… .font-extrabold { font-weight: 600 }`)
+   would quiet the whole page in four rules. They are wrong here: the FRAME uses
+   all of them. `LicensePlateArea.tsx:145,153,190` sets `uppercase`/`tracking-wider`
+   on the printed plate legend, `FrameCanvas.tsx:594` uses
+   `font-bold uppercase tracking-wide` on a slot overlay, and `RailSlot.tsx:414`
+   uses `border-2 … font-black` plus `shadow-[1px_1px_0_#1e1b17]` on the on-frame ✕
+   — the same arbitrary shadow class PaletteTile uses. A blanket rule would restyle
+   the hero, which is explicitly out of scope. So every override below is anchored
+   to a class that belongs to the CHROME and to nothing on the frame.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   1. TOKENS
+
+   Declared twice on purpose: on `.school-skin` for the in-tree subtree, and on
+   `.ff-school-portal` for the five portals that escape it (see the header note).
+   Keep the two blocks identical.
+
+   The accent is `#0F5C6B`, "Harbor". It is the only hue far enough from the
+   frame's navy `#1B2A4A` to never read as a second, slightly-wrong navy, yet it
+   sits opposite brass on the wheel at a chroma low enough to register as quiet UI
+   rather than a competing brand colour — so the small amount of it on screen makes
+   the frame's gold look warmer instead of fighting it.
+
+   Every text/background pair these produce is computed, not eyeballed; the tightest
+   in the whole system is `--ff-ink-3` on `--ff-stage` at 4.59:1. That is the reason
+   the stage may not be darkened any further.
+   ───────────────────────────────────────────────────────────────────────────── */
+.school-skin,
+.ff-school-portal {
+  --ff-canvas: #f7f7f6;        /* page background (was #faf0d6 + confetti) */
+  --ff-stage: #e6e3dd;         /* the mat the frame sits on — new */
+  --ff-card: #ffffff;          /* every panel, every modal */
+  --ff-sunk: #f1f0ed;          /* inset wells, disabled fills, secondary hover */
+
+  --ff-ink: #16181c;           /* headings, primary text        — 17.77 on card */
+  --ff-ink-2: #4b5058;         /* body, panel labels            —  8.12 on card */
+  --ff-ink-3: #5f656e;         /* helper / caption              —  5.88 on card */
+  --ff-ink-disabled: #656b74;  /* disabled label                —  4.71 on sunk */
+
+  --ff-line: #e4e3df;          /* hairline on white / canvas */
+  --ff-line-strong: #d3d1cb;   /* hairline ON THE STAGE, where --ff-line is
+                                  1.00:1 against the background — invisible */
+
+  --ff-accent: #0f5c6b;        /* primary action, focus, selected — 7.60 on card */
+  --ff-accent-hover: #0c4c58;  /* 9.59 against white */
+  --ff-accent-soft: #e6f1f3;   /* selected / armed tint */
+  --ff-on-accent: #ffffff;
+
+  --ff-danger: #9f2d22;        /* 7.31 on card, 6.41 on danger-soft */
+  --ff-danger-soft: #fbedeb;
+  --ff-warn-soft: #fcf3e3;
+  --ff-warn-ink: #6b4a10;      /* 7.30 on warn-soft */
+  --ff-ok-soft: #e8f2ec;
+  --ff-ok-ink: #1e5b3c;        /* 7.01 on ok-soft */
+
+  /* Radius collapses from seven values to three. 999px is reserved for GENUINE
+     pills (dismiss chips, phrase chips); `rounded-full` on a rectangular action
+     button is a sticker-era tic and goes to 10px. */
+  --ff-radius: 10px;
+  --ff-radius-sm: 6px;
+  --ff-radius-lg: 14px;
+
+  /* The ONE elevation in the system: a tight contact shadow plus a wide soft one.
+     This replaces every hard offset shadow on the page. Nothing here translates on
+     hover — modern elevation changes shade, it does not move. */
+  --ff-elev: 0 1px 2px rgba(16, 18, 28, 0.04), 0 4px 12px rgba(16, 18, 28, 0.06);
+  --ff-elev-modal: 0 12px 32px rgba(16, 18, 28, 0.16), 0 2px 6px rgba(16, 18, 28, 0.08);
+  --ff-focus: 0 0 0 3px rgba(15, 92, 107, 0.2);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   2. TYPE
+
+   `build-skin.css:18-28` sets Nunito on the root and Fredoka on every heading,
+   input and button. Dropping those two faces is the single largest "craft app"
+   signal removed on the whole page, and it costs one rule.
+
+   Inter is ALREADY loaded here — `builder-fonts.css:6` fetches it and
+   `globals.css:36` already declares `--font-sans: "Inter", system-ui, sans-serif`.
+   No new font import is needed, and adding one would be a second network round
+   trip for a face the page already has.
+   ───────────────────────────────────────────────────────────────────────────── */
+.build-skin.school-skin,
+.build-skin.school-skin h1,
+.build-skin.school-skin h2,
+.build-skin.school-skin h3,
+.build-skin.school-skin input,
+.build-skin.school-skin select,
+.build-skin.school-skin textarea,
+.build-skin.school-skin button,
+.build-skin.school-skin .font-display {
+  font-family: var(--font-sans);
+}
+.ff-school-portal,
+.ff-school-portal h3,
+.ff-school-portal input,
+.ff-school-portal button {
+  font-family: var(--font-sans);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   3. THE PAGE + THE STAGE
+
+   The confetti has to go. `build-skin.css` paints two radial-gradient dot fields
+   at 44px pitch DIRECTLY BEHIND a product whose entire selling point is
+   embroidered patch detail — texture competing with texture. A plain mat is what
+   product photography uses, for exactly this reason.
+   ───────────────────────────────────────────────────────────────────────────── */
+.build-skin.school-skin .workbench-bg {
+  background-color: var(--ff-canvas);
+  background-image: none;
+}
+
+/* The mat the frame sits on. It is the ONLY zone on the page darker than its
+   neighbours (1.19:1 below the canvas, 1.28:1 below the cards) — everything else
+   is white or near-white, so the eye goes to the one tonal break and finds the
+   frame sitting in it. Plain, with no texture at all.
+
+   `position: relative` is NOT set here on purpose: the element already carries
+   Tailwind's `relative`, and the frame-side ArmedBanner is absolutely positioned
+   against it. Setting it here too would be harmless but would hide the dependency. */
+.ff-stage {
+  background: var(--ff-stage);
+  border: 1px solid var(--ff-line-strong);
+  border-radius: var(--ff-radius-lg);
+  box-shadow: inset 0 1px 3px rgba(16, 18, 28, 0.05);
+  padding: 16px;
+}
+@media (min-width: 1024px) {
+  .ff-stage { padding: 24px; }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   4. THE PRIMITIVES
+
+   Unscoped on purpose — see the header note on portals. One elevation, three
+   radii, four button tiers, and nothing that moves on hover.
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.ff-panel {
+  background: var(--ff-card);
+  border: 1px solid var(--ff-line);
+  border-radius: var(--ff-radius);
+  box-shadow: var(--ff-elev);
+}
+
+/* A well INSIDE a panel: no shadow (nothing is raised above a raised thing), just
+   a change of tone so the grouping reads. */
+.ff-well {
+  background: var(--ff-sunk);
+  border: 1px solid var(--ff-line);
+  border-radius: var(--ff-radius);
+}
+
+.ff-modal {
+  background: var(--ff-card);
+  border: 1px solid var(--ff-line);
+  border-radius: var(--ff-radius-lg);
+  box-shadow: var(--ff-elev-modal);
+}
+.ff-scrim { background: rgba(16, 18, 28, 0.45); }
+
+/* Type roles. Five of them, replacing nine sizes and 102-of-105 bold-or-heavier
+   weight declarations. Sentence case throughout: `uppercase` at 12px is the single
+   loudest thing in the old chrome and dropping it costs no contrast at all.
+   600 is the weight ceiling — `font-extrabold` and `font-black` are banned here. */
+.ff-h1 { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; color: var(--ff-ink); }
+.ff-h2 { font-size: 13px; font-weight: 600; letter-spacing: -0.005em; color: var(--ff-ink); }
+.ff-label { font-size: 12px; font-weight: 500; color: var(--ff-ink-2); }
+.ff-help { font-size: 12px; font-weight: 400; color: var(--ff-ink-3); line-height: 1.5; }
+.ff-micro { font-size: 11px; font-weight: 400; color: var(--ff-ink-3); line-height: 1.45; }
+
+/* Buttons. Exactly ONE primary per view; everything else is a secondary outline.
+   Destructive is deliberately NOT a filled red — a filled red next to a
+   navy-and-brass product is a third shouting colour, and an outlined red carries
+   the same semantic at a fraction of the weight. */
+.ff-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: var(--ff-radius);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.2;
+  padding: 8px 12px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+.ff-btn-primary { background: var(--ff-accent); color: var(--ff-on-accent); border-color: var(--ff-accent); }
+.ff-btn-secondary { background: var(--ff-card); color: var(--ff-ink); border-color: var(--ff-line-strong); }
+.ff-btn-danger { background: var(--ff-card); color: var(--ff-danger); border-color: #e8c9c5; }
+@media (hover: hover) {
+  .ff-btn-primary:hover:not(:disabled) { background: var(--ff-accent-hover); border-color: var(--ff-accent-hover); }
+  .ff-btn-secondary:hover:not(:disabled) { background: var(--ff-sunk); }
+  .ff-btn-danger:hover:not(:disabled) { background: var(--ff-danger-soft); }
+}
+/* `opacity-40/60` for disabled is banned: it produces a contrast ratio nobody can
+   compute and it failed AA everywhere it was used. An explicit pair instead. */
+.ff-btn:disabled,
+.ff-btn[disabled] {
+  background: var(--ff-sunk);
+  color: var(--ff-ink-disabled);
+  border-color: var(--ff-line);
+  cursor: not-allowed;
+}
+.ff-btn-sm { padding: 5px 10px; font-size: 12px; }
+
+/* A genuine pill — dismiss chips and phrase chips only. */
+.ff-chip {
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border: 1px solid var(--ff-line-strong);
+  background: var(--ff-card);
+  color: var(--ff-ink);
+  cursor: pointer;
+}
+.ff-chip-on { background: var(--ff-accent); border-color: var(--ff-accent); color: var(--ff-on-accent); }
+
+.ff-field {
+  background: var(--ff-card);
+  border: 1px solid var(--ff-line-strong);
+  border-radius: var(--ff-radius-sm);
+  color: var(--ff-ink);
+  font-size: 13px;
+  padding: 8px 10px;
+}
+.ff-field::placeholder { color: var(--ff-ink-3); }
+.ff-field:focus {
+  outline: none;
+  border-color: var(--ff-accent);
+  box-shadow: var(--ff-focus);
+}
+
+/* One focus treatment for everything keyboard-reachable. The ring is Harbor on the
+   canvas at 7.09:1, comfortably past the 3:1 a focus indicator needs. */
+.build-skin.school-skin :is(button, a, input, select, textarea, summary, label):focus-visible,
+.ff-school-portal :is(button, a, input, select, textarea, summary, label):focus-visible {
+  outline: 2px solid var(--ff-accent);
+  outline-offset: 2px;
+  border-radius: var(--ff-radius-sm);
+}
+
+/* Status banners across the top of the page. */
+.ff-banner { border-bottom: 1px solid var(--ff-line); }
+.ff-banner-ok { background: var(--ff-ok-soft); color: var(--ff-ok-ink); }
+.ff-banner-warn { background: var(--ff-warn-soft); color: var(--ff-warn-ink); }
+.ff-banner-error { background: var(--ff-danger-soft); color: var(--ff-danger); }
+/* Purely informational ("we restored your last design"). It used to share the gold
+   fill with "email isn't configured", which coloured an expected outcome like a
+   problem. Neutral surface, body ink — 7.12:1. */
+.ff-banner-info { background: var(--ff-sunk); color: var(--ff-ink-2); }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   5. ICONOGRAPHY IN SHARED COMPONENTS
+
+   Emoji that live inside JS STRING LITERALS (QuickActions' `actions` array,
+   TilePalette's "⚙ Tools") are unreachable from CSS — you cannot restyle a text
+   node you cannot select. The shared components therefore get ONE inert class on a
+   span that already existed, or on a new span wrapping just the glyph:
+
+     .ff-glyph          → the glyph is decorative; hide it here, keep it on /build.
+     .ff-icon .ff-i-X   → the glyph is load-bearing; swap it for a line icon.
+
+   `.ff-icon` paints the SVG as a MASK filled with `currentColor`, so one rule
+   inherits the button's text colour in every tier and state, including disabled.
+   Using a mask rather than a second `<span>` carrying a background image means the
+   shared files gain a class attribute and NO new DOM node at all — on /build the
+   class matches no rule anywhere and the rendered text nodes stay
+   character-identical.
+
+   All icons: 24x24 viewBox, no fill, 1.5 stroke, round caps and joins, rendered at
+   16px (14px inside steppers). That consistency IS the modern language. */
+.build-skin.school-skin .ff-glyph { display: none; }
+/* Undo/Redo and "⚙ Tools" are a SINGLE text node inside a flex button, so their
+   icon+label is wrapped in one span to keep it one flex item (see the comment in
+   QuickActions). That wrapper does the icon/label spacing itself. */
+.build-skin.school-skin .ff-glyph-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.build-skin.school-skin .ff-icon {
+  display: inline-block;
+  flex: none;
+  width: 16px;
+  height: 16px;
+  /* The emoji is still in the DOM as the /build fallback; collapse it to nothing
+     so only the mask paints. */
+  font-size: 0;
+  line-height: 0;
+  background-color: currentColor;
+  -webkit-mask: var(--ff-i) center / contain no-repeat;
+  mask: var(--ff-i) center / contain no-repeat;
+}
+.build-skin.school-skin .ff-i-fill { --ff-i: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4.5 4.5h6v6h-6zM13.5 4.5h6v6h-6zM4.5 13.5h6v6h-6zM13.5 13.5h6v6h-6z'/%3E%3C/svg%3E"); }
+.build-skin.school-skin .ff-i-shuffle { --ff-i: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6.5h3.5l9 11H20M4 17.5h3.5l9-11H20M17 3.5l3 3-3 3M17 14.5l3 3-3 3'/%3E%3C/svg%3E"); }
+.build-skin.school-skin .ff-i-mirror { --ff-i: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3.5v17M9 8.5L5 12l4 3.5M15 8.5l4 3.5-4 3.5'/%3E%3C/svg%3E"); }
+.build-skin.school-skin .ff-i-trash { --ff-i: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4.5 7h15M9.5 7V4.5h5V7M6.5 7l.9 12.5h9.2L17.5 7M10 11v5.5M14 11v5.5'/%3E%3C/svg%3E"); }
+.build-skin.school-skin .ff-i-undo { --ff-i: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4.5 12h11a4.5 4.5 0 1 1 0 9h-2M4.5 12l4.5-4.5M4.5 12L9 16.5'/%3E%3C/svg%3E"); }
+.build-skin.school-skin .ff-i-redo { --ff-i: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M19.5 12h-11a4.5 4.5 0 1 0 0 9h2M19.5 12L15 7.5M19.5 12L15 16.5'/%3E%3C/svg%3E"); }
+.build-skin.school-skin .ff-i-sliders { --ff-i: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 8h9M17 8h3M4 16h4M12 16h8M15 6v4M10 14v4'/%3E%3C/svg%3E"); }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   6. SHARED-COMPONENT OVERRIDES
+
+   Everything below shadows a rule in `build-skin.css` or a Tailwind utility baked
+   into a shared component's class string. Each block names the component it serves
+   and the anchor is checked to appear nowhere on the frame.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── TilePalette (shared) — the desktop palette aside ────────────────────────
+   Anchors: `.bsk-panel-blue` and `.bg-surface-800/50`, both on the same element.
+   On THIS page `.bsk-panel-blue` is TilePalette alone — SectionControls and
+   PanelWidthToggle also carry it in the codebase, but SectionControls is
+   school-only and has been moved onto `.ff-panel`, and PanelWidthToggle is not
+   rendered by SchoolDesigner at all.
+
+   The two rules are given IDENTICAL values on purpose. Both match this element at
+   the same specificity, so whichever the bundler happens to order last wins; if
+   they agreed only by accident, the panel would change appearance on an unrelated
+   refactor. They agree by construction instead. */
+.build-skin.school-skin .bsk-panel-blue,
+.build-skin.school-skin .bg-surface-800\/50 {
+  background-color: var(--ff-card) !important;
+  border: 1px solid var(--ff-line) !important;
+  border-radius: var(--ff-radius);
+  box-shadow: var(--ff-elev);
+}
+.build-skin.school-skin .border-surface-700\/50 { border-color: var(--ff-line) !important; }
+
+/* The mobile tile tray. `bg-surface-900/95` is NOT in build-skin.css — it resolves
+   straight to the globals.css dark `#0f0f0f`, which is why the tray needs its own
+   rule rather than riding on one of the remapped surfaces. */
+.build-skin.school-skin .bg-surface-900\/95 { background-color: var(--ff-card) !important; }
+.build-skin.school-skin .border-surface-700 { border-color: var(--ff-line) !important; }
+.build-skin.school-skin .shadow-\[0_8px_24px_rgba\(0\2c 0\2c 0\2c 0\.35\)\] {
+  box-shadow: 0 -2px 16px rgba(16, 18, 28, 0.08) !important;
+}
+.build-skin.school-skin .border-surface-700\/60 { border-color: var(--ff-line) !important; }
+
+/* The palette's text ramp. These four are the whole of the shared chrome's type
+   colour; every one of them is opaque, because the `text-[#1e1b17]/45…/70` alpha
+   ramp this replaces had 20+ sites and not one of them passed AA. NO
+   ALPHA-MODIFIED TEXT COLOUR MAY SURVIVE THE RESKIN — that is the rule that stops
+   this recurring. */
+.build-skin.school-skin .text-surface-300 { color: var(--ff-ink-2) !important; }
+.build-skin.school-skin .text-surface-200 { color: var(--ff-ink) !important; }
+.build-skin.school-skin .bg-surface-800 { background-color: var(--ff-sunk) !important; }
+.build-skin.school-skin .text-\[\#1e1b17\] { color: var(--ff-ink) !important; }
+
+/* TilePalette's "Tap a tile, then tap your frame" pill (mobile tray) and the
+   desktop hint line beneath QuickActions. `bg-brand-gold/15` and
+   `border-brand-gold/60` are NOT in build-skin.css either — they resolve to the
+   globals `#FFD700`, so each needs its own selector. */
+.build-skin.school-skin .bg-brand-gold\/15 { background-color: var(--ff-sunk) !important; }
+.build-skin.school-skin .border-brand-gold\/60 { border-color: var(--ff-line) !important; }
+.build-skin.school-skin [data-tour="tiles"] .font-extrabold { font-weight: 500 !important; }
+.build-skin.school-skin [data-tour="tiles"] p { letter-spacing: 0 !important; }
+
+/* ── QuickActions (shared) — Fill All / Random / Mirror / Clear / Undo / Redo ──
+   Four saturated fills (blue, purple, pink, red) plus a cream, each with a 2px ink
+   outline and a hard offset shadow that TRANSLATES on hover. All of it becomes one
+   secondary tier: white, hairline, ambient shadow, shade change on hover. Clear
+   keeps a semantic through the destructive tier rather than a red fill. */
+.build-skin.school-skin .bsk-btn {
+  border: 1px solid var(--ff-line-strong) !important;
+  border-radius: var(--ff-radius) !important;
+  box-shadow: none !important;
+  background-color: var(--ff-card) !important;
+  color: var(--ff-ink) !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  letter-spacing: 0 !important;
+  transition: background-color 0.12s ease, border-color 0.12s ease !important;
+}
+/* Modern elevation changes shade; it does not move. */
+.build-skin.school-skin .bsk-btn:active:not(:disabled),
+.build-skin.school-skin .bsk-press:active,
+.build-skin.school-skin .bsk-press:hover {
+  transform: none !important;
+  box-shadow: none !important;
+}
+@media (hover: hover) {
+  .build-skin.school-skin .bsk-btn:hover:not(:disabled) {
+    filter: none !important;
+    transform: none !important;
+    box-shadow: none !important;
+    background-color: var(--ff-sunk) !important;
+  }
+  .build-skin.school-skin .bsk-red:hover:not(:disabled) {
+    background-color: var(--ff-danger-soft) !important;
+  }
+}
+.build-skin.school-skin .bsk-blue,
+.build-skin.school-skin .bsk-purple,
+.build-skin.school-skin .bsk-pink,
+.build-skin.school-skin .bsk-cream {
+  background-color: var(--ff-card) !important;
+  color: var(--ff-ink) !important;
+}
+/* Clear is the one destructive control in the toolbox. */
+.build-skin.school-skin .bsk-red {
+  background-color: var(--ff-card) !important;
+  color: var(--ff-danger) !important;
+  border-color: #e8c9c5 !important;
+}
+/* `disabled:opacity-40` produced grey-on-grey at an unmeasurable ratio. Replaced
+   with the explicit disabled pair, which is 4.71:1. */
+.build-skin.school-skin .bsk-btn:disabled {
+  opacity: 1 !important;
+  background-color: var(--ff-sunk) !important;
+  color: var(--ff-ink-disabled) !important;
+  border-color: var(--ff-line) !important;
+}
+
+/* ── ArmedBanner (shared) — the "now tap the frame" cue ──────────────────────
+   Anchored on `.ff-armed`, an inert marker class added to the component's root.
+   A marker was used rather than the arbitrary-value classes it already carries
+   (`bg-brand-gold`, `shadow-[3px_3px_0_#1e1b17]`) because `RailSlot.tsx:415` — the
+   on-frame ✕, which is the hero and out of scope — uses the sibling class
+   `shadow-[1px_1px_0_#1e1b17]`, and selector archaeology that close to the frame
+   is how you restyle the product by accident.
+
+   It stays the loudest chrome element on the page, because it is a transient
+   instruction the user has just triggered — but it says so with the accent tint
+   and a hairline instead of gold and a 3px outline. */
+.build-skin.school-skin .ff-armed {
+  background: var(--ff-accent-soft) !important;
+  border: 1px solid var(--ff-accent) !important;
+  border-radius: var(--ff-radius) !important;
+  box-shadow: var(--ff-elev) !important;
+}
+.build-skin.school-skin .ff-armed span {
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  color: var(--ff-ink) !important;
+}
+.build-skin.school-skin .ff-armed button {
+  border: 1px solid var(--ff-line-strong) !important;
+  border-radius: var(--ff-radius-sm) !important;
+  background: var(--ff-card) !important;
+  color: var(--ff-ink) !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+}
+
+/* ── PaletteTile (shared) — the armed "Placing" state ────────────────────────
+   Same marker-class reasoning as ArmedBanner: `.ff-ptile` rather than the
+   `shadow-[1px_1px_0_#1e1b17]` / `ring-brand-gold` classes it shares with
+   RailSlot's on-frame controls.
+
+   The gold ring + gold glow + gold badge become one accent ring and one accent
+   badge. The pulse ANIMATION is kept — it is an affordance, not decoration, and
+   removing it would be a behaviour change — but re-pointed at a Harbor keyframe so
+   a selected tile does not glow in a colour that appears nowhere else. */
+@keyframes ff-armed-pulse-school {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(15, 92, 107, 0.28); }
+  50% { box-shadow: 0 0 0 5px rgba(15, 92, 107, 0.42); }
+}
+.build-skin.school-skin .ff-ptile .animate-armed-pulse,
+.build-skin.school-skin .ff-ptile .motion-safe\:animate-armed-pulse {
+  animation-name: ff-armed-pulse-school !important;
+}
+.build-skin.school-skin .ff-ptile .ring-brand-gold { --tw-ring-color: var(--ff-accent) !important; }
+.build-skin.school-skin .ff-ptile .ring-\[3px\] { --tw-ring-shadow: 0 0 0 2px var(--ff-accent) !important; }
+.build-skin.school-skin .ff-ptile .bg-brand-gold\/20 { background-color: var(--ff-accent-soft) !important; }
+.build-skin.school-skin .ff-ptile .bg-brand-gold {
+  background-color: var(--ff-accent) !important;
+  color: var(--ff-on-accent) !important;
+}
+.build-skin.school-skin .ff-ptile .shadow-\[1px_1px_0_\#1e1b17\] { box-shadow: none !important; }
+.build-skin.school-skin .ff-ptile .shadow-\[0_0_14px_2px_rgba\(248\2c 197\2c 59\2c 0\.6\)\] { box-shadow: none !important; }
+/* The "Placing" badge: sentence case, 500 weight, no ink outline. */
+.build-skin.school-skin .ff-ptile .bg-brand-gold {
+  border-color: var(--ff-accent) !important;
+  border-width: 1px !important;
+  font-size: 10px !important;
+  font-weight: 500 !important;
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+}
+/* The drag-grip dots. `text-[#1e1b17]/25` and `/55` are alpha text colours, which
+   the reskin bans for TEXT — this is a decorative SVG fill, not type, so the alpha
+   is kept and only the hue is re-pointed. */
+.build-skin.school-skin .ff-ptile .text-\[\#1e1b17\]\/25 { color: rgba(75, 80, 88, 0.35) !important; }
+.build-skin.school-skin .ff-ptile .group-hover\:text-\[\#1e1b17\]\/55:is(:hover *, .group:hover *) {
+  color: rgba(75, 80, 88, 0.7) !important;
+}
+.build-skin.school-skin .ff-ptile .hover\:bg-surface-700\/50:hover { background-color: var(--ff-sunk) !important; }
+.build-skin.school-skin .bg-surface-700\/50 { background-color: var(--ff-sunk) !important; }
+
+/* ── StateSelector (shared), `theme="header"` branch ONLY ────────────────────
+   The `compact` and default branches are /build-only and must not be touched;
+   both of those use `surface-*` utilities, while the header branch is the only one
+   written in `#2a2620` / `#faf0d6` literals — which makes those literals a precise
+   anchor for exactly the branch in scope. On this page they appear nowhere else
+   (`FrameCanvas.tsx:594` uses the sibling class `text-[#faf0d6]/70`).
+
+   The CHEVRON is the trap. It is a data-URI background-image baked into the class
+   string with its arrow filled `%23faf0d6` — cream, which is invisible the moment
+   the header turns white. `bg-[#2a2620]` and the `bg-[url(…)]` utility set
+   different properties on the SAME element, so one rule anchored on the former can
+   replace the latter's background-image without ever naming that unescapable class.
+
+   The `<option>` elements at line 30 carry the same two literals, so they are
+   re-coloured by the same rule — and they are NATIVE-RENDERED, so this is checked
+   in a real browser rather than in a canvas render. */
+.build-skin.school-skin .bg-\[\#2a2620\] {
+  background-color: var(--ff-card) !important;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%2212%22%20viewBox%3D%220%200%2012%2012%22%3E%3Cpath%20fill%3D%22%2316181C%22%20d%3D%22M6%208L1%203h10z%22%2F%3E%3C%2Fsvg%3E") !important;
+}
+.build-skin.school-skin .text-\[\#faf0d6\] { color: var(--ff-ink) !important; }
+.build-skin.school-skin .border-\[\#faf0d6\]\/20 { border-color: var(--ff-line-strong) !important; }
+.build-skin.school-skin .focus\:border-\[\#f8c53b\]\/70:focus { border-color: var(--ff-accent) !important; }
+.build-skin.school-skin select.bg-\[\#2a2620\]:focus { box-shadow: var(--ff-focus); }

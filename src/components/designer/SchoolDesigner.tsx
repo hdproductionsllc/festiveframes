@@ -44,6 +44,31 @@ import type { SnappetPreview } from "@/lib/utils/snappet";
 /** The school builder's own persist key — its design never touches /build's. */
 export const SCHOOL_PERSIST_KEY = "festive-frames-school-v1";
 
+/**
+ * The one icon this file needs, drawn to the house spec for the re-skin: 24x24
+ * viewBox, no fill, 1.5 stroke, round caps and joins, rendered at 16px and
+ * inheriting `currentColor` so it works in every button tier without a variant.
+ * It replaces a ⬇ character, which rendered at a different weight from the
+ * surrounding type in every font on every platform.
+ */
+function DownloadIcon() {
+  return (
+    <svg
+      aria-hidden
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M12 3.5v11M12 14.5l-4-4M12 14.5l4-4M4 19.5h16" />
+    </svg>
+  );
+}
+
 export function SchoolDesigner() {
   const frameConfig = useDesignStore((s) => s.frameConfig);
   const slots = useDesignStore((s) => s.slots);
@@ -84,7 +109,7 @@ export function SchoolDesigner() {
   const handleExportPrint = async () => {
     if (exporting) return;
     setExporting(true);
-    setExportResult({ kind: "rendering", msg: "Rendering your print files…" });
+    setExportResult({ kind: "rendering", msg: "Rendering your print files..." });
     // Release any prior export URL before minting a new one.
     if (exportUrlRef.current) {
       URL.revokeObjectURL(exportUrlRef.current);
@@ -111,7 +136,7 @@ export function SchoolDesigner() {
       if (panelPngs.length === 0) {
         // Nothing printable yet (empty design) → fall back to the assembled sheet.
         if (!overview) {
-          setExportResult({ kind: "error", msg: "Nothing to export yet — add some tiles or art to the frame first." });
+          setExportResult({ kind: "error", msg: "Nothing to export yet - add some tiles or art to the frame first." });
           return;
         }
         blob = new Blob([dataUrlToBytes(overview) as unknown as BlobPart], { type: "image/png" });
@@ -201,11 +226,11 @@ export function SchoolDesigner() {
       });
       const data = (await res.json().catch(() => ({}))) as { ok?: boolean; reason?: string };
       if (res.ok && data.ok) {
-        setSubmitState({ kind: "ok", msg: "Sent to production! Check the orders inbox." });
+        setSubmitState({ kind: "ok", msg: "Your design is on its way to our team." });
       } else if (data.reason === "email-not-configured") {
         setSubmitState({
           kind: "not-configured",
-          msg: "Email isn't switched on yet — nothing was sent. (Configure RESEND_API_KEY to go live.)",
+          msg: "Sending is not switched on yet, so nothing was sent.",
         });
       } else {
         setSubmitState({ kind: "error", msg: "Couldn't send your design right now. Please try again." });
@@ -258,58 +283,61 @@ export function SchoolDesigner() {
 
   return (
     <div className="workbench-bg min-h-screen flex flex-col">
-      {/* Minimal prototype header — school context + the plate state picker (the
-          real StateSelector, wired to the shared store). No storefront/order flow. */}
-      <header className="flex flex-wrap items-center justify-between gap-3 border-b-[3px] border-[#1e1b17] bg-[#1e1b17] px-4 py-2">
-        <div>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-[#f8c53b]">
-            Internal prototype · fork of the live builder
-          </p>
-          <h1 className="text-lg font-extrabold text-[#faf0d6]">School / Fundraising Frame</h1>
-        </div>
+      {/* Header — school context + the plate state picker (the real StateSelector,
+          wired to the shared store). No storefront/order flow.
+
+          It used to be a solid-ink bar, which made it the highest-contrast object on
+          the page at 15.11:1 — louder than the product it exists to frame. A white
+          bar with a hairline puts that contrast budget back where it belongs.
+
+          The "Internal prototype · fork of the live builder" strapline is gone
+          rather than restyled: it is dev scaffolding, and this page is shown to
+          parents deciding whether to spend money. */}
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--ff-line)] bg-[var(--ff-card)] px-4 py-2.5">
+        <h1 className="ff-h1">School Frame</h1>
         <div className="flex items-center gap-2">
-          <span className="hidden text-[10px] uppercase tracking-wide text-[#faf0d6]/45 sm:block">
-            Plate
-          </span>
+          <span className="ff-label hidden sm:block">Plate</span>
           <StateSelector theme="header" />
+          {/* Two actions, ONE of them primary. Exporting a file is the power-user
+              path; sending the design to be made is the thing this page is for. */}
           <button
             type="button"
             onClick={handleExportPrint}
             disabled={exporting}
-            title="Render the whole assembled frame to a print-ready PNG (client-side; no order)"
-            className="shrink-0 rounded-full border-2 border-[#f8c53b] bg-[#f8c53b] px-3 py-1 text-xs font-extrabold uppercase tracking-wide text-[#1e1b17] transition hover:bg-[#ffd968] disabled:cursor-not-allowed disabled:opacity-60"
+            title="Download a print-ready image of your frame"
+            className="ff-btn ff-btn-secondary ff-btn-sm shrink-0"
           >
-            {exporting ? "Rendering…" : "Export print file"}
+            {exporting ? "Rendering..." : "Export print file"}
           </button>
           <button
             type="button"
             onClick={handleSubmit}
             disabled={submitting || exporting}
-            title="Render the frame and email the print file to production (no payment)"
-            className="shrink-0 rounded-full border-2 border-[#ed5aa0] bg-[#ed5aa0] px-3 py-1 text-xs font-extrabold uppercase tracking-wide text-[#fff9ec] transition hover:bg-[#f472ac] disabled:cursor-not-allowed disabled:opacity-60"
+            title="Send your finished design to our team"
+            className="ff-btn ff-btn-primary ff-btn-sm shrink-0"
           >
-            {submitting ? "Sending…" : "Send to production"}
+            {submitting ? "Sending..." : "Send my design"}
           </button>
         </div>
       </header>
 
+      {/* The three status banners. Each was a saturated fill (cyan / gold / red)
+          with white or near-black text; two of the three failed AA outright. They
+          are now tinted surfaces with a matching dark ink — ok 7.01:1, warn 7.30:1,
+          error 6.41:1 — which also stops a transient banner out-shouting the frame. */}
       {submitState && (
         <div
           role="status"
-          className={`flex items-start justify-between gap-3 border-b-[3px] border-[#1e1b17] px-4 py-2.5 ${
+          className={`ff-banner flex items-start justify-between gap-3 px-4 py-2.5 ${
             submitState.kind === "ok"
-              ? "bg-[#3fb0e6] text-[#0a1a22]"
+              ? "ff-banner-ok"
               : submitState.kind === "not-configured"
-                ? "bg-[#f8c53b] text-[#1e1b17]"
-                : "bg-[#C8102E] text-[#fff9ec]"
+                ? "ff-banner-warn"
+                : "ff-banner-error"
           }`}
         >
-          <p className="text-xs font-bold leading-snug sm:text-sm">{submitState.msg}</p>
-          <button
-            type="button"
-            onClick={() => setSubmitState(null)}
-            className="shrink-0 rounded-full border-2 border-current px-2.5 py-0.5 text-xs font-extrabold uppercase tracking-wide hover:opacity-80"
-          >
+          <p className="text-[13px] leading-snug">{submitState.msg}</p>
+          <button type="button" onClick={() => setSubmitState(null)} className="ff-chip shrink-0">
             Dismiss
           </button>
         </div>
@@ -318,18 +346,21 @@ export function SchoolDesigner() {
       {exportResult && (
         <div
           role="status"
-          className={`flex flex-wrap items-center justify-between gap-3 border-b-[3px] border-[#1e1b17] px-4 py-2.5 ${
+          className={`ff-banner flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 ${
             exportResult.kind === "ready"
-              ? "bg-[#3fb0e6] text-[#0a1a22]"
+              ? "ff-banner-ok"
               : exportResult.kind === "rendering"
-                ? "bg-[#f8c53b] text-[#1e1b17]"
-                : "bg-[#C8102E] text-[#fff9ec]"
+                ? "ff-banner-warn"
+                : "ff-banner-error"
           }`}
         >
-          <p className="text-xs font-bold leading-snug sm:text-sm">
+          <p className="text-[13px] leading-snug">
             {exportResult.msg}
             {exportResult.kind === "ready" && (
-              <span className="font-semibold opacity-80"> If the download didn&apos;t start, tap the button →</span>
+              // The old copy ended in an arrow pointing at a button whose position on
+              // the line is not guaranteed — it wraps on a narrow window. Name the
+              // button instead.
+              <span> If the download did not start, use the Download button.</span>
             )}
           </p>
           <div className="flex shrink-0 items-center gap-2">
@@ -338,16 +369,17 @@ export function SchoolDesigner() {
               <a
                 href={exportResult.href}
                 download={exportResult.filename}
-                className="rounded-full border-2 border-[#1e1b17] bg-[#fff9ec] px-3 py-1 text-xs font-extrabold uppercase tracking-wide text-[#1e1b17] hover:bg-white"
+                className="ff-btn ff-btn-secondary ff-btn-sm no-underline"
               >
-                ⬇ Download{exportResult.filename?.endsWith(".zip") ? " .zip" : ""}
+                <DownloadIcon />
+                Download{exportResult.filename?.endsWith(".zip") ? " .zip" : ""}
               </a>
             )}
             {exportResult.kind !== "rendering" && (
               <button
                 type="button"
                 onClick={() => setExportResult(null)}
-                className="rounded-full border-2 border-current px-2.5 py-0.5 text-xs font-extrabold uppercase tracking-wide hover:opacity-80"
+                className="ff-chip shrink-0"
               >
                 Dismiss
               </button>
@@ -357,16 +389,12 @@ export function SchoolDesigner() {
       )}
 
       {storageFull && (
-        <div className="flex items-start justify-between gap-3 border-b-[3px] border-[#1e1b17] bg-[#C8102E] px-4 py-2.5 text-[#fff9ec]">
-          <p className="text-xs font-bold leading-snug sm:text-sm">
-            Heads up — this browser&apos;s storage is full, so your latest change may not
-            be saved for next time. Try a smaller image, or finish and order this design now.
+        <div className="ff-banner ff-banner-error flex items-start justify-between gap-3 px-4 py-2.5">
+          <p className="text-[13px] leading-snug">
+            This browser&apos;s storage is full, so your latest change may not be saved
+            for next time. Try a smaller image, or finish and order this design now.
           </p>
-          <button
-            type="button"
-            onClick={() => setStorageFull(false)}
-            className="shrink-0 rounded-full border-2 border-[#fff9ec] px-2.5 py-0.5 text-xs font-extrabold uppercase tracking-wide hover:bg-[#fff9ec]/15"
-          >
+          <button type="button" onClick={() => setStorageFull(false)} className="ff-chip shrink-0">
             Dismiss
           </button>
         </div>
@@ -379,11 +407,13 @@ export function SchoolDesigner() {
 
           Offered, never imposed: a modal on every load would tax the common case
           (coming back to finish) to serve the rarer one. */}
+      {/* Informational, not a warning — so it gets the neutral banner rather than the
+          gold one it used to share with "email isn't configured". A restore is the
+          expected outcome of a reload, and colouring it like a problem said
+          otherwise. */}
       {restoredNotice && (
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b-[3px] border-[#1e1b17] bg-[#f8c53b] px-4 py-2 text-[#1e1b17]">
-          <p className="text-xs font-bold leading-snug sm:text-sm">
-            Picked up where you left off — your last design was restored.
-          </p>
+        <div className="ff-banner ff-banner-info flex flex-wrap items-center justify-between gap-3 px-4 py-2">
+          <p className="text-[13px] leading-snug">We restored your last design.</p>
           <div className="flex shrink-0 items-center gap-2">
             <button
               type="button"
@@ -391,14 +421,14 @@ export function SchoolDesigner() {
                 clearAll();
                 setRestoredDismissed(true);
               }}
-              className="rounded-full border-2 border-[#1e1b17] bg-[#1e1b17] px-2.5 py-0.5 text-xs font-extrabold uppercase tracking-wide text-[#fff9ec] hover:bg-[#1e1b17]/85"
+              className="ff-btn ff-btn-danger ff-btn-sm"
             >
               Start fresh
             </button>
             <button
               type="button"
               onClick={() => setRestoredDismissed(true)}
-              className="rounded-full border-2 border-[#1e1b17] px-2.5 py-0.5 text-xs font-extrabold uppercase tracking-wide hover:bg-[#1e1b17]/10"
+              className="ff-btn ff-btn-secondary ff-btn-sm"
             >
               Keep it
             </button>
@@ -462,7 +492,16 @@ export function SchoolDesigner() {
               below it with `gap-6` of clear margin, and the page scrolls. */}
           <div className="order-2 lg:order-none flex flex-col gap-6 min-w-0">
             <div className="w-full flex flex-col gap-3">
-              <div className="relative mx-auto w-full">
+              {/* THE STAGE. The one zone on the page darker than its neighbours
+                  (1.19:1 below the canvas, 1.28:1 below the cards) — everything else
+                  is white or near-white, so the eye goes to the single tonal break
+                  and finds the frame sitting in it. Frame navy on this mat is
+                  11.10:1, which makes the product the highest-contrast large object
+                  in view now that the ink header and the 3px outlines are gone.
+
+                  `relative` MUST stay: the frame-side ArmedBanner is absolutely
+                  positioned against this element. */}
+              <div className="ff-stage relative mx-auto w-full">
                 <ArmedBanner placement="frame" />
                 <FrameCanvas
                   ref={canvasRef}

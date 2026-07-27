@@ -56,10 +56,18 @@ export function QuickActions({ surfacedSetIds }: QuickActionsProps = {}) {
     sfx("rattle");
   };
 
+  // `iconClass` is INERT EVERYWHERE EXCEPT /lab/school. This component is shared
+  // with the live /build storefront, whose sticker skin keeps the emoji; the school
+  // page re-skins to a line-icon set, and an emoji sitting inside a JS string
+  // literal is unreachable from CSS — you cannot select a text node. So each glyph
+  // gets a class that `school-skin.css` uses to collapse the emoji to zero size and
+  // paint an SVG mask in its place. On /build these class names match no rule in the
+  // codebase, so the span renders the emoji exactly as it did before.
   const actions = [
     {
       label: "Fill All",
       icon: "🪣",
+      iconClass: "ff-i-fill",
       color: "bsk-blue",
       onClick: handleFillAll,
       // Enabled as long as the set has tiles — uses your selected tile, or the
@@ -72,6 +80,7 @@ export function QuickActions({ surfacedSetIds }: QuickActionsProps = {}) {
     {
       label: "Random",
       icon: "🎲",
+      iconClass: "ff-i-shuffle",
       color: "bsk-purple",
       onClick: handleRandomFill,
       disabled: fillablePieces.length === 0,
@@ -80,6 +89,7 @@ export function QuickActions({ surfacedSetIds }: QuickActionsProps = {}) {
     {
       label: "Mirror",
       icon: "🪞",
+      iconClass: "ff-i-mirror",
       color: "bsk-pink",
       onClick: () => { mirrorTopSlots(); sfx("shimmer"); },
       disabled: false,
@@ -88,6 +98,7 @@ export function QuickActions({ surfacedSetIds }: QuickActionsProps = {}) {
     {
       label: "Clear",
       icon: "🗑️",
+      iconClass: "ff-i-trash",
       color: "bsk-red",
       onClick: () => { clearAll(); sfx("whoosh"); },
       disabled: false,
@@ -107,7 +118,7 @@ export function QuickActions({ surfacedSetIds }: QuickActionsProps = {}) {
             className={`bsk-btn ${action.color} flex items-center gap-1.5 px-2 py-1.5 rounded-md text-xs font-bold
               disabled:opacity-40 disabled:cursor-not-allowed`}
           >
-            <span>{action.icon}</span>
+            <span className={`ff-icon ${action.iconClass}`}>{action.icon}</span>
             {action.label}
           </button>
         ))}
@@ -120,7 +131,13 @@ export function QuickActions({ surfacedSetIds }: QuickActionsProps = {}) {
           className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-md text-xs font-medium
             bsk-btn bsk-cream disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          ↩ Undo
+          {/* ONE wrapper span, deliberately. The four buttons above already render
+              their glyph and label as two flex children, so adding a class there
+              changes nothing. These two are a single text node, and splitting
+              "↩ Undo" into an icon span plus a bare label would make it TWO flex
+              children — at which point the button's own `gap-1` inserts 4px that
+              /build never had. Wrapping keeps it one flex item and one text run. */}
+          <span className="ff-glyph-wrap"><span className="ff-icon ff-i-undo">↩</span> Undo</span>
         </button>
         <button
           onClick={() => { redo(); sfx("forward"); }}
@@ -129,7 +146,7 @@ export function QuickActions({ surfacedSetIds }: QuickActionsProps = {}) {
           className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-md text-xs font-medium
             bsk-btn bsk-cream disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          ↪ Redo
+          <span className="ff-glyph-wrap"><span className="ff-icon ff-i-redo">↪</span> Redo</span>
         </button>
       </div>
     </div>

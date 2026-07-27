@@ -2,6 +2,18 @@ import type { BottomBarConfig } from "@/lib/types";
 import { luminance } from "@/lib/utils/tile-theme";
 import type { SchoolProfile, TextCandidate } from "./types";
 
+/**
+ * The parts of a profile this module reads.
+ *
+ * Structural rather than `SchoolProfile`, because the SCAN ROUTE deliberately strips
+ * `logos`/`droppedLogos` out of what it returns — those are superseded by the decoded
+ * candidate list, and returning both would invite the client to render the untested
+ * one. The client therefore holds an `Omit<SchoolProfile, ...>`, and a kit builder
+ * that demanded the whole shape could not be called from the one place it exists to
+ * serve.
+ */
+export type BrandSource = Pick<SchoolProfile, "names" | "mottos" | "mascots" | "colors">;
+
 // ─── SchoolProfile → concrete design decisions ───────────────────────────────
 //
 // The scanner returns RANKED LISTS because every extraction can be wrong. This module
@@ -70,7 +82,7 @@ export function bannerTextOn(bg: string): string {
  * words back to it. Motto is the fallback when no mascot clears the floor, because a
  * motto is still THEIRS; a generic "GO TEAM" is nobody's.
  */
-export function buildBrandKit(profile: SchoolProfile): SchoolBrandKit | null {
+export function buildBrandKit(profile: BrandSource): SchoolBrandKit | null {
   const notes: string[] = [];
 
   const name = best(profile.names);
