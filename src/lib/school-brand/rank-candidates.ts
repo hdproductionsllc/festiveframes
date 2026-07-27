@@ -51,6 +51,18 @@ const SOCIAL_ASSET =
 const TRACKING_ASSET =
   /(spacer|pixel\.(gif|png)|blank\.(gif|png)|1x1\.|transparent\.(gif|png)|doubleclick|googletagmanager|google-analytics|facebook\.com\/tr|beacon)/i;
 
+/**
+ * UI-library sprite sheets and icon atlases. Shaped exactly like a candidate — a few
+ * hundred pixels square, referenced from CSS, sitting in the page chrome — and never
+ * anybody's crest.
+ *
+ * `ui-icons_444444_256x240.png` is jQuery UI's icon atlas, and it was offered to a
+ * real user as a possible school logo the first time stylesheets were read. The name
+ * pattern is stable across the libraries that ship one.
+ */
+const UI_SPRITE_ASSET =
+  /(ui-icons?[-_]|icon-?sprite|sprites?\.(png|svg|gif)|glyphicons|iconfont|icomoon|fontawesome|material-?icons)/i;
+
 /** Byte ranges of vendor containers. Computed once, before candidates are scored. */
 export function vendorRanges(scan: PageScan): [number, number][] {
   const ranges: [number, number][] = [];
@@ -103,6 +115,7 @@ function vendorVerdict(
   if (VENDOR_ASSET.test(haystack) || VENDOR_CONTAINER.test(haystack)) return "vendor-mark";
   if (SOCIAL_ASSET.test(haystack)) return "social-icon";
   if (TRACKING_ASSET.test(haystack)) return "tracking-pixel";
+  if (UI_SPRITE_ASSET.test(haystack)) return "tracking-pixel";
   return null;
 }
 

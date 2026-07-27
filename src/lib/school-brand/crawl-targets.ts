@@ -108,3 +108,49 @@ export function pickCrawlTargets(html: string, pageUrl: string, limit = 3): Craw
 
   return [...seen.values()].sort((a, b) => b.score - a.score).slice(0, limit);
 }
+
+// ─── which stylesheets are worth the budget ──────────────────────────────────
+
+/**
+ * Vendor and library CSS. Fetching these burns the stylesheet budget on files that
+ * cannot contain a school's crest.
+ *
+ * Not hypothetical: the first scan with stylesheet support enabled came back with
+ * `ui-icons_444444_256x240.png` — jQuery UI's icon sprite — as a logo candidate,
+ * because the page's first four `<link rel=stylesheet>` tags were all libraries and
+ * the theme sheet was further down the list. A budget spent in document order is a
+ * budget spent on whatever the CMS happened to enqueue first.
+ */
+const VENDOR_CSS =
+  /(jquery|jquery-?ui|normalize|reset|bootstrap|foundation|font-?awesome|fontawesome|slick|swiper|owl-?carousel|magnific|lightbox|fancybox|animate|tailwind|bulma|semantic|materialize|print)\b/i;
+
+/** Sheets whose name says they carry the site's own look. */
+const THEME_CSS = /(theme|site|main|style|custom|brand|header|app|global|layout|screen)/i;
+
+/**
+ * Rank `<link rel=stylesheet>` hrefs by how likely they are to hold the school's own
+ * design — theme-ish names first, vendor libraries last (and only if nothing better
+ * exists, since a page really can call its one stylesheet `bootstrap.css`).
+ *
+ * Same-host is NOT required here, unlike page crawling: a CMS routinely serves its
+ * compiled theme CSS from a CDN, and a stylesheet is text we regex rather than a
+ * document we trust. It still goes through the same fetch guard.
+ */
+export function pickStylesheets(html: string, pageUrl: string, limit = 8): string[] {
+  const seen = new Map<string, number>();
+  for (const tag of scanTags(html, "link")) {
+    if (!/(^|\s)stylesheet(\s|$)/i.test(tag.attrs.rel ?? "")) continue;
+    const abs = resolveUrl(tag.attrs.href ?? "", pageUrl);
+    if (!abs) continue;
+    let score = 0;
+    if (THEME_CSS.test(abs)) score += 3;
+    if (VENDOR_CSS.test(abs)) score -= 5;
+    // A media="print" sheet describes paper, not the header.
+    if (/print/i.test(tag.attrs.media ?? "")) score -= 5;
+    if (!seen.has(abs) || seen.get(abs)! < score) seen.set(abs, score);
+  }
+  return [...seen.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, limit)
+    .map(([url]) => url);
+}

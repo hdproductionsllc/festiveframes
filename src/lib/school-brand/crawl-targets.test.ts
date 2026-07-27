@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { pickCrawlTargets } from "./crawl-targets";
+import { pickCrawlTargets, pickStylesheets } from "./crawl-targets";
 
 // The first live scan returned nothing usable because only the pasted page was
 // fetched — homepage header logos sit below the print floor. These tests pin the
@@ -65,5 +65,41 @@ describe("pickCrawlTargets", () => {
 
   it("returns [] for an unparsable page URL rather than throwing", () => {
     expect(pickCrawlTargets(page(`<a href="/athletics">Athletics</a>`), "not a url")).toEqual([]);
+  });
+});
+
+describe("pickStylesheets (the jQuery-UI budget burn)", () => {
+  const page = (links: string) => `<!doctype html><html><head>${links}</head><body></body></html>`;
+
+  it("ranks the site's own theme above vendor libraries", () => {
+    // The real failure: a page's first four stylesheets were all libraries, the
+    // budget was spent in document order, and the only thing the CSS pass produced
+    // was jQuery UI's icon sprite offered as a school crest.
+    const html = page(`
+      <link rel="stylesheet" href="/vendor/jquery-ui.min.css">
+      <link rel="stylesheet" href="/vendor/normalize.css">
+      <link rel="stylesheet" href="/vendor/bootstrap.css">
+      <link rel="stylesheet" href="/vendor/slick.css">
+      <link rel="stylesheet" href="/assets/theme.css">
+    `);
+    expect(pickStylesheets(html, "https://school.org/", 2)[0]).toContain("/assets/theme.css");
+  });
+
+  it("still returns vendor sheets when they are all there is", () => {
+    const html = page(`<link rel="stylesheet" href="/bootstrap.css">`);
+    expect(pickStylesheets(html, "https://school.org/")).toHaveLength(1);
+  });
+
+  it("deprioritises a print stylesheet — it describes paper, not the header", () => {
+    const html = page(`
+      <link rel="stylesheet" href="/a.css" media="print">
+      <link rel="stylesheet" href="/b.css">
+    `);
+    expect(pickStylesheets(html, "https://school.org/")[0]).toContain("/b.css");
+  });
+
+  it("allows a CDN-hosted theme — a stylesheet is text we regex, not a page we trust", () => {
+    const html = page(`<link rel="stylesheet" href="https://cdn.example.net/site-theme.css">`);
+    expect(pickStylesheets(html, "https://school.org/")).toHaveLength(1);
   });
 });
