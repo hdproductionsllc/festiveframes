@@ -35,17 +35,24 @@ describe("buildBrandKit", () => {
     expect(kit.schoolName).toBe("Parkway West High School");
     expect(kit.primary).toBe("#8A1F2B");
     expect(kit.secondary).toBe("#C9A34A");
-    expect(kit.topBar.text).toBe("PARKWAY WEST HIGH SCHOOL");
-    expect(kit.bottomBar.text).toBe("HOME OF THE LONGHORNS");
+    // The classic gym-wall stack, in the seeded design's own shape: top strip,
+    // mascot headline, school name in the tagline tier.
+    expect(kit.top.text).toBe("HOME OF THE");
+    expect(kit.bottom.text).toBe("LONGHORNS");
+    expect(kit.bottom.tagline).toBe("PARKWAY WEST HIGH SCHOOL");
     // Dark maroon → white type, by the same luminance rule the tile edges use.
-    expect(kit.topBar.textColor).toBe("#FFFFFF");
-    expect(kit.bottomBar.backgroundColor).toBe("#8A1F2B");
+    expect(kit.top.textColor).toBe("#FFFFFF");
+    expect(kit.bottom.backgroundColor).toBe("#8A1F2B");
   });
 
   it("falls back to the motto when no mascot clears the auto floor", () => {
     const kit = buildBrandKit(profile({ mascots: [tc("Newsletter", 0.3)] }))!;
     expect(kit.mascot).toBeNull();
-    expect(kit.bottomBar.text).toBe("TRADITION AND EXCELLENCE");
+    // No mascot → the name takes the headline and the motto the tagline slot's
+    // place; "HOME OF THE" with nothing under it never ships.
+    expect(kit.top.text).toBe("PARKWAY WEST HIGH SCHOOL");
+    expect(kit.bottom.text).toBe("TRADITION AND EXCELLENCE");
+    expect(kit.bottom.tagline).toBeUndefined();
   });
 
   it("REFUSES rather than half-fills: no confident name", () => {
@@ -86,7 +93,7 @@ describe("bannerTextOn", () => {
 
 // Type-level guard: the kit's banner shapes must stay assignable to the store's
 // config patch, or applying them becomes a cast at the call site.
-const _assign: SchoolBrandKit["topBar"] extends Partial<import("@/lib/types").BottomBarConfig>
+const _assign: SchoolBrandKit["top"] extends Partial<import("@/lib/types").BottomBarConfig>
   ? true
   : never = true;
 void _assign;

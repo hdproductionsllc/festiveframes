@@ -31,9 +31,15 @@ export interface SchoolBrandKit {
   /** `#RRGGBB`. Primary carries the banners; secondary is offered for accents. */
   primary: string;
   secondary: string | null;
-  /** Ready-to-apply banner configs — colour AND copy, one per row. */
-  topBar: Partial<BottomBarConfig>;
-  bottomBar: Partial<BottomBarConfig>;
+  /**
+   * Ready-to-apply SECTION text patches, matching the seeded design's own shape:
+   * the top strip says "HOME OF THE", the bottom's headline carries the mascot and
+   * its tagline the school name. Filling the pattern the placeholder already
+   * teaches — rather than inventing a new arrangement — is what makes the applied
+   * frame read as "your school", instantly, to someone who has seen any gym wall.
+   */
+  top: Partial<BottomBarConfig>;
+  bottom: Partial<BottomBarConfig>;
   /** What was decided and why, in order. Shown in the debug panel and asserted in
    *  tests, so a silent change of opinion cannot ship unnoticed. */
   notes: string[];
@@ -82,27 +88,27 @@ export function buildBrandKit(profile: SchoolProfile): SchoolBrandKit | null {
 
   const mascot = best(profile.mascots);
   const motto = best(profile.mottos);
-  const bottomText = mascot
-    ? `HOME OF THE ${mascot.value.toUpperCase()}`
-    : motto
-      ? motto.value.toUpperCase()
-      : null;
-  if (!bottomText) return null; // a one-banner kit reads as broken, not minimal
-  notes.push(mascot ? `bottom from mascot "${mascot.value}"` : `bottom from motto "${motto!.value}"`);
+  if (!mascot && !motto) return null; // a one-banner kit reads as broken, not minimal
 
   const textColor = bannerTextOn(primary.hex);
+  // With a mascot: the classic gym-wall stack — HOME OF THE / LONGHORNS — with the
+  // school's name in the tagline tier, so all three identities are on the frame.
+  // Without one: the name takes the headline and the motto the tagline, which is
+  // still unmistakably theirs; "HOME OF THE" with nothing under it never ships.
+  const top = mascot ? "HOME OF THE" : name.value.toUpperCase();
+  const headline = mascot ? mascot.value.toUpperCase() : (motto!.value.toUpperCase());
+  const tagline = mascot ? name.value.toUpperCase() : undefined;
+  notes.push(mascot ? `stack from mascot "${mascot.value}"` : `stack from motto "${motto!.value}"`);
+
   return {
     schoolName: name.value,
     mascot: mascot?.value ?? null,
     primary: primary.hex,
     secondary: secondary?.hex ?? null,
-    topBar: {
-      text: name.value.toUpperCase(),
-      backgroundColor: primary.hex,
-      textColor,
-    },
-    bottomBar: {
-      text: bottomText,
+    top: { text: top, backgroundColor: primary.hex, textColor },
+    bottom: {
+      text: headline,
+      ...(tagline !== undefined ? { tagline } : {}),
       backgroundColor: primary.hex,
       textColor,
     },
