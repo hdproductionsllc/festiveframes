@@ -42,10 +42,10 @@ describe("school spirit set", () => {
     const pieces = getSetPieces("school");
     const hs = pieces.filter((p) => p.setId === "hs");
     // 19 of Becky's originals (20 minus Field Hockey, whose art never arrived) plus
-    // the 3 embroidered-patch pieces. Asserting the COUNT is deliberate even though
+    // the 6 embroidered-patch pieces. Asserting the COUNT is deliberate even though
     // it needs editing whenever art lands: it is what catches a piece silently
     // dropping out of the palette, which a `> 0` check would sail straight past.
-    expect(hs.length).toBe(22);
+    expect(hs.length).toBe(25);
     // Real art first, so the collection is what you see on open.
     expect(pieces.slice(0, hs.length).every((p) => p.setId === "hs")).toBe(true);
     // Every one points at a committed local PNG (not an emoji/CDN placeholder).

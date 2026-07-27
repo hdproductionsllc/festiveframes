@@ -123,6 +123,33 @@ export const highSchoolSet: TileSet = {
       backgroundColor: NAVY,
       defaultSpan: PREFERRED,
     },
+    {
+      id: `${H}:volleyball-patch`,
+      setId: H,
+      name: "Volleyball (patch)",
+      artworkUrl: `${A}/volleyball-patch.png`,
+      emoji: "🏐",
+      backgroundColor: NAVY,
+      defaultSpan: PREFERRED,
+    },
+    {
+      id: `${H}:softball-patch`,
+      setId: H,
+      name: "Softball (patch)",
+      artworkUrl: `${A}/softball-patch.png`,
+      emoji: "🥎",
+      backgroundColor: NAVY,
+      defaultSpan: PREFERRED,
+    },
+    {
+      id: `${H}:baseball-patch`,
+      setId: H,
+      name: "Baseball (patch)",
+      artworkUrl: `${A}/baseball-patch.png`,
+      emoji: "⚾",
+      backgroundColor: NAVY,
+      defaultSpan: PREFERRED,
+    },
 
     // ─── Athletics ─────────────────────────────────────────────
     {

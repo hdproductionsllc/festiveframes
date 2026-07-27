@@ -5,6 +5,9 @@ const JOBS = [
   ["high-level-description-a-3d-product-rend_MkW2AY7aXWKoNFWZUzzKNQ_HdKdeishSF2N9p1tzowamQ.png","soccer-patch"],
   ["high-level-description-a-3d-render-of-a-_G2Pf_0txVG6eud94EctQhA_2akg-qKqSJGLMnAkKg0IDQ.png","football-patch"],
   ["high-level-description-a-3d-render-of-a-_PLyCmKDJUbaJ1Rppxpb7wg_vV4fg-1uTk-WQYYt2mgu7g.png","basketball-patch"],
+  ["high-level-description-a-photorealistic-_2jNHO8pCVGmhHdGkeJ153A_LHfEosGJRcK9wHz7imYwYg_cover.png","volleyball-patch"],
+  ["high-level-description-a-photorealistic-_4xkiDrCDV2-5LXFfgrBhaw_yf0SZCLFRWuN1301e-OxOw.png","softball-patch"],
+  ["high-level-description-a-photorealistic-_tvqVy84wUImms5_YDqw-AA_qN9NpgnoQReUExmfnGZE_w.png","baseball-patch"],
 ];
 // Chroma distance in the (r-g, b-g) plane: independent of BRIGHTNESS, so a lighting
 // gradient across the backdrop moves a pixel very little while the art moves a lot.
@@ -26,7 +29,7 @@ for (const [src, out] of JOBS) {
   const bgC = chroma(...BG);
   // Thresholds in chroma units. Below T0 it is background; above T1 it is art; between
   // is the antialiased edge, where alpha ramps and the matte gets subtracted.
-  const T0 = 26, T1 = 74;
+  const T0 = 48, T1 = 92;
   let cut=0, edge=0;
   for (let i=0;i<d.length;i+=4){
     const dc = dist(chroma(d[i],d[i+1],d[i+2]), bgC);
@@ -37,7 +40,7 @@ for (const [src, out] of JOBS) {
     // pixel that is still chromatically near the backdrop is shadow, not art edge —
     // real art edges leave the backdrop's chroma fast because the art is a different
     // colour, not a darker version of the same one.
-    if (a < 0.45 && dc < T0 * 2.1) a = 0;
+    if (a < 0.7 && dc < T0 * 1.9) a = 0;
     if (a === 0) { d[i+3]=0; cut++; continue; }
     if (a < 1) {
       edge++;
