@@ -60,6 +60,7 @@ import {
 } from "@/lib/school-brand";
 import { pickCrawlTargets, pickStylesheets } from "@/lib/school-brand/crawl-targets";
 import { mergeProfiles } from "@/lib/school-brand/merge-profiles";
+import { lookupKnownSchool } from "@/lib/school-brand/known-school.server";
 import {
   manifestIconCandidates,
   scoreLogoCandidate,
@@ -409,6 +410,59 @@ export async function POST(request: Request): Promise<NextResponse> {
     }
   }
   profile = mergeProfiles(profile, extraProfiles);
+
+  // ── WHAT IS ALREADY PUBLICLY KNOWN ──
+  //
+  // Everything above reads the page. That is the right primary source — it reflects
+  // the school's brand as it is today — but it only works when the page declares its
+  // palette somewhere a parser can reach, and plenty of real sites do not. A
+  // university front page keeps its colours in a hashed bundle; a JS-rendered theme
+  // never lands in the HTML at all. Meanwhile the fact itself is public: anyone can
+  // tell you Northwestern is purple.
+  //
+  // So this fills the GAPS the page left, and only the gaps. Page-derived candidates
+  // keep their confidence and stay ahead of it; a school whose site already said
+  // "navy and gold" is not overruled by recall. It runs at all only when something is
+  // actually missing, which keeps it off the common path entirely.
+  const needsColors = profile.colors.length === 0;
+  const needsMascot = profile.mascots.length === 0;
+  if (needsColors || needsMascot) {
+    const known = await lookupKnownSchool(profile.pageUrl, {
+      name: profile.names[0]?.value ?? null,
+      mascot: profile.mascots[0]?.value ?? null,
+    });
+    if (known) {
+      // Confidence is deliberately below every page-derived source. This is a real
+      // answer, but a page that states its own colours is better evidence than
+      // anyone's memory of it, and the ordering has to say so.
+      const conf = Math.min(0.5, known.confidence * 0.55);
+      if (needsColors && known.colors.length) {
+        profile.colors = known.colors.map((hex, i) => ({
+          hex,
+          confidence: conf,
+          source: "public-knowledge",
+          // `hits` is corroboration COUNT elsewhere in this file, and buildBrandKit
+          // gates on it (MIN_COLOR_HITS). A recalled colour has no declarations to
+          // count, so it is given the floor it needs to be usable — the confidence
+          // above is what actually ranks it.
+          hits: 2,
+          role: i === 0 ? "primary" : i === 1 ? "secondary" : "accent",
+          neutral: false,
+          why: `Publicly known colour for this school — ${known.reasoning}`,
+        }));
+      }
+      if (needsMascot && known.mascot) {
+        profile.mascots = [
+          {
+            value: known.mascot,
+            confidence: conf,
+            source: "public-knowledge",
+            why: `Publicly known mascot for this school — ${known.reasoning}`,
+          },
+        ];
+      }
+    }
+  }
 
   // ── the MANIFEST ──
   //
