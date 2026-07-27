@@ -178,13 +178,19 @@ export function collectLogoCandidates(scan: PageScan): LogoCandidate[] {
   // 1. <img>. `src`, or the lazy-loading attributes, because a header logo behind a
   //    lazyloader has `src` pointing at a 1x1 placeholder and the real file in
   //    `data-src` — take the placeholder and every candidate is a transparent pixel.
+  //
+  //    srcset OUTRANKS src, and we take its LARGEST entry. The first live scan
+  //    rejected a school whose 512px logo was sitting in the same srcset as the
+  //    150px variant we fetched: srcset lists are conventionally smallest-first,
+  //    and `split(",")[0]` was literally selecting the smallest available file for
+  //    a pipeline whose whole gate is "is this big enough to print".
   for (const tag of scan.tags) {
     if (tag.name !== "img") continue;
     const rawSrc =
+      largestFromSrcset(tag.attrs.srcset ?? tag.attrs["data-srcset"] ?? "") ||
       tag.attrs["data-src"] ||
       tag.attrs["data-lazy-src"] ||
       tag.attrs.src ||
-      (tag.attrs.srcset ?? "").split(",")[0]?.trim().split(/\s+/)[0] ||
       "";
     const url = resolveUrl(rawSrc, base);
     if (!url) continue;
@@ -274,6 +280,107 @@ export function collectLogoCandidates(scan: PageScan): LogoCandidate[] {
     });
   }
 
+  return out;
+}
+
+/**
+ * The largest URL in a `srcset`, by its width (`640w`) or density (`2x`) descriptor.
+ * A descriptorless entry counts as 1x. Returns "" for an empty/absent srcset so the
+ * caller's `||` chain falls through to the other attributes.
+ */
+export function largestFromSrcset(srcset: string): string {
+  let bestUrl = "";
+  let bestScore = -1;
+  for (const entry of srcset.split(",")) {
+    const parts = entry.trim().split(/\s+/);
+    const url = parts[0];
+    if (!url) continue;
+    const d = parts[1] ?? "1x";
+    const m = /^([\d.]+)(w|x)$/i.exec(d);
+    // Width descriptors are in px and density in screens; multiplying density by a
+    // nominal 400 makes "2x" comparable to "800w" rather than losing to every `w`.
+    const score = m ? parseFloat(m[1]) * (m[2].toLowerCase() === "x" ? 400 : 1) : 400;
+    if (score > bestScore) {
+      bestScore = score;
+      bestUrl = url;
+    }
+  }
+  return bestUrl;
+}
+
+/**
+ * A same-URL-family variant likely to be the FULL-SIZE original, or null when the
+ * URL carries no size markers. CMS image services serve the header logo through a
+ * resizer — `logo.png?width=150`, WordPress's `logo-300x150.png` — so the fetched
+ * bytes are small even though the original on the same host is not. The route tries
+ * this variant when the original measures too small; a variant that 404s or comes
+ * back smaller costs one bounded fetch and changes nothing.
+ */
+export function upgradeCandidateUrl(url: string): string | null {
+  let u: URL;
+  try {
+    u = new URL(url);
+  } catch {
+    return null;
+  }
+  let changed = false;
+  // Query-string resizers: width/height/w/h/size/scale/fit/crop/quality.
+  for (const key of [...u.searchParams.keys()]) {
+    if (/^(width|height|w|h|size|scale|fit|crop|quality|q|resize)$/i.test(key)) {
+      u.searchParams.delete(key);
+      changed = true;
+    }
+  }
+  // WordPress-style `-300x150` suffix before the extension.
+  const dePath = u.pathname.replace(/-\d{2,4}x\d{2,4}(\.[a-z0-9]+)$/i, "$1");
+  if (dePath !== u.pathname) {
+    u.pathname = dePath;
+    changed = true;
+  }
+  return changed ? u.toString() : null;
+}
+
+/**
+ * Icon candidates from a web-app manifest's `icons` array.
+ *
+ * The manifest is where the ONE reliably large icon lives: 512x512 is the size the
+ * PWA install spec demands, so sites that have a manifest almost always have a 512
+ * — frequently the only >=400px mark anywhere on the site. The first live scan's
+ * school had exactly that: every visible logo too small, and a printable 512 sitting
+ * unread in the manifest. Pure (parsed JSON in, candidates out); the route fetches.
+ *
+ * Sizes come from the DECLARED `sizes` field and are still verified by measurement
+ * after fetch, like every other declared dimension in this package.
+ */
+export function manifestIconCandidates(manifest: unknown, manifestUrl: string): LogoCandidate[] {
+  if (typeof manifest !== "object" || manifest === null) return [];
+  const icons = (manifest as { icons?: unknown }).icons;
+  if (!Array.isArray(icons)) return [];
+  const out: LogoCandidate[] = [];
+  for (const icon of icons) {
+    if (typeof icon !== "object" || icon === null) continue;
+    const src = (icon as { src?: unknown }).src;
+    if (typeof src !== "string" || !src) continue;
+    const url = resolveUrl(src, manifestUrl);
+    if (!url) continue;
+    // "512x512" or "48x48 96x96" — take the largest declared edge.
+    const sizes = String((icon as { sizes?: unknown }).sizes ?? "");
+    let edge: number | undefined;
+    for (const m of sizes.matchAll(/(\d+)x(\d+)/gi)) {
+      const e = Math.max(Number(m[1]), Number(m[2]));
+      if (edge === undefined || e > edge) edge = e;
+    }
+    out.push({
+      url,
+      kind: /\.svg(\?|#|$)/i.test(url) ? "svg-file" : "raster",
+      source: "manifest-icon",
+      score: 0,
+      declaredWidth: edge,
+      declaredHeight: edge,
+      risks: [],
+      offset: -1,
+    });
+  }
   return out;
 }
 

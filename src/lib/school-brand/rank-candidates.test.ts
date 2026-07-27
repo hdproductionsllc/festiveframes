@@ -5,6 +5,9 @@ import { scanPage } from "./html-scan";
 import {
   collectLogoCandidates,
   gateByResolution,
+  largestFromSrcset,
+  manifestIconCandidates,
+  upgradeCandidateUrl,
   imageHints,
   MIN_BADGE_INCHES,
   MIN_BADGE_PIXELS,
@@ -221,5 +224,90 @@ describe("the resolution gate (constraint 5)", () => {
   it("tells the user the pixel number, not just a DPI", () => {
     const v = gateByResolution({ width: 180, height: 180 });
     expect(v.message).toContain(`${MIN_BADGE_PIXELS}px`);
+  });
+});
+
+describe("largestFromSrcset (the first live scan's rejection, root-caused)", () => {
+  it("takes the LARGEST width descriptor, not the first entry", () => {
+    // srcset lists are conventionally smallest-first, and the old code took
+    // entry[0] — literally selecting the smallest available file for a pipeline
+    // whose whole gate is "is this big enough to print". The 512 that would have
+    // passed was sitting in the same attribute as the 150 we rejected.
+    expect(
+      largestFromSrcset("/logo-150.png 150w, /logo-512.png 512w, /logo-300.png 300w"),
+    ).toBe("/logo-512.png");
+  });
+
+  it("compares density descriptors with width descriptors sanely", () => {
+    expect(largestFromSrcset("/a.png 1x, /b.png 2x")).toBe("/b.png");
+    // 2x (nominal 800) beats 640w; 1200w beats 2x.
+    expect(largestFromSrcset("/a.png 640w, /b.png 2x")).toBe("/b.png");
+    expect(largestFromSrcset("/a.png 1200w, /b.png 2x")).toBe("/a.png");
+  });
+
+  it("returns '' for an absent srcset so the caller falls through to src", () => {
+    expect(largestFromSrcset("")).toBe("");
+  });
+});
+
+describe("upgradeCandidateUrl", () => {
+  it("strips query-string resizers", () => {
+    expect(upgradeCandidateUrl("https://s.org/logo.png?width=150&height=80&v=3")).toBe(
+      "https://s.org/logo.png?v=3",
+    );
+  });
+
+  it("strips a WordPress size suffix", () => {
+    expect(upgradeCandidateUrl("https://s.org/up/2024/logo-300x150.png")).toBe(
+      "https://s.org/up/2024/logo.png",
+    );
+  });
+
+  it("returns null when the URL carries no size markers — nothing to retry", () => {
+    expect(upgradeCandidateUrl("https://s.org/logo.png")).toBeNull();
+    expect(upgradeCandidateUrl("not a url")).toBeNull();
+  });
+});
+
+describe("manifestIconCandidates", () => {
+  it("yields the 512 icon the PWA spec demands, sized from `sizes`", () => {
+    const icons = manifestIconCandidates(
+      { icons: [
+        { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+        { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
+      ] },
+      "https://school.org/manifest.json",
+    );
+    expect(icons).toHaveLength(2);
+    expect(icons[1]).toMatchObject({
+      url: "https://school.org/icons/icon-512.png",
+      source: "manifest-icon",
+      declaredWidth: 512,
+    });
+  });
+
+  it("survives every malformed shape a real manifest can take", () => {
+    expect(manifestIconCandidates(null, "https://x.org/m.json")).toEqual([]);
+    expect(manifestIconCandidates("nope", "https://x.org/m.json")).toEqual([]);
+    expect(manifestIconCandidates({ icons: "nope" }, "https://x.org/m.json")).toEqual([]);
+    expect(manifestIconCandidates({ icons: [{ sizes: "1x1" }, null] }, "https://x.org/m.json")).toEqual([]);
+  });
+
+  it("takes the largest edge from a multi-size declaration", () => {
+    const [icon] = manifestIconCandidates(
+      { icons: [{ src: "/i.png", sizes: "48x48 96x96 144x144" }] },
+      "https://x.org/m.json",
+    );
+    expect(icon.declaredWidth).toBe(144);
+  });
+});
+
+describe("collectLogoCandidates picks the largest srcset entry over src", () => {
+  it("prefers the biggest variant when the img declares both", () => {
+    const html = `<html><body><img src="/logo-150.png" srcset="/logo-150.png 150w, /logo-512.png 512w" alt="Crest"></body></html>`;
+    const scan = scanPage(html, "https://school.org/");
+    const urls = collectLogoCandidates(scan).map((c) => c.url);
+    expect(urls).toContain("https://school.org/logo-512.png");
+    expect(urls).not.toContain("https://school.org/logo-150.png");
   });
 });

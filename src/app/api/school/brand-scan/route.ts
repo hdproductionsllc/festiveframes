@@ -57,6 +57,12 @@ import {
 import { pickCrawlTargets } from "@/lib/school-brand/crawl-targets";
 import { mergeProfiles } from "@/lib/school-brand/merge-profiles";
 import {
+  manifestIconCandidates,
+  scoreLogoCandidate,
+  upgradeCandidateUrl,
+} from "@/lib/school-brand/rank-candidates";
+import { scanTags, resolveUrl as resolveHtmlUrl } from "@/lib/school-brand/html-scan";
+import {
   assertPublicUrl,
   checkUrlShape,
   fetchGuarded,
@@ -352,6 +358,44 @@ export async function POST(request: Request): Promise<NextResponse> {
   }
   profile = mergeProfiles(profile, extraProfiles);
 
+  // ── the MANIFEST ──
+  //
+  // The web-app manifest is where the one reliably LARGE icon lives: the PWA spec
+  // demands a 512x512, so sites with a manifest almost always have one — often the
+  // only >=400px mark on the whole site. The first live scan's school was exactly
+  // this shape: every visible logo below the print floor, and a printable 512
+  // sitting unread in the manifest. One extra fetch, JSON, small cap.
+  try {
+    const manifestLink = scanTags(html, "link").find((t) =>
+      /(^|\s)manifest(\s|$)/i.test(t.attrs.rel ?? ""),
+    );
+    const manifestUrl = manifestLink
+      ? resolveHtmlUrl(manifestLink.attrs.href ?? "", page.finalUrl)
+      : null;
+    if (manifestUrl) {
+      const mf = await fetchGuarded(manifestUrl, {
+        maxBytes: 64 * 1024,
+        timeoutMs: SECOND_HOP_TIMEOUT_MS,
+        accept: "application/manifest+json,application/json,*/*;q=0.5",
+      });
+      if (mf.ok && mf.status >= 200 && mf.status < 300) {
+        const icons = manifestIconCandidates(
+          JSON.parse(new TextDecoder().decode(mf.bytes)),
+          mf.finalUrl,
+        );
+        // Scored with the same function as every page candidate, then folded in via
+        // the same URL-deduping merge the second hop uses — a manifest icon that
+        // also appears in the page keeps whichever description scored better.
+        const scored = icons.map((c) => ({ ...c, score: scoreLogoCandidate(c) }));
+        if (scored.length) {
+          profile = mergeProfiles(profile, [{ ...profile, logos: scored }]);
+        }
+      }
+    }
+  } catch {
+    // A malformed manifest is a lost opportunity, never a failed scan.
+  }
+
   // ── fetch + QC the candidates, SEQUENTIALLY ──
   //
   // Sequential is the memory constraint, not laziness. Two 10 MP candidates in
@@ -391,6 +435,27 @@ export async function POST(request: Request): Promise<NextResponse> {
           detail: err instanceof Error ? err.message : "Preparing this image failed.",
         },
       };
+    }
+
+    // ── the RESIZER RETRY ──
+    //
+    // CMS image services serve the page's copy of the logo through a resizer —
+    // `?width=150`, a WordPress `-300x150` suffix — so the fetched bytes measure
+    // small even though the ORIGINAL on the same host is not. When a candidate
+    // comes back unusable purely on size and its URL carries resize markers, retry
+    // once with the markers stripped. Strictly an upgrade: the variant replaces the
+    // original only when it measures USABLE, so a 404 or a same-size answer costs
+    // one bounded fetch and changes nothing.
+    if (result.ok && !result.candidate.usable && result.candidate.resolution.usable === false) {
+      const up = upgradeCandidateUrl(c.url);
+      if (up) {
+        try {
+          const retried = await prepareCandidate({ ...c, url: up });
+          if (retried.ok && retried.candidate.usable) result = retried;
+        } catch {
+          // The stripped URL not existing is the expected failure of a guess.
+        }
+      }
     }
     if (result.ok) {
       candidates.push(result.candidate);
