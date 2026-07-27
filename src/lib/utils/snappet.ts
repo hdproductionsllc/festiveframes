@@ -234,7 +234,20 @@ export function canPlace(
       return { ok: false, reason: "plate", evicts: [] };
     }
     const cell = grid.cellAt(coord.row, coord.col);
-    if (!cell) continue; // overhang — no cell, nothing to violate
+    // A footprint cell with NO grid cell under it is off the frame, and that is a
+    // refusal — not something to skip past.
+    //
+    // This used to `continue`, on the reasoning that an absent cell has no rule to
+    // break. But the rules are about the FRAME, and a cell outside it is the one case
+    // no rule can speak to, so skipping meant a 2x2 could hang its bottom row below
+    // the bottom bar or its right column past the last column and still be accepted.
+    // The builder drew it, the store kept it, and the part it describes does not
+    // exist — art placed there prints on nothing.
+    //
+    // `overhangTiles` is NOT this. That is a canvas GUTTER, so a drag preview near an
+    // edge is clipped inside the builder rather than escaping over the page; it was
+    // never meant to license placing a tile out there permanently.
+    if (!cell) return { ok: false, reason: "offgrid", evicts: [] };
     if (grid.panelAt(coord.row, coord.col) !== anchorPanel) {
       return { ok: false, reason: "panel", evicts: [] };
     }

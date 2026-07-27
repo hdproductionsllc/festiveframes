@@ -105,13 +105,28 @@ describe("canPlace", () => {
     expect(canPlace(ctx(), topInner, { cols: 1, rows: 1 }).ok).toBe(true);
   });
 
-  it("ALLOWS a footprint hanging off the outer edge (overhang)", () => {
-    // The far right wing column is col 13, the last column in the grid.
+  it("REFUSES a footprint hanging off the outer edge", () => {
+    // This test used to assert the opposite, and the opposite was the bug: a cell
+    // with no grid cell under it was skipped ("nothing to violate") rather than
+    // refused, so a tile could be seated partly off the frame. It drew, it persisted,
+    // and the part it describes does not exist - art out there prints on nothing.
     const rightWing = schoolGrid.coordOf("frame:wing-right-0")!;
     expect(rightWing.col).toBe(schoolGrid.cols - 1);
     const result = canPlace(ctx(), rightWing, { cols: 3, rows: 1 });
-    expect(result.ok).toBe(true);
-    expect(result.reason).toBeUndefined();
+    expect(result.ok).toBe(false);
+    expect(result.reason).toBe("offgrid");
+  });
+
+  it("REFUSES a footprint hanging off the BOTTOM edge", () => {
+    // The other axis, reported separately: a 2x2 anchored on the last row put its
+    // bottom half below the bottom bar, where the canvas reserves an overhang gutter
+    // and made it look legitimate.
+    const lastRow = schoolGrid.rows - 1;
+    const anchor = { row: lastRow, col: 0 };
+    expect(schoolGrid.cellAt(lastRow, 0)).not.toBeNull();
+    const result = canPlace(ctx(), anchor, { cols: 1, rows: 2 });
+    expect(result.ok).toBe(false);
+    expect(result.reason).toBe("offgrid");
   });
 
   it("ALLOWS a 2-wide footprint spanning the wing column + inner rail", () => {
@@ -501,11 +516,11 @@ describe("resolveSnappetDrop", () => {
     expect([p.anchorRow, p.anchorCol, p.cols, p.rows]).toEqual([6, 2, 2, 2]);
   });
 
-  it("ALLOWS a footprint hanging off the outer edge", () => {
-    // The far right wing column — a 3-wide footprint puts two cells past the edge.
-    const p = drop("frame:wing-right-0", { cols: 3, rows: 1 })!;
-    expect(p.valid).toBe(true);
-    expect(p.anchorCol).toBe(schoolGrid.cols - 1);
+  it("does not RESOLVE a drop to a footprint hanging off the outer edge", () => {
+    // The resolver either nudges the anchor back to somewhere the footprint fits, or
+    // reports it invalid. What it must not do is seat it half off the frame.
+    const p = drop("frame:wing-right-0", { cols: 3, rows: 1 });
+    if (p) expect(p.valid).toBe(false);
   });
 
   it("NUDGES the anchor back so a footprint clears the plate", () => {
