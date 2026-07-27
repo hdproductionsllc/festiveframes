@@ -76,7 +76,7 @@ import {
   type CornerRadii,
   rimMetrics,
   shift,
-  textEmboss,
+  textChenille,
   tileBackground,
 } from "@/lib/utils/tile-theme";
 import { getFullRes } from "@/lib/utils/image-store";
@@ -404,10 +404,41 @@ function drawTextBar(
   const fontPx = fitTextBarFont(ctx, text, cfg.fontFamily, cfg.letterSpacing, h, avail, cfg.fontSize ?? 1);
   ctx.font = `700 ${fontPx}px ${cfg.fontFamily}`;
   try { (ctx as CanvasRenderingContext2D & { letterSpacing?: string }).letterSpacing = `${cfg.letterSpacing}px`; } catch { /* unsupported */ }
-  ctx.fillStyle = cfg.textColor;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText(text, x + w / 2, y + h / 2 + h * 0.04);
+  // CHENILLE, same treatment as the section text — the banner is the most-seen type on
+  // the frame, so if only one of the two carried it the product would read as two
+  // different objects. Stroke UNDER the fill (outer gold thread, then the dark seat),
+  // then the softened emboss, then the face.
+  {
+    const bx = x + w / 2;
+    const by = y + h / 2 + h * 0.04;
+    const em = textChenille(fontPx, cfg.textColor);
+    ctx.lineJoin = "round";
+    ctx.miterLimit = 2;
+
+    ctx.save();
+    ctx.shadowColor = em.shadow.colour;
+    ctx.shadowBlur = em.shadow.blur;
+    ctx.shadowOffsetX = em.shadow.offsetX;
+    ctx.shadowOffsetY = em.shadow.offsetY;
+    ctx.strokeStyle = em.merrow.thread;
+    ctx.lineWidth = em.merrow.width;
+    ctx.strokeText(text, bx, by);
+    ctx.restore();
+
+    ctx.strokeStyle = em.merrow.seatColour;
+    ctx.lineWidth = em.merrow.seat;
+    ctx.strokeText(text, bx, by);
+
+    ctx.fillStyle = em.shade;
+    ctx.fillText(text, bx + em.depth, by + em.depth);
+    ctx.fillStyle = em.highlight;
+    ctx.fillText(text, bx - em.depth, by - em.depth);
+
+    ctx.fillStyle = cfg.textColor;
+    ctx.fillText(text, bx, by);
+  }
   try { (ctx as CanvasRenderingContext2D & { letterSpacing?: string }).letterSpacing = "0px"; } catch { /* unsupported */ }
 
   if (bar.qr && qrImg) {
@@ -512,16 +543,34 @@ function drawTextBlock(
     // Three passes make the type raised rather than printed on: the shaded underside
     // (carrying the cast shadow), the lit edge above it, then the face on top. Same
     // upper-left light as the badge edges, so the letters belong to the same object.
-    const em = textEmboss(fontPx, cfg.textColor);
+    // CHENILLE. The letters are a felt varsity patch, not engraving: a merrow border
+    // stroked UNDER the fill, then the softened emboss on top. Order matters and is
+    // outside-in — cast shadow, gold thread, dark seat, shade, lit edge, face. Stroke
+    // before fill, always, or the thread eats the letterform's own weight.
+    const em = textChenille(fontPx, cfg.textColor);
+    ctx.lineJoin = "round";
+    ctx.miterLimit = 2;
     for (const ln of lines) {
+      // The cast shadow rides the OUTERMOST pass so it falls from the patch's true
+      // silhouette (thread included), not from the letter inside it.
       ctx.save();
       ctx.shadowColor = em.shadow.colour;
       ctx.shadowBlur = em.shadow.blur;
       ctx.shadowOffsetX = em.shadow.offsetX;
       ctx.shadowOffsetY = em.shadow.offsetY;
+      ctx.strokeStyle = em.merrow.thread;
+      ctx.lineWidth = em.merrow.width;
+      ctx.strokeText(ln, tx, ty);
+      ctx.restore();
+
+      // The seat between thread and felt. Without it the gold reads as a cartoon
+      // keyline; the dark gap is what makes it look stitched ONTO something.
+      ctx.strokeStyle = em.merrow.seatColour;
+      ctx.lineWidth = em.merrow.seat;
+      ctx.strokeText(ln, tx, ty);
+
       ctx.fillStyle = em.shade;
       ctx.fillText(ln, tx + em.depth, ty + em.depth);
-      ctx.restore();
 
       ctx.fillStyle = em.highlight;
       ctx.fillText(ln, tx - em.depth, ty - em.depth);

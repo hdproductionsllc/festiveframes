@@ -495,6 +495,40 @@ export function textChenille(fontPx: number, textColour: string) {
   };
 }
 
+/**
+ * CSS twin of `textChenille` — the merrow border as a `-webkit-text-stroke` plus the
+ * softened emboss as a `text-shadow` stack.
+ *
+ * Returns BOTH properties because CSS gives you exactly one text stroke, and the
+ * canvas draws two (gold thread, then a dark seat inside it). The seat is faked with
+ * the innermost text-shadow ring instead, which is close enough at banner sizes and
+ * is the only option that does not need a duplicated DOM node per line.
+ */
+export function textChenilleCss(fontPx: number, textColour: string): {
+  textShadow: string;
+  WebkitTextStroke: string;
+  paintOrder: "stroke fill";
+} {
+  const e = textChenille(fontPx, textColour);
+  const d = e.depth.toFixed(2);
+  const s = e.shadow;
+  const seat = (e.merrow.seat / 2).toFixed(2);
+  return {
+    // `paint-order: stroke fill` is load-bearing: without it the stroke is painted
+    // OVER the glyph and eats half the letterform's weight, exactly the way it would
+    // on canvas if you stroked after filling.
+    paintOrder: "stroke fill",
+    WebkitTextStroke: `${e.merrow.width.toFixed(2)}px ${e.merrow.thread}`,
+    textShadow: [
+      // The dark seat between thread and felt, as a tight ring.
+      `0 0 ${seat}px ${e.merrow.seatColour}`,
+      `${-e.depth.toFixed(2)}px ${-e.depth.toFixed(2)}px 0 ${e.highlight}`,
+      `${d}px ${d}px 0 ${e.shade}`,
+      `${s.offsetX.toFixed(2)}px ${s.offsetY.toFixed(2)}px ${s.blur.toFixed(2)}px ${s.colour}`,
+    ].join(", "),
+  };
+}
+
 /** CSS twin of `textEmboss`, as a `text-shadow` stack (lit edge, shade, cast). */
 export function textEmbossCss(fontPx: number, textColour: string): string {
   const e = textEmboss(fontPx, textColour);
