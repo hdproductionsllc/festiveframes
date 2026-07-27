@@ -20,7 +20,6 @@ import { MIN_DPI } from "@/lib/utils/artwork-qc";
 import { evaluateResolution, type ResolutionVerdict } from "@/lib/utils/print-resolution";
 import type { DropReason, LogoCandidate, LogoKind } from "./types";
 import {
-  elementInner,
   elementOuter,
   elementRange,
   resolveUrl,
