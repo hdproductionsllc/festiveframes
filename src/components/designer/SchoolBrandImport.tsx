@@ -319,8 +319,15 @@ export function SchoolBrandImport() {
     setRimColor(k.rimColor);
     // Mode before text: the top bar cannot hold tiles, so `sectionSupportsTiles` has
     // to have run before the write rather than after it.
-    setSectionMode("top", "text");
-    setSectionText("top", k.top);
+    //
+    // The top strip is OPTIONAL. When the scan found no mascot and no motto the
+    // school's name goes on the bottom banner alone, and there is nothing true left
+    // for the top to say — so it keeps whatever the user already had rather than
+    // being overwritten with a repeat of the name.
+    if (k.top) {
+      setSectionMode("top", "text");
+      setSectionText("top", k.top);
+    }
     setSectionMode("bottom", "text");
     setSectionText("bottom", k.bottom);
     selectSection("bottom");

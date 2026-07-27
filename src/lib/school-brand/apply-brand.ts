@@ -73,7 +73,10 @@ export interface SchoolBrandKit {
    * teaches — rather than inventing a new arrangement — is what makes the applied
    * frame read as "your school", instantly, to someone who has seen any gym wall.
    */
-  top: Partial<BottomBarConfig>;
+  /** Absent when the scan found neither a mascot nor a motto: there is nothing
+   *  true to put on the top strip, and inventing a line is how a frame ships
+   *  saying HOME OF THE NEWSLETTER. The colours still apply. */
+  top?: Partial<BottomBarConfig>;
   bottom: Partial<BottomBarConfig>;
   /** What was decided and why, in order. Shown in the debug panel and asserted in
    *  tests, so a silent change of opinion cannot ship unnoticed. */
@@ -123,7 +126,17 @@ export function buildBrandKit(profile: BrandSource): SchoolBrandKit | null {
 
   const mascot = best(profile.mascots);
   const motto = best(profile.mottos);
-  if (!mascot && !motto) return null; // a one-banner kit reads as broken, not minimal
+  // NO LONGER A REFUSAL. This used to `return null` when the scan found neither a
+  // mascot nor a motto, on the grounds that a one-banner kit reads as broken — but
+  // that reasoning is about BANNERS, and it was throwing away the COLOURS too. A
+  // university front page is the ordinary case here: it never says "Home of the
+  // Wildcats" and its motto is in Latin, so a school whose purple was extracted
+  // perfectly well got nothing applied at all, which is what it looked like from
+  // the outside — "it did not grab them".
+  //
+  // The colours are independent of the copy and were never in doubt. So when there
+  // is nothing true to say, the kit says only the school's NAME, on the one banner,
+  // and still recolours the frame. Minimal is not broken; empty is.
 
   // The BANNERS take the same surface colour as the badges — see below. They used to
   // take `primary` while the badges took the darker of the pair, so whenever primary
@@ -153,14 +166,30 @@ export function buildBrandKit(profile: BrandSource): SchoolBrandKit | null {
       ? `surfaces ${darker} (darker of the pair, banners included), rim ${lighter} (lighter)`
       : `surfaces ${darker} + rim ${lighter}, both derived from the one colour found`,
   );
-  // With a mascot: the classic gym-wall stack — HOME OF THE / LONGHORNS — with the
-  // school's name in the tagline tier, so all three identities are on the frame.
-  // Without one: the name takes the headline and the motto the tagline, which is
-  // still unmistakably theirs; "HOME OF THE" with nothing under it never ships.
-  const top = mascot ? "HOME OF THE" : name.value.toUpperCase();
-  const headline = mascot ? mascot.value.toUpperCase() : (motto!.value.toUpperCase());
+  // Three shapes, in descending order of how much the scan actually learned. Each
+  // one only ever says things the page said — "HOME OF THE" with nothing under it
+  // never ships, and neither does an invented tagline.
+  //
+  //   mascot          HOME OF THE / WILDCATS / NORTHWESTERN   (the gym-wall stack)
+  //   motto only      NORTHWESTERN / QUAECUMQUE SUNT VERA
+  //   neither         NORTHWESTERN                            (name alone, one bar)
+  const headline = mascot
+    ? mascot.value.toUpperCase()
+    : motto
+      ? motto.value.toUpperCase()
+      : name.value.toUpperCase();
   const tagline = mascot ? name.value.toUpperCase() : undefined;
-  notes.push(mascot ? `stack from mascot "${mascot.value}"` : `stack from motto "${motto!.value}"`);
+  // The top strip carries the school only when the bottom is carrying something
+  // else. With the name already on the headline there is nothing left for it to
+  // say, so it is left alone rather than made to repeat.
+  const top = mascot ? "HOME OF THE" : motto ? name.value.toUpperCase() : null;
+  notes.push(
+    mascot
+      ? `stack from mascot "${mascot.value}"`
+      : motto
+        ? `stack from motto "${motto.value}"`
+        : `no mascot or motto found — name only, colours still applied`,
+  );
 
   return {
     schoolName: name.value,
@@ -170,7 +199,7 @@ export function buildBrandKit(profile: BrandSource): SchoolBrandKit | null {
     frameColor,
     tileFieldColor,
     rimColor,
-    top: { text: top, backgroundColor: darker, textColor },
+    ...(top !== null ? { top: { text: top, backgroundColor: darker, textColor } } : {}),
     bottom: {
       text: headline,
       ...(tagline !== undefined ? { tagline } : {}),

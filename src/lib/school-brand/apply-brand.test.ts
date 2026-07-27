@@ -38,11 +38,11 @@ describe("buildBrandKit", () => {
     expect(kit.secondary).toBe("#C9A34A");
     // The classic gym-wall stack, in the seeded design's own shape: top strip,
     // mascot headline, school name in the tagline tier.
-    expect(kit.top.text).toBe("HOME OF THE");
+    expect(kit.top!.text).toBe("HOME OF THE");
     expect(kit.bottom.text).toBe("LONGHORNS");
     expect(kit.bottom.tagline).toBe("PARKWAY WEST HIGH SCHOOL");
     // Dark maroon → white type, by the same luminance rule the tile edges use.
-    expect(kit.top.textColor).toBe("#FFFFFF");
+    expect(kit.top!.textColor).toBe("#FFFFFF");
     expect(kit.bottom.backgroundColor).toBe("#8A1F2B");
   });
 
@@ -51,7 +51,7 @@ describe("buildBrandKit", () => {
     expect(kit.mascot).toBeNull();
     // No mascot → the name takes the headline and the motto the tagline slot's
     // place; "HOME OF THE" with nothing under it never ships.
-    expect(kit.top.text).toBe("PARKWAY WEST HIGH SCHOOL");
+    expect(kit.top!.text).toBe("PARKWAY WEST HIGH SCHOOL");
     expect(kit.bottom.text).toBe("TRADITION AND EXCELLENCE");
     expect(kit.bottom.tagline).toBeUndefined();
   });
@@ -66,10 +66,36 @@ describe("buildBrandKit", () => {
     expect(buildBrandKit(profile({ colors: [cc("#0000EE", 1)] }))).toBeNull();
   });
 
-  it("REFUSES when neither mascot nor motto is usable", () => {
-    expect(
-      buildBrandKit(profile({ mascots: [], mottos: [tc("x", 0.1)] })),
-    ).toBeNull();
+  it("still delivers the COLOURS when neither mascot nor motto is usable", () => {
+    // This used to return null, and that was the bug: a university front page never
+    // says "Home of the Wildcats" and its motto is in Latin, so a school whose
+    // purple had been extracted perfectly well got NOTHING applied — which from the
+    // outside looks exactly like "it did not grab the colours at all".
+    //
+    // The copy and the palette fail independently. When there is nothing true to
+    // say, the kit says only the school's name, and still recolours the frame.
+    const kit = buildBrandKit(profile({ mascots: [], mottos: [tc("x", 0.1)] }));
+    expect(kit).not.toBeNull();
+    expect(kit!.tileFieldColor).toBeTruthy();
+    expect(kit!.rimColor).toBeTruthy();
+    expect(kit!.bottom.text).toBe("PARKWAY WEST HIGH SCHOOL");
+    // No invented top line: "HOME OF THE" with nothing under it never ships, and
+    // repeating the name on both bars is not a design.
+    expect(kit!.top).toBeUndefined();
+    expect(kit!.notes.join(" ")).toContain("colours still applied");
+  });
+
+  it("PURPLE AND WHITE: the dark one paints, the light one edges", () => {
+    // The reported case. White is a real half of a scheme, not a background to be
+    // discarded — it is what the rim wants, because a rim reads as metal only if it
+    // runs lighter than the body it sits on.
+    const kit = buildBrandKit(profile({
+      mascots: [], mottos: [],
+      colors: [cc("#4E2A84", 6), cc("#FFFFFF", 4)],
+    }))!;
+    expect(kit.tileFieldColor).toBe("#4E2A84");
+    expect(kit.frameColor).toBe("#4E2A84");
+    expect(kit.rimColor).toBe("#FFFFFF");
   });
 
   it("secondary skips duplicates of the primary", () => {
@@ -94,7 +120,7 @@ describe("bannerTextOn", () => {
 
 // Type-level guard: the kit's banner shapes must stay assignable to the store's
 // config patch, or applying them becomes a cast at the call site.
-const _assign: SchoolBrandKit["top"] extends Partial<import("@/lib/types").BottomBarConfig>
+const _assign: NonNullable<SchoolBrandKit["top"]> extends Partial<import("@/lib/types").BottomBarConfig>
   ? true
   : never = true;
 void _assign;
@@ -154,7 +180,7 @@ describe("one background, not two", () => {
   // and the frame read as two designs sharing a plate.
   it("gives the banners the SAME surface as the badges when primary is the LIGHT one", () => {
     const kit = buildBrandKit(profile({ colors: [cc("#F0C05A", 9), cc("#1B2A4A", 4)] }))!;
-    expect(kit.top.backgroundColor).toBe(kit.tileFieldColor);
+    expect(kit.top!.backgroundColor).toBe(kit.tileFieldColor);
     expect(kit.bottom.backgroundColor).toBe(kit.tileFieldColor);
     expect(kit.tileFieldColor).toBe("#1B2A4A"); // the darker of the pair
     expect(kit.rimColor).toBe("#F0C05A"); // the lighter carries the rim
@@ -162,12 +188,12 @@ describe("one background, not two", () => {
 
   it("holds when primary is already the dark one", () => {
     const kit = buildBrandKit(profile({ colors: [cc("#1B2A4A", 9), cc("#F0C05A", 4)] }))!;
-    expect(kit.top.backgroundColor).toBe(kit.tileFieldColor);
+    expect(kit.top!.backgroundColor).toBe(kit.tileFieldColor);
     expect(kit.bottom.backgroundColor).toBe(kit.tileFieldColor);
   });
 
   it("keeps the banner TEXT legible on the surface it actually sits on", () => {
     const kit = buildBrandKit(profile({ colors: [cc("#F0C05A", 9), cc("#1B2A4A", 4)] }))!;
-    expect(luminance(kit.top.textColor!)).toBeGreaterThan(luminance(kit.top.backgroundColor!));
+    expect(luminance(kit.top!.textColor!)).toBeGreaterThan(luminance(kit.top!.backgroundColor!));
   });
 });
