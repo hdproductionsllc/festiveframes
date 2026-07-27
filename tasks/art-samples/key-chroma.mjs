@@ -55,6 +55,42 @@ for (const [src, out] of JOBS) {
     d[i+3] = Math.round(a*255);
   }
   g.putImageData(img,0,0);
+
+  // TRIM to the art's own alpha bounding box, then re-pad to a square.
+  //
+  // The generator leaves a generous margin, and the badge then reserves another ~15%
+  // of a cell for rim + bevel + air (chromeInset), so an untrimmed file lands as a
+  // small ball floating in a large tile. Cropping to what is actually painted lets
+  // `objectFit: contain` scale the art up to the tile instead of scaling the
+  // generator's whitespace.
+  //
+  // Re-padded to a SQUARE around the art's centre rather than saved as a bare bbox:
+  // a tile is square, and a non-square source would otherwise be letterboxed by
+  // contain — trading the margin we just removed for a different one.
+  // Bounding box by ROW/COLUMN OCCUPANCY, not by any single pixel.
+  //
+  // A per-pixel test is defeated by one stray survivor: two of these files keep a few
+  // solid pixels right at the frame edge, and a single one pins the box to the whole
+  // canvas so the trim silently does nothing. Requiring a row or column to carry a
+  // MEANINGFUL number of solid pixels before it counts as "art" ignores specks while
+  // still finding the true extent of the ball.
+  const MIN_RUN = Math.max(4, Math.round(W * 0.004));
+  const rowN = new Array(H).fill(0), colN = new Array(W).fill(0);
+  for (let y=0;y<H;y++) for (let x=0;x<W;x++) {
+    if (d[((y*W+x)<<2)+3] > 96) { rowN[y]++; colN[x]++; }
+  }
+  const first = (arr) => arr.findIndex(v => v >= MIN_RUN);
+  const last = (arr) => { for (let i=arr.length-1;i>=0;i--) if (arr[i] >= MIN_RUN) return i; return -1; };
+  const y0 = first(rowN), y1 = last(rowN), x0 = first(colN), x1 = last(colN);
+  if (x1 >= x0 && y1 >= y0) {
+    const bw = x1-x0+1, bh = y1-y0+1;
+    const side = Math.max(bw, bh);
+    const t = createCanvas(side, side), tg = t.getContext("2d");
+    tg.drawImage(c, x0, y0, bw, bh, (side-bw)/2, (side-bh)/2, bw, bh);
+    writeFileSync(`public/tiles/high-school/${out}.png`, t.toBuffer("image/png"));
+    console.log(`${out.padEnd(18)} bg=rgb(${BG})  trimmed ${W}x${H} -> ${side}x${side}  (art filled ${(100*Math.max(bw,bh)/W).toFixed(0)}% before)`);
+    continue;
+  }
   writeFileSync(`public/tiles/high-school/${out}.png`, c.toBuffer("image/png"));
-  console.log(`${out.padEnd(18)} bg=rgb(${BG})  cut=${(100*cut/(W*H)).toFixed(1)}%  edge=${edge}px`);
+
 }

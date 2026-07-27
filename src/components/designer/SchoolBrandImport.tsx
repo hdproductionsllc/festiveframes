@@ -42,6 +42,7 @@ import {
   candidateFileName,
   candidateNotes,
   dataUrlToFile,
+  groupBannerFills,
   isSubmittableUrl,
   performableActions,
   type BannerFill,
@@ -406,29 +407,42 @@ export function SchoolBrandImport() {
           <p className="text-[10px] font-extrabold uppercase tracking-wide text-[#1e1b17]/55">
             Tap to fill a banner
           </p>
-          <div className="mt-1.5 space-y-1.5">
-            {fills.map((f) => {
-              const key = `${f.kind}:${f.value}`;
-              const isFilled = filled === key;
-              return (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => applyFill(f)}
-                  className={`block w-full rounded-lg border-2 border-[#1e1b17] px-2.5 py-1.5 text-left transition-all active:translate-y-0.5 ${
-                    isFilled ? "bg-[#3fb0e6] text-white" : "bg-[#faf0d6] text-[#1e1b17] hover:brightness-105"
-                  }`}
-                >
-                  <span className="block text-[9px] font-extrabold uppercase tracking-wide opacity-60">
-                    {f.label} {f.hint}
-                  </span>
-                  <span className="block truncate text-[12px] font-extrabold leading-tight">
-                    {isFilled ? "✓ " : ""}
-                    {f.value}
-                  </span>
-                </button>
-              );
-            })}
+          {/* Grouped, so the destination is said ONCE per group. Two name candidates
+              used to render as two chips each stamped "SCHOOL NAME → TOP BAR", which
+              reads as two controls that happen to share a label rather than as one
+              choice with two answers. */}
+          <div className="mt-1.5 space-y-2">
+            {groupBannerFills(fills).map((g) => (
+              <div key={g.kind}>
+                <p className="text-[9px] font-extrabold uppercase tracking-wide text-[#1e1b17]/45">
+                  {g.label} <span className="text-[#1e1b17]/35">{g.hint}</span>
+                </p>
+                <div className="mt-1 space-y-1">
+                  {g.fills.map((f) => {
+                    const key = `${f.kind}:${f.value}`;
+                    const isFilled = filled === key;
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => applyFill(f)}
+                        title={f.value}
+                        className={`block w-full rounded-lg border-2 border-[#1e1b17] px-2.5 py-1.5 text-left text-[12px] font-extrabold leading-tight transition-all active:translate-y-0.5 ${
+                          isFilled
+                            ? "bg-[#3fb0e6] text-white"
+                            : "bg-[#faf0d6] text-[#1e1b17] hover:brightness-105"
+                        }`}
+                      >
+                        <span className="block truncate">
+                          {isFilled ? "✓ " : ""}
+                          {f.value}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
           </div>
           <p className="mt-1.5 text-[10px] font-semibold leading-relaxed text-[#1e1b17]/50">
             These are our best guesses from the page — tap one, then edit it in the
@@ -577,9 +591,20 @@ function CandidateCard({ candidate, onAdd }: { candidate: ScanCandidate; onAdd: 
         />
       </div>
 
-      <p className="truncate text-[10px] font-extrabold uppercase tracking-wide text-[#1e1b17]/70" title={notes.title}>
+      <p className="truncate text-[10px] font-extrabold uppercase tracking-wide text-[#1e1b17]/70">
         {notes.title}
       </p>
+      {/* The page's own alt text, on its own line and clamped to two. Combined with
+          the kind on one line it truncated to `LOGO IMAGE — "LIN…` in a 340px rail,
+          which threw away the only part that tells two crests apart. */}
+      {notes.alt && (
+        <p
+          className="line-clamp-2 text-[10px] font-semibold leading-snug text-[#1e1b17]/55"
+          title={notes.alt}
+        >
+          “{notes.alt}”
+        </p>
+      )}
       <p className="text-[10px] font-semibold text-[#1e1b17]/45">{notes.spec}</p>
       <p
         className={`mt-1 text-[10px] font-bold leading-snug ${
@@ -595,21 +620,31 @@ function CandidateCard({ candidate, onAdd }: { candidate: ScanCandidate; onAdd: 
         </p>
       ))}
       {/* What we already did to it, so "why does this look different from their
-          website" has an answer on the card instead of in a support email. */}
+          website" has an answer on the card instead of in a support email. The raw
+          repair strings are engineer-facing ("Removed the (255,255,255) matte from 812
+          edge pixels") so they go in the tooltip, not the card. */}
       {notes.repairs.length > 0 && (
-        <p className="mt-0.5 text-[10px] font-semibold leading-snug text-[#1e1b17]/45">
-          Cleaned up: {notes.repairs.length === 1 ? "background/edges" : "background and edges"}
+        <p
+          className="mt-0.5 text-[10px] font-semibold leading-snug text-[#1e1b17]/45"
+          title={notes.repairs.join(" ")}
+        >
+          ✓ Tidied up for print
         </p>
       )}
 
-      <button
-        type="button"
-        onClick={onAdd}
-        disabled={!notes.addable}
-        className="mt-1.5 w-full rounded-lg border-2 border-[#1e1b17] bg-[#3fb0e6] px-2 py-1.5 text-[11px] font-extrabold uppercase tracking-wide text-white shadow-[2px_2px_0_#1e1b17] transition-all hover:brightness-105 active:translate-y-0.5 disabled:cursor-not-allowed disabled:border-[#1e1b17]/25 disabled:bg-[#1e1b17]/10 disabled:text-[#1e1b17]/40 disabled:shadow-none"
-      >
-        {notes.addable ? "Add to frame" : "Too small"}
-      </button>
+      {/* `mt-auto` so the buttons line up across a row whose cards have different
+          amounts of text — without it a two-line caution on one card pushed its
+          button below its neighbour's and the row read as broken. */}
+      <div className="mt-auto pt-1.5">
+        <button
+          type="button"
+          onClick={onAdd}
+          disabled={!notes.addable}
+          className="w-full rounded-lg border-2 border-[#1e1b17] bg-[#3fb0e6] px-2 py-1.5 text-[11px] font-extrabold uppercase tracking-wide text-white shadow-[2px_2px_0_#1e1b17] transition-all hover:brightness-105 active:translate-y-0.5 disabled:cursor-not-allowed disabled:border-[#1e1b17]/25 disabled:bg-[#1e1b17]/10 disabled:text-[#1e1b17]/40 disabled:shadow-none"
+        >
+          {notes.addable ? "Add to frame" : "Too small"}
+        </button>
+      </div>
     </div>
   );
 }
