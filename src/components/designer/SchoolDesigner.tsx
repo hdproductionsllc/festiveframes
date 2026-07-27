@@ -454,13 +454,15 @@ export function SchoolDesigner() {
               pair simply stays put together while the tall tools rail scrolls past.
               `self-start` so the sticky box is its content's height rather than being
               stretched by the grid row, which is what makes sticky a no-op. */}
-          <div className="order-2 lg:order-none flex flex-col gap-4 min-w-0 lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100vh-2rem)]">
+          <div className="order-2 lg:order-none flex flex-col gap-4 min-w-0 lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto">
             <div className="w-full flex flex-col gap-3 lg:min-h-0">
               {/* Bound the WIDTH, because the frame is width-driven and a bare
                   max-height would just clip it. The school frame is 13.874in x 7.928in
-                  — exactly 1.75:1 — so 105vh of width is 60vh of height, matching the
-                  cap above. Centred so the column's spare width goes to both sides. */}
-              <div className="relative mx-auto w-full lg:max-w-[105vh]">
+                  — exactly 1.75:1 — so 91vh of width is 52vh of height, which always leaves
+                  the editor most of the remaining half a viewport. The column also
+                  scrolls, so on a short window the tail of a tall editor stays reachable
+                  instead of being clipped by the sticky box's own max-height. */}
+              <div className="relative mx-auto w-full lg:max-w-[91vh]">
                 <ArmedBanner placement="frame" />
                 <FrameCanvas
                   ref={canvasRef}

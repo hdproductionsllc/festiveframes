@@ -68,16 +68,39 @@ const inRanges = (offset: number, ranges: [number, number][]): boolean =>
   ranges.some(([a, b]) => offset >= a && offset < b);
 
 /**
+ * The part of a URL that is allowed to accuse it: everything EXCEPT the hostname.
+ *
+ * THE HOST MUST NOT BE MATCHED, and getting this wrong is worse than not having a
+ * blocklist at all. Finalsite hosts its customers' own uploads on
+ * `resources.finalsite.net`; Edlio serves school crests from `cdn.edlio.com`. A
+ * blocklist that greps the whole URL for "finalsite" therefore throws away THE
+ * SCHOOL'S OWN LOGO on every Finalsite site in the country, silently, and leaves
+ * the picker empty on exactly the pages that had a perfectly good crest.
+ *
+ * A vendor's own mark gives itself away in the FILE NAME (`edlio-logo-footer.png`,
+ * `powered-by-apptegy.svg`) or in the markup around it — never in the host alone.
+ */
+function assetIdentity(url: string): string {
+  if (!url) return "";
+  try {
+    const u = new URL(url);
+    return `${u.pathname}${u.search}`;
+  } catch {
+    return url; // relative URL, a data: URI, or "" — already host-free
+  }
+}
+
+/**
  * Everything we know about a candidate that could identify it as not-the-school's.
- * URL, alt text, and the class/id of the element AND its ancestors — because the
- * Edlio mark's own <svg> tag carries no telltale attribute at all; only its parent
- * does.
+ * Asset path, alt text, and the class/id of the element AND its ancestors — because
+ * the Edlio mark's own <svg> tag carries no telltale attribute at all; only its
+ * parent does.
  */
 function vendorVerdict(
   candidate: LogoCandidate,
   markerText: string,
 ): DropReason | null {
-  const haystack = `${candidate.url} ${candidate.alt ?? ""} ${markerText}`;
+  const haystack = `${assetIdentity(candidate.url)} ${candidate.alt ?? ""} ${markerText}`;
   if (VENDOR_ASSET.test(haystack) || VENDOR_CONTAINER.test(haystack)) return "vendor-mark";
   if (SOCIAL_ASSET.test(haystack)) return "social-icon";
   if (TRACKING_ASSET.test(haystack)) return "tracking-pixel";
@@ -103,6 +126,32 @@ function markerFor(tag: ScannedTag): string {
     tag.attrs.id ?? "",
     tag.attrs["aria-label"] ?? "",
     ...tag.ancestors.map((a) => `${a.name} ${a.id} ${a.className}`),
+  ].join(" ");
+}
+
+/**
+ * The marker text the VENDOR test is allowed to see: everything `markerFor` sees
+ * except `<html>` and `<body>`.
+ *
+ * Caught by running it: Edlio writes `<body class="edlio-site">` and Finalsite
+ * writes `<body class="fsElement">`. Those classes are on EVERY element's ancestor
+ * chain, so a vendor test over the full chain drops every image on the page —
+ * including the school's own crest, which is the one thing we came for. It cost the
+ * Edlio fixture its logo the first time this ran.
+ *
+ * A body class says who BUILT the site. It says nothing about who owns this image.
+ * The vendor's own mark identifies itself closer in — its own class (`.edlio-logo`,
+ * `#fsPoweredByFinalsite`, both of which are handled as container ranges anyway),
+ * its aria-label, or its file name.
+ */
+function vendorMarkerFor(tag: ScannedTag): string {
+  return [
+    tag.attrs.class ?? "",
+    tag.attrs.id ?? "",
+    tag.attrs["aria-label"] ?? "",
+    ...tag.ancestors
+      .filter((a) => a.name !== "html" && a.name !== "body")
+      .map((a) => `${a.id} ${a.className}`),
   ].join(" ");
 }
 
@@ -347,10 +396,15 @@ export function rankLogoCandidates(
   // Marker text per candidate, recovered from the tag that produced it. Needed both
   // for the vendor check and for scoring, so it is computed once.
   const markerByOffset = new Map<number, string>();
-  for (const tag of scan.tags) markerByOffset.set(tag.start, markerFor(tag));
+  const vendorMarkerByOffset = new Map<number, string>();
+  for (const tag of scan.tags) {
+    markerByOffset.set(tag.start, markerFor(tag));
+    vendorMarkerByOffset.set(tag.start, vendorMarkerFor(tag));
+  }
 
   for (const candidate of collected) {
     const marker = markerByOffset.get(candidate.offset) ?? candidate.alt ?? "";
+    const vendorMarker = vendorMarkerByOffset.get(candidate.offset) ?? candidate.alt ?? "";
 
     // ── 1. blocklist, before anything else ──
     if (candidate.offset >= 0 && inRanges(candidate.offset, ranges)) {
