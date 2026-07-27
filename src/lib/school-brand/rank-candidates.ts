@@ -337,6 +337,38 @@ export function upgradeCandidateUrl(url: string): string | null {
     u.pathname = dePath;
     changed = true;
   }
+
+  // CLOUDINARY-STYLE PATH TRANSFORMATIONS. This is the one that matters most in
+  // practice and the one this function originally missed: Finalsite (and therefore a
+  // large share of US school sites) delivers every image through Cloudinary, where
+  // the resize lives in a PATH SEGMENT rather than a query string —
+  //
+  //   /images/f_auto,q_auto,t_image_size_2/v1686857649/rsdmoorg/.../Logo.png
+  //           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ the whole segment is the transformation
+  //
+  // Dropping that segment asks the CDN for the ORIGINAL upload, which is the
+  // full-size mark the school actually gave their CMS. A real example: the segment
+  // above serves 512px; the school's original behind it is larger.
+  //
+  // Matched conservatively — every comma-separated token must look like a Cloudinary
+  // parameter (`f_auto`, `w_300`, `t_image_size_2`) AND at least one must be a key
+  // that actually affects size or format. A path segment that merely contains an
+  // underscore is left alone, because `/assets/logo_final/` is a directory, not a
+  // transformation, and stripping it would 404 every image on such a host.
+  const SIZING_KEYS = /^(w|h|c|t|f|q|dpr|ar|e|g|x|y|z|b|bo|r)_/;
+  const segments = u.pathname.split("/");
+  const kept = segments.filter((seg) => {
+    if (!seg.includes("_")) return true;
+    const tokens = seg.split(",");
+    const allParams = tokens.every((t) => /^[a-z]{1,3}_[A-Za-z0-9_.:%-]+$/.test(t));
+    const anySizing = tokens.some((t) => SIZING_KEYS.test(t));
+    return !(allParams && anySizing);
+  });
+  if (kept.length !== segments.length) {
+    u.pathname = kept.join("/");
+    changed = true;
+  }
+
   return changed ? u.toString() : null;
 }
 

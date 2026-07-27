@@ -102,8 +102,13 @@ export function buildEmptyState(reason: {
  * handle, and the difference between "nothing there" and "we crashed" is a field
  * rather than a try/catch.
  */
-export function parseSchoolPage(html: string, pageUrl: string): SchoolProfile {
-  const scan = scanPage(html ?? "", pageUrl ?? "");
+export function parseSchoolPage(
+  html: string,
+  pageUrl: string,
+  /** CSS from linked stylesheets the caller fetched. See `scanPage`. */
+  extraCss: string[] = [],
+): SchoolProfile {
+  const scan = scanPage(html ?? "", pageUrl ?? "", extraCss);
   const platform = detectPlatform(scan.html, scan.pageUrl);
   const warnings: string[] = [];
 

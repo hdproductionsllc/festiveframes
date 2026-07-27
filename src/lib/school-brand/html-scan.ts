@@ -531,7 +531,20 @@ export interface PageScan {
   text: string;
 }
 
-export function scanPage(html: string, pageUrl: string): PageScan {
+export function scanPage(
+  html: string,
+  pageUrl: string,
+  /**
+   * CSS from EXTERNAL stylesheets, already fetched by the caller.
+   *
+   * Inline `<style>` alone was a real blind spot: this package claims to collect
+   * CSS-background logos, but a Finalsite/WordPress theme compiles its header rules
+   * into a linked .css file, so the crest — and most of the brand palette — lived
+   * somewhere nothing here ever read. Threaded in as a parameter rather than fetched
+   * here, because this module must stay pure and network-free to be testable.
+   */
+  extraCss: string[] = [],
+): PageScan {
   const tags = scanTags(html);
   const titleTag = tags.find((t) => t.name === "title");
   let host = "";
@@ -546,7 +559,7 @@ export function scanPage(html: string, pageUrl: string): PageScan {
     host,
     title: titleTag ? innerText(elementInner(html, titleTag)) : "",
     meta: metaMap(html),
-    styles: styleBlocks(html),
+    styles: [...styleBlocks(html), ...extraCss],
     jsonLd: jsonLdBlocks(html),
     tags,
     text: innerText(html),
