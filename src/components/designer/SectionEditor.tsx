@@ -5,6 +5,7 @@ import { SECTION_LABELS, sectionSupportsText, sectionSupportsTiles } from "@/lib
 import { SCHOOL_COLLEGIATE_FONTS, SCHOOL_OTHER_FONTS } from "@/lib/constants/frame";
 import { SCHOOL_PHRASE_GROUPS } from "@/data/school-phrases";
 import type { BottomBarConfig, SectionId } from "@/lib/types";
+import { sectionSupportsLogo } from "@/lib/utils/banner-logo";
 import { useSnappetUpload } from "./useSnappetUpload";
 
 // Editor for the SELECTED section (school builder).
@@ -181,7 +182,12 @@ export function SectionEditor() {
             />
           </label>
 
-          <LogoRow sectionId={selectedSectionId} logo={sec.text?.logo} />
+          {/* Bottom banner only — see `sectionSupportsLogo`. Both renderers enforce
+              the same rule, so a design saved before this control was narrowed does
+              not keep drawing a crest on the top strip. */}
+          {sectionSupportsLogo(selectedSectionId) && (
+            <LogoRow sectionId={selectedSectionId} logo={sec.text?.logo} />
+          )}
         </div>
       ) : (
         <div className="ff-well space-y-3 p-3.5">

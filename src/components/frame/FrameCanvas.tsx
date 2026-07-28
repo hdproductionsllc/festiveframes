@@ -8,6 +8,7 @@ import { useFrameLayout } from "@/hooks/useFrameLayout";
 import { useDesignStore } from "@/stores/design-store";
 import { useUIStore } from "@/stores/ui-store";
 import { SECTION_IDS, sectionBounds, slotSuppressed } from "@/lib/utils/sections";
+import { bannerConfigFor } from "@/lib/utils/banner-logo";
 import { buildGrid } from "@/lib/utils/slot-generator";
 import { coveredSlotIds } from "@/lib/utils/text-bar";
 import { coveredBySnappets, hasAnySpan, isMultiCell, resolveSnappetResize, snappetRect, tileSpan, visibleAnchorSlots, type SnappetPreview } from "@/lib/utils/snappet";
@@ -592,7 +593,7 @@ export const FrameCanvas = forwardRef<FrameCanvasHandle, FrameCanvasProps>(
                     <SectionTextElement
                       width={box.width}
                       height={box.height}
-                      config={sec.text}
+                      config={bannerConfigFor(id, sec.text)}
                       unit={tileSize}
                     />
                   ) : (

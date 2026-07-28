@@ -1,4 +1,4 @@
-import type { BottomBarConfig } from "@/lib/types";
+import type { BottomBarConfig, SectionId } from "@/lib/types";
 
 // ─── A crest set INTO the banner ─────────────────────────────────────────────
 //
@@ -22,6 +22,34 @@ export const LOGO_HEIGHT_RATIO = 0.72;
 
 /** Gap between the crest and the text, as a fraction of the banner's height. */
 export const LOGO_GAP_RATIO = 0.08;
+
+/**
+ * Which banner may carry a crest: the BOTTOM one only.
+ *
+ * The top strip is a single tile row. A crest there comes out around half an inch on
+ * the printed part — small enough to read as a smudge rather than a mark — and it
+ * takes width from the one line carrying the school's name. The bottom panel is two
+ * rows, which is where a crest is actually worth having.
+ */
+export function sectionSupportsLogo(id: SectionId): boolean {
+  return id === "bottom";
+}
+
+/**
+ * The config a section's banner should actually render with.
+ *
+ * Enforced HERE rather than in the editor alone, because the editor only governs what
+ * gets written from now on: a design saved while the top bar could carry a crest would
+ * otherwise keep drawing one with no control anywhere to remove it — the same stranded
+ * state `normalizeSections` exists to clear.
+ *
+ * Returns the SAME object when there is nothing to strip, so it can sit in a render
+ * path without handing React a new prop on every pass.
+ */
+export function bannerConfigFor(id: SectionId, config: BottomBarConfig): BottomBarConfig {
+  if (!config.logo || sectionSupportsLogo(id)) return config;
+  return { ...config, logo: undefined };
+}
 
 export interface BannerLogoLayout {
   /** Square box for the crest. Crests are usually square-ish; a wide mark letterboxes

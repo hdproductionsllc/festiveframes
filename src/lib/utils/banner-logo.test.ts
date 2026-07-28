@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { bannerLogoLayout, LOGO_HEIGHT_RATIO } from "./banner-logo";
+import { bannerConfigFor, bannerLogoLayout, sectionSupportsLogo, LOGO_HEIGHT_RATIO } from "./banner-logo";
+import type { BottomBarConfig } from "@/lib/types";
 
 const BAR = { width: 800, height: 120, inset: 10 };
 const logo = (placement: "left" | "right" | "both") => ({
@@ -60,5 +61,39 @@ describe("bannerLogoLayout", () => {
     const l = bannerLogoLayout(logo("both"), 200, 160, 10)!;
     expect(l.textX).toBeGreaterThanOrEqual(0);
     expect(l.textX + l.textWidth).toBeLessThanOrEqual(200);
+  });
+});
+
+describe("sectionSupportsLogo / bannerConfigFor", () => {
+  const cfg = (over: Partial<BottomBarConfig> = {}): BottomBarConfig => ({
+    text: "GO WILDCATS",
+    fontFamily: "sans-serif",
+    fontSize: 1,
+    textColor: "#ffffff",
+    backgroundColor: "#1B2A4A",
+    textAlign: "center",
+    letterSpacing: 0,
+    ...over,
+  });
+
+  it("allows a crest on the bottom banner only", () => {
+    expect(sectionSupportsLogo("bottom")).toBe(true);
+    expect(sectionSupportsLogo("top")).toBe(false);
+    expect(sectionSupportsLogo("wing-left")).toBe(false);
+  });
+
+  it("strips a crest the top strip is no longer allowed to carry", () => {
+    // A design saved while the top bar could take one keeps the field forever; the
+    // editor stopped offering the control, so nothing else could ever remove it.
+    const withLogo = cfg({ logo: { url: "data:image/png;base64,x", placement: "left" } });
+    expect(bannerConfigFor("top", withLogo).logo).toBeUndefined();
+    expect(bannerConfigFor("bottom", withLogo).logo).toEqual(withLogo.logo);
+  });
+
+  it("returns the SAME object when there is nothing to strip, so renders don't churn", () => {
+    const plain = cfg();
+    expect(bannerConfigFor("top", plain)).toBe(plain);
+    const withLogo = cfg({ logo: { url: "x", placement: "both" } });
+    expect(bannerConfigFor("bottom", withLogo)).toBe(withLogo);
   });
 });

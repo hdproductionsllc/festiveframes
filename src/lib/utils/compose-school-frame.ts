@@ -60,7 +60,7 @@ import {
 } from "@/lib/utils/sections";
 import { panelRects, type PanelRect } from "@/lib/utils/panels";
 import { bannerBands } from "@/lib/utils/banner-tiers";
-import { bannerLogoLayout } from "@/lib/utils/banner-logo";
+import { bannerConfigFor, bannerLogoLayout, sectionSupportsLogo } from "@/lib/utils/banner-logo";
 import { getPiece } from "@/data/sets";
 import {
   BRASS,
@@ -791,8 +791,8 @@ export function drawSchoolFrame(
     if (!box) continue;
     if (sec.mode === "text" && sec.text) {
       drawTextBlock(
-        ctx, sec.text, box.x, box.y, box.width, box.height, m.tileSize, design.rimColor,
-        images.logos.get(id) ?? null,
+        ctx, bannerConfigFor(id, sec.text), box.x, box.y, box.width, box.height, m.tileSize,
+        design.rimColor, images.logos.get(id) ?? null,
       );
     } else if (sec.mode === "image") {
       const img = images.sections.get(id);
@@ -1008,7 +1008,7 @@ async function renderSchoolFrameCanvas(
   // roughly 0.7in square at 300dpi, where the preview proxy would visibly soften.
   for (const id of SECTION_IDS) {
     const sec = sections[id];
-    const logo = sec?.mode === "text" ? sec.text?.logo : undefined;
+    const logo = sec?.mode === "text" && sectionSupportsLogo(id) ? sec.text?.logo : undefined;
     if (!logo?.url) continue;
     jobs.push(
       (async () => {

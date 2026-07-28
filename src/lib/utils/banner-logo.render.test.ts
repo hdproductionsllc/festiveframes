@@ -8,9 +8,10 @@ import type { BottomBarConfig, SectionState } from "@/lib/types";
 
 // A LOOK at the crest, not an assertion about it. Set BANNER_LOGO_OUT to a directory
 // and this writes the print-path renders that CLAUDE.md requires before a visual
-// change is reported: the two banner shapes the crest actually takes (a 1-row top bar
-// and the 2-row bottom panel) on a light and a dark field. Skipped without the env
-// var so it costs the normal suite nothing.
+// change is reported: the bottom banner on a light and a dark field, each with a
+// crest on one end and on both. The top bar carries a logo in its config on purpose,
+// so the render also shows `bannerConfigFor` refusing to draw one there. Skipped
+// without the env var so it costs the normal suite nothing.
 
 const OUT = process.env.BANNER_LOGO_OUT;
 
