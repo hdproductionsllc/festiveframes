@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { createCanvas } from "@napi-rs/canvas";
+import { createCanvas, loadImage, type Canvas } from "@napi-rs/canvas";
 import { analyzeBackdrop, keyBackground, type RGBA } from "./key-background";
 
 // Fixtures are DRAWN rather than checked in, so each case says in code exactly what
@@ -176,5 +176,134 @@ describe("keyBackground", () => {
     keyBackground(img);
     // Well below the disc, inside the shadow's reach but outside the mark.
     expect(alphaAt(img, 120, 196)).toBe(0);
+  });
+});
+
+// ─── SOURCED artwork, not artwork we made ────────────────────────────────────
+//
+// A crest is not drawn here, it is taken off a school's own site: a JPEG at a few
+// hundred pixels, sometimes on an off-white or grey card, sometimes with a drop
+// shadow baked in, occasionally an 8-bit GIF from a site that has not been touched
+// since 2006. The clean PNG above is the case that never happens.
+//
+// A false alarm is recorded here on purpose. These cases first appeared to key
+// badly — confetti along the shield, a chewed rim — and the cause was the harness:
+// @napi-rs/canvas takes JPEG quality as 0-100, and being handed 0.7 it produced a
+// 2.6 KB file no server would ever serve. Two filters were written against that
+// phantom and then removed. Anything added here later needs evidence from a real
+// sourced file, not from a synthetic one.
+
+describe("keyBackground on sourced artwork", () => {
+  /** Round-trip through a REAL JPEG encode so the input carries genuine ringing.
+   *  Quality is 0-100 for this encoder — passing 0.7 silently means "worst possible". */
+  function jpegRoundTrip(c: Canvas, quality: number) {
+    expect(quality).toBeGreaterThan(1); // the exact mistake that faked a defect
+    const buf = c.toBuffer("image/jpeg", quality);
+    return buf;
+  }
+
+  function scene(size: number, card: string, shadow: boolean): Canvas {
+    const c = createCanvas(size, size) as Canvas;
+    const g = c.getContext("2d");
+    const k = size / 500;
+    g.fillStyle = card;
+    g.fillRect(0, 0, size, size);
+    if (shadow) {
+      g.shadowColor = "rgba(0,0,0,0.30)";
+      g.shadowBlur = 24 * k;
+      g.shadowOffsetY = 9 * k;
+    }
+    g.fillStyle = "#1B2A4A";
+    g.beginPath();
+    g.moveTo(150 * k, 70 * k);
+    g.lineTo(350 * k, 70 * k);
+    g.lineTo(350 * k, 290 * k);
+    g.quadraticCurveTo(350 * k, 410 * k, 250 * k, 430 * k);
+    g.quadraticCurveTo(150 * k, 410 * k, 150 * k, 290 * k);
+    g.closePath();
+    g.fill();
+    g.shadowColor = "transparent";
+    g.strokeStyle = "#C8102E";
+    g.lineWidth = 11 * k;
+    g.stroke();
+    g.fillStyle = "#ffffff";
+    g.font = `bold ${130 * k}px sans-serif`;
+    g.textAlign = "center";
+    g.textBaseline = "middle";
+    g.fillText("W", 250 * k, 230 * k);
+    return c;
+  }
+
+  /** Mean brightness of the partial-alpha pixels. The artwork is navy and red, so a
+   *  surviving card shows up here as a number far lighter than either. */
+  function edgeMean(img: RGBA): number {
+    let n = 0, sum = 0;
+    for (let i = 0; i < img.data.length; i += 4) {
+      const a = img.data[i + 3];
+      if (a > 24 && a < 232) {
+        n++;
+        sum += (img.data[i] + img.data[i + 1] + img.data[i + 2]) / 3;
+      }
+    }
+    return n ? sum / n : 0;
+  }
+
+  const CASES: [string, number, string, boolean, number][] = [
+    // 400px is the floor the print gate already enforces: it blocks below 200 DPI and
+    // the smallest badge is 1.982in, so nothing smaller can reach print anyway.
+    ["a 400px q60 JPEG", 400, "#ffffff", false, 60],
+    ["a 500px q70 JPEG", 500, "#ffffff", false, 70],
+    ["an off-white card", 500, "#f4f2ed", false, 70],
+    ["a grey card", 500, "#e9e9e9", false, 70],
+    ["a baked-in drop shadow", 500, "#ffffff", true, 80],
+    ["a rough q45 JPEG", 500, "#ffffff", false, 45],
+  ];
+
+  it.each(CASES)("keys %s without leaving the card behind", async (_label, size, card, shadow, q) => {
+    const buf = jpegRoundTrip(scene(size, card, shadow), q);
+    const decoded = await loadImage(buf);
+    const c = createCanvas(decoded.width, decoded.height);
+    const g = c.getContext("2d");
+    g.drawImage(decoded, 0, 0);
+    const raw = g.getImageData(0, 0, c.width, c.height);
+    const img: RGBA = {
+      data: raw.data as unknown as Uint8ClampedArray,
+      width: c.width,
+      height: c.height,
+    };
+
+    const report = keyBackground(img);
+    expect(report.keyed).toBe(true);
+    // The card is roughly 70% of the frame in this composition. Well under means the
+    // card survived; well over means the crest went with it.
+    expect(report.removed).toBeGreaterThan(0.6);
+    expect(report.removed).toBeLessThan(0.8);
+    // The white W inside the shield is the detail a colour-only keyer destroys.
+    expect(img.data[(Math.round(img.height * 0.46) * img.width + Math.round(img.width * 0.5)) * 4 + 3]).toBe(255);
+    // No pale ring: the edge sits with the artwork, not with the card it came off.
+    expect(edgeMean(img)).toBeLessThan(115);
+  });
+
+  it("keys an 8-bit dithered GIF, where the card is not one colour at the pixel level", async () => {
+    const c = scene(500, "#ffffff", false);
+    const g = c.getContext("2d");
+    const raw = g.getImageData(0, 0, 500, 500);
+    const M = [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]];
+    for (let y = 0; y < 500; y++) {
+      for (let x = 0; x < 500; x++) {
+        const k = (y * 500 + x) * 4;
+        const t = (M[y & 3][x & 3] / 16 - 0.5) * 24;
+        for (let j = 0; j < 3; j++) {
+          raw.data[k + j] = Math.max(0, Math.min(255, Math.round((raw.data[k + j] + t) / 24) * 24));
+        }
+      }
+    }
+    const img: RGBA = { data: raw.data as unknown as Uint8ClampedArray, width: 500, height: 500 };
+    // The dither is real spread on the card, and the split floor is measured from it
+    // rather than assumed — this is the one case where that floor does anything.
+    expect(analyzeBackdrop(img).noise).toBeGreaterThan(4);
+    const report = keyBackground(img);
+    expect(report.keyed).toBe(true);
+    expect(edgeMean(img)).toBeLessThan(115);
   });
 });

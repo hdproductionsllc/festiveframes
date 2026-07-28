@@ -42,6 +42,22 @@ const SPLIT_FRACTION = 0.35;
  *  up splitting its own sensor noise into "backdrop" and "subject". */
 const MIN_SPLIT = 28;
 
+/**
+ * How far above the backdrop's OWN variation the split must sit.
+ *
+ * Sourced crests are JPEGs, and a JPEG's flat white card is not flat: 8x8 blocking
+ * and chroma subsampling leave it wandering several levels either side of its mean.
+ * Measured on a 240px q75 re-encode of a crest on a #E9E9E9 card, that wander was
+ * enough to push whole blocks past a fixed split, and they survived keying as
+ * speckle scattered across what should have been empty background.
+ *
+ * So the floor is measured from the card in front of us rather than assumed. A clean
+ * PNG has almost no spread and keeps the fixed floor; a heavily compressed JPEG
+ * raises its own bar.
+ */
+const NOISE_MARGIN = 2.4;
+
+
 /** How far to look for a local foreground colour when solving an edge pixel's
  *  coverage. Two pixels covers ordinary antialiasing and JPEG ringing. */
 const EDGE_RADIUS = 2;
@@ -122,7 +138,9 @@ function distance(
  * whole basis for refusing: a crest photographed on a gym floor has a ring of
  * floorboards, and no keyer should touch it.
  */
-export function analyzeBackdrop(img: RGBA): { rgb: [number, number, number]; flatness: number } {
+export function analyzeBackdrop(
+  img: RGBA,
+): { rgb: [number, number, number]; flatness: number; noise: number } {
   const { data: d, width: W, height: H } = img;
   const samples: [number, number, number][] = [];
   const stepX = Math.max(1, Math.floor(W / 64));
@@ -136,7 +154,7 @@ export function analyzeBackdrop(img: RGBA): { rgb: [number, number, number]; fla
   for (let x = 0; x < W; x += stepX) { push(x, 2); push(x, 3); push(x, H - 3); push(x, H - 4); }
   for (let y = 0; y < H; y += stepY) { push(2, y); push(3, y); push(W - 3, y); push(W - 4, y); }
 
-  if (samples.length === 0) return { rgb: [255, 255, 255], flatness: 0 };
+  if (samples.length === 0) return { rgb: [255, 255, 255], flatness: 0, noise: 0 };
 
   const med = (k: 0 | 1 | 2) => {
     const v = samples.map((s) => s[k]).sort((a, b) => a - b);
@@ -145,8 +163,14 @@ export function analyzeBackdrop(img: RGBA): { rgb: [number, number, number]; fla
   const rgb: [number, number, number] = [med(0), med(1), med(2)];
   const [R, G, B] = rgb;
   const bgCr = R - G, bgCb = B - G, bgL = luma(R, G, B);
-  const agree = samples.filter((s) => distance(s[0], s[1], s[2], bgCr, bgCb, bgL) <= FLATNESS_TOLERANCE);
-  return { rgb, flatness: agree.length / samples.length };
+  const spread = samples
+    .map((s) => distance(s[0], s[1], s[2], bgCr, bgCb, bgL))
+    .sort((a, b) => a - b);
+  const agree = spread.filter((v) => v <= FLATNESS_TOLERANCE).length;
+  // How far the card wanders from its own median. The 90th percentile rather than the
+  // maximum, so one dark speck in a corner does not set the bar for the whole image.
+  const noise = spread[Math.min(spread.length - 1, Math.floor(spread.length * 0.9))];
+  return { rgb, flatness: agree / samples.length, noise };
 }
 
 /**
@@ -165,19 +189,21 @@ function fill(
   W: number, H: number,
   seed: number, to: number, from = 0,
 ): number {
-  if (alpha[seed] === 255 || label[seed] !== from) return 0;
+  const open = (q: number) => alpha[q] < 255 && label[q] === from;
+  if (!open(seed)) return 0;
   let filled = 0;
   const stack: number[] = [seed];
   while (stack.length) {
     const p = stack.pop()!;
+    if (label[p] === to) continue; // reached by an earlier span
     const y = (p / W) | 0;
     const rowStart = y * W;
     const rowEnd = rowStart + W - 1;
     // Walk left and right to the ends of this run.
     let l = p;
-    while (l > rowStart && alpha[l - 1] < 255 && label[l - 1] === from) l--;
+    while (l > rowStart && open(l - 1)) l--;
     let r = p;
-    while (r < rowEnd && alpha[r + 1] < 255 && label[r + 1] === from) r++;
+    while (r < rowEnd && open(r + 1)) r++;
     for (let i = l; i <= r; i++) { label[i] = to; filled++; }
     // Seed the rows above and below, once per contiguous run so the stack stays small.
     for (const ny of [y - 1, y + 1]) {
@@ -186,9 +212,9 @@ function fill(
       let inRun = false;
       for (let x = l - rowStart; x <= r - rowStart; x++) {
         const q = base + x;
-        const open = alpha[q] < 255 && label[q] === from;
-        if (open && !inRun) { stack.push(q); inRun = true; }
-        else if (!open) inRun = false;
+        const isOpen = open(q);
+        if (isOpen && !inRun) { stack.push(q); inRun = true; }
+        else if (!isOpen) inRun = false;
       }
     }
   }
@@ -220,7 +246,7 @@ function alreadyCutOut(img: RGBA): boolean {
  * and letting someone print it.
  */
 export function keyBackground(img: RGBA): KeyReport {
-  const { rgb, flatness } = analyzeBackdrop(img);
+  const { rgb, flatness, noise } = analyzeBackdrop(img);
   const backdrop = hex(rgb[0], rgb[1], rgb[2]);
 
   if (alreadyCutOut(img)) {
@@ -262,13 +288,23 @@ export function keyBackground(img: RGBA): KeyReport {
     acc += hist[b];
     if (acc >= target) { p95 = b; break; }
   }
-  const split = Math.max(MIN_SPLIT, p95 * SPLIT_FRACTION);
+  // Two floors: one absolute, one measured from how much the card itself wanders.
+  const split = Math.max(MIN_SPLIT, noise * NOISE_MARGIN, p95 * SPLIT_FRACTION);
 
   // Alpha starts BINARY. A soft drop shadow is the backdrop at lower brightness, so
   // it falls below the split and leaves with it — which is the point: left in, it
   // prints as a grey rectangle round the mark.
   const alpha = new Uint8Array(total);
   for (let p = 0; p < total; p++) alpha[p] = dist[p] >= split ? 255 : 0;
+
+  // NO despeckle or majority filter here, deliberately. Both were written and then
+  // removed: they were answering JPEG confetti that turned out to be an artifact of a
+  // test harness passing quality 0.7 to an encoder that wanted 0-100, i.e. a 2.6 KB
+  // file no site would ever serve. Re-measured across 400-800px JPEGs at q45-q80, an
+  // off-white card, a grey card, a drop shadow and an 8-bit dithered GIF, they moved
+  // the partial-pixel count by single digits and the edge colour not at all — while a
+  // majority filter rounds off anything thinner than a pixel. If a real sourced logo
+  // ever shows speckle, that is the evidence to add it back on.
 
   // PASS 2 — CONNECTIVITY. Only backdrop that reaches the edge of the picture is the
   // background. Judging by colour alone deletes every light detail INSIDE the mark
