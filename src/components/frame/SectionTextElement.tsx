@@ -5,6 +5,7 @@ import type { BottomBarConfig } from "@/lib/types";
 import { bannerBands } from "@/lib/utils/banner-tiers";
 import { chromeInset, glossStops, ringCss, textChenilleCss, tileEdgeCss } from "@/lib/utils/tile-theme";
 import { useDesignStore } from "@/stores/design-store";
+import { bannerLogoLayout } from "@/lib/utils/banner-logo";
 
 // A section's TEXT rendered as a MULTI-LINE block that honors `\n` line breaks and
 // works on a wide top/bottom bar AND a tall/narrow side panel (wing).
@@ -109,7 +110,11 @@ export function SectionTextElement({
     short * PAD_RATIO,
     chromeInset(width, height, config.backgroundColor, cell),
   );
-  const contentW = Math.max(1, width - pad * 2);
+  // A crest set into the banner takes width from the text BEFORE the font is fitted.
+  // Fitting to the full bar and then drawing a crest over one end is how you get
+  // words running underneath a mascot.
+  const logoLayout = bannerLogoLayout(config, width, height, pad);
+  const contentW = Math.max(1, (logoLayout?.textWidth ?? width - pad * 2));
   const contentH = Math.max(1, height - pad * 2);
 
   // Bumped once web fonts finish loading so we re-measure with real glyph metrics
@@ -170,6 +175,7 @@ export function SectionTextElement({
         boxShadow: edge.outerShadow,
         padding: edge.rimInset,
         overflow: "hidden",
+        position: "relative",
       }}
     >
       <div
@@ -211,6 +217,43 @@ export function SectionTextElement({
           </div>
         </div>
       </div>
+
+      {/* THE CREST. Positioned against the OUTER banner box, not inside the text
+          column, so it sits over the bevel band's inner edge exactly where the print
+          path puts it — the text column is inset by the chrome and would place it
+          differently. `contain` because a crest is a mark, not a fill: a wide mark
+          letterboxes rather than being cropped to a square. */}
+      {logoLayout?.leftX != null && <BannerLogo layout={logoLayout} x={logoLayout.leftX} url={config.logo!.url} />}
+      {logoLayout?.rightX != null && <BannerLogo layout={logoLayout} x={logoLayout.rightX} url={config.logo!.url} />}
     </div>
+  );
+}
+
+/** One crest, placed absolutely inside the banner. */
+function BannerLogo({
+  layout,
+  x,
+  url,
+}: {
+  layout: NonNullable<ReturnType<typeof bannerLogoLayout>>;
+  x: number;
+  url: string;
+}) {
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={url}
+      alt=""
+      draggable={false}
+      style={{
+        position: "absolute",
+        left: x,
+        top: layout.y,
+        width: layout.size,
+        height: layout.size,
+        objectFit: "contain",
+        pointerEvents: "none",
+      }}
+    />
   );
 }

@@ -156,6 +156,30 @@ export interface BottomBarConfig {
   backgroundColor: string;
   textAlign: "left" | "center" | "right";
   letterSpacing: number; // px
+  /**
+   * A crest or mascot mark set INTO the banner, flanking the text.
+   *
+   * The banner is the widest single thing on the frame and it was text-only, which
+   * meant a school's actual mark could never sit next to its name — the one
+   * arrangement every gym wall, letterhead and jersey already uses. Set from the
+   * uploads tray or a scanned crest.
+   *
+   * Absent on every /build bar and on any banner the customer has not opted into, so
+   * the text-only layout is untouched.
+   *
+   * SECTION banners only (the school builder's top/bottom panels). A `PlacedTextBar`
+   * reuses this config type but neither of its two renderers draws a crest, and
+   * nothing sets one there — if that ever changes, BOTH have to change together or
+   * the builder and the print sheet will disagree.
+   */
+  logo?: {
+    /** Preview data URL — what both renderers draw on screen. */
+    url: string;
+    /** IndexedDB key for the print-resolution original, when there is one. */
+    fullResId?: string;
+    /** Which side(s) of the text it sits on. */
+    placement: "left" | "right" | "both";
+  };
 }
 
 export interface QRCodeConfig {

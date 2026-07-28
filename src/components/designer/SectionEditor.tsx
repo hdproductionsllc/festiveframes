@@ -4,6 +4,7 @@ import { useDesignStore } from "@/stores/design-store";
 import { SECTION_LABELS, sectionSupportsText, sectionSupportsTiles } from "@/lib/utils/sections";
 import { SCHOOL_COLLEGIATE_FONTS, SCHOOL_OTHER_FONTS } from "@/lib/constants/frame";
 import { SCHOOL_PHRASE_GROUPS } from "@/data/school-phrases";
+import type { BottomBarConfig, SectionId } from "@/lib/types";
 import { useSnappetUpload } from "./useSnappetUpload";
 
 // Editor for the SELECTED section (school builder).
@@ -179,6 +180,8 @@ export function SectionEditor() {
                 [&::-webkit-slider-thumb]:shadow-sm [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white"
             />
           </label>
+
+          <LogoRow sectionId={selectedSectionId} logo={sec.text?.logo} />
         </div>
       ) : (
         <div className="ff-well space-y-3 p-3.5">
@@ -208,6 +211,101 @@ export function SectionEditor() {
       )}
 
       {cropModal}
+    </div>
+  );
+}
+
+const PLACEMENTS: { id: NonNullable<BottomBarConfig["logo"]>["placement"]; label: string }[] = [
+  { id: "left", label: "Left" },
+  { id: "right", label: "Right" },
+  { id: "both", label: "Both ends" },
+];
+
+/**
+ * Put a crest beside the banner text.
+ *
+ * It draws from the UPLOADS TRAY rather than opening its own file picker, and that is
+ * deliberate: a school's mascot is already in the tray by the time anyone reaches this
+ * control — the URL scan puts it there, and so does "Add art" on a wing. A second
+ * upload path here would mean the same crest stored twice, cropped differently, at two
+ * resolutions, and the print sheet picking whichever one it happened to be handed.
+ *
+ * With an empty tray there is nothing to toggle, so it says where crests come from
+ * instead of offering a checkbox that would do nothing.
+ */
+function LogoRow({ sectionId, logo }: { sectionId: SectionId; logo: BottomBarConfig["logo"] }) {
+  const uploads = useDesignStore((s) => s.uploads);
+  const setSectionText = useDesignStore((s) => s.setSectionText);
+
+  if (uploads.length === 0) {
+    return (
+      <div>
+        <span className="ff-label mb-1 block">Mascot or crest</span>
+        <p className="ff-micro">
+          Scan your school&apos;s website, or add art to a side panel - anything you
+          upload shows up here and can sit beside this text.
+        </p>
+      </div>
+    );
+  }
+
+  const on = !!logo?.url;
+  const toggle = () => {
+    if (on) {
+      setSectionText(sectionId, { logo: undefined });
+      return;
+    }
+    // Newest first in the tray, so [0] is what the user just added — which is nearly
+    // always the crest they came here to use.
+    const pick = uploads[0];
+    setSectionText(sectionId, {
+      logo: { url: pick.url, fullResId: pick.fullResId, placement: "left" },
+    });
+  };
+
+  return (
+    <div>
+      <label className="flex cursor-pointer items-center gap-2">
+        <input type="checkbox" checked={on} onChange={toggle} className="h-4 w-4 cursor-pointer accent-[var(--ff-accent)]" />
+        <span className="ff-label">Put a mascot or crest beside the text</span>
+      </label>
+
+      {on && (
+        <div className="mt-2 space-y-2">
+          <div className="flex flex-wrap gap-1.5">
+            {uploads.map((u) => (
+              <button
+                key={u.id}
+                type="button"
+                title={u.name}
+                onClick={() =>
+                  setSectionText(sectionId, {
+                    logo: { url: u.url, fullResId: u.fullResId, placement: logo?.placement ?? "left" },
+                  })
+                }
+                className={`h-11 w-11 overflow-hidden rounded-[6px] border-2 bg-white ${
+                  logo?.url === u.url ? "border-[var(--ff-accent)]" : "border-[var(--ff-line)]"
+                }`}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={u.url} alt={u.name} className="h-full w-full object-contain" />
+              </button>
+            ))}
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {PLACEMENTS.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => setSectionText(sectionId, { logo: { ...logo!, placement: p.id } })}
+                className={`ff-chip ${logo?.placement === p.id ? "ff-chip-on" : ""}`}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

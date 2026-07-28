@@ -152,6 +152,7 @@ describe("drawSchoolFrame (node-canvas render of a seeded design)", () => {
     snappets: new Map(),
     sections: new Map(),
     qr: null,
+    logos: new Map(),
   });
 
   it("paints the banner background, white tiles, and produces a non-trivial PNG", async () => {
@@ -219,7 +220,7 @@ describe("print backing — nothing reaches the printer transparent", () => {
     sections: {},
   };
   const bundle = (): SchoolImageBundle => ({
-    plate: null, pieces: new Map(), snappets: new Map(), sections: new Map(), qr: null,
+    plate: null, pieces: new Map(), snappets: new Map(), sections: new Map(), qr: null, logos: new Map(),
   });
 
   it("leaves NO transparent or partial-alpha pixel anywhere in the render", () => {

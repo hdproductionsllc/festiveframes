@@ -60,6 +60,7 @@ import {
 } from "@/lib/utils/sections";
 import { panelRects, type PanelRect } from "@/lib/utils/panels";
 import { bannerBands } from "@/lib/utils/banner-tiers";
+import { bannerLogoLayout } from "@/lib/utils/banner-logo";
 import { getPiece } from "@/data/sets";
 import {
   BRASS,
@@ -268,6 +269,10 @@ export interface SchoolImageBundle {
   sections: Map<SectionId, DrawableImage>;
   /** The QR code, or null when no banner carries one. */
   qr: DrawableImage | null;
+  /** Banner crests, keyed by the SectionId whose text config carries one. Separate
+   *  from `sections` because that map holds an IMAGE-mode panel — a section can be
+   *  in text mode and still have a crest, and the two are drawn quite differently. */
+  logos: Map<SectionId, DrawableImage>;
 }
 
 // ─── Pure geometry (no DOM — unit-testable in node) ──────────────────────────
@@ -507,6 +512,8 @@ function drawTextBlock(
   unit: number,
   /** School colour standing in for the brass, so the bars match the badges. */
   rimColor?: string | null,
+  /** The crest bitmap, when this banner carries one and it loaded. */
+  logoImg?: DrawableImage | null,
 ) {
   const bevel = bevelMetrics(w, h, cfg.backgroundColor, unit);
   // A banner never reaches a frame corner on this geometry — the wings do, and they
@@ -534,7 +541,11 @@ function drawTextBlock(
     Math.min(w, h) * SECTION_PAD_RATIO,
     chromeInset(w, h, cfg.backgroundColor, unit),
   );
-  const contentW = Math.max(1, w - pad * 2);
+  // A crest set into the banner takes width from the text BEFORE the font is fitted,
+  // and shifts where the text is anchored. Same helper the builder calls, so the
+  // printed lockup matches the one on screen rather than approximating it.
+  const logoBox = bannerLogoLayout(cfg, w, h, pad);
+  const contentW = Math.max(1, logoBox?.textWidth ?? w - pad * 2);
   const contentH = Math.max(1, h - pad * 2);
   const headline = cfg.text ?? "";
   const tagline = cfg.tagline?.trim() ? cfg.tagline : "";
@@ -542,7 +553,13 @@ function drawTextBlock(
   const ls = cfg.letterSpacing ?? 0;
   const contentTop = y + pad;
   const align = cfg.textAlign;
-  const tx = align === "left" ? x + pad : align === "right" ? x + w - pad : x + w / 2;
+  const textLeft = x + (logoBox?.textX ?? pad);
+  const tx =
+    align === "left"
+      ? textLeft
+      : align === "right"
+        ? textLeft + contentW
+        : textLeft + contentW / 2;
 
   // Draw one tier's `\n` lines, vertically centered within a band that starts
   // `bandTop` below the content top and is `bandH` tall.
@@ -609,6 +626,19 @@ function drawTextBlock(
     } else {
       const fontPx = fitSectionFont(ctx, headline, cfg.fontFamily, ls, contentW, contentH, fill);
       drawTier(headline, fontPx, 0, contentH, cfg.fontFamily);
+    }
+  }
+
+  // THE CREST, last so it sits over the gloss rather than under it — the same order
+  // the builder gets for free by rendering the <img> after the text column. "contain"
+  // because a crest is a mark, not a fill: a wide mark letterboxes inside its square
+  // instead of being cropped, which is what the box was sized for.
+  if (logoImg && logoBox) {
+    if (logoBox.leftX != null) {
+      drawFit(ctx, logoImg, x + logoBox.leftX, y + logoBox.y, logoBox.size, logoBox.size, "contain", 1);
+    }
+    if (logoBox.rightX != null) {
+      drawFit(ctx, logoImg, x + logoBox.rightX, y + logoBox.y, logoBox.size, logoBox.size, "contain", 1);
     }
   }
   ctx.restore();
@@ -760,7 +790,10 @@ export function drawSchoolFrame(
     const box = sectionBounds(id, frameSlots, config);
     if (!box) continue;
     if (sec.mode === "text" && sec.text) {
-      drawTextBlock(ctx, sec.text, box.x, box.y, box.width, box.height, m.tileSize, design.rimColor);
+      drawTextBlock(
+        ctx, sec.text, box.x, box.y, box.width, box.height, m.tileSize, design.rimColor,
+        images.logos.get(id) ?? null,
+      );
     } else if (sec.mode === "image") {
       const img = images.sections.get(id);
       ctx.save();
@@ -916,6 +949,7 @@ async function renderSchoolFrameCanvas(
     snappets: new Map(),
     sections: new Map(),
     qr: null,
+    logos: new Map(),
   };
   const objectUrls: string[] = [];
 
@@ -966,6 +1000,21 @@ async function renderSchoolFrameCanvas(
         const blob = sec.fullResId ? await getFullRes(sec.fullResId) : null;
         const img = blob ? await loadBlobImage(blob) : sec.imageUrl ? await loadImage(sec.imageUrl) : null;
         if (img) bundle.sections.set(id, img);
+      })(),
+    );
+  }
+
+  // Banner crests. Print-resolution original when there is one — the crest lands at
+  // roughly 0.7in square at 300dpi, where the preview proxy would visibly soften.
+  for (const id of SECTION_IDS) {
+    const sec = sections[id];
+    const logo = sec?.mode === "text" ? sec.text?.logo : undefined;
+    if (!logo?.url) continue;
+    jobs.push(
+      (async () => {
+        const blob = logo.fullResId ? await getFullRes(logo.fullResId) : null;
+        const img = blob ? await loadBlobImage(blob) : await loadImage(logo.url);
+        if (img) bundle.logos.set(id, img);
       })(),
     );
   }
