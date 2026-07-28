@@ -108,6 +108,48 @@ export function bannerTextOn(bg: string): string {
  * words back to it. Motto is the fallback when no mascot clears the floor, because a
  * motto is still THEIRS; a generic "GO TEAM" is nobody's.
  */
+
+/**
+ * Give a school's colours their JOBS on the frame.
+ *
+ * The ONE rule, with one caller for each way a colour can arrive: the automatic
+ * brand kit, and the "use these" button on the scan's colour strip. Two copies of
+ * this would drift, and the drift would be invisible — a frame that comes out one
+ * way from the kit and another way from the strip, with nothing to point at.
+ *
+ * Sorted by LUMINANCE, not by rank. The scan orders colours by how likely each is to
+ * be a brand colour, which says nothing about which can carry an edge: a rim reads as
+ * metal because it runs bright-to-dark, so a navy rim on a navy body simply
+ * disappears. Darker paints the surfaces, lighter takes the rim.
+ *
+ * With one colour there is no pair to sort, so the second is derived from the first —
+ * pushed down for the body and up for the rim, keeping the hue. `derived` says which
+ * happened, because "we found both of these" and "we invented the second" are
+ * different claims and the UI should not make them identically.
+ */
+export function assignSurfaces(hexes: string[]): {
+  frameColor: string;
+  tileFieldColor: string;
+  rimColor: string;
+  /** True when the second colour was computed rather than found. */
+  derived: boolean;
+} {
+  const usable = hexes.filter((h) => typeof h === "string" && /^#[0-9a-f]{6}$/i.test(h));
+  if (!usable.length) {
+    return { frameColor: "#1B2A4A", tileFieldColor: "#1B2A4A", rimColor: "#C9A227", derived: true };
+  }
+  const distinct = [...new Set(usable.map((h) => h.toUpperCase()))];
+  if (distinct.length === 1) {
+    const only = distinct[0];
+    const darker = shift(only, luminance(only) > 0.5 ? -0.45 : -0.3);
+    return { frameColor: darker, tileFieldColor: darker, rimColor: shift(only, 0.45), derived: true };
+  }
+  const [darker, lighter] = distinct
+    .slice(0, 2)
+    .sort((a, b) => luminance(a) - luminance(b));
+  return { frameColor: darker, tileFieldColor: darker, rimColor: lighter, derived: false };
+}
+
 export function buildBrandKit(profile: BrandSource): SchoolBrandKit | null {
   const notes: string[] = [];
 
@@ -151,14 +193,12 @@ export function buildBrandKit(profile: BrandSource): SchoolBrandKit | null {
   // can actually do: the darker one becomes the surfaces (body and every badge
   // field), the lighter one replaces the gold rim. Ranking alone would routinely put
   // a navy on the rim, where it vanishes against a navy body.
-  const pair = secondary
-    ? [primary.hex, secondary.hex].sort((a, b) => luminance(a) - luminance(b))
-    : null;
-  const darker = pair ? pair[0] : shift(primary.hex, luminance(primary.hex) > 0.5 ? -0.45 : -0.3);
-  const lighter = pair ? pair[1] : shift(primary.hex, 0.45);
-  const frameColor = darker;
-  const tileFieldColor = darker;
-  const rimColor = lighter;
+  const { frameColor, tileFieldColor, rimColor, derived } = assignSurfaces(
+    [primary.hex, secondary?.hex].filter((h): h is string => typeof h === "string"),
+  );
+  const darker = tileFieldColor;
+  const lighter = rimColor;
+  const pair = !derived;
   // Recomputed against the surface it actually sits on, not against `primary`.
   const textColor = bannerTextOn(darker);
   notes.push(

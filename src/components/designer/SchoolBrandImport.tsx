@@ -50,7 +50,7 @@ import {
 import type { ScanCandidate, RejectedCandidate } from "@/lib/school-brand/prepare-artwork.server";
 import { useDesignStore } from "@/stores/design-store";
 import type { ColorCandidate } from "@/lib/school-brand/types";
-import { buildBrandKit, type SchoolBrandKit } from "@/lib/school-brand/apply-brand";
+import { assignSurfaces, buildBrandKit, type SchoolBrandKit } from "@/lib/school-brand/apply-brand";
 import { SECTION_LABELS } from "@/lib/utils/sections";
 import type { SectionId } from "@/lib/types";
 
@@ -850,17 +850,40 @@ function CandidateCard({ candidate, onAdd }: { candidate: ScanCandidate; onAdd: 
  * it, for whoever is looking at a scan that went wrong.
  */
 function ColorStrip({ colors }: { colors: ColorCandidate[] }) {
+  const setFrameColor = useDesignStore((s) => s.setFrameColor);
+  const setTileFieldColor = useDesignStore((s) => s.setTileFieldColor);
+  const setRimColor = useDesignStore((s) => s.setRimColor);
+  const [applied, setApplied] = useState<string | null>(null);
+
   if (!colors.length) return null;
   const shown = colors.slice(0, 6);
+
+  /** The AUTOMATIC match: hand the top two to the same rule the brand kit uses. */
+  const auto = assignSurfaces(shown.map((c) => c.hex));
+
+  const apply = (hexes: string[], label: string) => {
+    const { frameColor, tileFieldColor, rimColor } = assignSurfaces(hexes);
+    setFrameColor(frameColor);
+    setTileFieldColor(tileFieldColor);
+    setRimColor(rimColor);
+    setApplied(label);
+  };
+
   return (
     <div className="mt-2">
       <p className="ff-help mb-1">Colours found on the page</p>
       <div className="flex flex-wrap items-center gap-1.5">
         {shown.map((c) => (
-          <span
+          // A SWATCH IS A BUTTON. Reading a colour off the page and then making the
+          // user retype its hex into a picker is the sort of thing that makes a tool
+          // feel like a report. Tapping one makes it the background and derives the
+          // rim from it, so a single tap is a complete, coherent scheme.
+          <button
             key={c.hex}
-            title={`${c.hex} — ${c.why ?? c.source} (${c.hits} declaration${c.hits === 1 ? "" : "s"})`}
-            className="inline-flex items-center gap-1.5 rounded-full border px-1.5 py-0.5 text-[11px]"
+            type="button"
+            onClick={() => apply([c.hex], c.hex)}
+            title={`Use ${c.hex} as the background — ${c.why ?? c.source} (${c.hits} declaration${c.hits === 1 ? "" : "s"})`}
+            className="inline-flex items-center gap-1.5 rounded-full border px-1.5 py-0.5 text-[11px] transition-transform active:translate-y-0.5"
             style={{ borderColor: "var(--ff-line, rgba(30,27,23,0.25))" }}
           >
             <span
@@ -869,9 +892,44 @@ function ColorStrip({ colors }: { colors: ColorCandidate[] }) {
               style={{ background: c.hex, borderColor: "var(--ff-line, rgba(30,27,23,0.35))" }}
             />
             <span className="font-mono text-[var(--ff-ink-2,#4b5058)]">{c.hex}</span>
-          </span>
+          </button>
         ))}
       </div>
+
+      {/* AUTO-MATCH. Offered only with a real pair to sort — with one colour the
+          swatch tap above already does the same thing, and two buttons for one
+          outcome is a worse panel. */}
+      {shown.length > 1 && (
+        <div className="mt-2 flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => apply(shown.map((c) => c.hex), "auto")}
+            className="ff-btn ff-btn-secondary ff-btn-sm"
+          >
+            Use these colours
+          </button>
+          <span className="ff-help inline-flex items-center gap-1">
+            <span
+              aria-hidden
+              className="h-3 w-3 rounded-[3px] border"
+              style={{ background: auto.tileFieldColor, borderColor: "var(--ff-line, rgba(30,27,23,0.35))" }}
+            />
+            background
+            <span
+              aria-hidden
+              className="ml-1 h-3 w-3 rounded-full border"
+              style={{ background: auto.rimColor, borderColor: "var(--ff-line, rgba(30,27,23,0.35))" }}
+            />
+            rim
+          </span>
+        </div>
+      )}
+
+      {applied && (
+        <p className="ff-help mt-1">
+          {applied === "auto" ? "Applied." : `Applied ${applied}.`} Change anything in Frame colour.
+        </p>
+      )}
     </div>
   );
 }

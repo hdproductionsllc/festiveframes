@@ -426,9 +426,17 @@ export async function POST(request: Request): Promise<NextResponse> {
   // It is the LAST source consulted and the lowest-ranked, on purpose. It costs a
   // paid API call and is the only source here that can be confidently wrong, so it
   // runs only when the two free ones have both come up empty.
+  // COLOURS ONLY, deliberately. A missing mascot is common — plenty of school sites
+  // never write one in extractable form — and gating on it fired a paid call on a
+  // large share of scans for something the user can type in a second and the banner
+  // already falls back for (it uses the school's name). A page that yields no colour
+  // at all is genuinely rare, and it is the case where there is nothing else to try.
+  //
+  // The mascot still comes back when the call happens for the colours' sake; it just
+  // no longer justifies the call on its own.
   const needsColors = profile.colors.length === 0;
   const needsMascot = profile.mascots.length === 0;
-  if (needsColors || needsMascot) {
+  if (needsColors) {
     const known = await lookupKnownSchool(profile.pageUrl, {
       name: profile.names[0]?.value ?? null,
       mascot: profile.mascots[0]?.value ?? null,
