@@ -6,6 +6,7 @@ import {
   RESOLUTION_COPY,
   type ResolutionLevel,
 } from "@/lib/utils/print-resolution";
+import { keyBackground, KEY_REFUSAL_COPY, type KeyReport } from "@/lib/utils/key-background";
 
 // ─── Crop / reposition / zoom modal (school builder image upload) ─────────────
 //
@@ -71,6 +72,52 @@ function hasTransparency(canvas: HTMLCanvasElement): boolean {
 
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
+/** Long edge of the cheap copy the background check runs on first. Deciding whether
+ *  to even OFFER the cut-out must not cost a full-resolution pass on every upload. */
+const KEY_PROBE_PX = 360;
+
+/** Turn the cut-out ON by itself only when the backdrop is unmistakably a flat card.
+ *  Above `MIN_FLATNESS` the control is offered; this much higher bar is what
+ *  separates a scanned crest from a photo taken against a plain wall, which should
+ *  never be silently cut out. */
+const KEY_AUTO_FLATNESS = 0.9;
+
+/** Run the keyer over a copy of `source` and hand back a decoded image, or null when
+ *  it declined. Keeps the canvas work out of the component body. */
+async function keyToImage(
+  source: HTMLImageElement,
+): Promise<{ image: HTMLImageElement; url: string; report: KeyReport } | null> {
+  const c = document.createElement("canvas");
+  c.width = source.naturalWidth;
+  c.height = source.naturalHeight;
+  const ctx = c.getContext("2d", { willReadFrequently: true });
+  if (!ctx) return null;
+  ctx.drawImage(source, 0, 0);
+  let data: ImageData;
+  try {
+    data = ctx.getImageData(0, 0, c.width, c.height);
+  } catch {
+    return null; // tainted canvas — nothing to read, nothing to key
+  }
+  const report = keyBackground(data);
+  if (!report.keyed) return null;
+  ctx.putImageData(data, 0, 0);
+  const blob = await new Promise<Blob | null>((res) => c.toBlob(res, "image/png"));
+  if (!blob) return null;
+  const url = URL.createObjectURL(blob);
+  const image = new Image();
+  const ok = await new Promise<boolean>((res) => {
+    image.onload = () => res(true);
+    image.onerror = () => res(false);
+    image.src = url;
+  });
+  if (!ok) {
+    URL.revokeObjectURL(url);
+    return null;
+  }
+  return { image, url, report };
+}
+
 export function ImageCropModal({ file, targetInches, panelLabel, onCancel, onConfirm }: ImageCropModalProps) {
   const aspect = targetInches.width / targetInches.height;
 
@@ -99,8 +146,23 @@ export function ImageCropModal({ file, targetInches, panelLabel, onCancel, onCon
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [busy, setBusy] = useState(false);
 
+  // ── Cut the background out ──────────────────────────────────────────────────
+  // A crest arrives on a white card far more often than it arrives cut out, and
+  // dropped on a navy banner that card reads as a white box with a logo in it. The
+  // keyer lives in lib/utils/key-background; this holds the two images (original and
+  // cut-out) and which one is live.
+  const [keyOn, setKeyOn] = useState(false);
+  const [keyedImg, setKeyedImg] = useState<HTMLImageElement | null>(null);
+  const [keyReport, setKeyReport] = useState<KeyReport | null>(null);
+  const [keying, setKeying] = useState(false);
+  /** Null until the cheap probe has run; false when there is no flat backdrop here. */
+  const [keyOffered, setKeyOffered] = useState<boolean | null>(null);
+
+  // The image everything downstream reads — display, the crop rect, and the export.
+  const active = keyOn && keyedImg ? keyedImg : img;
+
   const imgRef = useRef<HTMLImageElement | null>(null);
-  imgRef.current = img;
+  imgRef.current = active;
 
   // Cover-fit scale: at zoom 1 the image exactly fills the viewport (no letterbox).
   const baseScale = useMemo(() => {
@@ -149,6 +211,74 @@ export function ImageCropModal({ file, targetInches, panelLabel, onCancel, onCon
       setOffset(center(1));
     }
   }, [img, center]);
+
+  // Is there a flat backdrop here at all? Answered on a small copy, because this runs
+  // on EVERY upload and a full-resolution pass to decide whether to show a checkbox
+  // would be paid for by every photo that was never going to be cut out.
+  useEffect(() => {
+    if (!img) return;
+    setKeyOffered(null);
+    setKeyedImg(null);
+    setKeyReport(null);
+    setKeyOn(false);
+    const scale = Math.min(1, KEY_PROBE_PX / Math.max(img.naturalWidth, img.naturalHeight));
+    const c = document.createElement("canvas");
+    c.width = Math.max(1, Math.round(img.naturalWidth * scale));
+    c.height = Math.max(1, Math.round(img.naturalHeight * scale));
+    const ctx = c.getContext("2d", { willReadFrequently: true });
+    if (!ctx) return setKeyOffered(false);
+    ctx.drawImage(img, 0, 0, c.width, c.height);
+    let report: KeyReport;
+    try {
+      const data = ctx.getImageData(0, 0, c.width, c.height);
+      report = keyBackground(data);
+    } catch {
+      return setKeyOffered(false); // tainted canvas
+    }
+    setKeyReport(report);
+    setKeyOffered(report.keyed);
+    // Flat enough to be a card rather than a wall — take the cut-out without being
+    // asked. Everything else waits to be asked.
+    if (report.keyed && report.flatness >= KEY_AUTO_FLATNESS) setKeyOn(true);
+  }, [img]);
+
+  // Do the real thing at full resolution, once, the first time it is switched on.
+  // Deliberately lazy: a 12 MP phone photo is seconds of pixel work and most uploads
+  // never turn this on.
+  // `keying` is tracked in a REF as well as in state, and deliberately kept OUT of the
+  // dependency list. Putting it in makes the effect re-run the moment it sets the flag,
+  // the cleanup marks the in-flight run stale, and the result is then thrown away
+  // without ever clearing the flag — the modal sat on "working..." forever.
+  const keyingRef = useRef(false);
+  useEffect(() => {
+    if (!keyOn || !img || keyedImg || keyingRef.current) return;
+    let live = true;
+    keyingRef.current = true;
+    setKeying(true);
+    void keyToImage(img).then((res) => {
+      keyingRef.current = false;
+      if (!live) {
+        if (res) URL.revokeObjectURL(res.url);
+        return;
+      }
+      setKeying(false);
+      if (!res) {
+        setKeyOn(false);
+        setKeyOffered(false);
+        return;
+      }
+      setKeyedImg(res.image);
+      setKeyReport(res.report);
+    });
+    return () => { live = false; };
+  }, [keyOn, img, keyedImg]);
+
+  // The cut-out's object URL outlives the effect that made it (the <img> holds it),
+  // so it is released when the image is replaced or the modal closes.
+  useEffect(() => {
+    const url = keyedImg?.src;
+    return () => { if (url?.startsWith("blob:")) URL.revokeObjectURL(url); };
+  }, [keyedImg]);
 
   const reset = useCallback(() => {
     setZoom(1);
@@ -342,18 +472,36 @@ export function ImageCropModal({ file, targetInches, panelLabel, onCancel, onCon
             {/* Crop viewport */}
             <div className="flex justify-center">
               <div
-                className="relative touch-none select-none overflow-hidden rounded-[6px] border border-[var(--ff-line-strong)] bg-[var(--ff-ink)]"
-                style={{ width: viewport.w, height: viewport.h, cursor: "grab" }}
+                className="relative touch-none select-none overflow-hidden rounded-[6px] border border-[var(--ff-line-strong)]"
+                style={{
+                  width: viewport.w,
+                  height: viewport.h,
+                  cursor: "grab",
+                  // A CHECKERBOARD under a cut-out, a flat field otherwise. Showing
+                  // transparency against the modal's dark ink made a keyed white logo
+                  // look identical to a keyed white card — the one thing this control
+                  // exists to let someone tell apart.
+                  ...(keyOn && keyedImg
+                    ? {
+                        backgroundColor: "#ffffff",
+                        backgroundImage:
+                          "linear-gradient(45deg,#d8d8d6 25%,transparent 25%,transparent 75%,#d8d8d6 75%)," +
+                          "linear-gradient(45deg,#d8d8d6 25%,transparent 25%,transparent 75%,#d8d8d6 75%)",
+                        backgroundSize: "16px 16px",
+                        backgroundPosition: "0 0, 8px 8px",
+                      }
+                    : { backgroundColor: "var(--ff-ink)" }),
+                }}
                 onPointerDown={onPointerDown}
                 onPointerMove={onPointerMove}
                 onPointerUp={onPointerUp}
                 onPointerCancel={onPointerUp}
                 onWheel={onWheel}
               >
-                {img && (
+                {img && active && (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={img.src}
+                    src={active.src}
                     alt=""
                     draggable={false}
                     style={{
@@ -423,6 +571,40 @@ export function ImageCropModal({ file, targetInches, panelLabel, onCancel, onCon
               </button>
             </div>
 
+            {/* Cut the background out. Shown only when there is a flat backdrop to
+                cut — an offer that does nothing is worse than no offer. When the
+                probe found one but declined, it says why instead of going quiet. */}
+            {(keyOffered || (keyReport?.reason && keyReport.flatness >= 0.55)) && (
+              <div className="ff-well mt-3 p-2.5">
+                {keyOffered ? (
+                  <>
+                    <label className="flex cursor-pointer items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={keyOn}
+                        disabled={keying}
+                        onChange={(e) => setKeyOn(e.target.checked)}
+                        className="h-4 w-4 cursor-pointer accent-[var(--ff-accent)]"
+                      />
+                      <span className="text-[13px] font-semibold text-[var(--ff-ink)]">
+                        Remove the background
+                      </span>
+                      {keying && <span className="ff-micro">working...</span>}
+                    </label>
+                    <p className="ff-micro mt-1">
+                      {keyOn
+                        ? "The logo sits straight on your frame's colour, with no white box behind it."
+                        : `There's a flat ${keyReport?.backdrop === "#FFFFFF" ? "white" : "coloured"} background behind this - cut it out and the logo sits straight on your frame.`}
+                    </p>
+                  </>
+                ) : (
+                  <p className="ff-micro">
+                    {keyReport?.reason ? KEY_REFUSAL_COPY[keyReport.reason] : null}
+                  </p>
+                )}
+              </div>
+            )}
+
             {/* Live resolution meter */}
             <div className="ff-well mt-3 p-2.5">
               <div className="flex items-center justify-between">
@@ -452,10 +634,16 @@ export function ImageCropModal({ file, targetInches, panelLabel, onCancel, onCon
               <button
                 type="button"
                 onClick={handleConfirm}
-                disabled={verdict.blocked || busy || !img}
+                disabled={verdict.blocked || busy || keying || !img}
                 className="ff-btn ff-btn-primary"
               >
-                {busy ? "Adding..." : verdict.blocked ? "Too low to print" : "Use this crop"}
+                {busy
+                  ? "Adding..."
+                  : keying
+                    ? "Removing background..."
+                    : verdict.blocked
+                      ? "Too low to print"
+                      : "Use this crop"}
               </button>
             </div>
           </>
