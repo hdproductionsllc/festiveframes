@@ -5,10 +5,27 @@ import { createPortal } from "react-dom";
 
 // ─── A loupe over the frame preview ──────────────────────────────────────────
 //
+// NOT CURRENTLY MOUNTED. It shipped, read as clunky in use, and was switched off at
+// the call site rather than deleted — the problem was the interaction, not the
+// mechanism. Kept working, and kept here, because the two constraints below cost a
+// browser session each to find and would be rediscovered from scratch otherwise.
+//
+// To bring it back, in SchoolDesigner: wrap `<FrameCanvas>` in `<div ref={stageRef}>`
+// (see the second constraint), then AFTER `</DndProvider>` (see the first):
+//
+//   <FrameLoupe stageRef={stageRef}>
+//     <FrameCanvas frameConfig={frameConfig} slots={slots} bottomBar={bottomBar}
+//                  qrCode={qrCode} plateState={plateState} />
+//   </FrameLoupe>
+//
+// If it comes back it probably wants a way to turn it off — a modifier key to summon
+// it, or a toggle beside the stage — rather than following the cursor unbidden across
+// a surface people are trying to drag tiles onto.
+//
 // The frame is about 6.5 inches of product shown at a few hundred CSS pixels, and
 // the things people want to check are the small ones: whether the tagline is
-// readable, whether the crest sits square, whether the bevel eats a descender. Until
-// now the only way to see any of that was to export a print sheet.
+// readable, whether the crest sits square, whether the bevel eats a descender. The
+// only other way to see any of that is to export a print sheet.
 //
 // HOW IT STAYS HONEST. The lens does not rasterise the stage, and it does not draw
 // the frame a second way — it renders the SAME component with the SAME props at the
@@ -17,10 +34,15 @@ import { createPortal } from "react-dom";
 // transforms, so the copy inside the lens lays out identically and only its painted
 // pixels are scaled. There is no third renderer here to drift from the other two.
 //
-// It is rendered OUTSIDE the DndProvider on purpose. The copy contains the same
-// draggable and droppable slots as the real stage, and inside the provider they would
-// register a second time under ids that already exist — a drop could then resolve to
-// the copy. Outside it they find no context and register nowhere.
+// CONSTRAINT 1 — it must be rendered OUTSIDE the DndProvider. The copy contains the
+// same draggable and droppable slots as the real stage, and inside the provider they
+// would register a second time under ids that already exist — a drop could then
+// resolve to the copy. Outside it they find no context and register nowhere.
+//
+// CONSTRAINT 2 — `stageRef` must point at a wrapper around FrameCanvas, NOT at the
+// stage. `.ff-stage` carries 16px of padding, so the stage is wider than the frame
+// inside it; a stage-sized reference box put the magnified copy 32px out of register
+// with the very thing it was magnifying.
 
 /** How much bigger. 3x turns the two-tier banner's tagline from a suggestion of text
  *  into text, which is the thing people are squinting at. */

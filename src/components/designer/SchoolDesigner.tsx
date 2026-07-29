@@ -25,7 +25,6 @@ import { makeZip, dataUrlToBytes, type ZipEntry } from "@/lib/utils/zip";
 import { buildPanelPartsList } from "@/lib/order/parts-list";
 import { DndProvider } from "./DndProvider";
 import { FrameCanvas, type FrameCanvasHandle } from "@/components/frame/FrameCanvas";
-import { FrameLoupe } from "@/components/frame/FrameLoupe";
 import { TilePalette } from "@/components/tiles/TilePalette";
 import { SCHOOL_SURFACED_SET_IDS } from "@/data/sets";
 import { SectionControls } from "./SectionControls";
@@ -118,8 +117,6 @@ export function SchoolDesigner() {
   const frameAspect = getTotalWidthInches(frameConfig) / getRenderHeightInches(frameConfig);
 
   const canvasRef = useRef<FrameCanvasHandle>(null);
-  /** The stage box the loupe tracks the pointer across. */
-  const stageRef = useRef<HTMLDivElement>(null);
   const storeApi = useDesignStoreApi();
   const [overSlotId, setOverSlotId] = useState<string | null>(null);
   const [bannerPreview, setBannerPreview] = useState<BannerPreview | null>(null);
@@ -580,27 +577,17 @@ export function SchoolDesigner() {
                 }
               >
                 <ArmedBanner placement="frame" />
-                {/* The loupe's reference box, and the reason it is a wrapper rather
-                    than the stage itself: `.ff-stage` carries 16px of padding, so
-                    the stage is wider than the frame inside it. The magnified copy
-                    lays itself out from whatever width its parent gives it, and a
-                    reference box 32px too wide put the copy out of register with the
-                    thing it was supposed to be magnifying. This div is FrameCanvas's
-                    direct parent, so its width is exactly the width FrameCanvas
-                    measures — in the lens and on the stage alike. */}
-                <div ref={stageRef}>
-                  <FrameCanvas
-                    ref={canvasRef}
-                    frameConfig={frameConfig}
-                    slots={slots}
-                    bottomBar={bottomBar}
-                    qrCode={qrCode}
-                    plateState={plateState}
-                    overSlotId={overSlotId}
-                    snappetPreview={snappetPreview}
-                    bannerPreview={bannerPreview}
-                  />
-                </div>
+                <FrameCanvas
+                  ref={canvasRef}
+                  frameConfig={frameConfig}
+                  slots={slots}
+                  bottomBar={bottomBar}
+                  qrCode={qrCode}
+                  plateState={plateState}
+                  overSlotId={overSlotId}
+                  snappetPreview={snappetPreview}
+                  bannerPreview={bannerPreview}
+                />
               </div>
             </div>
             {/* The editor's OWN scroll pane. `min-h-0` is load-bearing: a flex child
@@ -615,20 +602,11 @@ export function SchoolDesigner() {
         </main>
       </DndProvider>
 
-      {/* THE LOUPE. Deliberately a sibling of DndProvider rather than a child: the
-          copy it renders carries the same draggable/droppable slots as the real
-          stage, and inside the provider they would register a second time under ids
-          that already exist. Out here they find no context and register nowhere.
-          It renders nothing until the pointer is actually over the stage. */}
-      <FrameLoupe stageRef={stageRef}>
-        <FrameCanvas
-          frameConfig={frameConfig}
-          slots={slots}
-          bottomBar={bottomBar}
-          qrCode={qrCode}
-          plateState={plateState}
-        />
-      </FrameLoupe>
+      {/* The hover LOUPE was mounted HERE and is switched off — it read as clunky in
+          use. `components/frame/FrameLoupe.tsx` is kept and working; its header
+          carries the two constraints that are expensive to rediscover (it must be a
+          sibling of DndProvider, and it must track a wrapper around FrameCanvas
+          rather than the padded stage) and the exact block to paste back. */}
 
       {/* Re-crop flow for an image-snappet resized to a non-matching aspect. Sits at
           the builder root (not inside SectionEditor) because a resize can happen from
