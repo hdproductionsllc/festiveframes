@@ -37,7 +37,9 @@ const RULES: Record<string, Rule> = {
   // ~1.33x, so allow ~20MB encoded (the route enforces an 18MB DECODED ceiling).
   "/api/school/submit": { windowMs: 10 * 60_000, max: 10, maxBytes: 20 * MB },
   "/api/save-design": { windowMs: 5 * 60_000, max: 15, maxBytes: 6 * MB },
-  "/api/order/draft": { windowMs: 5 * 60_000, max: 40, maxBytes: 12 * MB },
+  // 20MB, not 12: a school-frame draft carries the assembled overview PLUS four
+  // 300-DPI panel PNGs (same payload class as /api/school/submit below).
+  "/api/order/draft": { windowMs: 5 * 60_000, max: 40, maxBytes: 20 * MB },
   "/api/contact": { windowMs: 10 * 60_000, max: 6, maxBytes: 64 * 1024 },
   "/api/review": { windowMs: 10 * 60_000, max: 6, maxBytes: 64 * 1024 },
   "/api/subscribe": { windowMs: 10 * 60_000, max: 12, maxBytes: 16 * 1024 },

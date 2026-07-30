@@ -65,7 +65,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     // ignored. Before this guard, a Still Beside Me pet-tribute order fell
     // through to a generic branch here and sent bogus Festive Frames order
     // emails (2026-07-19).
-    if (metadata.kind !== "custom-frame" && metadata.kind !== "cart") {
+    if (metadata.kind !== "custom-frame" && metadata.kind !== "cart" && metadata.kind !== "school-frame") {
       console.log(
         `[stripe-webhook] ignoring session ${session.id}: no Festive Frames metadata.kind` +
           (metadata.orderId ? " (has orderId — likely Still Beside Me)" : ""),
@@ -84,7 +84,10 @@ export async function POST(request: Request): Promise<NextResponse> {
     // ── Custom builder order: fulfill from the in-memory draft (backup to the
     // /thanks relay). fulfillOrder is idempotent, so whichever trigger fires
     // second is a no-op. Production/customer emails are handled there.
-    if (metadata.kind === "custom-frame" && metadata.orderId) {
+    // school-frame rides the same single-order fulfillment as custom-frame: the
+    // draft's printSheets ARE the eufy-ready school panels, and fulfillOrder falls
+    // back to them when the saved design isn't a /build design to re-render.
+    if ((metadata.kind === "custom-frame" || metadata.kind === "school-frame") && metadata.orderId) {
       try {
         // Expand the shipping address so fulfillOrder's emails get a real
         // "Ship to" block — it lives at collected_information.shipping_details

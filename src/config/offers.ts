@@ -48,6 +48,23 @@ export function priceFor(selection: OfferSelection): number {
 /** Hard ceiling on frames in one cart, so production can't be swamped. */
 export const MAX_CART_FRAMES = 10;
 
+// ─── MySchoolFrame (school fundraiser) pricing ───────────────────────────────
+//
+// PLACEHOLDER PRICING — set by engineering to unblock the checkout flow, NOT a
+// business decision. Confirm both numbers before any real outreach send:
+//   - schoolPrice: what the parent pays for the frame (before shipping).
+//   - schoolDonationCents: the slice of that price promised to the school's
+//     booster club per frame. It rides in Stripe metadata so every school's
+//     take can be totalled from the dashboard until real tracking exists; it
+//     is NOT charged separately.
+// $49 sits above /build's $39 because the school frame is a physically larger
+// product (wings + banners) and carries the donation inside it.
+export const schoolOffer = {
+  schoolPrice: 4900,
+  schoolDonationCents: 1000,
+  currency: offer.currency,
+};
+
 /**
  * Authoritative bulk price for N total frames, in cents — PAIRS pricing:
  * every two frames is the $69 bundle, any leftover frame is $39.

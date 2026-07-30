@@ -136,6 +136,7 @@ export function SchoolDesigner({ kit }: { kit?: SchoolKit } = {}) {
   >(null);
   const exportUrlRef = useRef<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [buying, setBuying] = useState(false);
   // null = idle; otherwise the outcome of the last "Send to production" attempt.
   const [submitState, setSubmitState] = useState<
     { kind: "ok" | "not-configured" | "error"; msg: string } | null
@@ -284,6 +285,92 @@ export function SchoolDesigner({ kit }: { kit?: SchoolKit } = {}) {
     }
   };
 
+  // Buy this frame — the DIRECT-TO-PARENT path. Same render pipeline as
+  // handleSubmit, but instead of emailing the files it stashes them as a server
+  // draft and hands the parent to Stripe; the paid session's webhook (and the
+  // /thanks relay) fulfills from that draft. The school slug rides the checkout
+  // metadata, which is the fundraiser's donation-attribution trail.
+  const handleBuy = async () => {
+    if (buying || submitting || exporting) return;
+    setBuying(true);
+    setSubmitState(null);
+    try {
+      const s = storeApi.getState();
+      const design = {
+        frameConfig: s.frameConfig,
+        frameColor: s.frameColor,
+        slots: s.slots,
+        textBars: s.textBars,
+        qrCode: s.qrCode,
+        plateState: s.plateState,
+        sections: s.sections,
+      };
+      const [printPng, panelPngs] = await Promise.all([
+        composeSchoolFrame(design),
+        composeSchoolPanels(design),
+      ]);
+      if (!printPng) {
+        setSubmitState({ kind: "error", msg: "Couldn't render your frame's print file. Try again." });
+        return;
+      }
+      const partsList = buildPanelPartsList({
+        slots: s.slots,
+        textBars: s.textBars,
+        qrCode: s.qrCode,
+        plateState: s.plateState,
+        designName: s.designName,
+        tileSizeInches: s.frameConfig.tileSizeInches,
+        dieCut: s.dieCut,
+        frameConfig: s.frameConfig,
+        sections: s.sections,
+      });
+      const orderId = crypto.randomUUID();
+      // Panels are the print files; the assembled sheet is the proof/overview.
+      // `design` is deliberately NOT sent: fulfillOrder only uses it to re-render
+      // /build-shaped designs, and a school design there would confuse, not help.
+      const draftRes = await fetch("/api/order/draft", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          orderId,
+          parts: partsList,
+          artifacts: {
+            proof: { name: "OVERVIEW-do-not-print", dataUrl: printPng },
+            printSheets: panelPngs.map((p) => ({ name: p.id, dataUrl: p.dataUrl })),
+            banners: [],
+          },
+        }),
+      });
+      if (!draftRes.ok) {
+        setSubmitState({ kind: "error", msg: "Couldn't save your design for checkout. Please try again." });
+        return;
+      }
+      const res = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          kind: "school-frame",
+          orderId,
+          designName: s.designName,
+          school: kit?.slug,
+        }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { url?: string; error?: string };
+      if (res.ok && data.url) {
+        window.location.assign(data.url);
+        return; // navigating away — leave the button in its busy state
+      }
+      setSubmitState({
+        kind: "error",
+        msg: data.error || "Couldn't start checkout. Please try again.",
+      });
+    } catch {
+      setSubmitState({ kind: "error", msg: "Something went wrong starting checkout. Please try again." });
+    } finally {
+      setBuying(false);
+    }
+  };
+
   // Uploaded mascot images can push this browser's storage over its limit. If a
   // save is rejected we warn instead of losing the design silently on reload.
   useEffect(() => onPersistQuotaExceeded(() => setStorageFull(true)), []);
@@ -363,9 +450,9 @@ export function SchoolDesigner({ kit }: { kit?: SchoolKit } = {}) {
           <button
             type="button"
             onClick={handleSubmit}
-            disabled={submitting || exporting}
-            title="Send your finished design to our team"
-            className="ff-btn ff-btn-primary ff-btn-sm shrink-0"
+            disabled={submitting || exporting || buying}
+            title="Send your finished design to our team without ordering"
+            className="ff-btn ff-btn-secondary ff-btn-sm shrink-0"
           >
             {submitting ? (
               "Sending..."
@@ -374,6 +461,15 @@ export function SchoolDesigner({ kit }: { kit?: SchoolKit } = {}) {
                 Send<span className="hidden sm:inline"> my</span> design
               </>
             )}
+          </button>
+          <button
+            type="button"
+            onClick={handleBuy}
+            disabled={buying || submitting || exporting}
+            title="Order this frame — secure checkout"
+            className="ff-btn ff-btn-primary ff-btn-sm shrink-0"
+          >
+            {buying ? "Starting checkout..." : <>Buy<span className="hidden sm:inline"> this frame</span> — $49</>}
           </button>
         </div>
       </header>

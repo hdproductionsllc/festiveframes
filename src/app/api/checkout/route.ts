@@ -17,7 +17,7 @@ import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 
 import { getStripe } from "@/lib/stripe";
-import { offer, priceForFramesCents, MAX_CART_FRAMES } from "@/config/offers";
+import { offer, priceForFramesCents, MAX_CART_FRAMES, schoolOffer } from "@/config/offers";
 import { SITE_URL, season } from "@/config/season";
 import { getDraft, saveCartDraft, type CartLineRef } from "@/lib/order/store";
 
@@ -103,6 +103,78 @@ export async function POST(request: Request): Promise<NextResponse> {
       return NextResponse.json({ url: session.url }, { status: 200 });
     } catch (err) {
       console.error("[checkout] custom-frame session creation failed:", err);
+      return NextResponse.json({ error: "Could not start checkout. Please try again." }, { status: 502 });
+    }
+  }
+
+  // ── MySchoolFrame order: one school-fundraiser frame, direct-to-parent.
+  // Same rails as custom-frame with two differences: the draft must already be
+  // stashed (a school design carries print files the builder just rendered —
+  // paying for one we can't produce is the cart bug all over again), and the
+  // session metadata carries the school slug + per-frame donation so every
+  // school's fundraiser take can be totalled straight from Stripe.
+  if ((rawBody as Record<string, unknown>)?.kind === "school-frame") {
+    const orderId = (rawBody as Record<string, unknown>).orderId;
+    if (typeof orderId !== "string" || !orderId) {
+      return badRequest("Missing orderId for school order.");
+    }
+    const draft = await getDraft(orderId);
+    if (!draft) {
+      return NextResponse.json(
+        { error: "Your design didn't finish uploading. Please try Buy again." },
+        { status: 409 },
+      );
+    }
+    const rawName = (rawBody as Record<string, unknown>).designName;
+    const designName =
+      typeof rawName === "string" && rawName.trim() ? rawName.trim().slice(0, 80) : "MySchoolFrame";
+    const rawSchool = (rawBody as Record<string, unknown>).school;
+    const school =
+      typeof rawSchool === "string" && /^[a-z0-9-]{1,60}$/.test(rawSchool) ? rawSchool : "";
+    try {
+      const session = await stripe.checkout.sessions.create({
+        mode: "payment",
+        allow_promotion_codes: true,
+        line_items: [
+          {
+            quantity: 1,
+            price_data: {
+              currency: schoolOffer.currency,
+              unit_amount: schoolOffer.schoolPrice,
+              product_data: {
+                name: designName,
+                description: school
+                  ? "MySchoolFrame — custom school license plate frame (includes school donation)"
+                  : "MySchoolFrame — custom school license plate frame",
+              },
+            },
+          },
+          {
+            quantity: 1,
+            price_data: {
+              currency: schoolOffer.currency,
+              unit_amount: season.flatShippingCents,
+              product_data: { name: season.shippingLabel },
+            },
+          },
+        ],
+        shipping_address_collection: { allowed_countries: ["US"] },
+        success_url: `${baseUrl}/thanks?session_id={CHECKOUT_SESSION_ID}&order=${encodeURIComponent(orderId)}`,
+        cancel_url: school ? `${baseUrl}/s/${school}` : `${baseUrl}/lab/school`,
+        metadata: {
+          kind: "school-frame",
+          orderId,
+          designName,
+          school,
+          donationCents: String(schoolOffer.schoolDonationCents),
+        },
+      });
+      if (!session.url) {
+        return NextResponse.json({ error: "Could not start checkout. Please try again." }, { status: 502 });
+      }
+      return NextResponse.json({ url: session.url }, { status: 200 });
+    } catch (err) {
+      console.error("[checkout] school-frame session creation failed:", err);
       return NextResponse.json({ error: "Could not start checkout. Please try again." }, { status: 502 });
     }
   }
