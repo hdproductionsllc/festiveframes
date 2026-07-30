@@ -1,14 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <!-- MySchoolFrame mark: a license-plate frame in profile — thin rails, the
-       school product's signature THICK bottom banner, and a brass chenille bar
-       where the school name goes. Navy flips to a light body on dark tabs so
-       the favicon doesn't sink into the tab strip. -->
-  <style>
-    .body { fill: #1b2a4a; }
-    @media (prefers-color-scheme: dark) { .body { fill: #e8ecf5; } }
-  </style>
-  <path class="body" fill-rule="evenodd"
-    d="M10 13 h44 a7 7 0 0 1 7 7 v24 a7 7 0 0 1 -7 7 h-44 a7 7 0 0 1 -7 -7 v-24 a7 7 0 0 1 7 -7 Z
-       M11 18 a3 3 0 0 0 -3 3 v14 a3 3 0 0 0 3 3 h42 a3 3 0 0 0 3 -3 v-14 a3 3 0 0 0 -3 -3 Z" />
-  <rect x="22" y="42" width="20" height="5" rx="2.5" fill="#f8c53b" />
+  <!-- MySchoolFrame favicon — the DARK treatment, the owner's pick: a school-navy
+       tile carrying the plate-frame mark in paper with the brass chenille bar.
+       Self-contained tile instead of a transparent glyph + media query, so the
+       same dark look holds on light and dark tab strips alike. -->
+  <rect width="64" height="64" rx="14" fill="#1b2a4a" />
+  <path fill="#f6f3ec" fill-rule="evenodd"
+    d="M12 15 h40 a6.5 6.5 0 0 1 6.5 6.5 v21 a6.5 6.5 0 0 1 -6.5 6.5 h-40 a6.5 6.5 0 0 1 -6.5 -6.5 v-21 a6.5 6.5 0 0 1 6.5 -6.5 Z
+       M13 19.5 a3 3 0 0 0 -3 3 v12 a3 3 0 0 0 3 3 h38 a3 3 0 0 0 3 -3 v-12 a3 3 0 0 0 -3 -3 Z" />
+  <rect x="23" y="41" width="18" height="4.6" rx="2.3" fill="#f8c53b" />
 </svg>

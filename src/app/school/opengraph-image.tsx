@@ -1,3 +1,5 @@
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 import { ImageResponse } from "next/og";
 
 // Social-share card for the MySchoolFrame landing page (myschoolframe.com
@@ -6,8 +8,6 @@ import { ImageResponse } from "next/og";
 // unfurl has to look like a real company. Served by Next's file convention at
 // /school/opengraph-image; overrides the site-wide Festive Frames sticker card
 // for this segment only.
-
-export const runtime = "edge";
 
 export const alt = "MySchoolFrame — Your school. Your story. Your frame.";
 export const size = { width: 1200, height: 630 };
@@ -20,9 +20,13 @@ const BRASS = "#f8c53b";
 const PAPER = "#f6f3ec";
 
 // Graduate — the collegiate slab the builder leads with — committed next to
-// this file (OFL) so Satori renders the real wordmark, not a fallback.
-const graduateFont = fetch(new URL("./_brand/Graduate.ttf", import.meta.url)).then(
-  (res) => res.arrayBuffer(),
+// this file (OFL) so Satori renders the real wordmark, not a fallback. Read
+// from disk on the Node runtime: the edge-runtime fetch(new URL(...,
+// import.meta.url)) pattern gets bundler-rewritten to a relative
+// /_next/static asset path that fetch() cannot parse, and this build does not
+// use `output: standalone`, so the src tree is present under cwd at runtime.
+const graduateFont = readFile(
+  join(process.cwd(), "src/app/school/_brand/Graduate.ttf"),
 );
 
 /** The plate-frame mark, same geometry as icon.svg. Monochrome: the chenille
