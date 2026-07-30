@@ -1,5 +1,25 @@
 # Festive Frames — working notes
 
+## MySchoolFrame — product direction (owner-confirmed)
+
+- **End state**: schools get a **code or QR** that opens **their school's mobile
+  builder**. The QR points at the per-school route (`/s/[slug]`); a short code is
+  the same thing typed into a redeem page. The code is also the missing
+  **attribution layer** — orders already carry `school` in Stripe metadata, so
+  code-gated entry makes "your club earned $X" a provable number.
+- **#31 (builder re-skin) is therefore mobile-first**, not just a visual pass:
+  tap-to-place, preset one-tap layouts, school theming pre-applied. A parent
+  arrives from a QR in the bleachers, on a phone. Do not start #31 without the
+  owner's go — direction for the common builder is his call.
+- **Pricing placeholders** in `src/config/offers.ts`: $49/frame, $10/frame
+  donation. Not owner-confirmed; must be confirmed before any outreach ships.
+- **Never email anyone without the owner's explicit permission.** Outreach email
+  drafts (in the metro catalogs) are text deliverables only; the only mail the
+  system sends is transactional order email.
+- Deploys: push to master; Railway auto-deploys. No PRs unless asked.
+- Kit `status: "verified"` is flipped manually only — requires confirmed school
+  colors AND written permission to use the school's name/marks.
+
 ## Verifying visual work
 
 Visual changes must be **looked at before they are handed over**. Tests passing is
