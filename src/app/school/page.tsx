@@ -1,7 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
+import { Graduate } from "next/font/google";
 import "./school-landing.css";
+
+// The wordmark face. Graduate is the collegiate slab the school builder itself
+// leads with (and what most schools' own marks map to), so the company brand
+// speaks the product's language. Its lowercase renders as small caps, which is
+// what makes the CamelCase "MySchoolFrame" read as three words.
+const graduate = Graduate({ weight: "400", subsets: ["latin"] });
 
 // ─── MySchoolFrame landing page ───────────────────────────────────────────────
 //
@@ -96,7 +103,22 @@ export default function MySchoolFramePage() {
     <main className="msf">
       {/* ── Hero ── */}
       <section className="msf-hero">
-        <p className="msf-brand">MySchoolFrame</p>
+        <p className="msf-brand">
+          {/* The mark: a plate frame in profile — thin rails, the product's
+              signature thick bottom banner, brass bar where the school name
+              goes. Body inherits currentColor so the same SVG works on any
+              ground; only the brass is fixed. Same geometry as icon.svg. */}
+          <svg className="msf-brand-mark" viewBox="0 0 64 64" aria-hidden="true">
+            <path
+              fill="currentColor"
+              fillRule="evenodd"
+              d="M10 13 h44 a7 7 0 0 1 7 7 v24 a7 7 0 0 1 -7 7 h-44 a7 7 0 0 1 -7 -7 v-24 a7 7 0 0 1 7 -7 Z
+                 M11 18 a3 3 0 0 0 -3 3 v14 a3 3 0 0 0 3 3 h42 a3 3 0 0 0 3 -3 v-14 a3 3 0 0 0 -3 -3 Z
+                 M24.5 42 h15 a2.5 2.5 0 0 1 0 5 h-15 a2.5 2.5 0 0 1 0 -5 Z"
+            />
+          </svg>
+          <span className={graduate.className}>MySchoolFrame</span>
+        </p>
         <h1>
           Your school. <span>Your story.</span> Your frame.
         </h1>

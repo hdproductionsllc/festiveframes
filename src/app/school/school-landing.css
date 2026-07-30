@@ -46,12 +46,22 @@
   padding-top: 76px;
 }
 .msf-brand {
-  font-family: var(--font-display-marketing), Oswald, sans-serif;
-  font-size: 15px;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
+  /* Lockup: mark + wordmark. The span carries Graduate via next/font, so the
+     rules here are only size/spacing — Graduate is wide, so far less tracking
+     than the old Oswald eyebrow needed. */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 19px;
+  letter-spacing: 0.05em;
   color: var(--brass-bright);
   margin: 0 0 18px;
+}
+.msf-brand-mark {
+  width: 30px;
+  height: 30px;
+  /* The frame body renders in currentColor = brass, matching the wordmark. */
 }
 .msf-hero h1 {
   font-size: clamp(38px, 7vw, 68px);
