@@ -41,6 +41,24 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  // myschoolframe.com is the school product's own front door. When its DNS points
+  // at this app (add the domain in Railway first), the bare domain serves the
+  // /school landing page and every other path passes through unchanged — so
+  // myschoolframe.com/lab/school is the builder, same app, no second deploy.
+  async rewrites() {
+    return [
+      {
+        source: "/",
+        has: [{ type: "host", value: "myschoolframe.com" }],
+        destination: "/school",
+      },
+      {
+        source: "/",
+        has: [{ type: "host", value: "www.myschoolframe.com" }],
+        destination: "/school",
+      },
+    ];
+  },
 };
 
 export default nextConfig;

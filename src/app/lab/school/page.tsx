@@ -21,7 +21,7 @@ import { SchoolBuilder } from "@/components/designer/SchoolDesigner";
 // builder (real drag-drop + text editor + plate), seeded with a school frame config
 // (wide 3-tile side panels via wings). Unlinked + noindex.
 export const metadata: Metadata = {
-  title: "School Frame Builder",
+  title: "MySchoolFrame — Frame Builder",
   robots: { index: false, follow: false },
 };
 

@@ -107,7 +107,7 @@ function coercePartsList(v: unknown): PartsList | null {
 /** Filesystem-safe attachment base name derived from the design name. */
 function safeName(designName: string): string {
   const s = designName.replace(/[^a-z0-9]+/gi, "-").replace(/^-+|-+$/g, "").toLowerCase();
-  return s ? `${s}-print` : "school-frame-print";
+  return s ? `${s}-print` : "myschoolframe-print";
 }
 
 export async function POST(request: Request): Promise<NextResponse> {

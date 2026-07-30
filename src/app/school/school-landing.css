@@ -1,0 +1,315 @@
+/* ─── MySchoolFrame landing (/school + myschoolframe.com) ─────────────────────
+   The product's own palette — school navy, brass, warm paper — so the page and
+   the frames it sells read as one object. Display face is Oswald via the site's
+   marketing font variable (self-hosted in the root layout); the collegiate
+   builder faces stay in the builder. Scoped under .msf so nothing leaks. */
+
+.msf {
+  --navy: #1b2a4a;
+  --navy-deep: #14203a;
+  --paper: #faf7f2;
+  --paper-2: #f2ede4;
+  --brass: #b98a2f;
+  --brass-bright: #f8c53b;
+  --ink: #22273a;
+  --dim: #5d6374;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body-marketing), -apple-system, "Segoe UI", sans-serif;
+  line-height: 1.55;
+}
+
+.msf h1,
+.msf h2,
+.msf h3 {
+  font-family: var(--font-display-marketing), Oswald, sans-serif;
+  line-height: 1.12;
+  text-wrap: balance;
+  margin: 0;
+}
+
+.msf section {
+  padding: 64px 20px;
+}
+.msf section > * {
+  max-width: 980px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* ── Hero ── */
+.msf-hero {
+  background:
+    radial-gradient(1200px 500px at 50% -180px, #2a3c66 0%, var(--navy) 55%, var(--navy-deep) 100%);
+  color: #f6f3ec;
+  text-align: center;
+  padding-top: 76px;
+}
+.msf-brand {
+  font-family: var(--font-display-marketing), Oswald, sans-serif;
+  font-size: 15px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--brass-bright);
+  margin: 0 0 18px;
+}
+.msf-hero h1 {
+  font-size: clamp(38px, 7vw, 68px);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.015em;
+}
+.msf-hero h1 span {
+  color: var(--brass-bright);
+  /* The three phrases are the headline's whole rhythm — never break inside one. */
+  white-space: nowrap;
+}
+.msf-sub {
+  font-size: clamp(16px, 2.2vw, 20px);
+  max-width: 620px;
+  margin: 18px auto 26px;
+  color: #dfe3ee;
+}
+.msf-ctas {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.msf-btn {
+  display: inline-block;
+  padding: 14px 28px;
+  border-radius: 10px;
+  font-family: var(--font-display-marketing), Oswald, sans-serif;
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.msf-btn:hover {
+  transform: translateY(-1px);
+}
+.msf-btn:focus-visible {
+  outline: 3px solid var(--brass-bright);
+  outline-offset: 2px;
+}
+.msf-btn-primary {
+  background: linear-gradient(180deg, var(--brass-bright), #d9a428);
+  color: #241a05;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+}
+.msf-btn-ghost {
+  border: 1.5px solid rgba(246, 243, 236, 0.55);
+  color: #f6f3ec;
+}
+.msf-btn-brass {
+  background: linear-gradient(180deg, var(--brass-bright), #d9a428);
+  color: #241a05;
+}
+.msf-trust {
+  font-size: 13.5px;
+  color: var(--dim);
+  margin: 14px 0 0;
+}
+.msf-hero .msf-trust,
+.msf-trust-light {
+  color: #aab3c9;
+}
+
+/* Badge strip: the real print artwork, seated on navy tiles like the frame. */
+.msf-badges {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 14px;
+  margin: 40px auto 0;
+}
+.msf-badge {
+  display: grid;
+  place-items: center;
+  width: 82px;
+  height: 82px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #223357, #1a2949);
+  border: 1.5px solid rgba(248, 197, 59, 0.55);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.09),
+    0 4px 10px rgba(0, 0, 0, 0.3);
+}
+.msf-badge img {
+  width: 62px;
+  height: 62px;
+  object-fit: contain;
+}
+.msf-tagline {
+  margin: 22px 0 0;
+  font-family: var(--font-display-marketing), Oswald, sans-serif;
+  font-size: 18px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--brass-bright);
+}
+
+/* ── Bands ── */
+.msf-band {
+  text-align: center;
+}
+.msf-band h2 {
+  font-size: clamp(26px, 4.2vw, 38px);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--navy);
+}
+.msf-band-paper {
+  background: var(--paper-2);
+}
+.msf-lede {
+  max-width: 640px;
+  margin: 14px auto 0;
+  font-size: 17px;
+  color: var(--dim);
+}
+
+.msf-steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 22px;
+  margin-top: 36px;
+  text-align: left;
+}
+.msf-steps article {
+  background: #fff;
+  border: 1px solid #e5dfd3;
+  border-radius: 14px;
+  padding: 24px;
+}
+.msf-step-n {
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--navy);
+  color: var(--brass-bright);
+  font-family: var(--font-display-marketing), Oswald, sans-serif;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+.msf-steps h3 {
+  font-size: 19px;
+  margin-bottom: 8px;
+}
+.msf-steps p {
+  margin: 0;
+  font-size: 15px;
+  color: var(--dim);
+}
+
+.msf-vignettes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 22px;
+  margin-top: 36px;
+  text-align: left;
+}
+.msf-vignettes article {
+  border-left: 3px solid var(--brass);
+  padding-left: 18px;
+}
+.msf-vignettes h3 {
+  font-size: 19px;
+  color: var(--navy);
+  margin-bottom: 6px;
+}
+.msf-vignettes p {
+  margin: 0;
+  font-size: 15px;
+  color: var(--dim);
+}
+
+.msf-qa {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 22px;
+  margin: 36px auto 0;
+  text-align: left;
+}
+.msf-qa dt {
+  font-family: var(--font-display-marketing), Oswald, sans-serif;
+  font-size: 18px;
+  color: var(--navy);
+  margin-bottom: 6px;
+}
+.msf-qa dd {
+  margin: 0;
+  font-size: 15px;
+  color: var(--dim);
+}
+
+/* ── Fundraising band ── */
+.msf-band-navy {
+  background: linear-gradient(180deg, var(--navy), var(--navy-deep));
+  color: #f6f3ec;
+}
+.msf-band-navy h2 {
+  color: #fff;
+}
+.msf-band-navy .msf-lede {
+  color: #c9d0e2;
+}
+.msf-booster {
+  list-style: none;
+  padding: 0;
+  margin: 32px auto;
+  max-width: 640px;
+  text-align: left;
+  display: grid;
+  gap: 16px;
+}
+.msf-booster li {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(248, 197, 59, 0.35);
+  border-radius: 12px;
+  padding: 16px 20px;
+  font-size: 15px;
+  color: #dfe3ee;
+}
+.msf-booster strong {
+  color: var(--brass-bright);
+  display: block;
+  margin-bottom: 2px;
+  font-family: var(--font-display-marketing), Oswald, sans-serif;
+  letter-spacing: 0.03em;
+}
+
+/* ── Close ── */
+.msf-close {
+  padding-bottom: 84px;
+}
+.msf-fineprint {
+  margin-top: 44px;
+  font-size: 13px;
+  color: var(--dim);
+}
+.msf-fineprint a {
+  color: var(--brass);
+}
+
+@media (max-width: 560px) {
+  .msf section {
+    padding: 46px 16px;
+  }
+  .msf-badges {
+    gap: 10px;
+  }
+  .msf-badge {
+    width: 68px;
+    height: 68px;
+  }
+  .msf-badge img {
+    width: 50px;
+    height: 50px;
+  }
+}

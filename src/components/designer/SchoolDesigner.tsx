@@ -335,7 +335,7 @@ export function SchoolDesigner() {
           rather than restyled: it is dev scaffolding, and this page is shown to
           parents deciding whether to spend money. */}
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--ff-line)] bg-[var(--ff-card)] px-4 py-2.5">
-        <h1 className="ff-h1">School Frame</h1>
+        <h1 className="ff-h1">MySchoolFrame</h1>
         <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-2">
           <span className="ff-label hidden sm:block">Plate</span>
           <StateSelector theme="header" />
