@@ -17,6 +17,12 @@
   drafts (in the metro catalogs) are text deliverables only; the only mail the
   system sends is transactional order email.
 - Deploys: push to master; Railway auto-deploys. No PRs unless asked.
+- **Scope is national**, not STL-first-forever: prefer solutions that work for
+  any school with zero hand-authoring (URL intake, generated kits, the code/QR
+  app) over per-school manual steps. Hand-built kits are for pilots only.
+- **Team**: Henry + Bill + Claude. The badge artwork's original illustrator is
+  no longer on the project — new tile art comes from the in-house pipeline:
+  Ideogram prompt library → background keyer → print-quality intake gate.
 - Kit `status: "verified"` is flipped manually only — requires confirmed school
   colors AND written permission to use the school's name/marks.
 
