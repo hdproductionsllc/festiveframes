@@ -43,6 +43,7 @@ import {
 } from "@/lib/constants/frame";
 import { SCHOOL_DEFAULT_SECTIONS } from "@/lib/constants/defaults";
 import { migrateSchoolDesign } from "@/lib/utils/school-migration";
+import { kitSections, type SchoolKit } from "@/data/school-kits";
 import type { BannerPreview } from "@/lib/types";
 import type { SnappetPreview } from "@/lib/utils/snappet";
 
@@ -99,7 +100,7 @@ function DownloadIcon() {
   );
 }
 
-export function SchoolDesigner() {
+export function SchoolDesigner({ kit }: { kit?: SchoolKit } = {}) {
   const frameConfig = useDesignStore((s) => s.frameConfig);
   const slots = useDesignStore((s) => s.slots);
   const bottomBar = useDesignStore((s) => s.bottomBar);
@@ -263,7 +264,7 @@ export function SchoolDesigner() {
       const res = await fetch("/api/school/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ printPng, panels, designName: s.designName, partsList }),
+        body: JSON.stringify({ printPng, panels, designName: s.designName, partsList, school: kit?.slug }),
       });
       const data = (await res.json().catch(() => ({}))) as { ok?: boolean; reason?: string };
       if (res.ok && data.ok) {
@@ -335,7 +336,10 @@ export function SchoolDesigner() {
           rather than restyled: it is dev scaffolding, and this page is shown to
           parents deciding whether to spend money. */}
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--ff-line)] bg-[var(--ff-card)] px-4 py-2.5">
-        <h1 className="ff-h1">MySchoolFrame</h1>
+        <h1 className="ff-h1">
+          MySchoolFrame
+          {kit && <span className="ff-h1-school"> · {kit.shortName} {kit.mascot}</span>}
+        </h1>
         <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-2">
           <span className="ff-label hidden sm:block">Plate</span>
           <StateSelector theme="header" />
@@ -625,7 +629,7 @@ export function SchoolDesigner() {
 // MUST sit above SchoolDesigner so that component's top-level store hooks read the
 // school store (not /build's). The store is created once on the client (lazy
 // useState init) with its OWN persist key, so it never touches /build's design.
-export function SchoolBuilder() {
+export function SchoolBuilder({ kit }: { kit?: SchoolKit }) {
   // The school store is configured two ways:
   //  - `frameConfig`: the school frame is ONE printable geometry (it must fit the
   //    eufyMake E1 bed), so the store owns it outright — initial state, and it wins
@@ -633,18 +637,30 @@ export function SchoolBuilder() {
   //  - `migrateExtra`: a school-ONLY persist migration. The wing trim (3 tile columns
   //    per side → 1, for the E1 bed) invalidated slot ids that remain perfectly valid
   //    on /build, so it cannot live in the shared migration.
+  //
+  // A KIT parameterizes, never forks: same engine, same geometry, same migrations —
+  // the kit only supplies seeds (colors, banner text) and a per-school persist key.
+  // The scoped key is what lets a family with kids at two schools hold two designs,
+  // and it keeps /lab/school's original key untouched for existing users.
   const [store] = useState(() =>
-    createDesignStore(SCHOOL_PERSIST_KEY, {
+    createDesignStore(kit ? `${SCHOOL_PERSIST_KEY}:${kit.slug}` : SCHOOL_PERSIST_KEY, {
       frameConfig: SCHOOL_FRAME_CONFIG,
       migrateExtra: migrateSchoolDesign,
-      // Top/bottom start as TEXT banners — see SCHOOL_DEFAULT_SECTIONS. Initial
+      // Top/bottom start as TEXT banners — kit-branded when there is a kit. Initial
       // state only; a returning user's persisted sections still win.
-      sections: SCHOOL_DEFAULT_SECTIONS,
+      sections: kit ? kitSections(kit) : SCHOOL_DEFAULT_SECTIONS,
+      initialBrand: kit
+        ? {
+            frameColor: kit.colors.frame,
+            tileFieldColor: kit.colors.tileField,
+            rimColor: kit.colors.rim,
+          }
+        : undefined,
     })
   );
   return (
     <DesignStoreProvider store={store}>
-      <SchoolDesigner />
+      <SchoolDesigner kit={kit} />
     </DesignStoreProvider>
   );
 }

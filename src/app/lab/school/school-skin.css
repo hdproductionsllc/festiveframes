@@ -264,6 +264,9 @@
    loudest thing in the old chrome and dropping it costs no contrast at all.
    600 is the weight ceiling — `font-extrabold` and `font-black` are banned here. */
 .ff-h1 { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; color: var(--ff-ink); }
+/* The school's name beside the wordmark on a /s/<slug> kit page — quieter than the
+   brand, present enough that a parent knows they're on THEIR school's page. */
+.ff-h1-school { font-weight: 500; color: var(--ff-ink-2); }
 .ff-h2 { font-size: 13px; font-weight: 600; letter-spacing: -0.005em; color: var(--ff-ink); }
 .ff-label { font-size: 12px; font-weight: 500; color: var(--ff-ink-2); }
 .ff-help { font-size: 12px; font-weight: 400; color: var(--ff-ink-3); line-height: 1.5; }

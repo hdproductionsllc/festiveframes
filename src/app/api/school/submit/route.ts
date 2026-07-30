@@ -118,7 +118,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json({ ok: false, error: "Invalid request." }, { status: 400 });
   }
 
-  const { printPng, panels, designName, partsList } = (body ?? {}) as Record<string, unknown>;
+  const { printPng, panels, designName, partsList, school } = (body ?? {}) as Record<string, unknown>;
 
   // ── Validate the print image (type + size). ──
   if (typeof printPng !== "string" || !DATA_URL_RE.test(printPng)) {
@@ -133,7 +133,13 @@ export async function POST(request: Request): Promise<NextResponse> {
   if (typeof designName !== "string" || designName.length > 200) {
     return NextResponse.json({ ok: false, error: "Invalid design name." }, { status: 400 });
   }
-  const name = designName.trim() || "Untitled";
+  let name = designName.trim() || "Untitled";
+  // Optional school-kit slug from a /s/<slug> builder. Folded into the order name so
+  // the production email says WHICH school's fundraiser this belongs to — that tag is
+  // the whole donation-attribution trail until real tracking exists.
+  if (typeof school === "string" && /^[a-z0-9-]{1,60}$/.test(school)) {
+    name = `[${school}] ${name}`;
+  }
 
   // ── Validate the optional per-panel print files (left/right/top/bottom + a little
   //    slack). Each must be a valid, size-bounded image data URL; anything malformed is

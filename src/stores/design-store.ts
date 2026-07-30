@@ -616,13 +616,27 @@ export interface DesignStoreOptions {
    * hydration and destroyed the returning user's work.
    */
   frameConfig?: FrameConfig;
+  /**
+   * School-kit colour seed — frame body, tile field, rim override.
+   *
+   * INITIAL STATE ONLY, like `sections` and unlike `frameConfig`: a per-school
+   * builder should OPEN wearing the school's colours, but a returning customer's
+   * persisted palette is their design and always wins on hydrate. This is the
+   * contract that makes kit updates safe — editing a kit restyles the next
+   * visitor, never an existing design.
+   */
+  initialBrand?: {
+    frameColor?: string;
+    tileFieldColor?: string | null;
+    rimColor?: string | null;
+  };
 }
 
 // The store is a FACTORY so more than one builder can each own an isolated design
 // (own state + own localStorage key). /build uses `defaultDesignStore`; the school
 // builder creates its own instance and provides it via `DesignStoreProvider`.
 function createDesignStore(persistName: string, options: DesignStoreOptions = {}) {
-  const { migrateExtra, frameConfig: ownedFrameConfig, sections: initialSections } = options;
+  const { migrateExtra, frameConfig: ownedFrameConfig, sections: initialSections, initialBrand } = options;
   const baseFrameConfig = ownedFrameConfig ?? DEFAULT_FRAME_CONFIG;
   return createStore<DesignState>()(
   persist(
@@ -662,9 +676,9 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
         // Initial state
         designName: "My Frame Design",
         plateState: "MO",
-        frameColor: DEFAULT_FRAME_COLOR,
-        tileFieldColor: null,
-        rimColor: null,
+        frameColor: initialBrand?.frameColor ?? DEFAULT_FRAME_COLOR,
+        tileFieldColor: initialBrand?.tileFieldColor ?? null,
+        rimColor: initialBrand?.rimColor ?? null,
         uploads: [],
         slots: {},
         bottomBar: { ...DEFAULT_BOTTOM_BAR },
