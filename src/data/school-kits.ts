@@ -68,6 +68,18 @@ const KITS: SchoolKit[] = [
     colorSource: "red/white per MSHSAA + athletics site; shade approx (#C8102E family, deepened for the frame body) — confirm with KHS before print",
   },
   {
+    slug: "sluh-jr-bills",
+    schoolName: "St. Louis University High School",
+    shortName: "SLUH",
+    mascot: "Jr. Bills",
+    city: "St. Louis, MO",
+    colors: { frame: "#1D4F91", tileField: "#1D4F91", rim: "#FFFFFF" },
+    banners: { top: "HOME OF THE", bottom: "JR. BILLS", tagline: "SLUH", bg: "#1D4F91", text: "#FFFFFF" },
+    status: "demo",
+    colorSource:
+      "blue/white confirmed (sluh.org, Paradigm identity: 'dark blue diamond shield'); exact blue APPROX — #1D4F91 stands in for their dark royal until SLUH confirms. Phase-1 pilot school.",
+  },
+  {
     slug: "micds-rams",
     schoolName: "MICDS",
     shortName: "MICDS",
