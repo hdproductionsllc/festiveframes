@@ -47,6 +47,34 @@ export function luminance(hex: string): number {
  * the scheme. Die-cut printing has no field at all: the art is cut to shape and
  * the frame shows through.
  */
+/**
+ * The field an UPLOADED artwork needs under it, from its own pixels.
+ *
+ * The uploads' answer to `tileBackground`: pieces carry a designed
+ * `backgroundColor`, uploads carry only pixels, so the field is derived — light
+ * art (a white-on-transparent school logo, drawn for a dark header bar) gets the
+ * navy field; dark art gets white. Computed ONCE at crop time and stored on the
+ * placed tile, so both renderers read one stored answer instead of re-deriving
+ * and drifting.
+ *
+ * Only OPAQUE pixels vote: the transparent surround is exactly what the field
+ * will replace, and letting it vote (as fully-black rgba(0,0,0,0)) would call
+ * every cut-out logo "dark". A fully-opaque image (a photo) covers its field
+ * completely, so whatever this returns for one is invisible — white keeps the
+ * legacy behaviour for edge pixels.
+ */
+export function fieldForArtPixels(data: Uint8ClampedArray): string {
+  let sum = 0;
+  let n = 0;
+  for (let i = 0; i < data.length; i += 4) {
+    if (data[i + 3] < 200) continue;
+    sum += (0.2126 * data[i] + 0.7152 * data[i + 1] + 0.0722 * data[i + 2]) / 255;
+    n++;
+  }
+  if (n === 0) return TILE_BG.white;
+  return sum / n > 0.62 ? TILE_BG.navy : TILE_BG.white;
+}
+
 export function tileBackground(piece: Pick<TilePiece, "backgroundColor">): string {
   const own = piece.backgroundColor?.toUpperCase();
   const standard = Object.values(TILE_BG).map((c) => c.toUpperCase());

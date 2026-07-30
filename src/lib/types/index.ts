@@ -136,7 +136,20 @@ export interface PlacedTile {
    * enters as a snappet exactly like a set piece, and the size/drag/resize engine
    * (Stage 0-8) operates on it with no special-casing beyond this render branch.
    */
-  image?: { url: string; fullResId?: string };
+  image?: {
+    url: string;
+    fullResId?: string;
+    /**
+     * The field colour this art needs UNDER it, derived from the art's own pixels
+     * at crop time (light art → navy, dark art → white). Print used to hard-code
+     * white here while the builder painted nothing at all — so a white-on-
+     * transparent school logo (drawn for a dark header bar) was visible on screen
+     * and INVISIBLE on the printed part. Deriving once at intake and storing it is
+     * what lets both renderers read the same answer forever. Absent on designs
+     * saved before this existed → both renderers fall back to white together.
+     */
+    field?: string;
+  };
 }
 
 export interface BottomBarConfig {

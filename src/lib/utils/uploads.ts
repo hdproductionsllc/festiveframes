@@ -93,6 +93,9 @@ export interface UploadedArt {
   aspect: number;
   /** The footprint the crop was sized against — the shape the user already saw. */
   span: TileSpan;
+  /** The field this art needs under it, derived from its pixels at crop time —
+   *  see `fieldForArtPixels`. Absent on older tray entries → white, both renderers. */
+  field?: string;
 }
 
 export function isUploadId(pieceId: string | null | undefined): boolean {

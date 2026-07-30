@@ -367,7 +367,7 @@ interface DesignState {
    */
   placeImageSnappet: (
     panelId: SectionId,
-    image: { imageUrl: string; fullResId?: string; sourceAspect: number },
+    image: { imageUrl: string; fullResId?: string; sourceAspect: number; field?: string },
     /** The builder's smallest footprint. A photo shrunk to one 0.991in cell is a
      *  thumbnail, not a print. Omitted (/build) = the previous 1x1 floor. */
     minSpan?: TileSpan
@@ -709,7 +709,7 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
               ? {
                   pieceId: UPLOAD_PIECE_ID,
                   setId: UPLOAD_SET_ID,
-                  image: { url: art.url, fullResId: art.fullResId },
+                  image: { url: art.url, fullResId: art.fullResId, field: art.field },
                 }
               : { pieceId, setId };
             // Only a genuine multi-cell footprint carries a span — a 1x1 stays the
@@ -899,7 +899,7 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
             const placed: PlacedTile = {
               pieceId: UPLOAD_PIECE_ID,
               setId: UPLOAD_SET_ID,
-              image: { url: image.imageUrl, fullResId: image.fullResId },
+              image: { url: image.imageUrl, fullResId: image.fullResId, field: image.field },
             };
             if (isMultiCell(placement.span)) placed.span = placement.span;
             newSlots[placement.anchorSlotId] = placed;

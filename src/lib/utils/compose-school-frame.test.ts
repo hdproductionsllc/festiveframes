@@ -310,3 +310,61 @@ describe("panel files are the SAME SIZE as the parts they print", () => {
     expect(box.outW).toBe(2 * 300 + 24);
   });
 });
+
+describe("uploaded art's field — the white-logo-vanishing fix", () => {
+  // A cut-out logo: transparent everywhere except a small white mark in the middle.
+  // Under the OLD hard-coded white field, every pixel around the mark printed white
+  // and the mark itself was white-on-white — invisible on the physical part.
+  function whiteLogo(): DrawableImage {
+    const c = createCanvas(200, 200);
+    const g = c.getContext("2d");
+    g.fillStyle = "#ffffff";
+    g.fillRect(80, 80, 40, 40);
+    return c as unknown as DrawableImage;
+  }
+
+  const designWith = (field?: string): SchoolDesign => ({
+    frameConfig: SCHOOL_FRAME_CONFIG,
+    slots: {
+      "frame:wing-left-0": {
+        pieceId: "upload:x",
+        setId: "upload",
+        span: { cols: 2, rows: 2 },
+        image: { url: "data:,", ...(field ? { field } : {}) },
+      } as PlacedTile,
+    },
+    textBars: [],
+    qrCode: { enabled: false, url: "", size: 0 },
+    plateState: "MO",
+    sections: {},
+  });
+
+  function renderAndProbe(design: SchoolDesign) {
+    const { width: W, height: H } = schoolCanvasSize(SCHOOL_FRAME_CONFIG, 75);
+    const canvas = createCanvas(W, H);
+    const ctx = canvas.getContext("2d") as unknown as CanvasRenderingContext2D;
+    const bundle: SchoolImageBundle = {
+      plate: null, pieces: new Map(), sections: new Map(), qr: null, logos: new Map(),
+      snappets: new Map([["frame:wing-left-0", whiteLogo()]]),
+    };
+    drawSchoolFrame(ctx, design, bundle, W);
+    // Probe INSIDE the snappet, off-centre — art is drawn `cover` so the white mark
+    // sits at the middle; this pixel is the field showing through the transparency.
+    const m = schoolRenderMetrics(SCHOOL_FRAME_CONFIG, W);
+    const x = Math.round(m.tileSize * 0.55);
+    const y = Math.round(m.tileSize * 1.55);
+    const d = (ctx as unknown as SKRSContext2D).getImageData(x, y, 1, 1).data;
+    return [d[0], d[1], d[2]] as const;
+  }
+
+  it("paints the STORED field (navy) under light art, so a white logo prints visible", () => {
+    const [r, g, b] = renderAndProbe(designWith("#1B2A4A"));
+    expect(b).toBeGreaterThan(r); // navy family, categorically not white
+    expect(r + g + b).toBeLessThan(400);
+  });
+
+  it("keeps the legacy white field for designs saved before the field existed", () => {
+    const [r, g, b] = renderAndProbe(designWith(undefined));
+    expect(r + g + b).toBeGreaterThan(700); // white-ish, byte-compatible with old prints
+  });
+});

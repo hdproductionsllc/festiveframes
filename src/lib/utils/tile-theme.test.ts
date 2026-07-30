@@ -23,6 +23,8 @@ import {
   textChenille,
   merrowThread,
   textChenilleCss,
+  fieldForArtPixels,
+  TILE_BG,
 } from "./tile-theme";
 
 describe("luminance", () => {
@@ -462,5 +464,42 @@ describe("artInset — the one answer both renderers ask for", () => {
       rimMetrics(tiny, tiny, tiny).width +
       bevelMetrics(tiny, tiny, bg, tiny).thickness;
     expect(artInset(tiny, tiny, bg, tiny)).toBeGreaterThanOrEqual(chrome + 1);
+  });
+});
+
+describe("fieldForArtPixels — the upload's answer to tileBackground", () => {
+  const px = (r: number, g: number, b: number, a: number, count: number) => {
+    const d = new Uint8ClampedArray(count * 4);
+    for (let i = 0; i < count; i++) d.set([r, g, b, a], i * 4);
+    return d;
+  };
+  const mix = (...parts: Uint8ClampedArray[]) => {
+    const total = parts.reduce((n, p) => n + p.length, 0);
+    const d = new Uint8ClampedArray(total);
+    let o = 0;
+    for (const p of parts) { d.set(p, o); o += p.length; }
+    return d;
+  };
+
+  it("gives light art the navy field — the white-logo-vanishing case", () => {
+    // A white-on-transparent header logo: mostly transparent, opaque pixels white.
+    const d = mix(px(255, 255, 255, 255, 100), px(0, 0, 0, 0, 900));
+    expect(fieldForArtPixels(d)).toBe(TILE_BG.navy);
+  });
+
+  it("gives dark art the white field", () => {
+    const d = mix(px(27, 42, 74, 255, 100), px(0, 0, 0, 0, 900));
+    expect(fieldForArtPixels(d)).toBe(TILE_BG.white);
+  });
+
+  it("ignores the transparent surround entirely", () => {
+    // Same opaque pixels, wildly different amounts of transparency — same verdict.
+    const small = mix(px(250, 250, 250, 255, 10), px(0, 0, 0, 0, 10));
+    const large = mix(px(250, 250, 250, 255, 10), px(0, 0, 0, 0, 100000));
+    expect(fieldForArtPixels(small)).toBe(fieldForArtPixels(large));
+  });
+
+  it("returns white for a fully transparent image (nothing to sit on a field)", () => {
+    expect(fieldForArtPixels(px(0, 0, 0, 0, 500))).toBe(TILE_BG.white);
   });
 });

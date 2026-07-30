@@ -27,7 +27,7 @@ interface PlacedTileViewProps {
    *  cover) instead of a set piece — the single render branch that unifies uploaded
    *  art with the snappet engine. Absent on every /build tile, so that path is the
    *  set-piece render below, byte-for-byte. */
-  image?: { url: string; fullResId?: string };
+  image?: { url: string; fullResId?: string; field?: string };
   /**
    * ONE grid cell in px. The badge's edge is measured against this, not against the
    * badge, so a 3x3 wears the same thin moulding as a 1x1. Defaults to the tile's
@@ -65,6 +65,13 @@ export function PlacedTileView({
         style={{
           width,
           height,
+          // The SAME field the print paints under this art (fieldForArtPixels at
+          // crop time, white for older uploads). This box used to have no
+          // background at all, so a white-on-transparent logo read fine against
+          // the dark frame body on screen and vanished on the white print field —
+          // the two renderers must show the art on the same ground or the
+          // customer approves a frame the printer cannot reproduce.
+          backgroundColor: tileField({ backgroundColor: image.field ?? "#FFFFFF" }, tileFieldColor),
           boxShadow:
             "0 2px 6px rgba(0,0,0,0.5), 0 1px 2px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.15), inset 0 -1px 0 rgba(0,0,0,0.1)",
         }}

@@ -8,6 +8,7 @@ import { buildGrid } from "@/lib/utils/slot-generator";
 import { coveredSlotIds } from "@/lib/utils/text-bar";
 import { panelSnappetPlacement } from "@/lib/utils/snappet";
 import { putFullRes } from "@/lib/utils/image-store";
+import { fieldForArtPixels } from "@/lib/utils/tile-theme";
 import { reviewUploadedImage } from "@/lib/utils/image-moderation";
 import type { FrameConfig, PlacedTile, PlacedTextBar, SectionId, SectionState, TileSpan } from "@/lib/types";
 import { thumbnailDataUrl } from "@/lib/utils/uploads";
@@ -130,6 +131,33 @@ export function useSnappetUpload(): SnappetUpload {
     setCropFile(file);
   };
 
+  // The field this art needs under it (light art → navy, dark art → white),
+  // sampled from the confirmed crop. Print used to hard-code white and the
+  // builder painted nothing, so a white school logo was visible on screen and
+  // invisible on the printed part — deriving ONCE here and storing it on the
+  // tile is what keeps the two renderers agreeing about every upload forever.
+  const deriveField = (previewUrl: string): Promise<string | undefined> =>
+    new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const c = document.createElement("canvas");
+          // A sample is enough — the verdict is one bit (light or dark art).
+          const scale = Math.min(1, 256 / Math.max(img.naturalWidth, img.naturalHeight));
+          c.width = Math.max(1, Math.round(img.naturalWidth * scale));
+          c.height = Math.max(1, Math.round(img.naturalHeight * scale));
+          const ctx = c.getContext("2d", { willReadFrequently: true });
+          if (!ctx) return resolve(undefined);
+          ctx.drawImage(img, 0, 0, c.width, c.height);
+          resolve(fieldForArtPixels(ctx.getImageData(0, 0, c.width, c.height).data));
+        } catch {
+          resolve(undefined); // tainted/failed → legacy white fallback downstream
+        }
+      };
+      img.onerror = () => resolve(undefined);
+      img.src = previewUrl;
+    });
+
   const onCropConfirm = async (result: ImageCropResult) => {
     if (!target) return;
     const id = crypto.randomUUID();
@@ -141,6 +169,7 @@ export function useSnappetUpload(): SnappetUpload {
     // Moderation integration point: user prints MUST be gated by a real server-side
     // vision check before production. No-op today (it does not fake an approval).
     void reviewUploadedImage(result.fullResBlob);
+    const field = await deriveField(result.previewUrl);
     // Into the TRAY as well as onto the frame. Placing it once was the whole flow,
     // which meant a crest on both wings was the same file uploaded twice. It is added
     // before the placement so the palette has it even if the panel turns out to be
@@ -156,6 +185,7 @@ export function useSnappetUpload(): SnappetUpload {
       fullResId: id,
       aspect: pendingAspect.current,
       span: pendingSpan.current,
+      field,
     });
     placeImageSnappet(
       target,
@@ -163,6 +193,7 @@ export function useSnappetUpload(): SnappetUpload {
         imageUrl: result.previewUrl,
         fullResId: id,
         sourceAspect: pendingAspect.current,
+        field,
       },
       frameConfig.minTileSpan,
     );

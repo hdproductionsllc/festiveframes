@@ -704,7 +704,15 @@ export function drawSchoolFrame(
 
     ctx.save();
     const piece0 = !tile.image ? getPiece(tile.pieceId) : undefined;
-    const field = piece0 ? tileField(piece0, design.tileFieldColor) : "#ffffff";
+    // An upload's field was derived from its own pixels at crop time and stored on
+    // the tile (see fieldForArtPixels) — hard-coding white here is what made a
+    // white-on-transparent school logo print invisible. Absent (older designs,
+    // sampler failure) falls back to white, and the builder falls back with it.
+    // Both routes flow through tileField, so a school colour override reskins
+    // uploads exactly the way it reskins pieces.
+    const field = piece0
+      ? tileField(piece0, design.tileFieldColor)
+      : tileField({ backgroundColor: tile.image?.field ?? "#FFFFFF" }, design.tileFieldColor);
     const bevel = bevelMetrics(w, h, field, m.tileSize);
     // Open up whichever corners face the frame's OUTSIDE, so the whole assembly
     // reads as one rounded part rather than a grid of separately-rounded squares.
