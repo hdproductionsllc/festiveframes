@@ -100,7 +100,7 @@ export default async function SchoolKitBuilderPage(
               <span
                 key={c}
                 style={{
-                  border: `1px solid ${kit.banners.text}55`,
+                  border: `1px solid ${kit.banners.text}66`,
                   borderRadius: 999,
                   padding: "5px 14px",
                   fontSize: 13.5,
