@@ -523,12 +523,12 @@ export function SchoolDesigner({
           The "Internal prototype · fork of the live builder" strapline is gone
           rather than restyled: it is dev scaffolding, and this page is shown to
           parents deciding whether to spend money. */}
-      <header className="ff-app-header sticky top-0 z-40 flex flex-wrap items-center justify-between gap-3 border-b border-[var(--ff-line)] bg-[var(--ff-card)] px-4 py-2.5">
-        <h1 className="ff-h1">
+      <header className="ff-app-header sticky top-0 z-40 flex flex-nowrap items-center justify-between gap-2 border-b border-[var(--ff-line)] bg-[var(--ff-card)] px-3 py-2 sm:gap-3 sm:px-4 sm:py-2.5">
+        <h1 className="ff-h1 min-w-0 truncate">
           MySchoolFrame
           {kit && <span className="ff-h1-school"> · {kit.shortName} {kit.mascot}</span>}
         </h1>
-        <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-2">
+        <div className="flex shrink-0 flex-nowrap items-center justify-end gap-1.5 sm:gap-2">
           <span className="ff-label hidden sm:block">Plate</span>
           <StateSelector theme="header" />
           {/* Two actions, ONE of them primary. Exporting a file is the power-user

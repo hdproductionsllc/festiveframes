@@ -1022,3 +1022,37 @@
 .school-skin .msf-kit-chip:active {
   transform: translateY(0) scale(0.97);
 }
+
+/* ── The sticky chrome on a phone ────────────────────────────────────────────
+   At 390px this wrapped to THREE rows — plate picker, wordmark, Send — which is
+   a third of the first screen spent on chrome, on the device this product is
+   aimed at, and the opposite of the tidying it was moved up here to achieve.
+   One row at every width: the wordmark gives up space first (it truncates), the
+   controls never do, because they are the things you press. */
+@media (max-width: 640px) {
+  .build-skin.school-skin .ff-app-header .ff-h1 {
+    font-size: 14px;
+    letter-spacing: -0.01em;
+  }
+  /* The school name is context, not identity — first to go when space is tight. */
+  .build-skin.school-skin .ff-app-header .ff-h1-school {
+    display: none;
+  }
+  .build-skin.school-skin .ff-app-header select {
+    max-width: 92px;
+    font-size: 12.5px;
+    padding-left: 6px;
+    padding-right: 20px;
+  }
+  .build-skin.school-skin .ff-app-header .ff-btn {
+    padding-left: 9px;
+    padding-right: 9px;
+    font-size: 12.5px;
+  }
+  /* The wordmark is the brand and must not be shown half-spelled. Everything
+     else in the bar gives up a few pixels first so it can be read whole. */
+  .build-skin.school-skin .ff-app-header .ff-h1 {
+    flex: 0 0 auto;
+    overflow: visible;
+  }
+}

@@ -15,8 +15,32 @@
 @import url('https://fonts.googleapis.com/css2?family=Cookie&family=Courgette&family=Damion&family=Lobster+Two:ital,wght@0,700;1,700&family=Marck+Script&display=swap');
 /* Collegiate / varsity faces — leads the SCHOOL builder's font picker. Graduate is
    the classic collegiate slab; the rest are athletic/condensed team faces. */
-@import url('https://fonts.googleapis.com/css2?family=Graduate&family=Fjalla+One&family=Big+Shoulders+Display:wght@600;700;800;900&family=Saira+Condensed:wght@600;700;800&family=Squada+One&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fjalla+One&family=Big+Shoulders+Display:wght@600;700;800;900&family=Saira+Condensed:wght@600;700;800&family=Squada+One&display=swap');
 @import url('https://fonts.cdnfonts.com/css/license-plate-usa');
+
+/* ── Graduate, SELF-HOSTED ────────────────────────────────────────────────────
+   The collegiate slab on every school banner, and the single most visible face
+   in the product. It used to arrive through the @import chain above, which is
+   how it ended up "thicker on mobile": seven chained @imports race, phones lose
+   that race far more often than desktops, and the stack's next stop is Rockwell
+   or plain `serif` — Times, which is heavier and fills the letter counters.
+   Nothing was wrong with the CSS; the font simply had not arrived yet.
+
+   Served from our own origin it cannot lose that race, and the family name is
+   unchanged, so every `fontFamily` string in the app and both renderers keep
+   working untouched. Same fix already applied to the welcome-band headline via
+   next/font — this is the half that was missed, the frame itself. */
+@font-face {
+  font-family: 'Graduate';
+  src: url('/fonts/graduate.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  /* `block` rather than `swap`: this face is the school's name on the product.
+     A brief invisible moment is better than rendering it in Times and then
+     reflowing — which is precisely the flash being reported as "too thick". The
+     file is ~20KB from our own origin, so the block period is imperceptible. */
+  font-display: block;
+}
 
 /* Stars & Stripes — a free font that isn't on a CDN. Drop the file at
    public/fonts/stars-and-stripes.(woff2|ttf) and it becomes the default text-bar

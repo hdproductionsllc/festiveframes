@@ -197,7 +197,7 @@ const KITS: SchoolKit[] = [
     // A real Jr. Bills plate, supplied by the owner. Cropped to the exact framing
     // of the stock Missouri photo (924x467 canvas, 903x461 body at 7,1) because
     // plate-images.ts tunes a per-plate `scale` against that framing.
-    plate: { state: "MO", src: "/plates/missouri-jrbills-centered.png" },
+    plate: { state: "MO", src: "/plates/missouri-jrbills-centered.jpg" },
     marks: {
       crest: "/kits/sluh/lockup-crest.png",
       lockup: "/kits/sluh/lockup.png",

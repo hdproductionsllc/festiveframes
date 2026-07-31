@@ -33,11 +33,16 @@ export function LicensePlateArea({ x, y, width, height, plateState, plateImageOv
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageFailed, setImageFailed] = useState(false);
 
-  // Reset image state when plate state changes
+  // Reset when the IMAGE changes, not when the state does. Those came apart the
+  // moment a kit could override the photo for a state: switching kits, or the
+  // override arriving after first paint, changed the URL while `plateState`
+  // stayed "MO", so a `failed` flag from the previous image stuck and the plate
+  // stayed on its CSS fallback forever. Keying on the URL is the honest
+  // dependency — it is the thing whose loading is being tracked.
   useEffect(() => {
     setImageLoaded(false);
     setImageFailed(false);
-  }, [plateState]);
+  }, [plateImageUrl]);
 
   const boltSize = Math.max(6, width * 0.015);
   const boltInset = width * 0.04;
@@ -98,6 +103,10 @@ export function LicensePlateArea({ x, y, width, height, plateState, plateImageOv
             onError={() => setImageFailed(true)}
             draggable={false}
             loading="eager"
+            // The CSS plate shows underneath until this resolves, so any delay
+            // here is time spent looking at the fallback rather than the product.
+            fetchPriority="high"
+            decoding="sync"
             className="absolute inset-0 w-full h-full"
             style={{
               opacity: imageLoaded ? 1 : 0,
