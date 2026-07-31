@@ -29,10 +29,10 @@
 }
 
 .msf section {
-  padding: 64px 20px;
+  padding: clamp(72px, 9vw, 112px) 20px;
 }
 .msf section > * {
-  max-width: 980px;
+  max-width: 1020px;
   margin-left: auto;
   margin-right: auto;
 }
@@ -56,7 +56,7 @@
   font-size: 19px;
   letter-spacing: 0.05em;
   color: var(--brass-bright);
-  margin: 0 0 18px;
+  margin: 0 0 24px;
 }
 .msf-brand-mark {
   width: 30px;
@@ -64,7 +64,7 @@
   /* The frame body renders in currentColor = brass, matching the wordmark. */
 }
 .msf-hero h1 {
-  font-size: clamp(38px, 7vw, 68px);
+  font-size: clamp(42px, 7.2vw, 76px);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.015em;
@@ -75,23 +75,24 @@
   white-space: nowrap;
 }
 .msf-sub {
-  font-size: clamp(16px, 2.2vw, 20px);
-  max-width: 620px;
-  margin: 18px auto 26px;
+  font-size: clamp(18px, 2.4vw, 22px);
+  line-height: 1.6;
+  max-width: 660px;
+  margin: 22px auto 34px;
   color: #dfe3ee;
 }
 .msf-ctas {
   display: flex;
-  gap: 12px;
+  gap: 14px;
   justify-content: center;
   flex-wrap: wrap;
 }
 .msf-btn {
   display: inline-block;
-  padding: 14px 28px;
+  padding: 16px 32px;
   border-radius: 10px;
   font-family: var(--font-display-marketing), Oswald, sans-serif;
-  font-size: 17px;
+  font-size: 18px;
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -119,9 +120,9 @@
   color: #241a05;
 }
 .msf-trust {
-  font-size: 13.5px;
+  font-size: 15px;
   color: var(--dim);
-  margin: 14px 0 0;
+  margin: 18px 0 0;
 }
 .msf-hero .msf-trust,
 .msf-trust-light {
@@ -133,8 +134,8 @@
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 14px;
-  margin: 40px auto 0;
+  gap: 16px;
+  margin: 48px auto 0;
 }
 .msf-badge {
   display: grid;
@@ -154,9 +155,9 @@
   object-fit: contain;
 }
 .msf-tagline {
-  margin: 22px 0 0;
+  margin: 30px 0 0;
   font-family: var(--font-display-marketing), Oswald, sans-serif;
-  font-size: 18px;
+  font-size: 21px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--brass-bright);
@@ -167,7 +168,8 @@
   text-align: center;
 }
 .msf-band h2 {
-  font-size: clamp(26px, 4.2vw, 38px);
+  font-size: clamp(30px, 4.6vw, 44px);
+  text-wrap: balance;
   text-transform: uppercase;
   letter-spacing: 0.02em;
   color: var(--navy);
@@ -176,85 +178,90 @@
   background: var(--paper-2);
 }
 .msf-lede {
-  max-width: 640px;
-  margin: 14px auto 0;
-  font-size: 17px;
+  max-width: 680px;
+  margin: 18px auto 0;
+  font-size: clamp(18px, 2vw, 20px);
+  line-height: 1.6;
   color: var(--dim);
 }
 
 .msf-steps {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 22px;
-  margin-top: 36px;
+  gap: 28px;
+  margin-top: 48px;
   text-align: left;
 }
 .msf-steps article {
   background: #fff;
   border: 1px solid #e5dfd3;
   border-radius: 14px;
-  padding: 24px;
+  padding: 30px 28px;
 }
 .msf-step-n {
   display: inline-grid;
   place-items: center;
-  width: 34px;
-  height: 34px;
+  width: 40px;
+  height: 40px;
+  font-size: 18px;
   border-radius: 50%;
   background: var(--navy);
   color: var(--brass-bright);
   font-family: var(--font-display-marketing), Oswald, sans-serif;
   font-weight: 700;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
 }
 .msf-steps h3 {
-  font-size: 19px;
-  margin-bottom: 8px;
+  font-size: 22px;
+  margin-bottom: 10px;
 }
 .msf-steps p {
   margin: 0;
-  font-size: 15px;
+  font-size: 16.5px;
+  line-height: 1.65;
   color: var(--dim);
 }
 
 .msf-vignettes {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 22px;
-  margin-top: 36px;
+  gap: 30px;
+  margin-top: 48px;
   text-align: left;
 }
 .msf-vignettes article {
   border-left: 3px solid var(--brass);
-  padding-left: 18px;
+  padding-left: 20px;
 }
 .msf-vignettes h3 {
-  font-size: 19px;
+  font-size: 22px;
   color: var(--navy);
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 .msf-vignettes p {
   margin: 0;
-  font-size: 15px;
+  font-size: 16.5px;
+  line-height: 1.65;
   color: var(--dim);
 }
 
 .msf-qa {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 22px;
-  margin: 36px auto 0;
+  gap: 34px 38px;
+  margin: 48px auto 0;
   text-align: left;
 }
 .msf-qa dt {
   font-family: var(--font-display-marketing), Oswald, sans-serif;
-  font-size: 18px;
+  font-size: 21px;
   color: var(--navy);
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 .msf-qa dd {
   margin: 0;
-  font-size: 15px;
+  font-size: 16.5px;
+  line-height: 1.65;
   color: var(--dim);
 }
 
@@ -272,35 +279,37 @@
 .msf-booster {
   list-style: none;
   padding: 0;
-  margin: 32px auto;
-  max-width: 640px;
+  margin: 44px auto;
+  max-width: 680px;
   text-align: left;
   display: grid;
-  gap: 16px;
+  gap: 18px;
 }
 .msf-booster li {
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(248, 197, 59, 0.35);
   border-radius: 12px;
-  padding: 16px 20px;
-  font-size: 15px;
+  padding: 20px 24px;
+  font-size: 16.5px;
+  line-height: 1.6;
   color: #dfe3ee;
 }
 .msf-booster strong {
   color: var(--brass-bright);
   display: block;
-  margin-bottom: 2px;
+  font-size: 18px;
+  margin-bottom: 6px;
   font-family: var(--font-display-marketing), Oswald, sans-serif;
   letter-spacing: 0.03em;
 }
 
 /* ── Close ── */
 .msf-close {
-  padding-bottom: 84px;
+  padding-bottom: 110px;
 }
 .msf-fineprint {
-  margin-top: 44px;
-  font-size: 13px;
+  margin-top: 56px;
+  font-size: 14px;
   color: var(--dim);
 }
 .msf-fineprint a {
@@ -309,7 +318,7 @@
 
 @media (max-width: 560px) {
   .msf section {
-    padding: 46px 16px;
+    padding: 60px 18px;
   }
   .msf-badges {
     gap: 10px;

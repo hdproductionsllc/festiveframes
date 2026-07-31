@@ -26,10 +26,56 @@ const graduate = Graduate({ weight: "400", subsets: ["latin"] });
 
 export const metadata: Metadata = {
   // absolute: opt out of the root layout's "| Festive Frames" title template —
-  // on myschoolframe.com this page IS the brand.
-  title: { absolute: "MySchoolFrame — Your school. Your story. Your frame." },
+  // on myschoolframe.com this page IS the brand. Title targets the two most
+  // winnable buying queries from the July 2026 SERP research ("custom school
+  // license plate frame", "school spirit license plate frame") — both SERPs are
+  // Etsy aggregation pages and dated vendors, with no dedicated brand.
+  title: {
+    absolute: "Custom School Spirit License Plate Frames | MySchoolFrame",
+  },
   description:
-    "Design a premium license-plate frame in your school's exact colors, with badges for your teams and clubs. Every frame gives back to your booster club.",
+    "Design a custom license plate frame in your high school's colors — badges for football, band, robotics, and 30+ activities. Printed in St. Louis, USA. Every frame sends a donation to your school's booster club.",
+};
+
+// Structured data. Product+Offer earns merchant snippets with zero reviews;
+// NO aggregateRating until real customer reviews render on-page (Google issues
+// manual actions for invisible ratings), and no FAQPage — FAQ rich results were
+// fully deprecated May 2026; the Q&A below stays for readers and AI answers.
+// Price mirrors the live builder's buy button (schema price must match what
+// the product page displays).
+const STRUCTURED_DATA = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": "https://www.myschoolframe.com/#org",
+      name: "MySchoolFrame",
+      url: "https://www.myschoolframe.com",
+      logo: "https://www.myschoolframe.com/brand/msf-mark.png",
+      parentOrganization: { "@type": "Organization", name: "Festive Frames" },
+    },
+    {
+      "@type": "WebSite",
+      name: "MySchoolFrame",
+      url: "https://www.myschoolframe.com",
+    },
+    {
+      "@type": "Product",
+      name: "Custom School Spirit License Plate Frame",
+      description:
+        "A personalized license plate frame in your school's colors with badge tiles for your student's sports, band, clubs, and achievements. Designed by you in an online builder, UV-printed and assembled in St. Louis, USA. A set donation from every frame goes to the school's booster club.",
+      image: "https://www.myschoolframe.com/school/opengraph-image",
+      brand: { "@type": "Brand", name: "MySchoolFrame" },
+      offers: {
+        "@type": "Offer",
+        url: "https://www.myschoolframe.com/lab/school",
+        price: "49.00",
+        priceCurrency: "USD",
+        availability: "https://schema.org/InStock",
+        itemCondition: "https://schema.org/NewCondition",
+      },
+    },
+  ],
 };
 
 /** Real print artwork from the badge library — the product sells itself. */
@@ -98,11 +144,27 @@ const ANSWERS = [
     q: "Is my school on it?",
     a: "Every school is. Paste your school's website and the builder themes itself in your colors — no waiting for us to add you.",
   },
+  {
+    q: "Are license plate frames legal in my state?",
+    a: "Frames are legal everywhere; what states regulate is covering the plate's numbers, stickers, or state name. The builder shows you exactly what your frame covers before anything prints, so you can keep your state's markings clear.",
+  },
+  {
+    q: "How much does the school actually get?",
+    a: "A set dollar amount from every frame — not a percentage of profit after costs. Your booster club sees exactly what a season of frames earned it.",
+  },
+  {
+    q: "Which activities have badges?",
+    a: "Football, soccer, basketball, volleyball, baseball, softball, track, tennis, golf, cheer, band, marching band, drama, robotics, debate, chess, science, honor society, student council, yearbook and more — plus your own photos.",
+  },
 ];
 
 export default function MySchoolFramePage() {
   return (
     <main className="msf">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(STRUCTURED_DATA) }}
+      />
       {/* ── Hero ── */}
       <section className="msf-hero">
         <p className="msf-brand">
@@ -142,12 +204,12 @@ export default function MySchoolFramePage() {
         </p>
 
         {/* Real badge artwork on school-navy tiles — the actual print files. */}
-        <div className="msf-badges" aria-hidden>
+        <div className="msf-badges">
           {BADGES.map(([slug, alt]) => (
             <span key={slug} className="msf-badge">
               <Image
                 src={`/tiles/high-school/${slug}.png`}
-                alt={alt}
+                alt={`${alt} badge tile for a custom school license plate frame`}
                 width={96}
                 height={96}
               />
@@ -160,6 +222,10 @@ export default function MySchoolFramePage() {
       {/* ── How it works ── */}
       <section className="msf-band">
         <h2>Three steps. About five minutes.</h2>
+        <p className="msf-lede">
+          A custom school license plate frame you design yourself — from any
+          phone, in your high school&apos;s real colors.
+        </p>
         <div className="msf-steps">
           {STEPS.map((s) => (
             <article key={s.n}>
@@ -185,8 +251,20 @@ export default function MySchoolFramePage() {
         </div>
       </section>
 
-      {/* ── Straight answers ── */}
+      {/* ── Senior night ── */}
       <section className="msf-band">
+        <h2>The senior night gift that stays out of the box</h2>
+        <p className="msf-lede">
+          Senior night gifts for football players, band seniors, cheerleaders,
+          soccer players — most end up on a shelf by January. A frame in their
+          school&apos;s colors, with their activities and their year, rides the
+          back of the car through college and gets kept. Their name, their
+          number, their four years — not another blanket with a stock logo.
+        </p>
+      </section>
+
+      {/* ── Straight answers ── */}
+      <section className="msf-band msf-band-paper">
         <h2>Straight answers</h2>
         <dl className="msf-qa">
           {ANSWERS.map((x) => (
@@ -212,9 +290,9 @@ export default function MySchoolFramePage() {
             amount back to the club — no percentage math, no minimums to hit.
           </li>
           <li>
-            <strong>Zero inventory, zero cost, zero risk.</strong> Nothing to
-            order, store, front, count or haul to a game. Parents order direct;
-            we print and ship direct.
+            <strong>Zero inventory, zero cost, zero risk.</strong> No order
+            forms, no sorting at practice, no minimums to hit, nothing to front.
+            Parents order direct; we print and ship direct — it runs itself.
           </li>
           <li>
             <strong>Your school controls its brand.</strong> Your official
