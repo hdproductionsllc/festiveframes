@@ -42,8 +42,74 @@ export default async function SchoolKitBuilderPage(
   const { slug } = await params;
   const kit = getSchoolKit(slug);
   if (!kit) notFound();
+  const w = kit.welcome;
   return (
     <div className="build-skin school-skin">
+      {/* School-branded welcome: the kit's own colors and banner voice, so a
+          parent arriving from a QR or a booster link lands on THEIR school,
+          not on our brand. Facts in the copy come from the kit, which is
+          research-sourced and owner-reviewed before a school goes live. */}
+      {w && (
+        <section
+          style={{
+            background: `linear-gradient(180deg, ${kit.colors.frame}, ${kit.colors.frame}e6)`,
+            color: kit.banners.text,
+            padding: "40px 20px 34px",
+            textAlign: "center",
+          }}
+        >
+          <p
+            style={{
+              margin: 0,
+              fontFamily: "Graduate, serif",
+              fontSize: "clamp(24px, 4vw, 38px)",
+              letterSpacing: "0.03em",
+            }}
+          >
+            {w.headline}
+          </p>
+          {w.message.map((m) => (
+            <p
+              key={m.slice(0, 24)}
+              style={{
+                maxWidth: 720,
+                margin: "14px auto 0",
+                fontSize: 17,
+                lineHeight: 1.6,
+                opacity: 0.94,
+              }}
+            >
+              {m}
+            </p>
+          ))}
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 8,
+              justifyContent: "center",
+              margin: "20px auto 0",
+              maxWidth: 760,
+            }}
+          >
+            {w.chips.map((c) => (
+              <span
+                key={c}
+                style={{
+                  border: `1px solid ${kit.banners.text}55`,
+                  borderRadius: 999,
+                  padding: "5px 14px",
+                  fontSize: 13.5,
+                  letterSpacing: "0.02em",
+                }}
+              >
+                {c}
+              </span>
+            ))}
+          </div>
+          <p style={{ margin: "22px 0 0", fontSize: 14.5, opacity: 0.85 }}>{w.ordering}</p>
+        </section>
+      )}
       <SchoolBuilder kit={kit} />
     </div>
   );

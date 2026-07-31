@@ -45,6 +45,16 @@ export interface SchoolKit {
   banners: { top: string; bottom: string; tagline: string; bg: string; text: string };
   /** Builder font family string for the banner faces. Absent = house default. */
   fontFamily?: string;
+  /** Parent-facing welcome above the builder: the "they did their homework"
+   *  layer. Every line is school-specific and research-sourced — a wrong fact
+   *  here costs more trust than the section earns, so facts only. */
+  welcome?: {
+    headline: string;
+    message: string[];
+    /** Activity/tradition chips — what the school is actually known for. */
+    chips: string[];
+    ordering: string;
+  };
   /** demo = research-guessed, noindexed, for sales demos. verified = school
    *  confirmed colors AND authorized use of its name — indexable. */
   status: "demo" | "verified";
