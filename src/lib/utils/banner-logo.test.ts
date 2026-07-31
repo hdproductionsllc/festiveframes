@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { bannerConfigFor, bannerLogoLayout, sectionSupportsLogo, LOGO_HEIGHT_RATIO } from "./banner-logo";
+import { bannerConfigFor, bannerLogoLayout, sectionSupportsLogo, LOGO_HEIGHT_RATIO, LOGO_EDGE_RATIO } from "./banner-logo";
 import type { BottomBarConfig } from "@/lib/types";
 
 const BAR = { width: 800, height: 120, inset: 10 };
@@ -29,21 +29,28 @@ describe("bannerLogoLayout", () => {
   });
 
   it("takes width from the side the crest is on, and only that side", () => {
+    // The crest sits INBOARD of the chrome inset (LOGO_EDGE_RATIO): flush against
+    // it read as crowding the bevel, because a round mark looks closer to an edge
+    // than a flat line of type at the same distance.
+    const edge = BAR.inset + Math.round(BAR.height * LOGO_EDGE_RATIO);
     const left = bannerLogoLayout(logo("left"), BAR.width, BAR.height, BAR.inset)!;
-    expect(left.leftX).toBe(BAR.inset);
+    expect(left.leftX).toBe(edge);
     expect(left.rightX).toBeNull();
-    expect(left.textX).toBeGreaterThan(BAR.inset); // pushed right past the crest
+    expect(left.textX).toBeGreaterThan(edge); // pushed right past the crest
 
     const right = bannerLogoLayout(logo("right"), BAR.width, BAR.height, BAR.inset)!;
     expect(right.leftX).toBeNull();
     expect(right.textX).toBe(BAR.inset); // text starts at the edge again
-    expect(right.rightX! + right.size).toBe(BAR.width - BAR.inset);
+    expect(right.rightX! + right.size).toBe(BAR.width - edge);
   });
 
   it("flanks BOTH sides symmetrically", () => {
+    const edge = BAR.inset + Math.round(BAR.height * LOGO_EDGE_RATIO);
     const l = bannerLogoLayout(logo("both"), BAR.width, BAR.height, BAR.inset)!;
-    expect(l.leftX).toBe(BAR.inset);
-    expect(l.rightX! + l.size).toBe(BAR.width - BAR.inset);
+    expect(l.leftX).toBe(edge);
+    expect(l.rightX! + l.size).toBe(BAR.width - edge);
+    // Symmetry is the point: equal air on both sides, whatever the inset.
+    expect(l.leftX).toBe(BAR.width - (l.rightX! + l.size));
     // Text centred between them.
     expect(l.textX + l.textWidth / 2).toBeCloseTo(BAR.width / 2, 0);
   });

@@ -24,6 +24,19 @@ export const LOGO_HEIGHT_RATIO = 0.72;
 export const LOGO_GAP_RATIO = 0.08;
 
 /**
+ * Extra inset for the crest, as a fraction of the banner's height, ON TOP of the
+ * chrome inset the text already clears.
+ *
+ * The crest used to start exactly where the text does, which put it hard against
+ * the bevel: correct by the letter (same inset as everything else) and wrong by
+ * eye, because a round-ish mark reads as closer to an edge than a flat line of
+ * type at the same distance. Nudging it toward the centre gives the mark its own
+ * margin without taking room the words need — the text area is measured from the
+ * crest, so it simply follows.
+ */
+export const LOGO_EDGE_RATIO = 0.10;
+
+/**
  * Which banner may carry a crest: the BOTTOM one only.
  *
  * The top strip is a single tile row. A crest there comes out around half an inch on
@@ -92,15 +105,18 @@ export function bannerLogoLayout(
   const wantsLeft = logo.placement === "left" || logo.placement === "both";
   const wantsRight = logo.placement === "right" || logo.placement === "both";
 
-  const leftX = wantsLeft ? inset : null;
-  const rightX = wantsRight ? width - inset - size : null;
+  // Seated inboard of the chrome inset — see LOGO_EDGE_RATIO.
+  const edge = inset + Math.round(height * LOGO_EDGE_RATIO);
+  const leftX = wantsLeft ? edge : null;
+  const rightX = wantsRight ? width - edge - size : null;
 
   // The text gets what is left. A crest that would leave no room for the words is
   // the wrong trade on a banner whose whole job is the words, so the text area is
   // never allowed below a third of the bar — past that the crest simply overlaps
   // less rather than the text vanishing.
-  const takenLeft = wantsLeft ? size + gap : 0;
-  const takenRight = wantsRight ? size + gap : 0;
+  // Measured from the crest's real position, so the words keep clear of it.
+  const takenLeft = wantsLeft ? size + gap + (edge - inset) : 0;
+  const takenRight = wantsRight ? size + gap + (edge - inset) : 0;
   const rawX = inset + takenLeft;
   const rawWidth = width - inset * 2 - takenLeft - takenRight;
   const floor = Math.round((width - inset * 2) / 3);

@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { useDesignStore } from "@/stores/design-store";
 import { getPiece } from "@/data/sets";
 import { useUIStore } from "@/stores/ui-store";
+import { ColorSwatch, HexInput } from "./ColorField";
 import { buildGrid } from "@/lib/utils/slot-generator";
 import { coveredSlotIds } from "@/lib/utils/text-bar";
 import { minSpanFor, tileSpan, resolveSnappetResize } from "@/lib/utils/snappet";
@@ -168,6 +169,20 @@ export function SnappetSizeControl() {
           }}
         />
       ))}
+      {/* Exact colour for THIS tile, same pair as the panel controls: presets for
+          speed, swatch + hex for "the precise colour on our brand sheet". */}
+      <ColorSwatch
+        value={current ?? "#1B2A4A"}
+        onChange={(hex) => setTileColors(selectedId, { [key]: hex })}
+        label={`${label} colour`}
+        size={24}
+      />
+      <HexInput
+        value={current ?? "#1B2A4A"}
+        onChange={(hex) => setTileColors(selectedId, { [key]: hex })}
+        label={label}
+        className="hidden sm:block"
+      />
       <button
         type="button"
         onClick={() => setTileColors(selectedId, { [key]: null })}

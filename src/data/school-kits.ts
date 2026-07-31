@@ -174,9 +174,8 @@ const KITS: SchoolKit[] = [
       "frame:right-3": { pieceId: "hs:drama", setId: "hs", span: { cols: 2, rows: 2 } },
       "frame:bottom-11": { pieceId: "hs:laurel", setId: "hs", span: { cols: 2, rows: 2 } },
     },
-    // Cut from the official files the owner supplied. The Billiken keeps its white
-    // field because the mark is navy line work on columbia AND its body is white —
-    // a global white key would hollow out the Billiken itself.
+    // Cut from the official files the owner supplied, both keyed to transparency
+    // so they sit on the school's colour rather than on white cards.
     //
     // PRINT RESOLUTION, measured (do not flip this kit to "verified" without
     // re-checking): the Billiken is 679px on a 1.982" 2x2 tile = 343 DPI, over the
@@ -193,14 +192,17 @@ const KITS: SchoolKit[] = [
           name: "Billiken",
           artworkUrl: "/kits/sluh/billiken.png",
           emoji: "🔵",
-          field: "white",
+          // Keyed to transparency (edge-connected fill only — a global white key
+          // would hollow out the Billiken, whose own body is white), so he now
+          // sits directly on the school's colour like every other badge.
+          field: "navy",
         },
         {
           key: "shield",
           name: "SLUH Crest",
           artworkUrl: "/kits/sluh/lockup-crest.png",
           emoji: "🛡️",
-          field: "white",
+          field: "navy",
         },
       ],
     },

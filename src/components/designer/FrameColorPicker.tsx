@@ -2,6 +2,7 @@
 
 import { DEFAULT_FRAME_COLOR, useDesignStore } from "@/stores/design-store";
 import { TILE_BG, brassGradientCss, luminance, solidFill } from "@/lib/utils/tile-theme";
+import { ColorSwatch, HexInput } from "./ColorField";
 
 // ─── The frame BODY colour, as a global override ─────────────────────────────
 //
@@ -47,19 +48,8 @@ export function FrameColorPicker() {
       <div className="flex items-center gap-2">
         {/* The swatch IS the input. A separate preview would be one more thing that
             can disagree with the truth. */}
-        <label
-          className="relative h-9 w-9 shrink-0 cursor-pointer overflow-hidden rounded-[var(--ff-radius-sm,6px)] border"
-          style={{ background: current, borderColor: "var(--ff-line, #1e1b17)" }}
-          title="Choose a frame colour"
-        >
-          <input
-            type="color"
-            value={current}
-            onChange={(e) => setFrameColor(e.target.value)}
-            aria-label="Frame colour"
-            className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-          />
-        </label>
+        <ColorSwatch value={current} onChange={setFrameColor} label="Frame colour" size={36} />
+        <HexInput value={current} onChange={setFrameColor} label="Frame colour" />
 
         <div className="flex min-w-0 flex-1 flex-wrap gap-1.5">
           {PRESETS.map(([hex, label]) => {
@@ -145,22 +135,18 @@ function SwatchRow({
 }) {
   return (
     <div className="flex items-center gap-2">
-      <label
-        className="relative h-7 w-7 shrink-0 cursor-pointer overflow-hidden rounded-[var(--ff-radius-sm,6px)] border"
-        style={{
-          background: value ? value : fallback,
-          borderColor: "var(--ff-line, #1e1b17)",
-        }}
-        title={`Choose a ${label.toLowerCase()} colour`}
-      >
-        <input
-          type="color"
-          value={value ?? "#1B2A4A"}
-          onChange={(e) => onChange(e.target.value)}
-          aria-label={`${label} colour`}
-          className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-        />
-      </label>
+      <ColorSwatch
+        value={value ?? "#1B2A4A"}
+        onChange={onChange}
+        label={`${label} colour`}
+        background={value ? undefined : fallback}
+      />
+      <HexInput
+        value={value ?? "#1B2A4A"}
+        onChange={onChange}
+        label={`${label} colour`}
+        className="hidden sm:block"
+      />
       <div className="min-w-0 flex-1">
         <p className="text-[12px] font-semibold leading-tight text-[var(--ff-ink,#1e1b17)]">{label}</p>
         <p className="ff-help leading-tight">{hint}</p>

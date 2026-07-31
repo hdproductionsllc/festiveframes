@@ -7,6 +7,7 @@ import { SCHOOL_PHRASE_GROUPS } from "@/data/school-phrases";
 import type { BottomBarConfig, SectionId } from "@/lib/types";
 import { sectionSupportsLogo } from "@/lib/utils/banner-logo";
 import { useSnappetUpload } from "./useSnappetUpload";
+import { ColorSwatch, HexInput } from "./ColorField";
 
 // Editor for the SELECTED section (school builder).
 //   TEXT mode  → phrase + font + colors → setSectionText.
@@ -316,16 +317,15 @@ function LogoRow({ sectionId, logo }: { sectionId: SectionId; logo: BottomBarCon
   );
 }
 
+/** Banner colour: the swatch opens the full picker, the field takes an exact hex.
+ *  Same pair as the frame and per-tile controls — a colour is chosen the same way
+ *  everywhere, and every one of them can express a precise brand value. */
 function Swatch({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
   return (
-    <label className="flex items-center gap-1.5">
+    <div className="flex items-center gap-1.5">
       <span className="ff-micro">{label}</span>
-      <input
-        type="color"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="h-7 w-9 cursor-pointer rounded-[6px] border border-[var(--ff-line-strong)]"
-      />
-    </label>
+      <ColorSwatch value={value} onChange={onChange} label={label} size={28} />
+      <HexInput value={value} onChange={onChange} label={label} className="hidden sm:block" />
+    </div>
   );
 }

@@ -62,7 +62,7 @@ export default async function SchoolKitBuilderPage(
           parent arriving from a QR or a booster link lands on THEIR school,
           not on our brand. Facts in the copy come from the kit, which is
           research-sourced and owner-reviewed before a school goes live. */}
-      {w && (
+      <SchoolBuilder kit={kit} hero={w ? (
         <section className="msf-kit-hero">
           {/* The school's own lockup, above its own words. This is the first
               thing on the page for a reason: a parent should recognise their
@@ -102,8 +102,7 @@ export default async function SchoolKitBuilderPage(
           </div>
           <p className="msf-kit-ordering">{w.ordering}</p>
         </section>
-      )}
-      <SchoolBuilder kit={kit} />
+      ) : null} />
     </div>
   );
 }

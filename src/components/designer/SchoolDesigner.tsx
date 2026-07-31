@@ -65,15 +65,20 @@ const STAGE_VIEWPORT_RESERVE_PX = 190;
 /**
  * The share of that room the frame keeps WHILE A SECTION EDITOR IS OPEN.
  *
- * With an editor open the two of them cannot both be full size on a laptop window —
+ * With an editor open the two of them cannot both be full size on a SHORT window —
  * a full-height frame plus a full-height editor is more than the viewport holds, and
  * something has to give. Every earlier attempt let the frame win and pushed the
  * editor off the bottom, which is the overlap this float was torn out for. So the
- * frame yields instead: it shrinks to a bit under two thirds, which is still the
- * largest thing on the page, and the editor gets the rest without either covering
- * the other.
+ * frame yields instead.
+ *
+ * It yields far LESS than it used to (0.62). At that depth the product visibly
+ * jumped every time a tile or a panel was selected, which reads as the page
+ * breaking rather than as making room — the frame is the thing being sold and it
+ * should not lurch. Three changes together fix it: a gentler share, a transition
+ * so the change is a move rather than a jump, and a height gate in CSS so on a
+ * tall window the frame does not move at all.
  */
-const STAGE_EDITING_SHARE = 0.62;
+const STAGE_EDITING_SHARE = 0.82;
 
 /**
  * The one icon this file needs, drawn to the house spec for the re-skin: 24x24
@@ -100,7 +105,10 @@ function DownloadIcon() {
   );
 }
 
-export function SchoolDesigner({ kit }: { kit?: SchoolKit } = {}) {
+export function SchoolDesigner({
+  kit,
+  hero,
+}: { kit?: SchoolKit; hero?: React.ReactNode } = {}) {
   // This school's own crest/mascot badges. Memoised on the kit so the palette
   // isn't handed a fresh array on every render of a page that never changes kit.
   const kitMarks = useMemo(() => kitMarkPieces(kit), [kit]);
@@ -515,7 +523,7 @@ export function SchoolDesigner({ kit }: { kit?: SchoolKit } = {}) {
           The "Internal prototype · fork of the live builder" strapline is gone
           rather than restyled: it is dev scaffolding, and this page is shown to
           parents deciding whether to spend money. */}
-      <header className="ff-app-header flex flex-wrap items-center justify-between gap-3 border-b border-[var(--ff-line)] bg-[var(--ff-card)] px-4 py-2.5">
+      <header className="ff-app-header sticky top-0 z-40 flex flex-wrap items-center justify-between gap-3 border-b border-[var(--ff-line)] bg-[var(--ff-card)] px-4 py-2.5">
         <h1 className="ff-h1">
           MySchoolFrame
           {kit && <span className="ff-h1-school"> · {kit.shortName} {kit.mascot}</span>}
@@ -548,7 +556,7 @@ export function SchoolDesigner({ kit }: { kit?: SchoolKit } = {}) {
             onClick={handleSubmit}
             disabled={submitting || exporting || buying}
             title="Send your finished design to our team without ordering"
-            className="ff-btn ff-btn-primary ff-btn-sm shrink-0"
+            className="ff-btn ff-btn-primary ff-btn-sm shrink-0 whitespace-nowrap"
           >
             {submitting ? (
               "Sending..."
@@ -568,7 +576,7 @@ export function SchoolDesigner({ kit }: { kit?: SchoolKit } = {}) {
               onClick={handleBuy}
               disabled={buying || submitting || exporting}
               title="Order this frame, secure checkout"
-              className="ff-btn ff-btn-primary ff-btn-sm shrink-0"
+              className="ff-btn ff-btn-primary ff-btn-sm shrink-0 whitespace-nowrap"
             >
               {buying ? "Starting checkout..." : <>Buy<span className="hidden sm:inline"> this frame</span></>}
             </button>
@@ -693,6 +701,14 @@ export function SchoolDesigner({ kit }: { kit?: SchoolKit } = {}) {
           </div>
         </div>
       )}
+
+      {/* The school's welcome, BELOW the app chrome and above the builder.
+          It is passed in rather than rendered by the page around this component
+          so that the chrome — wordmark, plate picker, Send, and the restore
+          banner — sits at the very top of the page instead of landing between
+          the hero and the frame, where it broke the read straight through from
+          "this is your school" to "here is your frame". */}
+      {hero}
 
       <DndProvider
         onOverSlotChange={setOverSlotId}
@@ -873,9 +889,12 @@ export function SchoolDesigner({ kit }: { kit?: SchoolKit } = {}) {
                 style={
                   {
                     "--ff-frame-aspect": frameAspect,
-                    "--ff-stage-room": `calc((100vh - ${STAGE_VIEWPORT_RESERVE_PX}px) * ${
-                      editorOpen ? STAGE_EDITING_SHARE : 1
-                    })`,
+                    // The full room, and SEPARATELY how much of it the frame
+                    // yields while editing. Kept as two values so CSS can decide
+                    // whether the yield is needed at all — on a tall window both
+                    // fit and the frame should not move. See .ff-stage-cap.
+                    "--ff-stage-full": `calc(100vh - ${STAGE_VIEWPORT_RESERVE_PX}px)`,
+                    "--ff-share-editing": editorOpen ? STAGE_EDITING_SHARE : 1,
                   } as React.CSSProperties
                 }
               >
@@ -938,7 +957,7 @@ export function SchoolDesigner({ kit }: { kit?: SchoolKit } = {}) {
 // MUST sit above SchoolDesigner so that component's top-level store hooks read the
 // school store (not /build's). The store is created once on the client (lazy
 // useState init) with its OWN persist key, so it never touches /build's design.
-export function SchoolBuilder({ kit }: { kit?: SchoolKit }) {
+export function SchoolBuilder({ kit, hero }: { kit?: SchoolKit; hero?: React.ReactNode }) {
   // The school store is configured two ways:
   //  - `frameConfig`: the school frame is ONE printable geometry (it must fit the
   //    eufyMake E1 bed), so the store owns it outright — initial state, and it wins
@@ -970,7 +989,7 @@ export function SchoolBuilder({ kit }: { kit?: SchoolKit }) {
   );
   return (
     <DesignStoreProvider store={store}>
-      <SchoolDesigner kit={kit} />
+      <SchoolDesigner kit={kit} hero={hero} />
     </DesignStoreProvider>
   );
 }

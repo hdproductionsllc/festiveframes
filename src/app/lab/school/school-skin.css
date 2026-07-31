@@ -193,7 +193,25 @@
    breakpoints want different answers, and an inline style cannot hold a media
    query. */
 .ff-stage-cap {
-  max-width: calc(var(--ff-stage-room, 60vh) * var(--ff-frame-aspect, 1.75));
+  /* How much of the room the frame takes. The component supplies
+     `--ff-share-editing` (1, or the yield while an editor is open); the media
+     query below can override it back to 1 when there is height to spare. */
+  --ff-share: var(--ff-share-editing, 1);
+  max-width: calc(var(--ff-stage-full, 60vh) * var(--ff-share) * var(--ff-frame-aspect, 1.75));
+  /* Selecting a tile or a panel used to make the product JUMP. Same destination,
+     but travelled rather than teleported. */
+  transition: max-width 240ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+/* Tall window: the frame and the editor both fit, so the frame does not move. */
+@media (min-height: 940px) {
+  .ff-stage-cap {
+    --ff-share: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ff-stage-cap {
+    transition: none;
+  }
 }
 
 /* ── MOBILE: the frame is DOCKED to the top of the screen ──────────────────
@@ -838,35 +856,40 @@
   color: var(--ff-on-dark-2);
 }
 
-/* ── The stage: the lit case ─────────────────────────────────────────────────
-   Brighter than the room at its centre and darker at its edges, which is what
-   makes it read as a light SOURCE rather than a panel. The bloom sits at 42%
-   height because that is where the frame's own centre lands. */
+/* ── The stage: a lit WHITE panel ────────────────────────────────────────────
+   The stage was dark, matching the room. Wrong, and for the same reason the very
+   first attempt was wrong: the frame is NAVY, and navy on near-black has almost
+   nothing to separate against. Navy on white is the highest-contrast pairing
+   available, which is exactly why product photography shoots on white.
+
+   So the room stays dark and the stage inverts: a bright panel inside it, lit at
+   the centre and falling to a soft warm grey at the edges. That reads as a
+   lightbox, and it is the brightest object on the page — the frame sits in the
+   one place the eye is already going. The gradient is kept (it is what stops the
+   panel looking like a flat cut-out rectangle) but it is achromatic, so nothing
+   competes with the school's colour on the product itself.
+
+   The school's colour still touches it, at the border and in the outer glow, so
+   the panel belongs to the room rather than being pasted onto it. */
 .school-skin .ff-stage {
   background:
-    radial-gradient(
-      66% 56% at 50% 42%,
-      var(--ff-lit) 0%,
-      color-mix(in srgb, var(--ff-glow) 88%, #000000) 46%,
-      color-mix(in srgb, var(--ff-glow) 34%, #05070c) 78%,
-      #05070c 100%
-    );
-  border: 1px solid color-mix(in srgb, var(--ff-glow) 45%, transparent);
+    radial-gradient(72% 62% at 50% 40%, #ffffff 0%, #f6f5f3 52%, #e7e5e0 100%);
+  border: 1px solid color-mix(in srgb, var(--ff-glow) 40%, #ffffff);
   border-radius: var(--ff-radius-lg);
   box-shadow:
-    inset 0 1px 0 color-mix(in srgb, var(--ff-lit) 70%, transparent),
-    inset 0 -40px 90px -40px #000000,
-    0 0 90px -12px color-mix(in srgb, var(--ff-glow) 55%, transparent),
-    0 24px 60px -20px #000000;
+    inset 0 1px 0 #ffffff,
+    /* the panel's own light spilling into the dark room */
+    0 0 90px -14px color-mix(in srgb, var(--ff-glow) 70%, transparent),
+    0 26px 60px -22px #000000;
   padding: clamp(20px, 4vw, 44px);
 }
 
-/* The frame's contact shadow, so it sits IN the case rather than in front of a
-   picture of one. */
+/* Contact shadow on a LIGHT ground: tighter and lighter than the dark-stage
+   version, which was tuned to lift navy off black and reads as soot on white. */
 .school-skin .ff-stage > div:not(.ff-stage-hint) {
   filter:
-    drop-shadow(0 18px 34px rgba(0, 0, 0, 0.55))
-    drop-shadow(0 2px 4px rgba(0, 0, 0, 0.45));
+    drop-shadow(0 14px 26px rgba(24, 28, 40, 0.30))
+    drop-shadow(0 2px 4px rgba(24, 28, 40, 0.22));
 }
 
 /* ── Everything sitting directly on the dark ─────────────────────────────── */
