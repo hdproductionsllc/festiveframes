@@ -10,6 +10,9 @@ interface LicensePlateAreaProps {
   width: number;
   height: number;
   plateState: string;
+  /** Override the stock photo for this state — a kit's own plate. Absent on
+   *  /build and on any kit without one, which keeps the stock path unchanged. */
+  plateImageOverride?: string;
 }
 
 // State name fonts — mapped to match real plate typography
@@ -23,9 +26,9 @@ const stateFontMap: Record<string, string> = {
 // Plate number font — authentic embossed plate typeface
 const PLATE_NUMBER_FONT = "'LICENSE PLATE USA', 'Barlow Condensed', 'Arial Narrow', sans-serif";
 
-export function LicensePlateArea({ x, y, width, height, plateState }: LicensePlateAreaProps) {
+export function LicensePlateArea({ x, y, width, height, plateState, plateImageOverride }: LicensePlateAreaProps) {
   const plate = getPlateDesign(plateState);
-  const plateImageUrl = getPlateImageUrl(plateState);
+  const plateImageUrl = plateImageOverride ?? getPlateImageUrl(plateState);
   const plateImageDisplay = getPlateImageDisplay(plateState);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageFailed, setImageFailed] = useState(false);

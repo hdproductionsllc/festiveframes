@@ -93,6 +93,17 @@ export interface SchoolKit {
       field: "navy" | "white";
     }[];
   };
+  /**
+   * A specific plate photo for the PREVIEW — typically a real vanity plate from
+   * the school's own community, which sells the product better than a stock
+   * plate reading FESTIVE ever could.
+   *
+   * Scoped to `state` because that is what the photo IS: switch the picker to
+   * Kansas and this stops applying, because a Missouri plate in a Kansas preview
+   * is a lie about the product. Preview only — the print path deliberately leaves
+   * the plate opening empty, since the customer fits their own plate.
+   */
+  plate?: { state: string; src: string };
   /** demo = research-guessed, noindexed, for sales demos. verified = school
    *  confirmed colors AND authorized use of its name — indexable. */
   status: "demo" | "verified";
@@ -183,6 +194,10 @@ const KITS: SchoolKit[] = [
     // UNDER it. Fine on screen, soft on a printed part, so a pilot print needs a
     // crest of at least 429px (300 DPI) — ideally the vector original from SLUH
     // communications. Owner-grab item, same class as exact hex values.
+    // A real Jr. Bills plate, supplied by the owner. Cropped to the exact framing
+    // of the stock Missouri photo (924x467 canvas, 903x461 body at 7,1) because
+    // plate-images.ts tunes a per-plate `scale` against that framing.
+    plate: { state: "MO", src: "/plates/missouri-jrbills-centered.png" },
     marks: {
       crest: "/kits/sluh/lockup-crest.png",
       lockup: "/kits/sluh/lockup.png",

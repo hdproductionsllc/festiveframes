@@ -24,6 +24,8 @@ interface FrameCanvasProps {
   bottomBar: BottomBarConfig;
   qrCode: QRCodeConfig;
   plateState: string;
+  /** A kit's own plate photo, passed straight through to the plate area. */
+  plateImageOverride?: string;
   overSlotId?: string | null;
   /**
    * Where a dragged MULTI-CELL tile will land, resolved by `resolveSnappetDrop`
@@ -108,7 +110,7 @@ function PlacedBar({
 }
 
 export const FrameCanvas = forwardRef<FrameCanvasHandle, FrameCanvasProps>(
-  function FrameCanvas({ frameConfig, slots, bottomBar, qrCode, plateState, overSlotId, snappetPreview, bannerPreview }, ref) {
+  function FrameCanvas({ frameConfig, slots, bottomBar, qrCode, plateState, plateImageOverride, overSlotId, snappetPreview, bannerPreview }, ref) {
     const frameRef = useRef<HTMLDivElement>(null);
     // The overflow layer that holds the snappet anchors + resize handles. Its
     // top-left equals the frame's origin, so the handles read pointer→grid from it.
@@ -544,6 +546,7 @@ export const FrameCanvas = forwardRef<FrameCanvasHandle, FrameCanvasProps>(
               width={plateArea.width}
               height={plateArea.height}
               plateState={plateState}
+              plateImageOverride={plateImageOverride}
             />
           )}
 

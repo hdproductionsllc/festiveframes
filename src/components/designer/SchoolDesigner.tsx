@@ -906,6 +906,10 @@ export function SchoolDesigner({
                   bottomBar={bottomBar}
                   qrCode={qrCode}
                   plateState={plateState}
+                  // Only while the picker is on the state this photo actually is.
+                  plateImageOverride={
+                    kit?.plate && kit.plate.state === plateState ? kit.plate.src : undefined
+                  }
                   overSlotId={overSlotId}
                   snappetPreview={snappetPreview}
                   bannerPreview={bannerPreview}
