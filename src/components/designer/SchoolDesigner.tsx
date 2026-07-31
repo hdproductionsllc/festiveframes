@@ -130,6 +130,19 @@ export function SchoolDesigner({ kit }: { kit?: SchoolKit } = {}) {
   // "Make it theirs" intake — the about-ME moment. Three fields that seed the
   // design through the same store actions the editors use, so everything the
   // intake writes is ordinary, fully editable state.
+  // First-visit tour: three beats, dismissible, remembered. Starts false on
+  // both server and client, then flips on after mount if not yet dismissed —
+  // hydration-safe by construction.
+  const [tourOpen, setTourOpen] = useState(false);
+  useEffect(() => {
+    try {
+      if (!localStorage.getItem("msf-tour-done")) setTourOpen(true);
+    } catch {}
+  }, []);
+  const dismissTour = () => {
+    setTourOpen(false);
+    try { localStorage.setItem("msf-tour-done", "1"); } catch {}
+  };
   const [kidName, setKidName] = useState("");
   const [kidActivity, setKidActivity] = useState("");
   const [kidYear, setKidYear] = useState("");
@@ -760,6 +773,17 @@ export function SchoolDesigner({ kit }: { kit?: SchoolKit } = {}) {
                   See it on the frame
                 </button>
               </div>
+              {tourOpen && (
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 rounded-xl border border-amber-300 bg-amber-50 px-3.5 py-2.5 text-[13px] text-stone-800">
+                  <span className="font-semibold">Quick tour:</span>
+                  <span>1️⃣ Type their name — it lands on the banner.</span>
+                  <span>2️⃣ Tap a badge, then tap the frame — or just drag it on.</span>
+                  <span>3️⃣ Love it? Send it. Nothing prints until you say so.</span>
+                  <button type="button" onClick={dismissTour} className="ff-chip ml-auto shrink-0">
+                    Got it
+                  </button>
+                </div>
+              )}
               {/* THE STAGE. The one zone on the page darker than its neighbours
                   (1.19:1 below the canvas, 1.28:1 below the cards) — everything else
                   is white or near-white, so the eye goes to the single tonal break
@@ -849,6 +873,7 @@ export function SchoolBuilder({ kit }: { kit?: SchoolKit }) {
       // Top/bottom start as TEXT banners — kit-branded when there is a kit. Initial
       // state only; a returning user's persisted sections still win.
       sections: kit ? kitSections(kit) : SCHOOL_DEFAULT_SECTIONS,
+      initialSlots: kit?.seedSlots,
       initialBrand: kit
         ? {
             frameColor: kit.colors.frame,

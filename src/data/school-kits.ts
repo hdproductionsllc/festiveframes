@@ -55,6 +55,9 @@ export interface SchoolKit {
     chips: string[];
     ordering: string;
   };
+  /** Badges the frame opens wearing (slotId -> placement). Initial state only —
+   *  a kit page lands on a finished-looking frame; persisted designs win. */
+  seedSlots?: Record<string, { pieceId: string; setId: string; span: { cols: number; rows: number } }>;
   /** demo = research-guessed, noindexed, for sales demos. verified = school
    *  confirmed colors AND authorized use of its name — indexable. */
   status: "demo" | "verified";
@@ -92,26 +95,42 @@ const KITS: SchoolKit[] = [
     // Crew + Cashbah + Clavius + Sisyphus (sluh.org). "Jr. Bills" is the
     // community register (their store/social); "Jr. Billikens" is the formal
     // mark — parents get the community voice.
+    // Copy rule (owner): subtle. The homework shows in the SELECTION — that
+    // racquetball and water polo are listed at all, that it says Jr. Bills and
+    // Blue Crew — never in recited stats. Facts stay verified in the research
+    // file; the page just sounds like someone who goes to the games.
     welcome: {
       headline: "Jr. Bills, this one's for the back of the car.",
       message: [
-        "Since 1818 — the oldest school west of the Mississippi — SLUH families have worn the blue. A racquetball program with 16 national titles. Back-to-back state soccer championships in 2024 and 2025. Twenty-three state titles in water polo, thirteen in volleyball, and the Blue Crew loud behind all of it.",
+        "SLUH families have worn the blue since 1818 — and from soccer in November to racquetball season, the Blue Crew shows up loud.",
         "This frame is your student's: their last name across the bottom banner, their sport or club on the badges, their class year in brass — all in SLUH blue.",
       ],
       chips: [
-        "Racquetball — 16 national titles",
-        "Soccer — back-to-back state champs '24 & '25",
-        "Water polo — 23 state titles",
-        "Volleyball — 13 state titles",
+        "Soccer",
+        "Racquetball",
+        "Water polo",
         "Rugby",
         "Swim & dive",
-        "Blue Crew",
-        "Clavius robotics",
-        "Sisyphus",
-        "Cashbah",
+        "Volleyball",
+        "Band",
+        "Robotics",
+        "Theater",
+        "Honor roll",
       ],
       ordering:
         "SLUH families: design your frame and send it in — we'll follow up with ordering details. A set donation from every frame goes back to SLUH.",
+    },
+    // The frame a SLUH parent lands on — the verified curated sample layout,
+    // fully dressed so the first impression is a finished product, not a grid.
+    seedSlots: {
+      "frame:wing-left-0": { pieceId: "hs:soccer-patch", setId: "hs", span: { cols: 2, rows: 2 } },
+      "frame:wing-left-2": { pieceId: "hs:football-patch", setId: "hs", span: { cols: 2, rows: 2 } },
+      "frame:wing-left-4": { pieceId: "hs:basketball-patch", setId: "hs", span: { cols: 2, rows: 2 } },
+      "frame:wing-left-6": { pieceId: "hs:band", setId: "hs", span: { cols: 2, rows: 2 } },
+      "frame:top-11": { pieceId: "hs:crest", setId: "hs", span: { cols: 2, rows: 2 } },
+      "frame:right-1": { pieceId: "hs:robotics", setId: "hs", span: { cols: 2, rows: 2 } },
+      "frame:right-3": { pieceId: "hs:drama", setId: "hs", span: { cols: 2, rows: 2 } },
+      "frame:bottom-11": { pieceId: "hs:honor-society", setId: "hs", span: { cols: 2, rows: 2 } },
     },
     status: "demo",
     colorSource:

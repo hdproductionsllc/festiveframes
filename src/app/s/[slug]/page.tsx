@@ -62,8 +62,12 @@ export default async function SchoolKitBuilderPage(
             style={{
               margin: 0,
               fontFamily: "Graduate, serif",
-              fontSize: "clamp(24px, 4vw, 38px)",
+              fontSize: "clamp(26px, 4.2vw, 42px)",
               letterSpacing: "0.03em",
+              // The frame banners' varsity read: white core, dark edge, soft
+              // lift — the headline wears the school's own banner treatment.
+              textShadow:
+                "0 1px 0 rgba(0,0,0,0.35), 0 2px 6px rgba(0,0,0,0.35), 0 0 1px rgba(0,0,0,0.5)",
             }}
           >
             {w.headline}

@@ -630,13 +630,19 @@ export interface DesignStoreOptions {
     tileFieldColor?: string | null;
     rimColor?: string | null;
   };
+  /**
+   * Badges the frame OPENS wearing — same initial-state-only contract as
+   * `sections`/`initialBrand`: a kit page should land on a finished-looking
+   * frame, but a returning customer's persisted layout always wins on hydrate.
+   */
+  initialSlots?: Record<string, PlacedTile>;
 }
 
 // The store is a FACTORY so more than one builder can each own an isolated design
 // (own state + own localStorage key). /build uses `defaultDesignStore`; the school
 // builder creates its own instance and provides it via `DesignStoreProvider`.
 function createDesignStore(persistName: string, options: DesignStoreOptions = {}) {
-  const { migrateExtra, frameConfig: ownedFrameConfig, sections: initialSections, initialBrand } = options;
+  const { migrateExtra, frameConfig: ownedFrameConfig, sections: initialSections, initialBrand, initialSlots } = options;
   const baseFrameConfig = ownedFrameConfig ?? DEFAULT_FRAME_CONFIG;
   return createStore<DesignState>()(
   persist(
@@ -680,7 +686,7 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
         tileFieldColor: initialBrand?.tileFieldColor ?? null,
         rimColor: initialBrand?.rimColor ?? null,
         uploads: [],
-        slots: {},
+        slots: initialSlots ? structuredClone(initialSlots) : {},
         bottomBar: { ...DEFAULT_BOTTOM_BAR },
         qrCode: { ...DEFAULT_QR_CODE },
         frameConfig: { ...baseFrameConfig },
@@ -1083,7 +1089,9 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
               ? (structuredClone(initialSections) as typeof state.sections)
               : {};
             return withHistory(state, {
-              slots: {},
+              // Same contract as `sections` above: start-fresh on a kit page
+              // returns to the kit's dressed frame, not a bare grid.
+              slots: initialSlots ? (structuredClone(initialSlots) as typeof state.slots) : {},
               textBars: [],
               selectedBarId: null,
               sections,
