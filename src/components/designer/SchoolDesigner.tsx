@@ -432,19 +432,22 @@ export function SchoolDesigner({ kit }: { kit?: SchoolKit } = {}) {
           <StateSelector theme="header" />
           {/* Two actions, ONE of them primary. Exporting a file is the power-user
               path; sending the design to be made is the thing this page is for. */}
+          {/* Production tool, not a customer action: now that the builder is
+              live, the print-file export hides behind a quiet gear. The result
+              banner still carries the real download link (iOS needs a tappable
+              <a>), so the flow past this button is unchanged. */}
           <button
             type="button"
             onClick={handleExportPrint}
             disabled={exporting}
-            title="Download a print-ready image of your frame"
-            className="ff-btn ff-btn-secondary ff-btn-sm shrink-0"
+            title="Export print files (production)"
+            aria-label="Export print files"
+            className="ff-btn ff-btn-secondary ff-btn-sm shrink-0 !px-2 opacity-45 hover:opacity-100"
           >
             {exporting ? (
-              "Rendering..."
+              <span className="animate-spin inline-block" aria-hidden>⚙</span>
             ) : (
-              <>
-                Export<span className="hidden sm:inline"> print file</span>
-              </>
+              <span aria-hidden>⚙</span>
             )}
           </button>
           <button
