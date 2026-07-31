@@ -1,0 +1,148 @@
+# Die-struck enamel pin — Ideogram test prompts
+
+A style TEST, not a commitment. The current badge library is embroidered patches
+(gold merrow border, thread texture). The question is whether die-struck hard
+enamel reads better at the size these are actually seen: roughly one inch, on the
+back of a car, in a parking lot.
+
+The case for testing it: every embroidered badge carries the same thread texture,
+so at 1" they blur toward each other and the sport is hard to read at a glance.
+Enamel keeps the dimensional, premium feel — arguably more so — while giving each
+badge hard, high-contrast edges. Polished metal also matches the frame's brass rim
+more closely than thread does.
+
+**Decide it on renders, not on prompts.** Generate the three A/B pieces in §3
+first, put them on the frame beside their embroidered twins at actual size, and
+look. See CLAUDE.md, "Verifying visual work".
+
+---
+
+## 1. The two hard rules (unchanged, they apply to every set)
+
+1. **Trademark-safe — generic elements only.** No real school mascots, logos,
+   crests, or wordmarks. Stars, pennants, trophies, laurels, blank shields,
+   generic sport equipment. Never name a real team.
+2. **Bake the colours into the generation.** These print via UV; recolouring a
+   raster afterwards is painful.
+
+---
+
+## 2. The style block — paste this after every subject line
+
+Keep it byte-identical across the set. Cohesion is the entire point of generating
+a family in one hand, and a reworded style block is how a set drifts.
+
+```
+die-struck hard enamel pin, cloisonné style, polished gold metal borders and
+raised metal linework separating every colour area, recessed enamel colour fill
+polished flush with the metal, glossy enamel with a single soft specular
+highlight, crisp hard edges, no gradients inside the enamel, no texture, no
+fabric, no embroidery, no stitching, bold simple shapes readable at one inch,
+symmetrical centred composition filling the frame, straight-on top-down view,
+flat lay product photograph, isolated on a solid pure magenta #FF00FF background,
+no drop shadow, no reflection, no text, no lettering, no words, 1:1 square
+```
+
+**Why magenta:** the in-house pipeline keys the backdrop out by chroma plane and
+un-multiplies it from every partial-alpha pixel, so edges carry no matte. Magenta
+is the furthest hue from anything in the palette, so nothing in the art keys away
+with it. Never generate these on white — white is in the art.
+
+**Why "no text":** Ideogram will happily letter a badge, and it will be subtly
+wrong. Lettering, when we want it, is placed by the builder where it can be
+spell-checked.
+
+**Settings:** 1:1, highest resolution available, 4 variants per prompt. Keep the
+seed of anything you like — the same seed with a new subject line is the cheapest
+way to hold a set together.
+
+---
+
+## 3. A/B pieces — generate these FIRST
+
+Direct twins of three badges that already exist as embroidered patches, so the
+comparison is like-for-like rather than a new subject in a new style.
+
+**Soccer**
+```
+a soccer ball, classic black and white pentagon panel pattern, navy blue and
+white enamel, [STYLE BLOCK]
+```
+
+**Band**
+```
+a marching band trumpet seen from the side, gold enamel body with navy blue
+enamel accents, [STYLE BLOCK]
+```
+
+**Honour roll**
+```
+a laurel wreath open at the top with a five-pointed star at its centre, gold
+enamel wreath, navy blue enamel star, [STYLE BLOCK]
+```
+
+If these three do not clearly beat the embroidered versions on the frame at
+actual size, stop here and keep embroidery.
+
+---
+
+## 4. The four SLUH pilot gaps
+
+These chips are live on the SLUH page today and fall back to a generic crest.
+Whichever style wins, these four have to be made.
+
+**Racquetball**
+```
+a racquetball racquet crossed with a single ball, teardrop-shaped racquet head
+with a strung face, navy blue enamel racquet, light blue enamel ball, gold metal
+strings and frame, [STYLE BLOCK]
+```
+
+**Water polo**
+```
+a water polo ball resting in a curl of stylised water, ball with a simple
+segmented panel pattern, yellow and navy blue enamel ball, light blue enamel
+water, [STYLE BLOCK]
+```
+
+**Rugby**
+```
+a rugby ball standing upright on its point, visible lacing and seam, navy blue
+enamel ball with white enamel lacing, gold metal seam lines, [STYLE BLOCK]
+```
+
+**Swim and dive**
+```
+a pair of swim goggles above three stylised water ripple lines, navy blue enamel
+goggle strap, light blue translucent enamel lenses, gold metal frame, [STYLE
+BLOCK]
+```
+
+---
+
+## 5. If enamel wins — the wider list to regenerate
+
+Tier 1, the activities common enough that most schools hit at least one:
+cross country, wrestling, lacrosse, ice hockey, dance/drill team, gymnastics,
+bowling, competitive cheer, esports, orchestra/strings, choir, jazz band,
+journalism/newspaper, speech, quiz bowl, Model UN, ROTC, campus ministry.
+
+Tier 2: crew/rowing, sailing, ski, weightlifting, colour guard, film, ceramics,
+culinary, FFA, scouts.
+
+Note the generic-only rule bites hardest here: DECA, FBLA, NHS and Mu Alpha Theta
+are other organisations' registered marks and were withdrawn from the library for
+that reason. Their generic stand-ins are the gavel (student government), the
+laurel (honours) and the diploma (academics).
+
+---
+
+## 6. Print spec — the intake gate, unchanged
+
+- **2000×2000 px** source, square.
+- Clears **300 DPI at a 2×2 tile**: 1.982" × 300 = 595 px minimum after trimming
+  to content. A 2000 px source trims comfortably clear.
+- Cut to transparency through the chroma keyer, then trimmed to its own bounds so
+  the art fills the tile rather than floating in padding.
+- **The 1-inch test:** shrink it to 100 px and look. If the sport is not
+  identifiable, the art is too detailed — regenerate simpler, do not sharpen.
