@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import type { BottomBarConfig } from "@/lib/types";
 import { bannerBands } from "@/lib/utils/banner-tiers";
-import { chromeInset, glossStops, ringCss, textChenilleCss, tileEdgeCss } from "@/lib/utils/tile-theme";
+import { chromeInset, ringCss, textChenilleCss, tileEdgeCss } from "@/lib/utils/tile-theme";
 import { useDesignStore } from "@/stores/design-store";
 import { bannerLogoLayout } from "@/lib/utils/banner-logo";
 
@@ -92,16 +92,21 @@ export function SectionTextElement({
   const letterSpacing = config.letterSpacing ?? 0;
   const fill = config.fontSize ?? 1;
 
-  // The bar wears the SAME chrome as a badge — gloss, brass rim, bevel — because on
+  // The bar wears the SAME chrome as a badge — brass rim, bevel — because on
   // the frame they sit side by side and a flat bar next to a moulded badge is what
   // made the thing read as assembled from parts.
   const short = Math.min(width, height);
   const cell = unit ?? short;
   const edge = tileEdgeCss(short, config.backgroundColor, width, height, cell, rimColor);
-  const [glossTop, glossBottom] = glossStops(config.backgroundColor);
-  // Opaque on purpose — this is what masks the rim and bevel gradients away from the
-  // middle of the bar. See `ringCss`.
-  const gloss = `linear-gradient(180deg, ${glossTop}, ${glossBottom})`;
+  // FLAT, exactly like a badge's field — the on-screen half of removing the
+  // banner-only gloss. Kept as a `linear-gradient` of one colour rather than a
+  // plain background so the layering below (which composites this over the rim
+  // and bevel runs) keeps working unchanged. Still opaque on purpose: this is what
+  // masks the rim and bevel gradients away from the middle of the bar. See
+  // `ringCss`. The two renderers have to drop the gloss TOGETHER or the builder
+  // and the print sheet disagree about a colour, which is the whole reason
+  // tile-theme exists.
+  const gloss = `linear-gradient(180deg, ${config.backgroundColor}, ${config.backgroundColor})`;
 
   // Padding must CLEAR the chrome, not merely coexist with it. At 6% of the short
   // edge against a 5.5% bevel the text ran straight into the shaded lip and read as

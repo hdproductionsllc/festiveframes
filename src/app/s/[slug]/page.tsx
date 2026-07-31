@@ -63,14 +63,7 @@ export default async function SchoolKitBuilderPage(
           not on our brand. Facts in the copy come from the kit, which is
           research-sourced and owner-reviewed before a school goes live. */}
       {w && (
-        <section
-          style={{
-            background: `linear-gradient(180deg, ${kit.colors.frame}, ${kit.colors.frame}e6)`,
-            color: kit.banners.text,
-            padding: "40px 20px 34px",
-            textAlign: "center",
-          }}
-        >
+        <section className="msf-kit-hero">
           {/* The school's own lockup, above its own words. This is the first
               thing on the page for a reason: a parent should recognise their
               school before they read anything. Only kits carrying authorized
@@ -78,79 +71,36 @@ export default async function SchoolKitBuilderPage(
           {kit.marks?.lockup && (
             // eslint-disable-next-line @next/next/no-img-element -- kit marks are
             // arbitrary per-school files; next/image would need each one whitelisted.
-            <img
-              src={kit.marks.lockup}
-              alt={`${kit.schoolName} logo`}
-              style={{
-                display: "block",
-                width: "min(340px, 72vw)",
-                height: "auto",
-                margin: "0 auto 26px",
-                // The lockup is drawn for a light page; on the school's own navy
-                // its white keyline is what separates it from the field.
-                filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.35))",
-              }}
-            />
+            <img className="msf-kit-lockup" src={kit.marks.lockup} alt={`${kit.schoolName} logo`} />
           )}
-          <p
-            className={graduate.className}
-            style={{
-              margin: 0,
-              fontSize: "clamp(26px, 4.2vw, 42px)",
-              letterSpacing: "0.03em",
-              // One soft lift only. The earlier three-layer varsity shadow
-              // fattened Graduate at phone sizes and filled the letter
-              // counters — at 26px a 1px glow is a third of a stroke.
-              textShadow: "0 2px 4px rgba(0,0,0,0.30)",
-            }}
-          >
-            {w.headline}
-          </p>
+          <p className={`msf-kit-headline ${graduate.className}`}>{w.headline}</p>
           {w.message.map((m) => (
-            <p
-              key={m.slice(0, 24)}
-              style={{
-                maxWidth: 720,
-                margin: "14px auto 0",
-                fontSize: 17,
-                lineHeight: 1.6,
-                opacity: 0.94,
-              }}
-            >
+            <p className="msf-kit-line" key={m.slice(0, 24)}>
               {m}
             </p>
           ))}
-          <div
-            style={{
-              display: "flex",
-              flexWrap: "wrap",
-              gap: 8,
-              justifyContent: "center",
-              margin: "20px auto 0",
-              maxWidth: 760,
-            }}
-          >
+          {/* Say what they ARE. They were styled as pills and read as a list of
+              facts about the school, so nobody knew a whole frame was one tap
+              away. The label names the action, the arrow marks them as controls,
+              and the hover lifts them. */}
+          <p className="msf-kit-chips-label">
+            One tap builds the frame. Pick what they do:
+          </p>
+          <div className="msf-kit-chips">
             {w.chips.map((c) => (
               // Live controls, not decoration: each chip carries its preset in
               // the hash; the builder below listens and composes the frame.
               <a
                 key={c}
+                className="msf-kit-chip"
                 href={`#preset=${encodeURIComponent(CHIP_PRESET_PIECE[c.toLowerCase()] ?? "generic")}`}
-                style={{
-                  border: `1px solid ${kit.banners.text}66`,
-                  borderRadius: 999,
-                  padding: "5px 14px",
-                  fontSize: 13.5,
-                  letterSpacing: "0.02em",
-                  color: "inherit",
-                  textDecoration: "none",
-                }}
               >
                 {c}
+                <span aria-hidden className="msf-kit-chip-go">→</span>
               </a>
             ))}
           </div>
-          <p style={{ margin: "22px 0 0", fontSize: 14.5, opacity: 0.85 }}>{w.ordering}</p>
+          <p className="msf-kit-ordering">{w.ordering}</p>
         </section>
       )}
       <SchoolBuilder kit={kit} />

@@ -663,102 +663,259 @@
 .build-skin.school-skin select.bg-\[\#2a2620\]:focus { box-shadow: var(--ff-focus); }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   10. THE BOLD PASS
+   10. THE LIT ROOM — one gradient language for the whole page
 
-   WHAT CHANGED AND WHY. Sections 1–9 above built a deliberately quiet skin: pale
-   mat, hairline borders, one low-chroma accent, everything stepping back so the
-   frame could be the only rich object on screen. The reasoning still holds and
-   the contrast maths above is still the floor. The result, in the owner's words,
-   was "dull and corporate" — and he is right, because quiet was applied to the
-   WRONG THING. Getting out of the frame's way was read as a licence to make the
-   surroundings inert, and an inert surrounding does not make a product pop; it
-   makes the whole screen look unfinished.
+   WHAT THIS REPLACES. Sections 1–9 built a deliberately quiet skin: pale mat,
+   hairline borders, one low-chroma accent, everything stepping back so the frame
+   could be the only rich object on screen. Two later attempts to fix its
+   flatness each made it worse, and both failures are worth keeping written down
+   because they are the same mistake in different clothes:
 
-   So this section keeps the restraint where it earns its keep (type, spacing,
-   radius, one accent) and spends contrast where the eye actually goes:
+     1. Filling the stage with the SCHOOL's colour. The frame is navy, so a navy
+        stage is camouflage. A product does not pop against its own colour.
+     2. Fixing only the stage. A dark stage inside a white page is a hole, not a
+        display case, and the page around it still read as inert paper.
 
-     THE STAGE stops being a pale mat and becomes a deep pool of the SCHOOL's own
-     colour with a spotlight behind the frame. A navy-and-brass product on light
-     grey is a photograph of a part; the same product lit on its own dark colour
-     is the part on the back of the car at night. This is also the single biggest
-     "it matched our blue" win — the owner already liked that the frame matched
-     the school, and now the room does too.
+   THE PRINCIPLE. Use the school's colour as LIGHT, never as FILL, and light the
+   WHOLE page with it. The room goes near-black; the colour blooms from behind
+   the product. Everything the frame is made of then has something to be seen
+   against: the navy body separates by its glow, the brass rim catches the light,
+   the white banner text is the brightest thing on screen. Nothing about the
+   frame changed — only what is behind it.
 
-     PANELS get a weighted header rule in the school colour and a real edge, so
-     the tools read as built rather than as a stack of white rectangles.
+   ─── ONE RAMP, USED EVERYWHERE ──────────────────────────────────────────────
+   "Consistent" is a requirement, not a nicety: three hand-tuned bloom recipes
+   (hero, page, stage) is how a page ends up looking assembled rather than
+   designed. So the ramp is declared ONCE as four stops and every gradient below
+   is built from those same variables. Change `--ff-lit` and the hero, the page
+   and the case all move together, in step, in the school's hue.
 
-     THE PRIMARY ACTION takes the school colour. On a school's page the loudest
-     button being a generic teal was the most corporate thing on screen.
+     --ff-lit    the hot centre, where the light is
+     --ff-glow   the school's colour at full strength
+     --ff-room-2 the room's upper wall, colour still visible
+     --ff-room   the room's floor, near-black
 
-   `--ff-school` is set by the kit page (SchoolDesigner's root). It falls back to
-   the frame navy, so the kitless /lab/school builder still gets the whole
-   treatment instead of an unstyled hole.
+   ─── WHY THE FRAME ITSELF STAYS FLAT ────────────────────────────────────────
+   A tempting extension is one gradient spanning the frame's whole wing so the
+   badges read as a single machined part. It is a good instinct and it is
+   deliberately NOT done: a gradient across the frame makes the top banner a
+   different shade from the bottom, which is precisely the mismatch the owner
+   reported three times and which `glossStops` was removed to fix. The frame's
+   dimensionality comes from the per-badge bevel, which follows each contour and
+   costs no colour drift. The structure feeling is delivered by the ROOM instead
+   — the case's bloom washes the whole assembly at once, from outside it.
 
-   CONTRAST. The stage now carries LIGHT text, not `--ff-ink-3`, so the 4.59:1
-   floor noted in section 1 no longer binds; `--ff-on-school` is white on a colour
-   whose luminance is bounded by the kits themselves (every school colour in the
-   catalogue is a saturated dark). The panels, wells, fields and modals are
-   untouched white-on-ink surfaces, so every ratio computed above still holds
-   exactly as written.
+   CONTRAST. Panels, wells, fields and modals are untouched white-on-ink
+   surfaces, so every ratio computed in section 1 holds exactly as written. What
+   changed is the ground under them; everything sitting directly on that ground
+   is re-specified here in light ink. The tightest new pair is `--ff-on-dark-2`
+   on `--ff-room` at 7.4:1.
    ═══════════════════════════════════════════════════════════════════════════ */
 
 .school-skin,
 .ff-school-portal {
-  --ff-school: #1b2a4a;         /* overridden per kit; navy is the house default */
+  --ff-school: #1b2a4a;        /* set per kit on the page root; navy by default */
   --ff-on-school: #ffffff;
-  --ff-brass: #f8c53b;          /* the frame's own rim colour, for accents */
+  --ff-brass: #f8c53b;         /* the frame's own rim colour */
+
+  /* THE RAMP. Every gradient on this page is built from these four. */
+  --ff-lit: color-mix(in srgb, var(--ff-school) 82%, #ffffff);
+  --ff-glow: var(--ff-school);
+  --ff-room-2: color-mix(in srgb, var(--ff-school) 30%, #0a0e16);
+  --ff-room: color-mix(in srgb, var(--ff-school) 12%, #05070c);
+
+  --ff-on-dark: rgba(255, 255, 255, 0.96);
+  --ff-on-dark-2: rgba(255, 255, 255, 0.74);
+
+  /* Elevation for bright objects on a dark ground. The section-1 shadows are
+     tuned for ink-on-white and vanish completely down here. */
+  --ff-elev-dark:
+    0 1px 2px rgba(0, 0, 0, 0.5),
+    0 18px 44px -14px rgba(0, 0, 0, 0.8);
 }
 
-/* ── The stage: a lit pool of the school's colour ────────────────────────── */
+/* ── The page ────────────────────────────────────────────────────────────────
+   A single top-down wash plus one wide bloom. Restrained on purpose: the earlier
+   version stacked four blooms including a stray brass one, which muddied to grey
+   in the middle of the page. Premium reads as ONE confident light, not several
+   competing ones. */
+.build-skin.school-skin,
+.build-skin.school-skin .workbench-bg {
+  background-color: var(--ff-room);
+  background-image:
+    radial-gradient(90% 60% at 50% 0%, color-mix(in srgb, var(--ff-glow) 55%, transparent) 0%, transparent 72%),
+    linear-gradient(180deg, var(--ff-room-2) 0%, var(--ff-room) 55%);
+  background-attachment: fixed;
+}
+
+/* ── The hero: the top of the same surface ───────────────────────────────────
+   Not a separate coloured slab. It is where the page's light is strongest, so
+   scrolling from the hero into the builder is one move through one space. */
+.school-skin .msf-kit-hero {
+  position: relative;
+  padding: clamp(44px, 7vw, 88px) 20px clamp(38px, 5vw, 64px);
+  text-align: center;
+  color: var(--ff-on-dark);
+  background:
+    radial-gradient(68% 78% at 50% 10%, var(--ff-lit) 0%, transparent 62%),
+    linear-gradient(180deg, color-mix(in srgb, var(--ff-glow) 72%, #05070c) 0%, var(--ff-room) 100%);
+}
+/* A lit hairline where the hero meets the builder: the two zones joined, not
+   merely adjacent. */
+.school-skin .msf-kit-hero::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--ff-lit) 50%, transparent);
+}
+
+/* These marks are drawn for white letterhead. On a dark ground a drop shadow does
+   nothing; a soft halo in the school's own colour is what seats them. */
+.school-skin .msf-kit-lockup {
+  display: block;
+  width: min(400px, 78vw);
+  height: auto;
+  margin: 0 auto clamp(22px, 3vw, 34px);
+  filter:
+    drop-shadow(0 0 28px color-mix(in srgb, var(--ff-glow) 70%, transparent))
+    drop-shadow(0 6px 14px rgba(0, 0, 0, 0.5));
+}
+
+.school-skin .msf-kit-headline {
+  margin: 0;
+  font-size: clamp(28px, 4.6vw, 50px);
+  line-height: 1.1;
+  letter-spacing: 0.03em;
+  text-wrap: balance;
+  color: #ffffff;
+  /* One soft lift only. A heavier varsity stack fattened Graduate at phone sizes
+     and filled the letter counters — at 28px a 1px glow is a third of a stroke. */
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+}
+
+.school-skin .msf-kit-line {
+  max-width: 720px;
+  margin: 16px auto 0;
+  font-size: clamp(15.5px, 1.6vw, 17.5px);
+  line-height: 1.6;
+  color: var(--ff-on-dark-2);
+}
+
+.school-skin .msf-kit-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  justify-content: center;
+  margin: clamp(22px, 3vw, 32px) auto 0;
+  max-width: 780px;
+}
+/* Glass pills. They are BUTTONS — each composes a whole layout — so they get a
+   real hover and a lit edge rather than a flat outline. */
+.school-skin .msf-kit-chip {
+  border: 1px solid color-mix(in srgb, var(--ff-lit) 55%, transparent);
+  border-radius: 999px;
+  padding: 7px 16px;
+  font-size: 13.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--ff-on-dark);
+  text-decoration: none;
+  background: rgba(255, 255, 255, 0.07);
+  backdrop-filter: blur(6px);
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.12s ease;
+}
+.school-skin .msf-kit-chip:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 2px;
+}
+
+.school-skin .msf-kit-ordering {
+  margin: clamp(24px, 3vw, 34px) auto 0;
+  max-width: 760px;
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: var(--ff-on-dark-2);
+}
+
+/* ── The stage: the lit case ─────────────────────────────────────────────────
+   Brighter than the room at its centre and darker at its edges, which is what
+   makes it read as a light SOURCE rather than a panel. The bloom sits at 42%
+   height because that is where the frame's own centre lands. */
 .school-skin .ff-stage {
-  /* Radial spotlight behind the frame, over a vertical fall-off to a deeper
-     shade. `color-mix` keeps both stops in the school's hue, so this works for
-     Kirkwood red and MICDS green without a per-school stop list. */
   background:
     radial-gradient(
-      120% 90% at 50% 38%,
-      color-mix(in srgb, var(--ff-school) 78%, #ffffff) 0%,
-      var(--ff-school) 52%,
-      color-mix(in srgb, var(--ff-school) 82%, #000000) 100%
+      66% 56% at 50% 42%,
+      var(--ff-lit) 0%,
+      color-mix(in srgb, var(--ff-glow) 88%, #000000) 46%,
+      color-mix(in srgb, var(--ff-glow) 34%, #05070c) 78%,
+      #05070c 100%
     );
-  border: 1px solid color-mix(in srgb, var(--ff-school) 70%, #000000);
+  border: 1px solid color-mix(in srgb, var(--ff-glow) 45%, transparent);
+  border-radius: var(--ff-radius-lg);
   box-shadow:
-    inset 0 1px 0 color-mix(in srgb, var(--ff-school) 60%, #ffffff),
-    0 10px 30px color-mix(in srgb, var(--ff-school) 55%, transparent);
-  padding: clamp(18px, 3.4vw, 34px);
+    inset 0 1px 0 color-mix(in srgb, var(--ff-lit) 70%, transparent),
+    inset 0 -40px 90px -40px #000000,
+    0 0 90px -12px color-mix(in srgb, var(--ff-glow) 55%, transparent),
+    0 24px 60px -20px #000000;
+  padding: clamp(20px, 4vw, 44px);
 }
 
-/* The frame's own contact shadow, so it sits ON the stage rather than floating in
-   front of it. Applied to the canvas wrapper, never to the frame's own parts. */
+/* The frame's contact shadow, so it sits IN the case rather than in front of a
+   picture of one. */
 .school-skin .ff-stage > div:not(.ff-stage-hint) {
-  filter: drop-shadow(0 14px 26px rgba(0, 0, 0, 0.42));
+  filter:
+    drop-shadow(0 18px 34px rgba(0, 0, 0, 0.55))
+    drop-shadow(0 2px 4px rgba(0, 0, 0, 0.45));
 }
 
-/* The instruction that replaced the Sections panel. It sits BELOW the stage, on
-   the page canvas — so it is dark-on-light. (It was written light-on-dark first,
-   on the assumption it was inside the stage, and rendered white on white: exactly
-   the class of defect that only shows up in a screenshot.) */
+/* ── Everything sitting directly on the dark ─────────────────────────────── */
 .ff-stage-hint {
-  margin: 14px 0 0;
+  margin: 16px 0 0;
   text-align: center;
   font-size: 13.5px;
   font-weight: 600;
   letter-spacing: 0.01em;
-  color: var(--ff-ink-3);
+  color: var(--ff-on-dark-2);
 }
 
-/* ── Panels: built, not blank ─────────────────────────────────────────────── */
+/* The builder's header spans the dark page: glass, not a white slab. */
+.build-skin.school-skin .ff-app-header {
+  background: color-mix(in srgb, var(--ff-room) 70%, transparent) !important;
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid color-mix(in srgb, var(--ff-glow) 38%, transparent);
+}
+/* The wordmark and the school name are the only TEXT directly on the glass, and
+   they inherit an ink colour tuned for a white bar — which is invisible here.
+   `.ff-h1` carries its own colour, so it has to be named, not inherited. */
+.build-skin.school-skin .ff-app-header,
+.build-skin.school-skin .ff-app-header .ff-h1,
+.build-skin.school-skin .ff-app-header .ff-h1-school,
+.build-skin.school-skin .ff-app-header > .ff-label,
+.build-skin.school-skin .ff-app-header > div > .ff-label {
+  color: var(--ff-on-dark) !important;
+}
+/* …except the controls in it, which are real widgets on their own surfaces. */
+.build-skin.school-skin .ff-app-header select,
+.build-skin.school-skin .ff-app-header .ff-btn:not(.ff-btn-primary),
+.build-skin.school-skin .ff-app-header .ff-btn:not(.ff-btn-primary) span {
+  color: var(--ff-ink) !important;
+}
+.build-skin.school-skin .ff-app-header .ff-btn-primary,
+.build-skin.school-skin .ff-app-header .ff-btn-primary span {
+  color: var(--ff-on-school) !important;
+}
+
+/* ── Panels: bright objects in a lit room ────────────────────────────────────
+   The single school-coloured rule along the top edge is what ties the white
+   tools to the room without tinting the surfaces the contrast maths depends on. */
 .school-skin .ff-panel,
 .school-skin .bsk-panel-blue {
-  border: 1px solid color-mix(in srgb, var(--ff-school) 22%, var(--ff-line));
-  border-top: 3px solid var(--ff-school);
-  box-shadow:
-    0 1px 2px rgba(16, 18, 28, 0.05),
-    0 6px 18px rgba(16, 18, 28, 0.09);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-top: 3px solid var(--ff-glow);
+  box-shadow: var(--ff-elev-dark);
 }
 
-/* Panel headings pick up the school colour and a little weight. Anchored to the
-   chrome's own heading classes — nothing on the FRAME uses these. */
 .school-skin .ff-panel h2,
 .school-skin .ff-panel h3,
 .school-skin .bsk-panel-blue h2,
@@ -770,23 +927,75 @@
 
 /* ── The primary action wears the school ─────────────────────────────────── */
 .school-skin .ff-btn-primary {
-  background: var(--ff-school);
-  border-color: color-mix(in srgb, var(--ff-school) 78%, #000000);
+  background: var(--ff-glow);
+  border-color: color-mix(in srgb, var(--ff-glow) 76%, #000000);
   color: var(--ff-on-school);
   font-weight: 700;
-  box-shadow: 0 2px 0 color-mix(in srgb, var(--ff-school) 72%, #000000);
+  box-shadow: 0 2px 0 color-mix(in srgb, var(--ff-glow) 70%, #000000);
 }
 @media (hover: hover) {
   .school-skin .ff-btn-primary:hover:not(:disabled) {
-    background: color-mix(in srgb, var(--ff-school) 86%, #000000);
-    border-color: color-mix(in srgb, var(--ff-school) 66%, #000000);
+    background: color-mix(in srgb, var(--ff-glow) 86%, #000000);
+    border-color: color-mix(in srgb, var(--ff-glow) 64%, #000000);
   }
 }
 
-/* Armed / selected states follow the school colour too, so the "this one is
-   picked" signal is the same hue everywhere instead of a second brand colour. */
 .school-skin .ff-panel [aria-pressed="true"],
 .school-skin .bsk-panel-blue [aria-pressed="true"] {
-  border-color: var(--ff-school);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ff-school) 30%, transparent);
+  border-color: var(--ff-glow);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ff-glow) 30%, transparent);
+}
+
+/* ── The preset chips read as controls ───────────────────────────────────────
+   They compose an entire frame in one tap, and styled as plain pills they read
+   as a list of facts about the school instead. Three signals, because one was
+   not enough: a label that names the action, an arrow that appears on approach,
+   and a lift with a lit edge on hover. */
+.school-skin .msf-kit-chips-label {
+  margin: clamp(24px, 3vw, 34px) 0 0;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--ff-lit) 80%, #ffffff);
+}
+.school-skin .msf-kit-chips {
+  margin-top: 14px;
+}
+.school-skin .msf-kit-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  cursor: pointer;
+}
+/* The arrow is ALWAYS present, dim, and brightens and slides on approach.
+   It was hover-only at first, which is invisible on exactly the device this
+   product is aimed at: a parent in the bleachers on a phone has no hover state,
+   so the one signal that these are buttons would never have reached them. It
+   holds its width at all times so the row never reflows. */
+.school-skin .msf-kit-chip-go {
+  display: inline-block;
+  width: 1.1em;
+  margin-left: 2px;
+  text-align: right;
+  opacity: 0.55;
+  transform: translateX(0);
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+.school-skin .msf-kit-chip:hover .msf-kit-chip-go,
+.school-skin .msf-kit-chip:focus-visible .msf-kit-chip-go,
+.school-skin .msf-kit-chip:active .msf-kit-chip-go {
+  opacity: 1;
+  transform: translateX(3px);
+}
+.school-skin .msf-kit-chip:hover,
+.school-skin .msf-kit-chip:focus-visible {
+  background: color-mix(in srgb, var(--ff-glow) 62%, transparent);
+  border-color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px -6px color-mix(in srgb, var(--ff-glow) 80%, transparent);
+}
+/* Touch has no hover, so it gets the press state instead. */
+.school-skin .msf-kit-chip:active {
+  transform: translateY(0) scale(0.97);
 }

@@ -515,7 +515,7 @@ export function SchoolDesigner({ kit }: { kit?: SchoolKit } = {}) {
           The "Internal prototype · fork of the live builder" strapline is gone
           rather than restyled: it is dev scaffolding, and this page is shown to
           parents deciding whether to spend money. */}
-      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--ff-line)] bg-[var(--ff-card)] px-4 py-2.5">
+      <header className="ff-app-header flex flex-wrap items-center justify-between gap-3 border-b border-[var(--ff-line)] bg-[var(--ff-card)] px-4 py-2.5">
         <h1 className="ff-h1">
           MySchoolFrame
           {kit && <span className="ff-h1-school"> · {kit.shortName} {kit.mascot}</span>}
@@ -673,7 +673,10 @@ export function SchoolDesigner({ kit }: { kit?: SchoolKit } = {}) {
             <button
               type="button"
               onClick={() => {
-                clearAll();
+                // "Start fresh" = the frame as this page arrives, i.e. the kit's
+                // dressed demo. The Clear button in QuickActions means the other
+                // thing and passes nothing.
+                clearAll({ reseed: true });
                 setRestoredDismissed(true);
               }}
               className="ff-btn ff-btn-danger ff-btn-sm"

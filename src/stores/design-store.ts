@@ -388,7 +388,14 @@ interface DesignState {
     pieceA: { pieceId: string; setId: string },
     pieceB: { pieceId: string; setId: string }
   ) => void;
-  clearAll: () => void;
+  /**
+   * Empty the frame. `reseed: true` instead returns it to how the page ARRIVED —
+   * the kit's dressed demo layout — which is what "Start fresh" means and is NOT
+   * what "Clear" means. Conflating them made Clear look broken on a kit page: it
+   * restored the same eight badges the page opens with, so the frame did not
+   * visibly change and the button read as dead.
+   */
+  clearAll: (options?: { reseed?: boolean }) => void;
   applyPreset: (preset: DesignPreset) => void;
   /** Apply a marketing "look" (LOOK_PRESETS) as a single, undoable replace:
    *  its tiles + themed filler + centered banner(s). One history step. */
@@ -1098,7 +1105,7 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
           });
         },
 
-        clearAll: () => {
+        clearAll: (options) => {
           set((state) => {
             // Clear returns the frame to how it ARRIVES, not to nothing. On the school
             // builder that means the seeded banners come back ("HOME OF THE" /
@@ -1113,9 +1120,15 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
               ? (structuredClone(initialSections) as typeof state.sections)
               : {};
             return withHistory(state, {
-              // Same contract as `sections` above: start-fresh on a kit page
-              // returns to the kit's dressed frame, not a bare grid.
-              slots: initialSlots ? (structuredClone(initialSlots) as typeof state.slots) : {},
+              // START FRESH returns a kit page to its dressed frame; CLEAR empties
+              // it. The banners come back either way (see `sections` above) — a
+              // frame with no bars at all is not "cleared", it is missing its
+              // shape, and there would be no way to get the class-year prompt
+              // back.
+              slots:
+                options?.reseed && initialSlots
+                  ? (structuredClone(initialSlots) as typeof state.slots)
+                  : {},
               textBars: [],
               selectedBarId: null,
               sections,

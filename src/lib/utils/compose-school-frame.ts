@@ -73,7 +73,6 @@ import {
   bevelMetrics,
   chromeInset,
   cornerRadii,
-  glossStops,
   insetRadii,
   luminance,
   NO_CORNERS,
@@ -524,14 +523,22 @@ function drawTextBlock(
   // brass rim was the loudest mismatch between the bars and the badges.
   roundRect(ctx, x, y, w, h, radii);
   ctx.clip();
-  // Banners wear the SAME chrome as the badges — gloss gradient, bevel and brass
-  // rim — because in the mock the bars and the badges read as one system. A flat
-  // bar next to a bevelled badge is what made the frame look assembled from parts.
-  const [gTop, gBot] = glossStops(cfg.backgroundColor);
-  const grad = ctx.createLinearGradient(x, y, x, y + h);
-  grad.addColorStop(0, gTop);
-  grad.addColorStop(1, gBot);
-  ctx.fillStyle = grad;
+  // Banners wear the SAME chrome as the badges — bevel and brass rim — because in
+  // the mock the bars and the badges read as one system.
+  //
+  // FLAT FILL, exactly like a badge's field. There used to be a vertical GLOSS
+  // here (`glossStops`: +14% at the top, -8% at the bottom) that no badge ever
+  // got. Both were painting the same hex and rendering visibly different shades:
+  // measured on a real SLUH sheet, the top banner came out rgb(44,74,114) and the
+  // bottom rgb(25,53,88) against a frame body of rgb(24,59,103). That is the
+  // "top/bottom aren't the same colour as left/right" the owner reported three
+  // times, and no amount of correcting the KIT could have fixed it, because the
+  // kit was already right and the renderer was overruling it.
+  //
+  // The shading that makes a bar look like a part still happens — `drawBevel`
+  // below does it, on the same contour-following run the badges use. This only
+  // removes the second, banner-only gradient stacked on top of it.
+  ctx.fillStyle = cfg.backgroundColor;
   ctx.fillRect(x, y, w, h);
   drawBevel(ctx, x, y, w, h, bevel, cfg.backgroundColor, unit, radii, rimColor);
 

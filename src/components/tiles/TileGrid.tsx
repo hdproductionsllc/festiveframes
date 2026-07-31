@@ -134,10 +134,24 @@ export function TileGrid({
           </div>
         </div>
       )}
-      <div className="grid grid-cols-4 gap-1.5">
-        {pieces.map((piece, i) => (
-          <PaletteTile key={piece.id} piece={piece} demo={demo && i === 0} />
-        ))}
+      {/* The badge library scrolls in its own pane rather than running the whole
+          rail down the page. At 30+ badges in four columns the tools column grew
+          to roughly three times the height of the frame beside it, which left a
+          screen of empty background under the product — the thing the page is
+          selling — and pushed the colour controls below the fold.
+
+          `pt-3 -mt-3` is load-bearing: the "● Placing" badge pops ABOVE a tile's
+          top edge, and an overflow pane with no top padding clips it. The padding
+          gives it room inside the scroll box and the negative margin gives that
+          room back to the layout, so nothing moves. (An earlier note here rejected
+          scrolling outright for exactly that clipping reason; this is the same
+          objection, answered rather than ignored.) */}
+      <div className="max-h-[46vh] overflow-y-auto overscroll-contain pt-3 -mt-3 lg:max-h-[52vh]">
+        <div className="grid grid-cols-4 gap-1.5">
+          {pieces.map((piece, i) => (
+            <PaletteTile key={piece.id} piece={piece} demo={demo && i === 0} />
+          ))}
+        </div>
       </div>
     </div>
     </>
