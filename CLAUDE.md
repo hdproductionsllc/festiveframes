@@ -26,6 +26,36 @@
 - Kit `status: "verified"` is flipped manually only — requires confirmed school
   colors AND written permission to use the school's name/marks.
 
+## Per-school research kit (repeat for every school)
+
+The SLUH deep-dive is the template. For each school gather, with a source per
+fact and an explicit "unverified" list (a wrong fact costs more trust than the
+section earns — facts only, no padding):
+
+1. **Identity** — founded year and any "oldest/first" distinction, affiliation,
+   official motto (+ translation), mascot origin story, colors as THEY phrase
+   them, and the nickname's formal vs everyday register (Jr. Billikens vs
+   Jr. Bills — schools have an insider form; using it right is the tell).
+2. **Athletics** — programs with real title history (years, streaks, national
+   vs state), conference, rivalries and named trophy games (Jesuit Cup).
+3. **Beyond sports** — signature clubs, publications, service programs (lit
+   mag, robotics outreach, senior service requirement).
+4. **Traditions** — student-section name, marquee annual events (auction/gala
+   names), campus milestones/anniversaries.
+5. **Parent culture** — mothers/fathers/booster clubs, how parents volunteer,
+   spirit store + its manager (often the cleanest door).
+6. **Brand language** — phrases the school uses about itself ("Men for
+   Others"), store naming, verbal habits ("-bills" compounds).
+7. **Doors** (from outreach waves) — AD, booster officers, advancement,
+   spirit-shop manager; best single door + why.
+8. **Usually needs manual grab by the owner** — exact hex values (school CMSes
+   block bots), mascot/crest image files, formal nickname preference.
+
+Working sources: Wikipedia, local news, MaxPreps/state-association pages, the
+school's own news archive and store site. School CMS fetches usually 403 —
+search snippets still work. Feed results into the kit's `welcome` block and
+the outreach catalogs.
+
 ## Verifying visual work
 
 Visual changes must be **looked at before they are handed over**. Tests passing is

@@ -85,6 +85,34 @@ const KITS: SchoolKit[] = [
     city: "St. Louis, MO",
     colors: { frame: "#1D4F91", tileField: "#1D4F91", rim: "#FFFFFF" },
     banners: { top: "HOME OF THE", bottom: "JR. BILLS", tagline: "SLUH", bg: "#1D4F91", text: "#FFFFFF" },
+    // Every welcome fact is research-verified w/ sources (scratchpad sluh-profile):
+    // 1818/oldest-west (Wikipedia, stlmag), racquetball 16 national titles thru
+    // 2023 (Prep News, USA Racquetball), soccer 2024+2025 back-to-back (Post-
+    // Dispatch), water polo 23 / volleyball 13 (sluh.org achievements), Blue
+    // Crew + Cashbah + Clavius + Sisyphus (sluh.org). "Jr. Bills" is the
+    // community register (their store/social); "Jr. Billikens" is the formal
+    // mark — parents get the community voice.
+    welcome: {
+      headline: "Jr. Bills, this one's for the back of the car.",
+      message: [
+        "Since 1818 — the oldest school west of the Mississippi — SLUH families have worn the blue. A racquetball program with 16 national titles. Back-to-back state soccer championships in 2024 and 2025. Twenty-three state titles in water polo, thirteen in volleyball, and the Blue Crew loud behind all of it.",
+        "This frame is your student's: their last name across the bottom banner, their sport or club on the badges, their class year in brass — all in SLUH blue.",
+      ],
+      chips: [
+        "Racquetball — 16 national titles",
+        "Soccer — back-to-back state champs '24 & '25",
+        "Water polo — 23 state titles",
+        "Volleyball — 13 state titles",
+        "Rugby",
+        "Swim & dive",
+        "Blue Crew",
+        "Clavius robotics",
+        "Sisyphus",
+        "Cashbah",
+      ],
+      ordering:
+        "SLUH families: design your frame and send it in — we'll follow up with ordering details. A set donation from every frame goes back to SLUH.",
+    },
     status: "demo",
     colorSource:
       "blue/white confirmed (sluh.org, Paradigm identity: 'dark blue diamond shield'); exact blue APPROX — #1D4F91 stands in for their dark royal until SLUH confirms. Phase-1 pilot school.",

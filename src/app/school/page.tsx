@@ -34,7 +34,7 @@ export const metadata: Metadata = {
     absolute: "Custom School Spirit License Plate Frames | MySchoolFrame",
   },
   description:
-    "Design a custom license plate frame in your high school's colors — badges for football, band, robotics, and 30+ activities. Printed in St. Louis, USA. Every frame sends a donation to your school's booster club.",
+    "Put your student's last name in varsity chenille on a custom school license plate frame — their sport, their class year, their school colors. Made in USA.",
 };
 
 // Structured data. Product+Offer earns merchant snippets with zero reviews;
@@ -87,37 +87,38 @@ const BADGES = [
 const STEPS = [
   {
     n: "1",
-    title: "Paste your school's website",
-    body: "The builder pulls your school's colors and crest straight from its own site, so your frame starts out looking like your school — not a blank template.",
+    title: "Type their last name",
+    body: "It comes up in varsity chenille on the bottom banner immediately. That's the frame, not a preview of a template.",
   },
   {
     n: "2",
-    title: "Add what your student actually does",
-    body: "Drag in badges for sports, band, drama, robotics, honors — or upload your own photos. Set the banners: HOME OF THE WILDCATS, your school's name, their class year.",
+    title: "Tap what they do",
+    body: "Football, soccer, band, robotics, cheer, drama, honors — 30+ activities, or upload your own photo. The badges land in place.",
   },
   {
     n: "3",
-    title: "We print it and ship it",
-    body: "Chenille lettering, brass rims, bevelled badges — UV-printed in St. Louis at automotive quality and mailed ready to mount.",
+    title: "Pick their class year",
+    body: "CLASS OF 2027 sets in brass and you're looking at a finished frame. Change anything from there — colors pull from your school's own website, and you can undo anything.",
   },
 ];
 
-const VIGNETTES = [
+// Anatomy of the frame, name-first: the school is the setting, the kid is the
+// star. (Replaced the four "kinds of kid" vignettes — this sells recognition,
+// not variety. Also fixed a real copy defect: the old Friday-night vignette
+// promised a "helmet badge up top", which the 1-row text-only top panel cannot
+// do.)
+const ANATOMY = [
   {
-    title: "The Friday night kid.",
-    body: "Helmet badge up top, jersey number below, HOME OF THE WILDCATS in varsity chenille across the banner. You'll spot it from the bleachers.",
+    title: "The big bottom banner — their last name.",
+    body: "Varsity chenille, jersey-style, across the widest panel on the frame. It's the first thing anyone reads in a parking lot, and it says MORALES, not \"Go Wildcats.\"",
   },
   {
-    title: "The band kid.",
-    body: "Marimba at 6 a.m., bus at dawn, state finals in November. A band badge, a gold laurel, and the year it all happened.",
+    title: "The badges — what they actually did.",
+    body: "Football, marching band, robotics, cheer, drama, honor society, student council. Pick one or load the whole lineup. Nobody fits on one badge.",
   },
   {
-    title: "The honor-roll kid.",
-    body: "Four years of quiet 4.0s that never got a stadium. An honor-society badge, a medal, a star, and CLASS OF 2027 in brass.",
-  },
-  {
-    title: "The kid who does everything.",
-    body: "Soccer, robotics, debate, drama, DECA. Load the whole lineup on. That's the point — nobody fits on one badge.",
+    title: "The details — their year, their number, their title.",
+    body: "CLASS OF 2027. CAPTAIN. SENIOR. #12. One tap each.",
   },
 ];
 
@@ -136,7 +137,15 @@ const ANSWERS = [
   },
   {
     q: "Is my school on it?",
-    a: "Every school is. Paste your school's website and the builder themes itself in your colors — no waiting for us to add you.",
+    a: "Every school is. The builder themes itself from your school's own website — no waiting for us to add you.",
+  },
+  {
+    q: "What if our last name is long?",
+    a: "You'll see it on the banner as you type — the frame in front of you is the frame we print. If it doesn't sit right, shorten it, switch to their first name, or drop to their number. Nothing prints until you send it.",
+  },
+  {
+    q: "Can I put their first name instead? Or a nickname?",
+    a: "Anything you type. Most parents use the last name because that's how it reads jersey-style from a distance — but it's your frame.",
   },
   {
     q: "Are license plate frames legal in my state?",
@@ -177,6 +186,7 @@ export default function MySchoolFramePage() {
           </svg>
           <span className={graduate.className}>MySchoolFrame</span>
         </p>
+        <p className="msf-eyebrow">Their name. Their sport. Their year.</p>
         <h1>
           Your school. <span>Your story.</span> Your frame.
         </h1>
@@ -185,16 +195,21 @@ export default function MySchoolFramePage() {
           teams, clubs, activities and accomplishments that make your story
           yours.
         </p>
+        <p className="msf-name-moment">
+          Type your last name. Watch it come up in varsity chenille across the
+          bottom banner — jersey-style, in your school&apos;s colors.
+        </p>
         <div className="msf-ctas">
           <Link href="/lab/school" className="msf-btn msf-btn-primary">
-            Build Your Frame
+            See Your Name On It
           </Link>
           <a href="#fundraise" className="msf-btn msf-btn-ghost">
             Fundraise for your school →
           </a>
         </div>
         <p className="msf-trust">
-          Designed by you. UV-printed at automotive quality in St.&nbsp;Louis.
+          Free to design. Nothing prints until you send it. UV-printed and
+          assembled in St.&nbsp;Louis, USA.
         </p>
 
         {/* Real badge artwork on school-navy tiles — the actual print files. */}
@@ -210,15 +225,19 @@ export default function MySchoolFramePage() {
             </span>
           ))}
         </div>
-        <p className="msf-tagline">A letterman jacket for the car.</p>
+        <p className="msf-badge-caption">
+          Football, soccer, band, robotics, cheer, drama, honors — 30+
+          activities.
+        </p>
       </section>
 
       {/* ── How it works ── */}
       <section className="msf-band">
-        <h2>Three steps. About five minutes.</h2>
+        <h2>Three taps. Then it&apos;s theirs.</h2>
         <p className="msf-lede">
           A custom school license plate frame you design yourself — from any
-          phone, in your high school&apos;s real colors.
+          phone, in your high school&apos;s real colors. Nothing prints until
+          you send it to us.
         </p>
         <div className="msf-steps">
           {STEPS.map((s) => (
@@ -231,30 +250,39 @@ export default function MySchoolFramePage() {
         </div>
       </section>
 
-      {/* ── Make it yours ── */}
+      {/* ── Anatomy: name-first ── */}
       <section className="msf-band msf-band-paper">
-        <h2>Two kids at the same school never have the same four years.</h2>
-        <p className="msf-lede">Your frame shouldn&apos;t look like anyone else&apos;s either.</p>
+        <h2>Their name is the whole point.</h2>
+        <p className="msf-lede">The school is the setting. Your kid is the star.</p>
         <div className="msf-vignettes">
-          {VIGNETTES.map((v) => (
+          {ANATOMY.map((v) => (
             <article key={v.title}>
               <h3>{v.title}</h3>
               <p>{v.body}</p>
             </article>
           ))}
         </div>
+        <p className="msf-lede">
+          Two kids at the same school never have the same four years. The
+          Friday-night kid and the 6 a.m. marimba kid and the
+          four-quiet-4.0s kid all get a different frame — because it&apos;s
+          built from their name out, not the school&apos;s logo down.
+        </p>
+        <p className="msf-tagline">A letterman jacket for the car.</p>
       </section>
 
       {/* ── Senior night ── */}
       <section className="msf-band">
-        <h2>The senior night gift that stays out of the box</h2>
+        <h2>The senior night gift that doesn&apos;t end up in a shadow box</h2>
         <p className="msf-lede">
           Senior night gifts for football players, band seniors, cheerleaders,
-          soccer players — most end up on a shelf by January. A frame in their
-          school&apos;s colors, with their activities and their year, rides the
-          back of the car through college and gets kept. Their name, their
-          number, their four years — not another blanket with a stock logo.
+          soccer players — the poster curls, the blanket goes in a bin, the
+          framed photo goes in a closet. A frame with his name, his number, and
+          his year rides the back of the car through graduation, through
+          college, through the first job. This one is out where you see it,
+          every single time you park.
         </p>
+        <p className="msf-tagline">Senior mom, this is the one they keep.</p>
       </section>
 
       {/* ── Straight answers ── */}
@@ -280,13 +308,15 @@ export default function MySchoolFramePage() {
         </p>
         <ul className="msf-booster">
           <li>
-            <strong>A set donation on every frame.</strong> A fixed per-frame
-            amount back to the club — no percentage math, no minimums to hit.
+            <strong>No order forms, no upfront cost, runs itself.</strong>{" "}
+            Nothing to front, nothing to sort at practice, no minimums to hit.
+            Parents order direct; we print and ship direct.
           </li>
           <li>
-            <strong>Zero inventory, zero cost, zero risk.</strong> No order
-            forms, no sorting at practice, no minimums to hit, nothing to front.
-            Parents order direct; we print and ship direct — it runs itself.
+            <strong>A set dollar amount per frame — not a percentage after
+            costs.</strong>{" "}
+            Fixed money back on every frame, so the club can count what a
+            season earned it.
           </li>
           <li>
             <strong>Your school controls its brand.</strong> Your official
@@ -311,9 +341,9 @@ export default function MySchoolFramePage() {
       <section className="msf-band msf-close">
         <h2>Every student has a story. Frame yours.</h2>
         <p className="msf-lede">
-          Senior year goes fast. The seasons end, the trophies go in a box, and
-          the driveway gets quiet. This one stays right where you&apos;ll see it
-          — every single time you park.
+          Senior year goes fast. The seasons end, the trophies go in a box,
+          the driveway gets quiet. Their name on the back of the car
+          doesn&apos;t.
         </p>
         <div className="msf-ctas">
           <Link href="/lab/school" className="msf-btn msf-btn-primary">

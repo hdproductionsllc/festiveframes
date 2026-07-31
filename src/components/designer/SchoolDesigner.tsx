@@ -127,6 +127,12 @@ export function SchoolDesigner({ kit }: { kit?: SchoolKit } = {}) {
   const [snappetPreview, setSnappetPreview] = useState<SnappetPreview | null>(null);
   const [storageFull, setStorageFull] = useState(false);
   const [restoredDismissed, setRestoredDismissed] = useState(false);
+  // "Make it theirs" intake — the about-ME moment. Three fields that seed the
+  // design through the same store actions the editors use, so everything the
+  // intake writes is ordinary, fully editable state.
+  const [kidName, setKidName] = useState("");
+  const [kidActivity, setKidActivity] = useState("");
+  const [kidYear, setKidYear] = useState("");
   const [exporting, setExporting] = useState(false);
   // Export result surfaced in a banner so the button is NEVER a silent no-op — and so
   // it carries a REAL tappable download link, which iOS Safari honors (a synthetic
@@ -290,6 +296,28 @@ export function SchoolDesigner({ kit }: { kit?: SchoolKit } = {}) {
   // draft and hands the parent to Stripe; the paid session's webhook (and the
   // /thanks relay) fulfills from that draft. The school slug rides the checkout
   // metadata, which is the fundraiser's donation-attribution trail.
+  // Seed the design from the intake. Badge lands in the two top corners the
+  // block-tiling layouts use; name goes jersey-style on the bottom banner with
+  // the class year as its tagline. All ordinary store writes — undoable,
+  // editable, persisted like anything hand-placed.
+  const applyKidIntake = () => {
+    const api = storeApi.getState();
+    const name = kidName.trim().toUpperCase();
+    if (name) {
+      api.setSectionMode("bottom", "text");
+      api.setSectionText("bottom", {
+        text: name,
+        ...(kidYear ? { tagline: `CLASS OF ${kidYear}` } : {}),
+      });
+    } else if (kidYear) {
+      api.setSectionText("bottom", { tagline: `CLASS OF ${kidYear}` });
+    }
+    if (kidActivity) {
+      api.placeTile("frame:wing-left-0", kidActivity, "hs", { cols: 2, rows: 2 });
+      api.placeTile("frame:top-11", kidActivity, "hs", { cols: 2, rows: 2 });
+    }
+  };
+
   const handleBuy = async () => {
     if (buying || submitting || exporting) return;
     setBuying(true);
@@ -665,6 +693,73 @@ export function SchoolDesigner({ kit }: { kit?: SchoolKit } = {}) {
               pinned frame on a phone leaves nowhere to type. */}
           <div className="contents lg:flex lg:order-none lg:flex-col lg:gap-6 lg:min-w-0 lg:sticky lg:top-3 lg:h-[calc(100vh-1.5rem)]">
             <div className="ff-frame-dock order-1 min-w-0 flex flex-col gap-3 sticky top-0 z-30 -mx-4 px-4 pt-2 pb-2 lg:static lg:order-none lg:z-auto lg:w-full lg:mx-0 lg:px-0 lg:pt-0 lg:pb-0 lg:shrink-0">
+              {/* Make-it-theirs intake: the first thing a parent touches. Three
+                  quick fields -> the frame is suddenly about THEIR kid. Writes
+                  ordinary store state via applyKidIntake. */}
+              <div data-intake className="flex flex-wrap items-end gap-2 rounded-xl border border-stone-300 bg-white px-3 py-2.5 shadow-sm">
+                <label className="flex flex-col gap-1 text-[12px] font-medium text-stone-700 grow basis-32">
+                  Their last name
+                  <input
+                    type="text"
+                    name="kid-name"
+                    value={kidName}
+                    onChange={(e) => setKidName(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") applyKidIntake(); }}
+                    placeholder="MORALES"
+                    maxLength={14}
+                    className="h-9 rounded-lg border border-stone-300 px-2.5 text-[14px] uppercase text-stone-900 placeholder:text-stone-400"
+                  />
+                </label>
+                <label className="flex flex-col gap-1 text-[12px] font-medium text-stone-700 grow basis-32">
+                  What they do
+                  <select
+                    name="kid-activity"
+                    value={kidActivity}
+                    onChange={(e) => setKidActivity(e.target.value)}
+                    className="h-9 rounded-lg border border-stone-300 bg-white px-2 text-[14px] text-stone-900"
+                  >
+                    <option value="">Pick one…</option>
+                    <option value="hs:football-patch">Football</option>
+                    <option value="hs:soccer-patch">Soccer</option>
+                    <option value="hs:basketball-patch">Basketball</option>
+                    <option value="hs:volleyball-patch">Volleyball</option>
+                    <option value="hs:baseball-patch">Baseball</option>
+                    <option value="hs:softball-patch">Softball</option>
+                    <option value="hs:track">Track</option>
+                    <option value="hs:tennis">Tennis</option>
+                    <option value="hs:golf">Golf</option>
+                    <option value="hs:cheer">Cheer</option>
+                    <option value="hs:band">Band</option>
+                    <option value="hs:marching-band">Marching Band</option>
+                    <option value="hs:drama">Drama</option>
+                    <option value="hs:robotics">Robotics</option>
+                    <option value="hs:honor-society">Honor Society</option>
+                  </select>
+                </label>
+                <label className="flex flex-col gap-1 text-[12px] font-medium text-stone-700 basis-28">
+                  Class year
+                  <select
+                    name="kid-year"
+                    value={kidYear}
+                    onChange={(e) => setKidYear(e.target.value)}
+                    className="h-9 rounded-lg border border-stone-300 bg-white px-2 text-[14px] text-stone-900"
+                  >
+                    <option value="">Year…</option>
+                    <option>2026</option>
+                    <option>2027</option>
+                    <option>2028</option>
+                    <option>2029</option>
+                  </select>
+                </label>
+                <button
+                  type="button"
+                  onClick={applyKidIntake}
+                  disabled={!kidName.trim() && !kidActivity && !kidYear}
+                  className="ff-btn ff-btn-primary ff-btn-sm h-9"
+                >
+                  See it on the frame
+                </button>
+              </div>
               {/* THE STAGE. The one zone on the page darker than its neighbours
                   (1.19:1 below the canvas, 1.28:1 below the cards) — everything else
                   is white or near-white, so the eye goes to the single tonal break
