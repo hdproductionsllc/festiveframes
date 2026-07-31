@@ -158,6 +158,14 @@ export function SectionTextElement({
     fontFamily: family,
     fontSize: fontPx,
     fontWeight: 800,
+    // Graduate — the collegiate slab on every school banner — ships ONE weight
+    // (400). Asking for 800 makes the browser FAKE the bold by smearing the
+    // glyphs, which on a slab face fills the counters and is the single biggest
+    // contributor to "the lettering looks fat". Faces that really do have an 800
+    // (Oswald, Montserrat) are unaffected and still get their designed bold; this
+    // only forbids the synthetic one. The canvas print path never synthesised in
+    // the first place, so this also closes a screen-vs-print divergence.
+    fontSynthesis: "none",
     lineHeight: LINE_HEIGHT,
     letterSpacing,
     whiteSpace: "pre", // honor \n only — never soft-wrap (keeps the fit exact)

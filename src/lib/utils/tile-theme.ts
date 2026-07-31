@@ -606,8 +606,16 @@ export function textEmboss(fontPx: number, textColour: string, rimColor?: string
      * and a one-row bar carry the same physical thread weight.
      */
     merrow: {
-      width: Math.max(2, fontPx * 0.075),
-      seat: Math.max(1, fontPx * 0.028),
+      // The floors here are ANTI-ZERO guards, nothing more. They used to be 2px
+      // and 1px, which quietly destroyed the proportionality the comment above
+      // promises: at the ~11px the banner renders at on a phone, a 2px thread is
+      // 18% of the glyph instead of the intended 7.5%, so the lettering filled in
+      // and read as a much heavier face. Desktop renders the same banner near
+      // 40px, where the floor never binds — which is exactly why it looked
+      // "thicker on mobile than on desktop", and why the PRINT path (rendered at
+      // high resolution, floors never reached) always looked correct.
+      width: Math.max(0.4, fontPx * 0.075),
+      seat: Math.max(0.2, fontPx * 0.028),
       /** Chosen for CONTRAST against the type — see `merrowThread`. */
       thread,
       seatColour: "rgba(0,0,0,0.55)",
@@ -634,8 +642,10 @@ export function textChenille(fontPx: number, textColour: string, rimColor?: stri
     shadow: {
       ...base.shadow,
       // Felt sits proud of the panel and drops a softer, longer shadow than engraving.
-      blur: Math.max(2, fontPx * 0.14),
-      offsetY: Math.max(1, fontPx * 0.055),
+      // Same anti-zero-only rule as the merrow above: a 2px blur under 11px type
+      // is a halo, not a shadow.
+      blur: Math.max(0.5, fontPx * 0.14),
+      offsetY: Math.max(0.25, fontPx * 0.055),
       colour: "rgba(0,0,0,0.5)",
     },
   };
