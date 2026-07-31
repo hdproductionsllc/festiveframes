@@ -146,6 +146,39 @@ export function SchoolDesigner({ kit }: { kit?: SchoolKit } = {}) {
   const [kidName, setKidName] = useState("");
   const [kidActivity, setKidActivity] = useState("");
   const [kidYear, setKidYear] = useState("");
+
+  // Welcome-band chips deep-link presets via #preset=<pieceId>. On arrival or
+  // click: compose the symmetric layout, preselect the activity, and put the
+  // cursor in the name field — the preset-lover flow in one tap.
+  useEffect(() => {
+    const applyFromHash = () => {
+      const m = /#preset=([^&]+)/.exec(window.location.hash);
+      if (!m) return;
+      const pieceId = decodeURIComponent(m[1]);
+      const api = storeApi.getState();
+      const SPAN = { cols: 2, rows: 2 };
+      const corners = pieceId === "generic" ? "hs:crest" : pieceId;
+      const layout: Array<[string, string]> = [
+        ["frame:wing-left-0", corners],
+        ["frame:top-11", corners],
+        ["frame:wing-left-2", "hs:laurel"],
+        ["frame:right-1", "hs:laurel"],
+        ["frame:wing-left-4", "hs:trophy"],
+        ["frame:right-3", "hs:trophy"],
+        ["frame:wing-left-6", corners],
+        ["frame:bottom-11", corners],
+      ];
+      for (const [slot, pc] of layout) api.placeTile(slot, pc, "hs", SPAN);
+      if (pieceId !== "generic") setKidActivity(pieceId);
+      const nameInput = document.querySelector<HTMLInputElement>("input[name=kid-name]");
+      nameInput?.scrollIntoView({ behavior: "smooth", block: "center" });
+      nameInput?.focus({ preventScroll: true });
+    };
+    applyFromHash();
+    window.addEventListener("hashchange", applyFromHash);
+    return () => window.removeEventListener("hashchange", applyFromHash);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [exporting, setExporting] = useState(false);
   // Export result surfaced in a banner so the button is NEVER a silent no-op — and so
   // it carries a REAL tappable download link, which iOS Safari honors (a synthetic

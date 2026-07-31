@@ -7,7 +7,7 @@ import "../../builder-fonts.css";
 import "../../build/build-skin.css";
 import "../../lab/school/school-skin.css";
 import { SchoolBuilder } from "@/components/designer/SchoolDesigner";
-import { allSchoolKits, getSchoolKit } from "@/data/school-kits";
+import { allSchoolKits, getSchoolKit, CHIP_PRESET_PIECE } from "@/data/school-kits";
 
 // ─── Per-school builder: /s/<slug> ───────────────────────────────────────────
 //
@@ -97,18 +97,23 @@ export default async function SchoolKitBuilderPage(
             }}
           >
             {w.chips.map((c) => (
-              <span
+              // Live controls, not decoration: each chip carries its preset in
+              // the hash; the builder below listens and composes the frame.
+              <a
                 key={c}
+                href={`#preset=${encodeURIComponent(CHIP_PRESET_PIECE[c.toLowerCase()] ?? "generic")}`}
                 style={{
                   border: `1px solid ${kit.banners.text}66`,
                   borderRadius: 999,
                   padding: "5px 14px",
                   fontSize: 13.5,
                   letterSpacing: "0.02em",
+                  color: "inherit",
+                  textDecoration: "none",
                 }}
               >
                 {c}
-              </span>
+              </a>
             ))}
           </div>
           <p style={{ margin: "22px 0 0", fontSize: 14.5, opacity: 0.85 }}>{w.ordering}</p>

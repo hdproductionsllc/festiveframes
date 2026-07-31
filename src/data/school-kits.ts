@@ -155,6 +155,29 @@ const KITS: SchoolKit[] = [
 
 const BY_SLUG = new Map(KITS.map((k) => [k.slug, k]));
 
+/** Welcome-chip label -> badge piece for the preset engine. Labels without a
+ *  matching badge (racquetball, water polo...) fall back to the generic crest
+ *  preset — the chip still composes a frame rather than doing nothing. */
+export const CHIP_PRESET_PIECE: Record<string, string> = {
+  soccer: "hs:soccer-patch",
+  football: "hs:football-patch",
+  basketball: "hs:basketball-patch",
+  volleyball: "hs:volleyball-patch",
+  baseball: "hs:baseball-patch",
+  softball: "hs:softball-patch",
+  track: "hs:track",
+  tennis: "hs:tennis",
+  golf: "hs:golf",
+  cheer: "hs:cheer",
+  band: "hs:band",
+  "marching band": "hs:marching-band",
+  theater: "hs:drama",
+  drama: "hs:drama",
+  robotics: "hs:robotics",
+  "honor roll": "hs:honor-society",
+  "honor society": "hs:honor-society",
+};
+
 export function getSchoolKit(slug: string): SchoolKit | undefined {
   return BY_SLUG.get(slug);
 }
