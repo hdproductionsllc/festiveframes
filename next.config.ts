@@ -46,18 +46,24 @@ const nextConfig: NextConfig = {
   // /school landing page and every other path passes through unchanged — so
   // myschoolframe.com/lab/school is the builder, same app, no second deploy.
   async rewrites() {
-    return [
-      {
-        source: "/",
-        has: [{ type: "host", value: "myschoolframe.com" }],
-        destination: "/school",
-      },
-      {
-        source: "/",
-        has: [{ type: "host", value: "www.myschoolframe.com" }],
-        destination: "/school",
-      },
-    ];
+    // beforeFiles is load-bearing: "/" is a real page (the Festive Frames
+    // home), and plain-array rewrites run AFTER filesystem routes — so the
+    // host rule silently never fired and myschoolframe.com served the
+    // patriotic homepage. beforeFiles wins over the filesystem.
+    return {
+      beforeFiles: [
+        {
+          source: "/",
+          has: [{ type: "host", value: "myschoolframe.com" }],
+          destination: "/school",
+        },
+        {
+          source: "/",
+          has: [{ type: "host", value: "www.myschoolframe.com" }],
+          destination: "/school",
+        },
+      ],
+    };
   },
 };
 

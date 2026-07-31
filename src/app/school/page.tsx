@@ -25,7 +25,9 @@ const graduate = Graduate({ weight: "400", subsets: ["latin"] });
 // from the drafts on those grounds ("tracked and paid out": no tracking exists).
 
 export const metadata: Metadata = {
-  title: "MySchoolFrame — Your school. Your story. Your frame.",
+  // absolute: opt out of the root layout's "| Festive Frames" title template —
+  // on myschoolframe.com this page IS the brand.
+  title: { absolute: "MySchoolFrame — Your school. Your story. Your frame." },
   description:
     "Design a premium license-plate frame in your school's exact colors, with badges for your teams and clubs. Every frame gives back to your booster club.",
 };

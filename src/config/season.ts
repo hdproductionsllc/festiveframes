@@ -34,4 +34,7 @@ export const season: Season = {
 // The store is served on the www subdomain (Railway can't verify the apex behind
 // Cloudflare's CNAME flattening); the bare festiveframes.co 301-redirects to www at
 // the Cloudflare edge.
-export const SITE_URL = "https://www.festiveframes.co";
+// myschoolframe.com is the domain attached to Railway since the school pivot;
+// festiveframes.co 301s here at the Cloudflare edge. Stripe return URLs,
+// canonicals, sitemap, and og URLs all build from this.
+export const SITE_URL = "https://www.myschoolframe.com";
