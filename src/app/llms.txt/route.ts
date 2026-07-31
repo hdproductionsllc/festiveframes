@@ -1,6 +1,6 @@
 import { SITE_URL } from "@/config/season";
 import { copy } from "@/content/copy";
-import { offer, formatUsd, schoolOffer } from "@/config/offers";
+import { offer, formatUsd } from "@/config/offers";
 
 // Served at /llms.txt — a concise, factual brief for AI answer engines.
 // Built from the same config/copy as the site so it never drifts.
@@ -39,7 +39,7 @@ export function GET() {
 - Personalized banners: "HOME OF THE [mascot]", the school's name, the student's class year.
 - Paste the school's website and the builder themes itself in that school's colors — every US high school works, no waiting.
 - Fundraising: a set dollar donation from every frame goes to the school's booster club. No inventory, no order forms, no upfront cost for the school — parents order direct and MySchoolFrame prints and ships direct.
-- Price: $${(schoolOffer.schoolPrice / 100).toFixed(0)} per frame (USD).
+- Ordering: design the frame in the builder and send it in; MySchoolFrame follows up with ordering info. Pricing on request.
 - Made: UV-printed and assembled in St. Louis, USA.
 - Good for: senior night gifts, graduation gifts for high school seniors, sports/band/club parent gifts, booster club fundraisers with no upfront cost.
 

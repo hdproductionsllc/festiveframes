@@ -452,7 +452,7 @@ export function SchoolDesigner({ kit }: { kit?: SchoolKit } = {}) {
             onClick={handleSubmit}
             disabled={submitting || exporting || buying}
             title="Send your finished design to our team without ordering"
-            className="ff-btn ff-btn-secondary ff-btn-sm shrink-0"
+            className="ff-btn ff-btn-primary ff-btn-sm shrink-0"
           >
             {submitting ? (
               "Sending..."
@@ -462,15 +462,21 @@ export function SchoolDesigner({ kit }: { kit?: SchoolKit } = {}) {
               </>
             )}
           </button>
-          <button
-            type="button"
-            onClick={handleBuy}
-            disabled={buying || submitting || exporting}
-            title="Order this frame — secure checkout"
-            className="ff-btn ff-btn-primary ff-btn-sm shrink-0"
-          >
-            {buying ? "Starting checkout..." : <>Buy<span className="hidden sm:inline"> this frame</span> — $49</>}
-          </button>
+          {/* Direct checkout is PARKED until pricing is owner-confirmed — the
+              published path is send-your-design, and we follow up with ordering
+              info. handleBuy and the Stripe rails stay wired for the flip back:
+              restore this button and demote Send to ff-btn-secondary. */}
+          {false && (
+            <button
+              type="button"
+              onClick={handleBuy}
+              disabled={buying || submitting || exporting}
+              title="Order this frame — secure checkout"
+              className="ff-btn ff-btn-primary ff-btn-sm shrink-0"
+            >
+              {buying ? "Starting checkout..." : <>Buy<span className="hidden sm:inline"> this frame</span></>}
+            </button>
+          )}
         </div>
       </header>
 

@@ -66,14 +66,8 @@ const STRUCTURED_DATA = {
         "A personalized license plate frame in your school's colors with badge tiles for your student's sports, band, clubs, and achievements. Designed by you in an online builder, UV-printed and assembled in St. Louis, USA. A set donation from every frame goes to the school's booster club.",
       image: "https://www.myschoolframe.com/school/opengraph-image",
       brand: { "@type": "Brand", name: "MySchoolFrame" },
-      offers: {
-        "@type": "Offer",
-        url: "https://www.myschoolframe.com/lab/school",
-        price: "49.00",
-        priceCurrency: "USD",
-        availability: "https://schema.org/InStock",
-        itemCondition: "https://schema.org/NewCondition",
-      },
+      // No Offer/price until pricing is owner-confirmed — ordering is
+      // design-and-send, and we follow up with ordering info.
     },
   ],
 };
