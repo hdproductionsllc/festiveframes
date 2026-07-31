@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { TilePiece } from "@/lib/types";
 import { getSetPieces, resolveSurfacedSetId, SURFACED_SET_IDS } from "@/data/sets";
 import { usePaletteStore } from "@/stores/palette-store";
 import { useDesignStore } from "@/stores/design-store";
@@ -19,9 +20,25 @@ interface TileGridProps {
    * shows the School Spirit set without changing /build.
    */
   surfacedSetIds?: readonly string[];
+  /**
+   * Pieces to show AHEAD of the surfaced set — the school's own crest and mascot
+   * on a kit page. They lead because they are the reason the page is theirs; a
+   * parent should find the Billiken before the generic soccer badge.
+   *
+   * Kept a prop rather than read from a set id because these are trademarks: they
+   * belong to exactly one kit and must not be reachable from another school's
+   * palette. See data/sets/school-marks.
+   */
+  extraPieces?: readonly TilePiece[];
 }
 
-export function TileGrid({ variant = "grid", surfacedSetIds = SURFACED_SET_IDS }: TileGridProps) {
+const NO_EXTRA: readonly TilePiece[] = [];
+
+export function TileGrid({
+  variant = "grid",
+  surfacedSetIds = SURFACED_SET_IDS,
+  extraPieces = NO_EXTRA,
+}: TileGridProps) {
   const activeSetId = usePaletteStore((s) => s.activeSetId);
   const uploads = useDesignStore((s) => s.uploads);
   const removeUpload = useDesignStore((s) => s.removeUpload);
@@ -48,7 +65,8 @@ export function TileGrid({ variant = "grid", surfacedSetIds = SURFACED_SET_IDS }
   // back to the first surfaced set so the tray is never empty / off-theme.
   const setId = resolveSurfacedSetId(activeSetId, surfacedSetIds);
 
-  const allPieces = getSetPieces(setId);
+  const setPieces = getSetPieces(setId);
+  const allPieces = extraPieces.length ? [...extraPieces, ...setPieces] : setPieces;
   // Quick search over the badge library — as the tile catalog grows, typing
   // "soc" beats scrolling. Names are the catalog (every piece has one); empty
   // query = the full set, exactly as before.

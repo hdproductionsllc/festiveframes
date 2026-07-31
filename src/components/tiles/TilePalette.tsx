@@ -2,6 +2,7 @@
 
 
 import { useState } from "react";
+import type { TilePiece } from "@/lib/types";
 import { TileGrid } from "./TileGrid";
 import { ArmedBanner } from "./ArmedBanner";
 import { QuickActions } from "@/components/designer/QuickActions";
@@ -21,9 +22,12 @@ interface TilePaletteProps {
    * change to /build (which passes nothing).
    */
   surfacedSetIds?: readonly string[];
+  /** The active school kit's own crest/mascot badges, shown ahead of the set.
+   *  Kit-scoped by design — see TileGrid's extraPieces. */
+  extraPieces?: readonly TilePiece[];
 }
 
-export function TilePalette({ surfacedSetIds }: TilePaletteProps = {}) {
+export function TilePalette({ surfacedSetIds, extraPieces }: TilePaletteProps = {}) {
   return (
     <>
       {/* Desktop / Tablet — palette panel (left side of the tools row) */}
@@ -31,18 +35,18 @@ export function TilePalette({ surfacedSetIds }: TilePaletteProps = {}) {
         data-tour="tiles"
         className="bsk-panel-blue hidden md:flex flex-col w-full lg:basis-0 lg:grow-[50] min-w-0 p-3 bg-surface-800/50 rounded-xl border border-surface-700/50"
       >
-        <DesktopPaletteContent surfacedSetIds={surfacedSetIds} />
+        <DesktopPaletteContent surfacedSetIds={surfacedSetIds} extraPieces={extraPieces} />
       </aside>
 
       {/* Mobile — stacked tile tray (tiles always visible, no hunting) */}
-      <MobileTileTray surfacedSetIds={surfacedSetIds} />
+      <MobileTileTray surfacedSetIds={surfacedSetIds} extraPieces={extraPieces} />
     </>
   );
 }
 
 /* ────────────────────────────── Desktop ────────────────────────────── */
 
-function DesktopPaletteContent({ surfacedSetIds }: TilePaletteProps) {
+function DesktopPaletteContent({ surfacedSetIds, extraPieces }: TilePaletteProps) {
   return (
     <div className="flex min-h-0 flex-col gap-2">
       {/* Tools + a COMPACT one-line hint sit ABOVE the tiles. ("Start from a Look"
@@ -55,7 +59,7 @@ function DesktopPaletteContent({ surfacedSetIds }: TilePaletteProps) {
           would clip the "● Placing" badge that pops ABOVE the top row of tiles when
           one is armed. The rail's height is fine unclamped since the right column —
           frame + editor — is the taller side.) */}
-      <TileGrid surfacedSetIds={surfacedSetIds} />
+      <TileGrid surfacedSetIds={surfacedSetIds} extraPieces={extraPieces} />
       {/* Armed-tile callout — surfaces here too, so the "now tap the frame" cue is
           visible no matter where you look. */}
       <ArmedBanner placement="tray" />
@@ -65,7 +69,7 @@ function DesktopPaletteContent({ surfacedSetIds }: TilePaletteProps) {
 
 /* ─────────────────────────────── Mobile ────────────────────────────── */
 
-function MobileTileTray({ surfacedSetIds }: TilePaletteProps) {
+function MobileTileTray({ surfacedSetIds, extraPieces }: TilePaletteProps) {
   // Tools start EXPANDED so the quick actions are visible on first render without
   // tapping the gear. The toggle still collapses them when the user wants the
   // tray focused purely on tiles.
@@ -109,7 +113,7 @@ function MobileTileTray({ surfacedSetIds }: TilePaletteProps) {
 
       {/* Thumb-friendly tile row, BELOW the tools. */}
       <div className="px-3 pt-2">
-        <TileGrid variant="row" surfacedSetIds={surfacedSetIds} />
+        <TileGrid variant="row" surfacedSetIds={surfacedSetIds} extraPieces={extraPieces} />
       </div>
 
       {/* Armed-tile callout — bold "now tap your frame" cue, mobile-prominent. */}

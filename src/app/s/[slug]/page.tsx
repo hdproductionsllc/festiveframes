@@ -65,6 +65,27 @@ export default async function SchoolKitBuilderPage(
             textAlign: "center",
           }}
         >
+          {/* The school's own lockup, above its own words. This is the first
+              thing on the page for a reason: a parent should recognise their
+              school before they read anything. Only kits carrying authorized
+              marks have one — everyone else opens on the headline. */}
+          {kit.marks?.lockup && (
+            // eslint-disable-next-line @next/next/no-img-element -- kit marks are
+            // arbitrary per-school files; next/image would need each one whitelisted.
+            <img
+              src={kit.marks.lockup}
+              alt={`${kit.schoolName} logo`}
+              style={{
+                display: "block",
+                width: "min(340px, 72vw)",
+                height: "auto",
+                margin: "0 auto 26px",
+                // The lockup is drawn for a light page; on the school's own navy
+                // its white keyline is what separates it from the field.
+                filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.35))",
+              }}
+            />
+          )}
           <p
             className={graduate.className}
             style={{

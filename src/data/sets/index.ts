@@ -18,6 +18,7 @@ import { militarySet } from "./military";
 import { militaryRealisticSet } from "./military-realistic";
 import { schoolSet } from "./school";
 import { highSchoolSet } from "./high-school";
+import { schoolMarksSet } from "./school-marks";
 
 // Ordered: Essentials first, holidays chronologically, then cultural/themed sets
 export const tileSets: TileSet[] = [
@@ -40,6 +41,9 @@ export const tileSets: TileSet[] = [
   militaryRealisticSet,
   schoolSet,
   highSchoolSet,
+  // Registered so getPiece() resolves a school's own crest/mascot in BOTH
+  // renderers; never surfaced as a palette set — see ./school-marks.
+  schoolMarksSet,
 ];
 
 /**

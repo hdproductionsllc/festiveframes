@@ -12,7 +12,7 @@
 // STORE NOTE: it owns an ISOLATED design store (its own `createDesignStore`
 // instance + its own persist key), so nothing it does can reach /build's design.
 
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import {
   useDesignStore,
   useDesignStoreApi,
@@ -27,6 +27,7 @@ import { DndProvider } from "./DndProvider";
 import { FrameCanvas, type FrameCanvasHandle } from "@/components/frame/FrameCanvas";
 import { TilePalette } from "@/components/tiles/TilePalette";
 import { SCHOOL_SURFACED_SET_IDS } from "@/data/sets";
+import { kitMarkPieces } from "@/data/sets/school-marks";
 import { SectionControls } from "./SectionControls";
 import { FrameColorPicker } from "./FrameColorPicker";
 import { SectionEditor } from "./SectionEditor";
@@ -101,6 +102,9 @@ function DownloadIcon() {
 }
 
 export function SchoolDesigner({ kit }: { kit?: SchoolKit } = {}) {
+  // This school's own crest/mascot badges. Memoised on the kit so the palette
+  // isn't handed a fresh array on every render of a page that never changes kit.
+  const kitMarks = useMemo(() => kitMarkPieces(kit), [kit]);
   const frameConfig = useDesignStore((s) => s.frameConfig);
   const slots = useDesignStore((s) => s.slots);
   const bottomBar = useDesignStore((s) => s.bottomBar);
@@ -728,7 +732,12 @@ export function SchoolDesigner({ kit }: { kit?: SchoolKit } = {}) {
                 already IS the school — showing "paste your school's website"
                 there undercuts the whole personalized pitch. */}
             {!kit && <SchoolBrandImport />}
-            <TilePalette surfacedSetIds={SCHOOL_SURFACED_SET_IDS} />
+            {/* The school's own marks lead its palette — a SLUH parent finds the
+                Billiken before the generic badges. Empty for the kitless builder. */}
+            <TilePalette
+              surfacedSetIds={SCHOOL_SURFACED_SET_IDS}
+              extraPieces={kitMarks}
+            />
             <UploadPhotoButton />
             <FrameColorPicker />
             <SectionControls />

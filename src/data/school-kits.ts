@@ -58,6 +58,36 @@ export interface SchoolKit {
   /** Badges the frame opens wearing (slotId -> placement). Initial state only —
    *  a kit page lands on a finished-looking frame; persisted designs win. */
   seedSlots?: Record<string, { pieceId: string; setId: string; span: { cols: number; rows: number } }>;
+  /**
+   * The school's OWN marks, cut from official artwork the school or the owner
+   * supplied. Everything here is KIT-SCOPED: a mark reaches this school's palette
+   * and this school's banner, never another school's — which is the whole reason
+   * marks live on the kit rather than in a shared tile set.
+   *
+   * Rights, not decoration: a school's crest is its trademark. Marks may only be
+   * added from assets we were actually given, and a kit carrying them cannot go
+   * `status: "verified"` (indexable, public) until the school has authorized use
+   * of its name and marks in writing.
+   */
+  marks?: {
+    /** Crest for the bottom banner, beside the school's name. Square-ish with a
+     *  transparent field — the banner crest box is square and letterboxes wide
+     *  marks down to nothing. */
+    crest?: string;
+    /** Full horizontal lockup, for the welcome band above the builder. */
+    lockup?: string;
+    /** Badge tiles unique to this school. `key` fixes the piece id
+     *  (`mark:<slug>:<key>`), so seedSlots and presets can name them. */
+    badges?: {
+      key: string;
+      name: string;
+      artworkUrl: string;
+      emoji: string;
+      /** Field behind the art, same rule as the high-school set: white for art
+       *  that is itself dark or navy line work, navy for full-colour art. */
+      field: "navy" | "white";
+    }[];
+  };
   /** demo = research-guessed, noindexed, for sales demos. verified = school
    *  confirmed colors AND authorized use of its name — indexable. */
   status: "demo" | "verified";
@@ -86,12 +116,13 @@ const KITS: SchoolKit[] = [
     shortName: "SLUH",
     mascot: "Jr. Bills",
     city: "St. Louis, MO",
-    colors: { frame: "#1B3F6E", tileField: "#1B3F6E", rim: "#FFFFFF" },
+    // Sampled from the official artwork itself (see colorSource) — not eyeballed.
+    colors: { frame: "#183B67", tileField: "#183B67", rim: "#FFFFFF" },
     // Tagline is their wordmark's own spelling — full name, no "SCHOOL",
     // exactly as the official lockup writes it. (Default rule: prefer the full
     // school name on the tagline line when it fits; the intake swaps it for
     // CLASS OF YYYY once the frame becomes the student's.)
-    banners: { top: "HOME OF THE", bottom: "JR. BILLS", tagline: "ST. LOUIS UNIVERSITY HIGH", bg: "#1B3F6E", text: "#FFFFFF" },
+    banners: { top: "HOME OF THE", bottom: "JR. BILLS", tagline: "ST. LOUIS UNIVERSITY HIGH", bg: "#183B67", text: "#FFFFFF" },
     // Every welcome fact is research-verified w/ sources (scratchpad sluh-profile):
     // 1818/oldest-west (Wikipedia, stlmag), racquetball 16 national titles thru
     // 2023 (Prep News, USA Racquetball), soccer 2024+2025 back-to-back (Post-
@@ -126,19 +157,51 @@ const KITS: SchoolKit[] = [
     },
     // The frame a SLUH parent lands on — the verified curated sample layout,
     // fully dressed so the first impression is a finished product, not a grid.
+    // The school's own Billiken and crest lead the layout — a SLUH parent should
+    // see THEIR mark on the frame before they read a word of the copy.
     seedSlots: {
-      "frame:wing-left-0": { pieceId: "hs:soccer-patch", setId: "hs", span: { cols: 2, rows: 2 } },
-      "frame:wing-left-2": { pieceId: "hs:football-patch", setId: "hs", span: { cols: 2, rows: 2 } },
+      "frame:wing-left-0": { pieceId: "mark:sluh-jr-bills:billiken", setId: "mark", span: { cols: 2, rows: 2 } },
+      "frame:wing-left-2": { pieceId: "hs:soccer-patch", setId: "hs", span: { cols: 2, rows: 2 } },
       "frame:wing-left-4": { pieceId: "hs:basketball-patch", setId: "hs", span: { cols: 2, rows: 2 } },
       "frame:wing-left-6": { pieceId: "hs:band", setId: "hs", span: { cols: 2, rows: 2 } },
-      "frame:top-11": { pieceId: "hs:crest", setId: "hs", span: { cols: 2, rows: 2 } },
+      "frame:top-11": { pieceId: "mark:sluh-jr-bills:shield", setId: "mark", span: { cols: 2, rows: 2 } },
       "frame:right-1": { pieceId: "hs:robotics", setId: "hs", span: { cols: 2, rows: 2 } },
       "frame:right-3": { pieceId: "hs:drama", setId: "hs", span: { cols: 2, rows: 2 } },
       "frame:bottom-11": { pieceId: "hs:honor-society", setId: "hs", span: { cols: 2, rows: 2 } },
     },
+    // Cut from the official files the owner supplied. The Billiken keeps its white
+    // field because the mark is navy line work on columbia AND its body is white —
+    // a global white key would hollow out the Billiken itself.
+    //
+    // PRINT RESOLUTION, measured (do not flip this kit to "verified" without
+    // re-checking): the Billiken is 679px on a 1.982" 2x2 tile = 343 DPI, over the
+    // gate. The CREST is 249px drawn at 1.427" in the bottom banner = 174 DPI,
+    // UNDER it. Fine on screen, soft on a printed part, so a pilot print needs a
+    // crest of at least 429px (300 DPI) — ideally the vector original from SLUH
+    // communications. Owner-grab item, same class as exact hex values.
+    marks: {
+      crest: "/kits/sluh/lockup-crest.png",
+      lockup: "/kits/sluh/lockup.png",
+      badges: [
+        {
+          key: "billiken",
+          name: "Billiken",
+          artworkUrl: "/kits/sluh/billiken.png",
+          emoji: "🔵",
+          field: "white",
+        },
+        {
+          key: "shield",
+          name: "SLUH Crest",
+          artworkUrl: "/kits/sluh/lockup-crest.png",
+          emoji: "🛡️",
+          field: "white",
+        },
+      ],
+    },
     status: "demo",
     colorSource:
-      "read from OWNER-SUPPLIED official logo assets (Jul 2026): deep navy ~#1B3F6E (wordmark/Billiken linework), columbia ~#8CC7E9 (Billiken diamond), shield royal ~#2050A0. Vision-read from raster images — verify against a vector original before print. Phase-1 pilot school.",
+      "MEASURED from the OWNER-SUPPLIED official logo files (Jul 2026), by sampling the decoded pixels — not eyeballed: deep navy #183B67 (wordmark + Billiken line work, 6.9% of the lockup's opaque pixels), columbia #89CCE9 (Billiken diamond, 23.6%), shield royal #254B86/#2A5695. Sources are rasters (659px Billiken JPEG, 800x273 lockup PNG); a vector original would still be worth having before a large print run. Phase-1 pilot school.",
   },
   {
     slug: "micds-rams",
@@ -212,6 +275,12 @@ export function kitSections(kit: SchoolKit): Partial<Record<SectionId, SectionSt
         letterSpacing: 2,
         backgroundColor: kit.banners.bg,
         textColor: kit.banners.text,
+        // The crest flanking the name is the arrangement every gym wall and
+        // letterhead already uses; "both" mirrors it so the name stays centred.
+        // Bottom bar only — sectionSupportsLogo enforces that independently.
+        ...(kit.marks?.crest
+          ? { logo: { url: kit.marks.crest, placement: "both" as const } }
+          : null),
       },
     },
   };

@@ -62,8 +62,10 @@ describe("POST /api/school/submit — validation", () => {
 
   it("rejects an oversized print image (413)", async () => {
     process.env.RESEND_API_KEY = "test-key";
-    // ~25MB of base64 → ~18.75MB decoded, over the 18MB ceiling.
-    const huge = `data:image/png;base64,${"A".repeat(25 * 1024 * 1024)}`;
+    // Base64 carries 3 bytes per 4 chars, so this is ~30MB decoded — over the
+    // 28MB ceiling. (The ceiling was raised from 18MB when a real school design
+    // came back too big to send; keep this comfortably above whatever it is.)
+    const huge = `data:image/png;base64,${"A".repeat(40 * 1024 * 1024)}`;
     const res = await POST(req({ printPng: huge, designName: "X" }));
     expect(res.status).toBe(413);
     expect(sendMock).not.toHaveBeenCalled();
