@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Graduate } from "next/font/google";
 import { notFound } from "next/navigation";
 // Same three-layer stylesheet stack as /lab/school, same order, same reasons —
 // see that page's header comments. The builder is ONE engine; this route only
@@ -15,6 +16,12 @@ import { allSchoolKits, getSchoolKit, CHIP_PRESET_PIECE } from "@/data/school-ki
 // its colors on the frame body and banners, its mascot on the bottom bar, its own
 // localStorage key. Adding a school is one entry in data/school-kits.ts — no new
 // components, no new routes, nothing to keep in sync.
+
+// Self-hosted via next/font — the welcome band CANNOT fall back to Times the
+// way a lost @import race does on phones (which rendered the headline in a
+// thin-thick serif that read as fat and filled-in; the frame banners were
+// never affected because the builder re-renders on font load).
+const graduate = Graduate({ weight: "400", subsets: ["latin"] });
 
 export function generateStaticParams() {
   return allSchoolKits().map((k) => ({ slug: k.slug }));
@@ -59,9 +66,9 @@ export default async function SchoolKitBuilderPage(
           }}
         >
           <p
+            className={graduate.className}
             style={{
               margin: 0,
-              fontFamily: "Graduate, serif",
               fontSize: "clamp(26px, 4.2vw, 42px)",
               letterSpacing: "0.03em",
               // One soft lift only. The earlier three-layer varsity shadow
