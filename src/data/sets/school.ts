@@ -71,17 +71,12 @@ export const schoolSet: TileSet = {
     { id: `${S}:solid-royal`, setId: S, name: "Royal", artworkUrl: "", emoji: "🟦", backgroundColor: ROYAL },
     { id: `${S}:solid-forest`, setId: S, name: "Forest", artworkUrl: "", emoji: "🟩", backgroundColor: FOREST },
 
-    // ─── Multi-cell TEST tiles (dev only) ──────────────────────
-    // Labeled placeholder art at fixed spans so multi-cell placement / rendering /
-    // resize can be tested on the side panels (2 tiles wide) and rails before the
-    // real varsity art lands. Each carries a `defaultSpan`, so dragging it drops a
-    // snappet of that footprint. School-only (never surfaced on /build); remove once
-    // real multi-cell art exists.
-    { id: `${S}:test-2x3`, setId: S, name: "Test 2×3", artworkUrl: "/tiles/school/test/2x3.svg", emoji: "🔳", backgroundColor: NAVY, defaultSpan: { cols: 2, rows: 3 }, spanRequired: true },
-    { id: `${S}:test-2x4`, setId: S, name: "Test 2×4", artworkUrl: "/tiles/school/test/2x4.svg", emoji: "🔳", backgroundColor: CRIMSON, defaultSpan: { cols: 2, rows: 4 }, spanRequired: true },
-    { id: `${S}:test-2x2`, setId: S, name: "Test 2×2", artworkUrl: "/tiles/school/test/2x2.svg", emoji: "🔳", backgroundColor: ROYAL, defaultSpan: { cols: 2, rows: 2 }, spanRequired: true },
-    { id: `${S}:test-2x1`, setId: S, name: "Test 2×1", artworkUrl: "/tiles/school/test/2x1.svg", emoji: "🔳", backgroundColor: TURF, defaultSpan: { cols: 2, rows: 1 }, spanRequired: true },
-    { id: `${S}:test-1x2`, setId: S, name: "Test 1×2", artworkUrl: "/tiles/school/test/1x2.svg", emoji: "🔳", backgroundColor: GOLD, textColor: "#333333", defaultSpan: { cols: 1, rows: 2 }, spanRequired: true },
+    // The multi-cell TEST tiles that used to close this palette are GONE. They were
+    // labelled calibration swatches ("Test 2×3") for checking multi-cell placement
+    // before real multi-cell art existed — dev scaffolding that ended up in front of
+    // customers, reading as five broken products at the end of the badge list.
+    // Multi-cell placement is now exercised by real 2×2 badge art and by the unit
+    // tests; nothing needs a labelled swatch on the shop floor.
   ],
   presets: buildPresets(),
 };
@@ -116,7 +111,7 @@ function buildPresets(): DesignPreset[] {
       id: `${S}:champions`,
       name: "Champions",
       description: "Honours and leadership badges",
-      slots: cycle(["hs:honor-society", "solid-navy", "hs:student-council", "hs:deca"]),
+      slots: cycle(["hs:laurel", "solid-navy", "hs:gavel", "hs:trophy"]),
       bottomBar: { text: "STATE CHAMPIONS", backgroundColor: CRIMSON, textColor: "#FFFFFF" },
     },
   ];

@@ -661,3 +661,132 @@
 .build-skin.school-skin .border-\[\#faf0d6\]\/20 { border-color: var(--ff-line-strong) !important; }
 .build-skin.school-skin .focus\:border-\[\#f8c53b\]\/70:focus { border-color: var(--ff-accent) !important; }
 .build-skin.school-skin select.bg-\[\#2a2620\]:focus { box-shadow: var(--ff-focus); }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   10. THE BOLD PASS
+
+   WHAT CHANGED AND WHY. Sections 1–9 above built a deliberately quiet skin: pale
+   mat, hairline borders, one low-chroma accent, everything stepping back so the
+   frame could be the only rich object on screen. The reasoning still holds and
+   the contrast maths above is still the floor. The result, in the owner's words,
+   was "dull and corporate" — and he is right, because quiet was applied to the
+   WRONG THING. Getting out of the frame's way was read as a licence to make the
+   surroundings inert, and an inert surrounding does not make a product pop; it
+   makes the whole screen look unfinished.
+
+   So this section keeps the restraint where it earns its keep (type, spacing,
+   radius, one accent) and spends contrast where the eye actually goes:
+
+     THE STAGE stops being a pale mat and becomes a deep pool of the SCHOOL's own
+     colour with a spotlight behind the frame. A navy-and-brass product on light
+     grey is a photograph of a part; the same product lit on its own dark colour
+     is the part on the back of the car at night. This is also the single biggest
+     "it matched our blue" win — the owner already liked that the frame matched
+     the school, and now the room does too.
+
+     PANELS get a weighted header rule in the school colour and a real edge, so
+     the tools read as built rather than as a stack of white rectangles.
+
+     THE PRIMARY ACTION takes the school colour. On a school's page the loudest
+     button being a generic teal was the most corporate thing on screen.
+
+   `--ff-school` is set by the kit page (SchoolDesigner's root). It falls back to
+   the frame navy, so the kitless /lab/school builder still gets the whole
+   treatment instead of an unstyled hole.
+
+   CONTRAST. The stage now carries LIGHT text, not `--ff-ink-3`, so the 4.59:1
+   floor noted in section 1 no longer binds; `--ff-on-school` is white on a colour
+   whose luminance is bounded by the kits themselves (every school colour in the
+   catalogue is a saturated dark). The panels, wells, fields and modals are
+   untouched white-on-ink surfaces, so every ratio computed above still holds
+   exactly as written.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.school-skin,
+.ff-school-portal {
+  --ff-school: #1b2a4a;         /* overridden per kit; navy is the house default */
+  --ff-on-school: #ffffff;
+  --ff-brass: #f8c53b;          /* the frame's own rim colour, for accents */
+}
+
+/* ── The stage: a lit pool of the school's colour ────────────────────────── */
+.school-skin .ff-stage {
+  /* Radial spotlight behind the frame, over a vertical fall-off to a deeper
+     shade. `color-mix` keeps both stops in the school's hue, so this works for
+     Kirkwood red and MICDS green without a per-school stop list. */
+  background:
+    radial-gradient(
+      120% 90% at 50% 38%,
+      color-mix(in srgb, var(--ff-school) 78%, #ffffff) 0%,
+      var(--ff-school) 52%,
+      color-mix(in srgb, var(--ff-school) 82%, #000000) 100%
+    );
+  border: 1px solid color-mix(in srgb, var(--ff-school) 70%, #000000);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--ff-school) 60%, #ffffff),
+    0 10px 30px color-mix(in srgb, var(--ff-school) 55%, transparent);
+  padding: clamp(18px, 3.4vw, 34px);
+}
+
+/* The frame's own contact shadow, so it sits ON the stage rather than floating in
+   front of it. Applied to the canvas wrapper, never to the frame's own parts. */
+.school-skin .ff-stage > div:not(.ff-stage-hint) {
+  filter: drop-shadow(0 14px 26px rgba(0, 0, 0, 0.42));
+}
+
+/* The instruction that replaced the Sections panel. It sits BELOW the stage, on
+   the page canvas — so it is dark-on-light. (It was written light-on-dark first,
+   on the assumption it was inside the stage, and rendered white on white: exactly
+   the class of defect that only shows up in a screenshot.) */
+.ff-stage-hint {
+  margin: 14px 0 0;
+  text-align: center;
+  font-size: 13.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--ff-ink-3);
+}
+
+/* ── Panels: built, not blank ─────────────────────────────────────────────── */
+.school-skin .ff-panel,
+.school-skin .bsk-panel-blue {
+  border: 1px solid color-mix(in srgb, var(--ff-school) 22%, var(--ff-line));
+  border-top: 3px solid var(--ff-school);
+  box-shadow:
+    0 1px 2px rgba(16, 18, 28, 0.05),
+    0 6px 18px rgba(16, 18, 28, 0.09);
+}
+
+/* Panel headings pick up the school colour and a little weight. Anchored to the
+   chrome's own heading classes — nothing on the FRAME uses these. */
+.school-skin .ff-panel h2,
+.school-skin .ff-panel h3,
+.school-skin .bsk-panel-blue h2,
+.school-skin .bsk-panel-blue h3 {
+  color: var(--ff-school);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+/* ── The primary action wears the school ─────────────────────────────────── */
+.school-skin .ff-btn-primary {
+  background: var(--ff-school);
+  border-color: color-mix(in srgb, var(--ff-school) 78%, #000000);
+  color: var(--ff-on-school);
+  font-weight: 700;
+  box-shadow: 0 2px 0 color-mix(in srgb, var(--ff-school) 72%, #000000);
+}
+@media (hover: hover) {
+  .school-skin .ff-btn-primary:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--ff-school) 86%, #000000);
+    border-color: color-mix(in srgb, var(--ff-school) 66%, #000000);
+  }
+}
+
+/* Armed / selected states follow the school colour too, so the "this one is
+   picked" signal is the same hue everywhere instead of a second brand colour. */
+.school-skin .ff-panel [aria-pressed="true"],
+.school-skin .bsk-panel-blue [aria-pressed="true"] {
+  border-color: var(--ff-school);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ff-school) 30%, transparent);
+}

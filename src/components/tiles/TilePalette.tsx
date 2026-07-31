@@ -53,7 +53,7 @@ function DesktopPaletteContent({ surfacedSetIds, extraPieces }: TilePaletteProps
           now lives in the header, freeing the rail for tiles.) */}
       <QuickActions surfacedSetIds={surfacedSetIds} />
       <p className="text-center text-xs font-semibold leading-snug text-surface-300">
-        Tap a tile then tap the frame — or drag it on. Drag a tile off to remove.
+        Tap a tile then tap the frame, or drag it on. Drag a tile off to remove.
       </p>
       {/* Tile grid at natural height — no overflow clip here. (An overflow-y scroll
           would clip the "● Placing" badge that pops ABOVE the top row of tiles when

@@ -26,6 +26,15 @@ import { minSpanFor, tileSpan, resolveSnappetResize } from "@/lib/utils/snappet"
  * readers, but a sighted user has nothing else). Drawn at 14px rather than the
  * house 16px because they sit in a 32px square control alongside a number.
  */
+/**
+ * The per-tile colour choices. Deliberately SHORT and deliberately not a colour
+ * wheel: this is a badge on a school's frame, not a paint app, and the useful
+ * answers are "the frame's own colours" plus white and black to lift one badge
+ * out of the field. The school's colour is already the default via the
+ * design-wide control, so it does not need a swatch of its own here.
+ */
+const TILE_COLORS = ["#FFFFFF", "#1B2A4A", "#111111", "#F8C53B", "#9E1B32"] as const;
+
 function StepIcon({ dir }: { dir: "minus" | "plus" }) {
   return (
     <svg
@@ -48,6 +57,7 @@ export function SnappetSizeControl() {
   const selectedId = useUIStore((s) => s.selectedSnappetSlotId);
   const selectSnappet = useUIStore((s) => s.selectSnappet);
   const requestRecrop = useUIStore((s) => s.requestRecrop);
+  const setTileColors = useDesignStore((s) => s.setTileColors);
   const slots = useDesignStore((s) => s.slots);
   const frameConfig = useDesignStore((s) => s.frameConfig);
   const sections = useDesignStore((s) => s.sections);
@@ -131,6 +141,44 @@ export function SnappetSizeControl() {
     );
   };
 
+  // Per-tile colour. Offered ONLY here, i.e. only while a tile is selected, which
+  // is what keeps it from becoming a sixth always-on picker: the design-wide
+  // Background/Rim controls dress the whole frame, and this picks ONE badge out of
+  // it (a senior's own sport, a captain's star). "Reset" clears the override and
+  // the tile falls back to the frame's colour, so the two controls never fight.
+  const renderSwatches = (
+    key: "field" | "rim",
+    label: string,
+    current: string | undefined,
+  ) => (
+    <div className="flex items-center gap-1.5">
+      <span className="ff-micro">{label}</span>
+      {TILE_COLORS.map((hex) => (
+        <button
+          key={hex}
+          type="button"
+          aria-label={`${label} ${hex}`}
+          aria-pressed={current === hex}
+          onClick={() => setTileColors(selectedId, { [key]: hex })}
+          className="h-6 w-6 rounded-[6px] border"
+          style={{
+            backgroundColor: hex,
+            borderColor: current === hex ? "var(--ff-ink)" : "var(--ff-line-strong)",
+            boxShadow: current === hex ? "0 0 0 2px var(--ff-accent-soft)" : undefined,
+          }}
+        />
+      ))}
+      <button
+        type="button"
+        onClick={() => setTileColors(selectedId, { [key]: null })}
+        disabled={!current}
+        className="ff-btn ff-btn-secondary ff-btn-sm"
+      >
+        Reset
+      </button>
+    </div>
+  );
+
   return createPortal(
     <div className="ff-school-portal fixed inset-x-0 bottom-0 z-[90] flex justify-center p-3 pointer-events-none">
       <div className="ff-modal pointer-events-auto flex w-full max-w-[440px] flex-wrap items-center justify-between gap-3 px-4 py-2.5">
@@ -143,6 +191,10 @@ export function SnappetSizeControl() {
         <div className="flex items-center gap-3">
           {renderStepper("W")}
           {renderStepper("H")}
+        </div>
+        <div className="flex w-full flex-col gap-1.5 border-t border-[var(--ff-line)] pt-2">
+          {renderSwatches("field", "Background", tile.field)}
+          {renderSwatches("rim", "Highlight", tile.rim)}
         </div>
         <div className="flex items-center gap-2">
           <button

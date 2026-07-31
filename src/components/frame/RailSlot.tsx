@@ -277,6 +277,10 @@ function PlacedTileCell({
   landing?: boolean;
 }) {
   const removeTile = useDesignStore((s) => s.removeTile);
+  // This tile's own colour overrides, read by slot id rather than threaded down
+  // through FrameCanvas. Selecting the TILE (not a derived object) keeps the
+  // reference stable until the tile itself changes.
+  const ownColors = useDesignStore((s) => s.slots[slotId]);
   const wings = useDesignStore((s) => s.frameConfig.wings);
   const soundEnabled = useUIStore((s) => s.soundEnabled);
   const selectSnappet = useUIStore((s) => s.selectSnappet);
@@ -403,6 +407,8 @@ function PlacedTileCell({
           height={height}
           unit={unit}
           corners={corners}
+          fieldOverride={ownColors?.field}
+          rimOverride={ownColors?.rim}
         />
 
         {/* Poof puff — a quick patriotic sparkle puff as the tile disappears. */}

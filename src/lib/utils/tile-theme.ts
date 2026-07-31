@@ -100,16 +100,33 @@ export function tileBackground(piece: Pick<TilePiece, "backgroundColor">): strin
  * one scheme, and nothing becomes invisible to make it.
  */
 export function tileField(
-  piece: Pick<TilePiece, "backgroundColor">,
+  piece: Pick<TilePiece, "backgroundColor"> & Partial<Pick<TilePiece, "artworkUrl">>,
   override?: string | null,
 ): string {
   const own = tileBackground(piece);
-  if (!override) return own;
-  const wantsLight = luminance(own) > 0.6;
-  if (!wantsLight) return override;
-  // A pale wash of the school colour: obviously theirs, still light enough that dark
-  // art reads. `shift` toward white rather than a fixed grey, so it stays in-hue.
-  return shift(override, luminance(override) > 0.6 ? 0.25 : 0.82);
+  // A SOLID COLOUR tile keeps its own colour, always. A badge SITS ON a field, so
+  // the field is the school's to set; a solid IS the colour — it is picked from
+  // the palette precisely to be that colour, and overriding it turns the whole row
+  // of swatches into identical squares and makes the tile unusable for the one
+  // thing it does. (Solids are the pieces with no artwork.)
+  if (piece.artworkUrl === "") return own;
+  // The override is the whole background, uniformly. No exceptions, because the
+  // control that sets it says so in as many words: "Behind every badge, and the
+  // banners", with "each tile's own" as the SEPARATE choice for keeping per-piece
+  // fields. Two states, and the user picks which one.
+  //
+  // This used to keep a third, unasked-for state: a light-field piece got a pale
+  // WASH of the school colour instead of the colour, on the theory that dark line
+  // art needs a light backing. The theory is sound and the behaviour was still
+  // wrong — picking one colour and getting it on some badges and a tint of it on
+  // others reads as a bug, not as care, and it was reported as one twice.
+  //
+  // The legibility case it protected is now handled where it belongs: art that
+  // needs a light backing carries that backing in the ARTWORK (the SLUH Billiken
+  // is drawn on its own white card), which survives any field colour. If a future
+  // piece is transparent dark line work, give it an opaque light card too rather
+  // than reviving a rule that silently edits the user's colour.
+  return override || own;
 }
 
 // ─── Faux bevel ─────────────────────────────────────────────────────────────

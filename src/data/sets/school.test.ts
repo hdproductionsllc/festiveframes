@@ -41,12 +41,13 @@ describe("school spirit set", () => {
   it("leads the palette with the real high-school art", () => {
     const pieces = getSetPieces("school");
     const hs = pieces.filter((p) => p.setId === "hs");
-    // 31 embroidered-patch pieces plus the 6 flats that survived the 3D refresh —
-    // the five organisation marks (DECA, FBLA, NHS, Mu Alpha Theta, FCA) and Student
-    // Council, none of which has a 3D equivalent yet. Asserting the COUNT is
-    // deliberate even though it needs editing whenever art lands: it is what catches
-    // a piece silently dropping out of the palette, which `> 0` would sail past.
-    expect(hs.length).toBe(37);
+    // 32 embroidered-patch pieces. The six flat originals that used to pad this out
+    // (DECA, FBLA, NHS, Mu Alpha Theta, FCA, Student Council) have been withdrawn —
+    // they were another illustrator's flat style and, being other organisations'
+    // registered marks, were never ours to print. Asserting the COUNT is deliberate
+    // even though it needs editing whenever art lands: it is what catches a piece
+    // silently dropping out of the palette, which `> 0` would sail past.
+    expect(hs.length).toBe(31);
     // Real art first, so the collection is what you see on open.
     expect(pieces.slice(0, hs.length).every((p) => p.setId === "hs")).toBe(true);
     // Every one points at a committed local PNG (not an emoji/CDN placeholder).
@@ -135,14 +136,19 @@ describe("High School fields — every piece takes a standard field colour", () 
     for (const p of hs) expect(tileBackground(p)).toBe(p.backgroundColor.toUpperCase());
   });
 
-  it("mixes both fields, so the set reads as a composed sheet not one flat block", () => {
+  it("puts every embroidered patch on the SAME field", () => {
+    // This asserted a MIX until the flat originals were withdrawn: they were the only
+    // white-field pieces, because they were dark line art that needed a light ground.
+    // Every remaining piece is a full-colour embroidered patch, and those all read on
+    // navy — so one field is now correct rather than a regression. It also matches
+    // how a kit page looks in practice, where the school's own colour floods every
+    // badge field anyway (see tileField).
     const navy = hs.filter((p) => p.backgroundColor.toUpperCase() === TILE_BG.navy);
-    expect(navy.length).toBeGreaterThan(0);
-    expect(navy.length).toBeLessThan(hs.length);
+    expect(navy.length).toBe(hs.length);
   });
 
   it("puts the white-on-colour logos on NAVY — they would vanish on white", () => {
-    for (const id of ["hs:deca", "hs:student-council", "hs:future-christian-athletes"]) {
+    for (const id of ["hs:laurel", "hs:gavel", "hs:trophy"]) {
       expect(hs.find((p) => p.id === id)?.backgroundColor.toUpperCase()).toBe(TILE_BG.navy);
     }
   });

@@ -1,17 +1,22 @@
 # High School Collection artwork
 
-Becky Newman's high-school snappets (delivered 2026-07-22, 20 PNGs).
+Embroidered-patch badges for high-school activities. Produced in house:
 
-The piece data is already wired up in `src/data/sets/high-school.ts` and expects the
-20 slugged filenames listed in that file's `ART_MANIFEST`. Becky's originals are named
-`High School Collection <Thing> snappet.png`; the importer does the renaming:
+1. **Ideogram prompt library** — `tasks/school-spirit-ideogram-brief.md` holds the
+   prompts; every patch shares the gold merrow border that echoes the frame's own
+   brass rim, so a badge and the part read as one product.
+2. **Background keyer** — generated on a magenta chroma field, then cut with the
+   measured backdrop un-multiplied out of every partial-alpha pixel, so edges
+   carry no matte and survive on any field colour.
+3. **Print-quality intake gate** — art lands here only after it clears the
+   resolution floor for a 2×2 tile (1.982" at 300 DPI = 595px).
 
-```
-node scripts/import-high-school-art.mjs <dir-with-her-pngs>
-```
+Piece data is in `src/data/sets/high-school.ts`; a file here is only reachable if
+a piece names it. There is no manifest to keep in sync — an earlier one drifted
+out of date and claimed files that no longer existed.
 
-It reports anything missing or unmatched, and exits non-zero until all 20 are present.
-
-Once they are, add `"hs"` to `SCHOOL_SURFACED_SET_IDS` in `src/data/sets/index.ts` and
-the collection appears in the school builder's palette. It is held out of that list
-until then so the palette never renders broken images.
+The collection began as flat die-cut "snappet" stickers from an outside
+illustrator. Those have all been withdrawn. Do not restore them: they no longer
+match the embroidered look, and the last six were other organisations'
+registered marks (DECA, FBLA, NHS, Mu Alpha Theta, Future Christian Athletes,
+Student Council) — not ours to print on a part we sell.

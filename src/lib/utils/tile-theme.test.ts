@@ -386,12 +386,13 @@ describe("tileField", () => {
     expect(tileField(dark, "#8C1D40")).toBe("#8C1D40");
   });
 
-  it("tints rather than floods a LIGHT-field piece, so its art stays legible", () => {
-    // The light-field pieces are drawn as dark art on near-white. Flooding them with a
-    // dark school colour turns them into a dark shape on a dark field — invisible.
-    const f = tileField(light, "#1B2A4A");
-    expect(f).not.toBe("#1B2A4A");
-    expect(luminance(f)).toBeGreaterThan(luminance("#1B2A4A"));
+  it("takes the override on a LIGHT-field piece too, with no tint", () => {
+    // One colour, every badge, no exceptions. This asserted the opposite until the
+    // owner reported the same thing twice: a school colour that floods some tiles
+    // and tints others reads as broken, whatever the reason. Art needing a light
+    // backing now carries an opaque light card in the ARTWORK, which no field
+    // colour can take away.
+    expect(tileField(light, "#1B2A4A")).toBe("#1B2A4A");
   });
 });
 

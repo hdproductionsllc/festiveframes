@@ -51,7 +51,13 @@ export default async function SchoolKitBuilderPage(
   if (!kit) notFound();
   const w = kit.welcome;
   return (
-    <div className="build-skin school-skin">
+    // The school's colour is handed to the CHROME, not just the frame: the stage,
+    // the panel headers and the primary action all read from `--ff-school`, so the
+    // builder wears the school instead of sitting in neutral grey beside it.
+    <div
+      className="build-skin school-skin"
+      style={{ "--ff-school": kit.colors.frame } as React.CSSProperties}
+    >
       {/* School-branded welcome: the kit's own colors and banner voice, so a
           parent arriving from a QR or a booster link lands on THEIR school,
           not on our brand. Facts in the copy come from the kit, which is

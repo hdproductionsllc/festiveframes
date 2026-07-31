@@ -119,6 +119,20 @@ export interface FrameConfig {
 export interface PlacedTile {
   pieceId: string;
   setId: string;
+  /**
+   * PER-TILE colour overrides, set from the floating control while this tile is
+   * selected. Absent on every tile that has not been individually recoloured, so
+   * a design of ordinary tiles serializes exactly as it always has.
+   *
+   * PRECEDENCE, top to bottom: this tile's override, then the design-wide
+   * background/rim, then the piece's own designed colours. That order is what
+   * makes both controls make sense at once — the school colour dresses the whole
+   * frame, and a single badge can still be picked out of it (a senior's own
+   * sport, a captain's star) without leaving the school's palette everywhere
+   * else.
+   */
+  field?: string;
+  rim?: string;
   /** Multi-cell footprint, anchored at THIS slot and growing right/down. Absent =
    *  1x1, so a design of ordinary tiles serializes exactly as it always has. The
    *  covered cells are DERIVED (see coveredBySnappets in utils/snappet), never

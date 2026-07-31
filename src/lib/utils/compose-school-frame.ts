@@ -710,9 +710,14 @@ export function drawSchoolFrame(
     // sampler failure) falls back to white, and the builder falls back with it.
     // Both routes flow through tileField, so a school colour override reskins
     // uploads exactly the way it reskins pieces.
-    const field = piece0
-      ? tileField(piece0, design.tileFieldColor)
-      : tileField({ backgroundColor: tile.image?.field ?? "#FFFFFF" }, design.tileFieldColor);
+    // Per-tile override wins over the design-wide one, which wins over the piece's
+    // own colour. Resolved identically in PlacedTileView, because the two renderers
+    // disagreeing about a colour is the exact failure tile-theme exists to prevent.
+    const field =
+      tile.field ??
+      (piece0
+        ? tileField(piece0, design.tileFieldColor)
+        : tileField({ backgroundColor: tile.image?.field ?? "#FFFFFF" }, design.tileFieldColor));
     const bevel = bevelMetrics(w, h, field, m.tileSize);
     // Open up whichever corners face the frame's OUTSIDE, so the whole assembly
     // reads as one rounded part rather than a grid of separately-rounded squares.
@@ -781,7 +786,7 @@ export function drawSchoolFrame(
     }
     // Faux bevel LAST, so it sits over the art and reads as the badge's moulding.
     // Still inside the clip, so it follows the rounded corner.
-    drawBevel(ctx, slot.x, slot.y, w, h, bevel, field, m.tileSize, radii, design.rimColor);
+    drawBevel(ctx, slot.x, slot.y, w, h, bevel, field, m.tileSize, radii, tile.rim ?? design.rimColor);
     ctx.restore();
   }
 

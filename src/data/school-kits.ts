@@ -41,8 +41,13 @@ export interface SchoolKit {
   city: string;
   /** Frame body / behind-badge field / rim-override colors, #RRGGBB. */
   colors: { frame: string; tileField: string | null; rim: string | null };
-  /** Banner seeds. Background is usually the darker school color. */
-  banners: { top: string; bottom: string; tagline: string; bg: string; text: string };
+  /** Banner seeds. `bg` is OPTIONAL and defaults to the badge field colour: they
+   *  are one background as far as anyone looking at the frame is concerned, and
+   *  two independent fields let a kit disagree with itself. It did — SLUH shipped
+   *  with banners a shade off its own tiles, which is what the mismatch reported
+   *  on desktop turned out to be. Set it only to say something different on
+   *  purpose. */
+  banners: { top: string; bottom: string; tagline: string; bg?: string; text: string };
   /** Builder font family string for the banner faces. Absent = house default. */
   fontFamily?: string;
   /** Parent-facing welcome above the builder: the "they did their homework"
@@ -106,7 +111,7 @@ const KITS: SchoolKit[] = [
     mascot: "Pioneers",
     city: "Kirkwood, MO",
     colors: { frame: "#7A0E1F", tileField: "#7A0E1F", rim: "#FFFFFF" },
-    banners: { top: "HOME OF THE", bottom: "PIONEERS", tagline: "KIRKWOOD HIGH SCHOOL", bg: "#7A0E1F", text: "#FFFFFF" },
+    banners: { top: "HOME OF THE", bottom: "PIONEERS", tagline: "KIRKWOOD HIGH SCHOOL", text: "#FFFFFF" },
     status: "demo",
     colorSource: "red/white per MSHSAA + athletics site; shade approx (#C8102E family, deepened for the frame body) — confirm with KHS before print",
   },
@@ -122,7 +127,7 @@ const KITS: SchoolKit[] = [
     // exactly as the official lockup writes it. (Default rule: prefer the full
     // school name on the tagline line when it fits; the intake swaps it for
     // CLASS OF YYYY once the frame becomes the student's.)
-    banners: { top: "HOME OF THE", bottom: "JR. BILLS", tagline: "ST. LOUIS UNIVERSITY HIGH", bg: "#183B67", text: "#FFFFFF" },
+    banners: { top: "HOME OF THE", bottom: "JR. BILLS", tagline: "ST. LOUIS UNIVERSITY HIGH", text: "#FFFFFF" },
     // Every welcome fact is research-verified w/ sources (scratchpad sluh-profile):
     // 1818/oldest-west (Wikipedia, stlmag), racquetball 16 national titles thru
     // 2023 (Prep News, USA Racquetball), soccer 2024+2025 back-to-back (Post-
@@ -137,8 +142,8 @@ const KITS: SchoolKit[] = [
     welcome: {
       headline: "Jr. Bills, this one's for the back of the car.",
       message: [
-        "SLUH families have worn the blue since 1818 — and from soccer in November to racquetball season, the Blue Crew shows up loud.",
-        "This frame is your student's: their last name across the bottom banner, their sport or club on the badges, their class year in brass — all in SLUH blue.",
+        "SLUH families have worn the blue since 1818. From soccer in November to racquetball season, the Blue Crew shows up loud.",
+        "This frame is your student's. Their last name across the bottom banner, their sport or club on the badges, their class year in brass, all in SLUH blue.",
       ],
       chips: [
         "Soccer",
@@ -153,7 +158,7 @@ const KITS: SchoolKit[] = [
         "Honor roll",
       ],
       ordering:
-        "SLUH families: design your frame and send it in — we'll follow up with ordering details. A set donation from every frame goes back to SLUH.",
+        "SLUH families: design your frame and send it in, and we'll follow up with ordering details. A set donation from every frame goes back to SLUH.",
     },
     // The frame a SLUH parent lands on — the verified curated sample layout,
     // fully dressed so the first impression is a finished product, not a grid.
@@ -167,7 +172,7 @@ const KITS: SchoolKit[] = [
       "frame:top-11": { pieceId: "mark:sluh-jr-bills:shield", setId: "mark", span: { cols: 2, rows: 2 } },
       "frame:right-1": { pieceId: "hs:robotics", setId: "hs", span: { cols: 2, rows: 2 } },
       "frame:right-3": { pieceId: "hs:drama", setId: "hs", span: { cols: 2, rows: 2 } },
-      "frame:bottom-11": { pieceId: "hs:honor-society", setId: "hs", span: { cols: 2, rows: 2 } },
+      "frame:bottom-11": { pieceId: "hs:laurel", setId: "hs", span: { cols: 2, rows: 2 } },
     },
     // Cut from the official files the owner supplied. The Billiken keeps its white
     // field because the mark is navy line work on columbia AND its body is white —
@@ -210,7 +215,7 @@ const KITS: SchoolKit[] = [
     mascot: "Rams",
     city: "St. Louis, MO",
     colors: { frame: "#04463D", tileField: "#04463D", rim: "#BCBBB6" },
-    banners: { top: "HOME OF THE", bottom: "RAMS", tagline: "MICDS", bg: "#04463D", text: "#FFFFFF" },
+    banners: { top: "HOME OF THE", bottom: "RAMS", tagline: "MICDS", text: "#FFFFFF" },
     status: "demo",
     colorSource: "OFFICIAL — MICDS Color Palette PDF (red #D12229, forest green #04463D, warm gray #BCBBB6). Demo until brand office authorizes use.",
   },
@@ -237,8 +242,8 @@ export const CHIP_PRESET_PIECE: Record<string, string> = {
   theater: "hs:drama",
   drama: "hs:drama",
   robotics: "hs:robotics",
-  "honor roll": "hs:honor-society",
-  "honor society": "hs:honor-society",
+  "honor roll": "hs:laurel",
+  "honor society": "hs:laurel",
 };
 
 export function getSchoolKit(slug: string): SchoolKit | undefined {
@@ -252,6 +257,8 @@ export function allSchoolKits(): readonly SchoolKit[] {
 /** The kit's section seeds — SCHOOL_DEFAULT_SECTIONS wearing this school. */
 export function kitSections(kit: SchoolKit): Partial<Record<SectionId, SectionState>> {
   const font = kit.fontFamily ?? SCHOOL_HEADLINE_FONT;
+  // One background colour for the whole frame unless a kit deliberately overrides.
+  const bg = kit.banners.bg ?? kit.colors.tileField ?? kit.colors.frame;
   return {
     top: {
       mode: "text",
@@ -260,7 +267,7 @@ export function kitSections(kit: SchoolKit): Partial<Record<SectionId, SectionSt
         text: "HOME OF THE",
         fontFamily: font,
         letterSpacing: 4,
-        backgroundColor: kit.banners.bg,
+        backgroundColor: bg,
         textColor: kit.banners.text,
       },
     },
@@ -273,7 +280,7 @@ export function kitSections(kit: SchoolKit): Partial<Record<SectionId, SectionSt
         fontFamily: font,
         taglineFontFamily: SCHOOL_TAGLINE_FONT,
         letterSpacing: 2,
-        backgroundColor: kit.banners.bg,
+        backgroundColor: bg,
         textColor: kit.banners.text,
         // The crest flanking the name is the arrangement every gym wall and
         // letterhead already uses; "both" mirrors it so the name stays centred.

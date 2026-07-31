@@ -28,7 +28,6 @@ import { FrameCanvas, type FrameCanvasHandle } from "@/components/frame/FrameCan
 import { TilePalette } from "@/components/tiles/TilePalette";
 import { SCHOOL_SURFACED_SET_IDS } from "@/data/sets";
 import { kitMarkPieces } from "@/data/sets/school-marks";
-import { SectionControls } from "./SectionControls";
 import { FrameColorPicker } from "./FrameColorPicker";
 import { SectionEditor } from "./SectionEditor";
 import { UploadPhotoButton } from "./UploadPhotoButton";
@@ -568,7 +567,7 @@ export function SchoolDesigner({ kit }: { kit?: SchoolKit } = {}) {
               type="button"
               onClick={handleBuy}
               disabled={buying || submitting || exporting}
-              title="Order this frame — secure checkout"
+              title="Order this frame, secure checkout"
               className="ff-btn ff-btn-primary ff-btn-sm shrink-0"
             >
               {buying ? "Starting checkout..." : <>Buy<span className="hidden sm:inline"> this frame</span></>}
@@ -732,15 +731,23 @@ export function SchoolDesigner({ kit }: { kit?: SchoolKit } = {}) {
                 already IS the school — showing "paste your school's website"
                 there undercuts the whole personalized pitch. */}
             {!kit && <SchoolBrandImport />}
+            {/* Their own photo sits ABOVE the badge library: for a parent the
+                picture of their kid is the most personal thing they can put on
+                this frame, and it was buried under a long scrolling palette. */}
+            <UploadPhotoButton />
             {/* The school's own marks lead its palette — a SLUH parent finds the
                 Billiken before the generic badges. Empty for the kitless builder. */}
             <TilePalette
               surfacedSetIds={SCHOOL_SURFACED_SET_IDS}
               extraPieces={kitMarks}
             />
-            <UploadPhotoButton />
             <FrameColorPicker />
-            <SectionControls />
+            {/* The "Sections" panel that used to sit here is GONE. It listed the
+                four panels with a Select button each and a paragraph explaining
+                which could hold what — a table of contents for a thing already
+                fully visible on screen. The frame itself is the control: tapping
+                a banner or panel selects it, which the frame now says out loud
+                (see the hint under the stage) instead of a panel restating it. */}
           </div>
 
           {/* RIGHT column — the frame, pinned, with the editor in its own pane below.
@@ -807,7 +814,7 @@ export function SchoolDesigner({ kit }: { kit?: SchoolKit } = {}) {
                     <option value="hs:marching-band">Marching Band</option>
                     <option value="hs:drama">Drama</option>
                     <option value="hs:robotics">Robotics</option>
-                    <option value="hs:honor-society">Honor Society</option>
+                    <option value="hs:laurel">Honor Roll</option>
                   </select>
                 </label>
                 <label className="flex flex-col gap-1 text-[12px] font-medium text-stone-700 basis-28">
@@ -841,8 +848,8 @@ export function SchoolDesigner({ kit }: { kit?: SchoolKit } = {}) {
               {tourOpen && (
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 rounded-xl border border-amber-300 bg-amber-50 px-3.5 py-2.5 text-[13px] text-stone-800">
                   <span className="font-semibold">Quick tour:</span>
-                  <span>1️⃣ Type their name — it lands on the banner.</span>
-                  <span>2️⃣ Tap a badge, then tap the frame — or just drag it on.</span>
+                  <span>1️⃣ Type their name. It lands on the banner.</span>
+                  <span>2️⃣ Tap a badge, then tap the frame. Or just drag it on.</span>
                   <span>3️⃣ Love it? Send it. Nothing prints until you say so.</span>
                   <button type="button" onClick={dismissTour} className="ff-chip ml-auto shrink-0">
                     Got it
@@ -882,6 +889,16 @@ export function SchoolDesigner({ kit }: { kit?: SchoolKit } = {}) {
                   bannerPreview={bannerPreview}
                 />
               </div>
+              {/* Replaces the old Sections panel. Same information, at the place
+                  it applies: the frame is the control, so the instruction belongs
+                  under the frame rather than in a list restating what is already
+                  on screen. Hidden once a section is open, since by then the user
+                  has plainly found it. */}
+              {!editorOpen && (
+                <p className="ff-stage-hint">
+                  Tap a banner or a side panel on the frame to edit it.
+                </p>
+              )}
             </div>
             {/* The editor's OWN scroll pane. `min-h-0` is load-bearing: a flex child
                 defaults to `min-height: auto`, which refuses to shrink below its

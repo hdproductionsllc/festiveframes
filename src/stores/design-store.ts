@@ -358,6 +358,13 @@ interface DesignState {
    */
   resizeTile: (slotId: string, newSpan: TileSpan, image?: PlacedTile["image"]) => void;
   /**
+   * Recolour ONE placed tile. `null` on either key clears that override and drops
+   * the tile back to the design-wide colour, which is why the argument is
+   * `string | null` and not just `string`: "no opinion" and "no colour" are
+   * different answers and only one of them is expressible by omitting the key.
+   */
+  setTileColors: (slotId: string, colors: { field?: string | null; rim?: string | null }) => void;
+  /**
    * Place UPLOADED customer art into a panel as a SNAPPET (the unified art path).
    * The span is `suggestSnappetSize` over the panel's free space (portrait → tall,
    * landscape → compact), anchored at the panel's top-most free cell and validated
@@ -830,6 +837,23 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
               slots: newSlots,
               updatedAt: Date.now(),
             });
+          });
+        },
+
+        setTileColors: (slotId, colors) => {
+          set((state) => {
+            const tile = state.slots[slotId];
+            if (!tile) return state;
+            const next: PlacedTile = { ...tile };
+            for (const key of ["field", "rim"] as const) {
+              if (!(key in colors)) continue;
+              const v = colors[key];
+              if (v) next[key] = v;
+              else delete next[key];
+            }
+            // Same object back when nothing moved, so this cannot churn renders.
+            if (next.field === tile.field && next.rim === tile.rim) return state;
+            return { slots: { ...state.slots, [slotId]: next }, updatedAt: Date.now() };
           });
         },
 

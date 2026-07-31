@@ -40,6 +40,11 @@ interface PlacedTileViewProps {
    * rounded squares. Absent = an interior badge, ordinary radius all round.
    */
   corners?: CornerFlags;
+  /** This tile's OWN colours, set while it was selected. They outrank the
+   *  design-wide background/rim, which outrank the piece's designed colours.
+   *  Resolved in the same order in compose-school-frame. */
+  fieldOverride?: string;
+  rimOverride?: string;
 }
 
 export function PlacedTileView({
@@ -50,6 +55,8 @@ export function PlacedTileView({
   image,
   unit,
   corners,
+  fieldOverride,
+  rimOverride,
 }: PlacedTileViewProps) {
   const dieCut = useDesignStore((s) => s.dieCut);
   const tileFieldColor = useDesignStore((s) => s.tileFieldColor);
@@ -71,7 +78,8 @@ export function PlacedTileView({
           // the dark frame body on screen and vanished on the white print field —
           // the two renderers must show the art on the same ground or the
           // customer approves a frame the printer cannot reproduce.
-          backgroundColor: tileField({ backgroundColor: image.field ?? "#FFFFFF" }, tileFieldColor),
+          backgroundColor:
+            fieldOverride ?? tileField({ backgroundColor: image.field ?? "#FFFFFF" }, tileFieldColor),
           boxShadow:
             "0 2px 6px rgba(0,0,0,0.5), 0 1px 2px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.15), inset 0 -1px 0 rgba(0,0,0,0.1)",
         }}
@@ -94,8 +102,8 @@ export function PlacedTileView({
   const isDieCut = dieCut && canDieCut(pieceId);
   // Both overrides come from the design, so the swatch you pick, the tile on the
   // frame and the printed sheet cannot disagree.
-  const field = tileField(piece, tileFieldColor);
-  const edge = tileEdgeCss(size, field, width, height, unit ?? size, rimColor);
+  const field = fieldOverride ?? tileField(piece, tileFieldColor);
+  const edge = tileEdgeCss(size, field, width, height, unit ?? size, rimOverride ?? rimColor);
   const radii = cornerRadii(unit ?? size, corners ?? NO_CORNERS);
   // The gap between the bevel and the art, taken from the SAME helper the print path
   // uses so the two agree by construction: what artInset reserves in total, less the

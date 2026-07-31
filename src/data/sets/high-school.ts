@@ -3,9 +3,18 @@ import { TILE_BG } from "@/lib/utils/tile-theme";
 
 // ─── High School Collection ─────────────────────────────────────────────────
 //
-// Becky Newman's high-school activities artwork (die-cut "snappet" stickers),
-// delivered 2026-07-22. Same shape as the 4th of July set: real PNG art on a
-// white background, with an emoji purely as a fallback if a file is missing.
+// Embroidered-patch artwork for high-school activities, produced in house:
+// Ideogram prompt library -> chroma-plane background keyer -> print-quality
+// intake gate. Real PNG art with an emoji purely as a fallback if a file is
+// missing.
+//
+// The collection began as flat die-cut "snappet" stickers from an outside
+// illustrator. Those are GONE — every flat original has been withdrawn, and the
+// last six (club logos: DECA, FBLA, NHS, Mu Alpha Theta, Future Christian
+// Athletes, Student Council) went with them. Two independent reasons not to
+// bring them back: they no longer match the embroidered look that is now the
+// product, and each was a third party organisation's registered mark, which is
+// not ours to print on a part we sell.
 //
 // The art files live in `public/tiles/high-school/`. These pieces are NOT
 // surfaced as their own set — `schoolSet` spreads them into the school palette
@@ -53,43 +62,14 @@ const TALL: TileSpan = { cols: 1, rows: 2 };
 
 const PREFERRED: TileSpan = { cols: 2, rows: 2 };
 
-/**
- * The exact PNG filenames this set expects in `public/tiles/high-school/`.
- * Becky's originals arrive named "High School Collection <Thing> snappet.png";
- * `scripts/import-high-school-art.mjs` renames them to these slugs.
- */
-export const ART_MANIFEST: readonly string[] = [
-  "basketball.png",
-  "cross-country.png",
-  "field-hockey.png",
-  "football.png",
-  "golf.png",
-  "soccer-ball.png",
-  "tennis.png",
-  "volleyball.png",
-  "future-christian-athletes.png",
-  "deca.png",
-  "fbla.png",
-  "honor-society.png",
-  "mu-alpha-theta.png",
-  "robotics-club.png",
-  "chess-club.png",
-  "speech-and-debate.png",
-  "drama-theater.png",
-  "photography-club.png",
-  "yearbook-club.png",
-  "student-council.png",
-];
-
 export const highSchoolSet: TileSet = {
   id: H,
   name: "High School",
   icon: "🏫",
   description:
-    "Becky Newman's high-school collection — team sports, academic clubs, and activities.",
+    "Embroidered high-school patches — team sports, academic clubs, and activities.",
   price: 0,
-  // Ordered so related activities sit together in one flat palette:
-  // athletics → academic/competition clubs → arts & media → student government.
+  // Ordered so related activities sit together in one flat palette.
   pieces: [
     // ─── EMBROIDERED PATCH series ──────────────────────────────
     //
@@ -377,79 +357,6 @@ export const highSchoolSet: TileSet = {
       name: "Baseball (patch)",
       artworkUrl: `${A}/baseball-patch.png`,
       emoji: "⚾",
-      backgroundColor: NAVY,
-      defaultSpan: PREFERRED,
-    },
-
-    // ─── Athletics ─────────────────────────────────────────────
-    // Field Hockey is the one piece whose PNG has not arrived yet. Its entry stays
-    // commented out (rather than pointing at a missing file) so the palette never
-    // renders a broken tile — drop the art in and uncomment to complete the set.
-    // {
-    //   id: `${H}:field-hockey`,
-    //   setId: H,
-    //   name: "Field Hockey",
-    //   artworkUrl: `${A}/field-hockey.png`,
-    //   emoji: "🏑",
-    //   backgroundColor: WHITE,
-    // },
-    {
-      id: `${H}:future-christian-athletes`,
-      setId: H,
-      name: "Future Christian Athletes",
-      artworkUrl: `${A}/future-christian-athletes.png`,
-      emoji: "✝️",
-      backgroundColor: NAVY,
-      defaultSpan: PREFERRED,
-    },
-
-    // ─── Academic & competition clubs ──────────────────────────
-    {
-      id: `${H}:deca`,
-      setId: H,
-      name: "DECA",
-      artworkUrl: `${A}/deca.png`,
-      emoji: "📈",
-      backgroundColor: NAVY,
-      defaultSpan: PREFERRED,
-    },
-    {
-      id: `${H}:fbla`,
-      setId: H,
-      name: "FBLA",
-      artworkUrl: `${A}/fbla.png`,
-      emoji: "💼",
-      backgroundColor: WHITE,
-      defaultSpan: PREFERRED,
-    },
-    {
-      id: `${H}:honor-society`,
-      setId: H,
-      name: "Honor Society",
-      artworkUrl: `${A}/honor-society.png`,
-      emoji: "🎓",
-      backgroundColor: NAVY,
-      defaultSpan: PREFERRED,
-    },
-    {
-      id: `${H}:mu-alpha-theta`,
-      setId: H,
-      name: "Mu Alpha Theta",
-      artworkUrl: `${A}/mu-alpha-theta.png`,
-      emoji: "📐",
-      backgroundColor: WHITE,
-      defaultSpan: PREFERRED,
-    },
-
-    // ─── Arts & media ──────────────────────────────────────────
-
-    // ─── Student government ────────────────────────────────────
-    {
-      id: `${H}:student-council`,
-      setId: H,
-      name: "Student Council",
-      artworkUrl: `${A}/student-council.png`,
-      emoji: "🗳️",
       backgroundColor: NAVY,
       defaultSpan: PREFERRED,
     },
