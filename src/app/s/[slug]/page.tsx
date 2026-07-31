@@ -64,10 +64,10 @@ export default async function SchoolKitBuilderPage(
               fontFamily: "Graduate, serif",
               fontSize: "clamp(26px, 4.2vw, 42px)",
               letterSpacing: "0.03em",
-              // The frame banners' varsity read: white core, dark edge, soft
-              // lift — the headline wears the school's own banner treatment.
-              textShadow:
-                "0 1px 0 rgba(0,0,0,0.35), 0 2px 6px rgba(0,0,0,0.35), 0 0 1px rgba(0,0,0,0.5)",
+              // One soft lift only. The earlier three-layer varsity shadow
+              // fattened Graduate at phone sizes and filled the letter
+              // counters — at 26px a 1px glow is a third of a stroke.
+              textShadow: "0 2px 4px rgba(0,0,0,0.30)",
             }}
           >
             {w.headline}
