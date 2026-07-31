@@ -35,7 +35,7 @@ const RULES: Record<string, Rule> = {
   "/api/lab/pet-submit": { windowMs: 10 * 60_000, max: 6, maxBytes: 12 * MB },
   // A full-frame 300-DPI print PNG is a few MB; base64 in the JSON body inflates it
   // ~1.33x, so allow ~20MB encoded (the route enforces an 18MB DECODED ceiling).
-  "/api/school/submit": { windowMs: 10 * 60_000, max: 10, maxBytes: 20 * MB },
+  "/api/school/submit": { windowMs: 10 * 60_000, max: 10, maxBytes: 32 * MB },
   "/api/save-design": { windowMs: 5 * 60_000, max: 15, maxBytes: 6 * MB },
   // 20MB, not 12: a school-frame draft carries the assembled overview PLUS four
   // 300-DPI panel PNGs (same payload class as /api/school/submit below).

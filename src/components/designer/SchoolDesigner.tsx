@@ -326,8 +326,24 @@ export function SchoolDesigner({ kit }: { kit?: SchoolKit } = {}) {
       api.setSectionText("bottom", { tagline: `CLASS OF ${kidYear}` });
     }
     if (kidActivity) {
-      api.placeTile("frame:wing-left-0", kidActivity, "hs", { cols: 2, rows: 2 });
-      api.placeTile("frame:top-11", kidActivity, "hs", { cols: 2, rows: 2 });
+      // PRESET, not a sprinkle: picking an activity composes the whole frame
+      // as a symmetric layout — activity patches in all four corners, laurel
+      // and trophy on the mid rails — so the preset-lover customer is one
+      // name + one tap from a finished, orderable design. Mirror pairs:
+      // (wing-left-0, top-11), (wing-left-2, right-1), (wing-left-4,
+      // right-3), (wing-left-6, bottom-11).
+      const SPAN = { cols: 2, rows: 2 };
+      const layout: Array<[string, string]> = [
+        ["frame:wing-left-0", kidActivity],
+        ["frame:top-11", kidActivity],
+        ["frame:wing-left-2", "hs:laurel"],
+        ["frame:right-1", "hs:laurel"],
+        ["frame:wing-left-4", "hs:trophy"],
+        ["frame:right-3", "hs:trophy"],
+        ["frame:wing-left-6", kidActivity],
+        ["frame:bottom-11", kidActivity],
+      ];
+      for (const [slot, pieceId] of layout) api.placeTile(slot, pieceId, "hs", SPAN);
     }
   };
 
@@ -675,7 +691,10 @@ export function SchoolDesigner({ kit }: { kit?: SchoolKit } = {}) {
                 candidate's full-res PNG and hands it to the same `useSnappetUpload.begin`
                 that UploadPhotoButton calls, so the aspect-locked crop, the live DPI
                 gate and the 2x2 minTileSpan floor all still apply. */}
-            <SchoolBrandImport />
+            {/* Brand scan is the GENERIC builder's school picker. A kit page
+                already IS the school — showing "paste your school's website"
+                there undercuts the whole personalized pitch. */}
+            {!kit && <SchoolBrandImport />}
             <TilePalette surfacedSetIds={SCHOOL_SURFACED_SET_IDS} />
             <UploadPhotoButton />
             <FrameColorPicker />
@@ -718,7 +737,7 @@ export function SchoolDesigner({ kit }: { kit?: SchoolKit } = {}) {
                     value={kidName}
                     onChange={(e) => setKidName(e.target.value)}
                     onKeyDown={(e) => { if (e.key === "Enter") applyKidIntake(); }}
-                    placeholder="MORALES"
+                    placeholder="MILLER"
                     maxLength={14}
                     className="h-9 rounded-lg border border-stone-300 px-2.5 text-[14px] uppercase text-stone-900 placeholder:text-stone-400"
                   />
@@ -758,10 +777,14 @@ export function SchoolDesigner({ kit }: { kit?: SchoolKit } = {}) {
                     className="h-9 rounded-lg border border-stone-300 bg-white px-2 text-[14px] text-stone-900"
                   >
                     <option value="">Year…</option>
-                    <option>2026</option>
-                    <option>2027</option>
-                    <option>2028</option>
-                    <option>2029</option>
+                    {/* Current students only: after June, the just-graduated
+                        class drops off and the incoming freshmen appear — the
+                        list can never go stale. */}
+                    {Array.from({ length: 4 }, (_, i) => {
+                      const now = new Date();
+                      const y = now.getFullYear() + (now.getMonth() >= 5 ? 1 : 0) + i;
+                      return <option key={y}>{y}</option>;
+                    })}
                   </select>
                 </label>
                 <button

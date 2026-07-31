@@ -30,7 +30,7 @@ const DATA_URL_RE = /^data:image\/(png|jpeg);base64,([A-Za-z0-9+/]+={0,2})$/;
 // Decoded-byte ceiling for the print image. A full-frame 300-DPI PNG is a few MB;
 // this leaves generous headroom while rejecting anything abusive. The proxy
 // (src/proxy.ts) caps the encoded request body first; this is the decoded guard.
-const MAX_PRINT_BYTES = 18 * 1024 * 1024;
+const MAX_PRINT_BYTES = 28 * 1024 * 1024;
 
 /** Decoded byte size of a base64 payload (no allocation). */
 function base64Bytes(b64: string): number {

@@ -87,7 +87,11 @@ const KITS: SchoolKit[] = [
     mascot: "Jr. Bills",
     city: "St. Louis, MO",
     colors: { frame: "#1B3F6E", tileField: "#1B3F6E", rim: "#FFFFFF" },
-    banners: { top: "HOME OF THE", bottom: "JR. BILLS", tagline: "SLUH", bg: "#1B3F6E", text: "#FFFFFF" },
+    // Tagline is their wordmark's own spelling — full name, no "SCHOOL",
+    // exactly as the official lockup writes it. (Default rule: prefer the full
+    // school name on the tagline line when it fits; the intake swaps it for
+    // CLASS OF YYYY once the frame becomes the student's.)
+    banners: { top: "HOME OF THE", bottom: "JR. BILLS", tagline: "ST. LOUIS UNIVERSITY HIGH", bg: "#1B3F6E", text: "#FFFFFF" },
     // Every welcome fact is research-verified w/ sources (scratchpad sluh-profile):
     // 1818/oldest-west (Wikipedia, stlmag), racquetball 16 national titles thru
     // 2023 (Prep News, USA Racquetball), soccer 2024+2025 back-to-back (Post-

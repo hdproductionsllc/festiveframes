@@ -110,7 +110,7 @@ const STEPS = [
 const ANATOMY = [
   {
     title: "The big bottom banner — their last name.",
-    body: "Varsity chenille, jersey-style, across the widest panel on the frame. It's the first thing anyone reads in a parking lot, and it says MORALES, not \"Go Wildcats.\"",
+    body: "Varsity chenille, jersey-style, across the widest panel on the frame. It's the first thing anyone reads in a parking lot, and it says MILLER, not \"Go Wildcats.\"",
   },
   {
     title: "The badges — what they actually did.",

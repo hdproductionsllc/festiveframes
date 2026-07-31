@@ -48,7 +48,24 @@ export function TileGrid({ variant = "grid", surfacedSetIds = SURFACED_SET_IDS }
   // back to the first surfaced set so the tray is never empty / off-theme.
   const setId = resolveSurfacedSetId(activeSetId, surfacedSetIds);
 
-  const pieces = getSetPieces(setId);
+  const allPieces = getSetPieces(setId);
+  // Quick search over the badge library — as the tile catalog grows, typing
+  // "soc" beats scrolling. Names are the catalog (every piece has one); empty
+  // query = the full set, exactly as before.
+  const [query, setQuery] = useState("");
+  const q = query.trim().toLowerCase();
+  const pieces = q ? allPieces.filter((pc) => pc.name.toLowerCase().includes(q)) : allPieces;
+  const searchBox =
+    variant === "grid" ? (
+      <input
+        type="search"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Search badges… (soccer, band, honor)"
+        aria-label="Search badges"
+        className="mb-2 h-9 w-full rounded-lg border border-stone-300 bg-white px-2.5 text-[13.5px] text-stone-900 placeholder:text-stone-400"
+      />
+    ) : null;
 
   if (variant === "row") {
     return (
@@ -74,6 +91,9 @@ export function TileGrid({ variant = "grid", surfacedSetIds = SURFACED_SET_IDS }
   }
 
   return (
+    <>
+      {searchBox}
+
     <div>
       {/* YOUR UPLOADS, above the catalogue.
           An uploaded crest is the one badge on the frame that is actually theirs, and
@@ -102,5 +122,6 @@ export function TileGrid({ variant = "grid", surfacedSetIds = SURFACED_SET_IDS }
         ))}
       </div>
     </div>
+    </>
   );
 }
