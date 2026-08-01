@@ -23,6 +23,7 @@ import {
   tileField,
   textChenille,
   merrowThread,
+  textEmboss,
   textChenilleCss,
   fieldForArtPixels,
 } from "./tile-theme";
@@ -529,5 +530,55 @@ describe("fieldForArtPixels — the upload's answer to tileBackground", () => {
 
   it("returns white for a fully transparent image (nothing to sit on a field)", () => {
     expect(fieldForArtPixels(px(0, 0, 0, 0, 500))).toBe(TILE_BG.white);
+  });
+});
+
+// ─── Banner lettering stays proportional at PREVIEW sizes ────────────────────
+//
+// Every number in textEmboss is meant to be a fraction of the font, so a banner
+// carries the same physical weight at any scale. Four of them were floored at
+// 1px, which meant `depth` stopped scaling below 45px and the shadow's X offset
+// below 50px — and EVERY on-screen banner renders under those sizes, while the
+// print sheet renders at thousands of pixels and never reaches them. That is the
+// exact shape of "it looks fat on mobile but the print file is fine", and it is
+// the second time this file has produced it: the merrow floors were 2px and 1px
+// for the same reason.
+
+describe("textEmboss stays proportional at small font sizes", () => {
+  const SMALL = 11; // a long school name on a phone
+  const BIG = 800; // print scale
+
+  it("keeps every edge number a FRACTION of the font, not a fixed pixel size", () => {
+    const small = textEmboss(SMALL, "#FFFFFF");
+    const big = textEmboss(BIG, "#FFFFFF");
+    for (const [name, s, b] of [
+      ["depth", small.depth, big.depth],
+      ["blur", small.shadow.blur, big.shadow.blur],
+      ["offsetX", small.shadow.offsetX, big.shadow.offsetX],
+      ["offsetY", small.shadow.offsetY, big.shadow.offsetY],
+      ["merrow width", small.merrow.width, big.merrow.width],
+      ["merrow seat", small.merrow.seat, big.merrow.seat],
+    ] as const) {
+      // Same share of the em at both scales. The floors are still there as
+      // anti-zero guards and one of them just grazes 11px, so this allows a few
+      // percent — it is catching the 5x the old floors produced, not a rounding.
+      expect(s / SMALL, `${name} is floored at preview size`).toBeLessThan((b / BIG) * 1.15);
+      expect(s / SMALL, `${name} shrank at preview size`).toBeGreaterThan((b / BIG) * 0.85);
+    }
+  });
+
+  it("never lets the emboss ghost reach a tenth of the glyph", () => {
+    // A 1px depth on 8px type puts a white ghost up-left and a black one
+    // down-right of every letter, which is most of what read as a fatter face.
+    for (const px of [7, 11, 16, 24, 32]) {
+      expect(textEmboss(px, "#FFFFFF").depth / px).toBeLessThan(0.1);
+    }
+  });
+
+  it("still guards against zero", () => {
+    const tiny = textEmboss(0.001, "#FFFFFF");
+    expect(tiny.depth).toBeGreaterThan(0);
+    expect(tiny.shadow.blur).toBeGreaterThan(0);
+    expect(tiny.merrow.width).toBeGreaterThan(0);
   });
 });

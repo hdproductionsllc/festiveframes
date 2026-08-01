@@ -616,15 +616,24 @@ export function textEmboss(fontPx: number, textColour: string, rimColor?: string
   // as two different products bolted together.
   const thread = merrowThread(textColour, rimColor);
   return {
-    depth: Math.max(1, fontPx * 0.022),
+    // ANTI-ZERO GUARDS, and nothing more — see the merrow note below, which is
+    // the same defect found in the same file and fixed only for the stroke.
+    // These four floors were all 1px, so `depth` stopped scaling below 45px and
+    // the shadow's X offset below 50px: EVERY on-screen banner is under those
+    // sizes. At the ~8px a long school name renders at on a phone, a 1px depth is
+    // 12% of the glyph instead of the intended 2.2%, which puts a white ghost
+    // up-left and a black one down-right of every letter and reads as a much
+    // fatter face. The print path renders at thousands of pixels, never reaches
+    // the floors, and always looked right — the same tell as last time.
+    depth: Math.max(0.25, fontPx * 0.022),
     // Light type cannot get lighter, so its depth comes almost entirely from the
     // shaded underside — the same reasoning as the bevel on a white field.
     highlight: lightText ? "rgba(255,255,255,0.35)" : "rgba(255,255,255,0.55)",
     shade: lightText ? "rgba(0,0,0,0.55)" : "rgba(0,0,0,0.35)",
     shadow: {
-      blur: Math.max(1, fontPx * 0.09),
-      offsetX: Math.max(1, fontPx * 0.02),
-      offsetY: Math.max(1, fontPx * 0.035),
+      blur: Math.max(0.25, fontPx * 0.09),
+      offsetX: Math.max(0.1, fontPx * 0.02),
+      offsetY: Math.max(0.2, fontPx * 0.035),
       colour: "rgba(0,0,0,0.45)",
     },
     /**

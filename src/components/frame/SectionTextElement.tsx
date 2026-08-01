@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { BottomBarConfig } from "@/lib/types";
-import { bannerBands } from "@/lib/utils/banner-tiers";
+import { bannerBands, trackingPx, widthLimitedFont } from "@/lib/utils/banner-tiers";
 import { chromeInset, ringCss, textChenilleCss, tileEdgeCss } from "@/lib/utils/tile-theme";
 import { useDesignStore } from "@/stores/design-store";
 import { bannerLogoLayout } from "@/lib/utils/banner-logo";
@@ -50,6 +50,8 @@ function fitBlockFont(
   let fontPx = contentH / (LINE_HEIGHT * lines.length);
 
   // Width clamp: shrink so the WIDEST line fits, measured against a probe font size.
+  // Tracking and the merrow stroke are part of what has to fit — see
+  // `widthLimitedFont`, which both renderers share.
   const ctx = measureCtx();
   const probe = 100;
   let widthLimited = Number.POSITIVE_INFINITY;
@@ -57,13 +59,14 @@ function fitBlockFont(
     ctx.font = `700 ${probe}px ${fontFamily}`;
     for (const ln of lines) {
       const glyphs = ctx.measureText(ln).width; // glyph run at the probe size
-      const avail = Math.max(1, contentW - letterSpacing * Math.max(0, ln.length - 1));
-      if (glyphs > 0) widthLimited = Math.min(widthLimited, (avail / glyphs) * probe);
+      if (glyphs > 0) {
+        widthLimited = Math.min(widthLimited, widthLimitedFont(glyphs / probe, ln.length, letterSpacing, contentW));
+      }
     }
   } else {
     // SSR / no-canvas fallback: rough char-width estimate (0.62em per glyph).
     const longest = Math.max(1, ...lines.map((l) => l.length));
-    widthLimited = contentW / (longest * 0.62);
+    widthLimited = widthLimitedFont(longest * 0.62, longest, letterSpacing, contentW);
   }
   fontPx = Math.min(fontPx, widthLimited);
 
@@ -167,7 +170,9 @@ export function SectionTextElement({
     // the first place, so this also closes a screen-vs-print divergence.
     fontSynthesis: "none",
     lineHeight: LINE_HEIGHT,
-    letterSpacing,
+    // Capped against the FITTED size, so a stored spacing tuned for a desktop
+    // preview cannot swallow a phone's banner. See banner-tiers.ts.
+    letterSpacing: trackingPx(letterSpacing, fontPx),
     whiteSpace: "pre", // honor \n only — never soft-wrap (keeps the fit exact)
     textAlign: config.textAlign,
     // Chenille — the CSS twin of the canvas's merrow-stroke + softened emboss. Both

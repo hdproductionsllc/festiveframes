@@ -59,7 +59,7 @@ import {
   slotSuppressed,
 } from "@/lib/utils/sections";
 import { panelRects, type PanelRect } from "@/lib/utils/panels";
-import { bannerBands } from "@/lib/utils/banner-tiers";
+import { bannerBands, trackingPx, widthLimitedFont } from "@/lib/utils/banner-tiers";
 import { bannerConfigFor, bannerLogoLayout, sectionSupportsLogo } from "@/lib/utils/banner-logo";
 import { getPiece } from "@/data/sets";
 import {
@@ -492,8 +492,9 @@ function fitSectionFont(
   let widthLimited = Number.POSITIVE_INFINITY;
   for (const ln of lines) {
     const glyphs = ctx.measureText(ln).width;
-    const avail = Math.max(1, contentW - letterSpacing * Math.max(0, ln.length - 1));
-    if (glyphs > 0) widthLimited = Math.min(widthLimited, (avail / glyphs) * probe);
+    if (glyphs > 0) {
+      widthLimited = Math.min(widthLimited, widthLimitedFont(glyphs / probe, ln.length, letterSpacing, contentW));
+    }
   }
   fontPx = Math.min(fontPx, widthLimited);
   return Math.max(6, fontPx * fill);
@@ -574,7 +575,10 @@ function drawTextBlock(
     ctx.font = `800 ${fontPx}px ${family}`;
     ctx.fillStyle = cfg.textColor;
     ctx.textBaseline = "middle";
-    try { (ctx as CanvasRenderingContext2D & { letterSpacing?: string }).letterSpacing = `${ls}px`; } catch { /* unsupported */ }
+    // Capped against the fitted size, exactly as the on-screen renderer does. At
+    // print resolution the cap never binds, which is the point: the sheet is
+    // unchanged and the phone stops being the odd one out.
+    try { (ctx as CanvasRenderingContext2D & { letterSpacing?: string }).letterSpacing = `${trackingPx(ls, fontPx)}px`; } catch { /* unsupported */ }
     ctx.textAlign = align === "left" ? "left" : align === "right" ? "right" : "center";
     const lines = str.split("\n");
     const lineBox = fontPx * SECTION_LINE_HEIGHT;
