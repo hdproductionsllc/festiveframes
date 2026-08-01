@@ -651,13 +651,23 @@ export interface DesignStoreOptions {
    * frame, but a returning customer's persisted layout always wins on hydrate.
    */
   initialSlots?: Record<string, PlacedTile>;
+  /**
+   * The state whose plate the frame OPENS showing. Initial state only, like
+   * everything above it: a visitor who picks their own state keeps it.
+   *
+   * A school frame is a mockup of a car in that school's parking lot, and the
+   * store's hard-coded "MO" meant every school in the country opened on a
+   * Missouri plate. Derived from the kit's own city so it needs no per-school
+   * entry — see `kitPlateState`.
+   */
+  initialPlateState?: string;
 }
 
 // The store is a FACTORY so more than one builder can each own an isolated design
 // (own state + own localStorage key). /build uses `defaultDesignStore`; the school
 // builder creates its own instance and provides it via `DesignStoreProvider`.
 function createDesignStore(persistName: string, options: DesignStoreOptions = {}) {
-  const { migrateExtra, frameConfig: ownedFrameConfig, sections: initialSections, initialBrand, initialSlots } = options;
+  const { migrateExtra, frameConfig: ownedFrameConfig, sections: initialSections, initialBrand, initialSlots, initialPlateState } = options;
   const baseFrameConfig = ownedFrameConfig ?? DEFAULT_FRAME_CONFIG;
   return createStore<DesignState>()(
   persist(
@@ -696,7 +706,7 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
       return {
         // Initial state
         designName: "My Frame Design",
-        plateState: "MO",
+        plateState: initialPlateState ?? "MO",
         frameColor: initialBrand?.frameColor ?? DEFAULT_FRAME_COLOR,
         tileFieldColor: initialBrand?.tileFieldColor ?? null,
         rimColor: initialBrand?.rimColor ?? null,

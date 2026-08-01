@@ -50,7 +50,7 @@ import { SCHOOL_DEFAULT_SECTIONS } from "@/lib/constants/defaults";
 import { migrateSchoolDesign } from "@/lib/utils/school-migration";
 import { schoolTopLine } from "@/lib/utils/school-banner";
 import { ACTIVITIES, ACTIVITY_GROUPS, hasJerseyNumber } from "@/data/activities";
-import { kitSections, type SchoolKit } from "@/data/school-kits";
+import { kitSections, kitPlateState, type SchoolKit } from "@/data/school-kits";
 import type { BannerPreview } from "@/lib/types";
 import type { SnappetPreview } from "@/lib/utils/snappet";
 
@@ -1227,6 +1227,11 @@ export function SchoolBuilder({ kit, hero }: { kit?: SchoolKit; hero?: React.Rea
       // state only; a returning user's persisted sections still win.
       sections: kit ? kitSections(kit) : SCHOOL_DEFAULT_SECTIONS,
       initialSlots: kit?.seedSlots,
+      // The plate under the frame is part of the mockup. It was hard-coded to
+      // Missouri, so a school in any other state opened on a car that could not
+      // be in its own parking lot. Read off the kit's city, initial state only —
+      // a visitor who picks their own state keeps it.
+      initialPlateState: kitPlateState(kit) ?? undefined,
       initialBrand: kit
         ? {
             frameColor: kit.colors.frame,

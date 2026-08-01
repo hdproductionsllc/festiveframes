@@ -1,4 +1,5 @@
 import type { SectionId, SectionState } from "@/lib/types";
+import { getPlateDesign } from "@/data/plates";
 import { DEFAULT_BOTTOM_BAR } from "@/lib/constants/defaults";
 import { SCHOOL_HEADLINE_FONT, SCHOOL_TAGLINE_FONT } from "@/lib/constants/defaults";
 
@@ -336,6 +337,24 @@ export function allSchoolKits(): readonly SchoolKit[] {
 }
 
 /** The kit's section seeds — SCHOOL_DEFAULT_SECTIONS wearing this school. */
+/**
+ * The STATE whose plate this school's frame should open showing.
+ *
+ * The builder's plate was hard-coded to Missouri, so a school in Texas opened on
+ * a Missouri plate — a mockup of a car that could not be in its parking lot. Read
+ * off the kit's own `city` ("St. Louis, MO"), so it costs a school nothing: there
+ * is no new field to fill in and no per-school step, which is the standing rule
+ * for anything national.
+ *
+ * Returns null when the city carries no usable state, and the caller keeps its
+ * own default rather than guessing.
+ */
+export function kitPlateState(kit: SchoolKit | undefined | null): string | null {
+  const abbr = /,\s*([A-Za-z]{2})\s*$/.exec(kit?.city ?? "")?.[1]?.toUpperCase();
+  if (!abbr) return null;
+  return getPlateDesign(abbr) ? abbr : null;
+}
+
 export function kitSections(kit: SchoolKit): Partial<Record<SectionId, SectionState>> {
   const font = kit.fontFamily ?? SCHOOL_HEADLINE_FONT;
   // One background colour for the whole frame unless a kit deliberately overrides.
