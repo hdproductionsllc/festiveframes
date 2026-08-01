@@ -48,6 +48,7 @@ import {
 } from "@/lib/constants/frame";
 import { SCHOOL_DEFAULT_SECTIONS } from "@/lib/constants/defaults";
 import { migrateSchoolDesign } from "@/lib/utils/school-migration";
+import { schoolTopLine } from "@/lib/utils/school-banner";
 import { kitSections, type SchoolKit } from "@/data/school-kits";
 import type { BannerPreview } from "@/lib/types";
 import type { SnappetPreview } from "@/lib/utils/snappet";
@@ -403,18 +404,49 @@ export function SchoolDesigner({
   // block-tiling layouts use; name goes jersey-style on the bottom banner with
   // the class year as its tagline. All ordinary store writes — undoable,
   // editable, persisted like anything hand-placed.
+  /**
+   * Put the PERSON on the bottom banner and move the SCHOOL up to the top.
+   *
+   * The two halves are one operation, because doing only the first breaks the
+   * frame. The kit ships reading "HOME OF THE / JR. BILLS / ST. LOUIS UNIVERSITY
+   * HIGH" — one sentence over three lines. The student replaces the mascot and
+   * the school name, so the frame was left saying "HOME OF THE OKAFOR" with the
+   * school nowhere on it. Promoting the school to the top strip fixes both, and
+   * gives the layout every personalized plate frame uses: school, then name,
+   * then year. See lib/utils/school-banner.ts for when the top is left alone.
+   */
+  const writePerson = (
+    api: ReturnType<typeof storeApi.getState>,
+    person: { name?: string; tagline?: string },
+  ) => {
+    const name = (person.name ?? "").trim().toUpperCase();
+    const tagline = person.tagline ?? "";
+    if (!name && !tagline) return;
+    if (name) {
+      const promoted = schoolTopLine({
+        kit,
+        currentTop: api.sections?.top?.text?.text,
+        currentBottom: api.sections?.bottom?.text?.text,
+        personName: name,
+      });
+      if (promoted) {
+        api.setSectionMode("top", "text");
+        api.setSectionText("top", { text: promoted });
+      }
+    }
+    api.setSectionMode("bottom", "text");
+    api.setSectionText("bottom", {
+      ...(name ? { text: name } : {}),
+      ...(tagline ? { tagline } : {}),
+    });
+  };
+
   const applyKidIntake = () => {
     const api = storeApi.getState();
-    const name = kidName.trim().toUpperCase();
-    if (name) {
-      api.setSectionMode("bottom", "text");
-      api.setSectionText("bottom", {
-        text: name,
-        ...(kidYear ? { tagline: buyer.taglineFor(kidYear, kidNumber.trim() || undefined) } : {}),
-      });
-    } else if (kidYear) {
-      api.setSectionText("bottom", { tagline: buyer.taglineFor(kidYear, kidNumber.trim() || undefined) });
-    }
+    writePerson(api, {
+      name: kidName,
+      tagline: kidYear ? buyer.taglineFor(kidYear, kidNumber.trim() || undefined) : "",
+    });
     if (kidActivity) {
       // PRESET, not a sprinkle: picking an activity composes the whole frame
       // as a symmetric layout — activity patches in all four corners, laurel
@@ -476,18 +508,13 @@ export function SchoolDesigner({
     for (const [slot, pieceId] of presetTiles(preset, kidActivity || null, mascotPieceId)) {
       api.placeTile(slot, pieceId, pieceId.split(":")[0], SPAN);
     }
-    const name = kidName.trim().toUpperCase();
     // The BUYER owns this line, not the preset: a grandparent applying
     // "Graduate" wants their relationship on it, which is the whole reason
     // they are buying a second frame for a student who already has one.
-    const tagline = kidYear ? buyer.taglineFor(kidYear, kidNumber.trim() || undefined) || undefined : undefined;
-    if (name || tagline) {
-      api.setSectionMode("bottom", "text");
-      api.setSectionText("bottom", {
-        ...(name ? { text: name } : {}),
-        ...(tagline ? { tagline } : {}),
-      });
-    }
+    writePerson(api, {
+      name: kidName,
+      tagline: kidYear ? buyer.taglineFor(kidYear, kidNumber.trim() || undefined) : "",
+    });
     setActivePreset(preset.id);
   };
 
@@ -512,12 +539,14 @@ export function SchoolDesigner({
   useEffect(() => {
     if (!expressOpen) return;
     const api = storeApi.getState();
-    const name = kidName.trim().toUpperCase();
-    api.setSectionMode("bottom", "text");
-    api.setSectionText("bottom", {
-      ...(name ? { text: name } : {}),
-      ...(kidYear ? { tagline: buyer.taglineFor(kidYear) } : {}),
+    writePerson(api, {
+      name: kidName,
+      tagline: kidYear ? buyer.taglineFor(kidYear) : "",
     });
+    // writePerson is recreated every render and depending on it would run this
+    // on every keystroke of every other field; the two values it reads that are
+    // not passed in (the kit, the live sections) are stable or read fresh.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [expressOpen, kidName, kidYear, buyer, storeApi]);
 
   const handleBuy = async () => {

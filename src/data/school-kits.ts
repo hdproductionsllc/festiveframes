@@ -345,7 +345,10 @@ export function kitSections(kit: SchoolKit): Partial<Record<SectionId, SectionSt
       mode: "text",
       text: {
         ...DEFAULT_BOTTOM_BAR,
-        text: "HOME OF THE",
+        // The kit's own top line, which this used to ignore in favour of a
+        // hard-coded "HOME OF THE" — every kit happens to say that today, so a
+        // kit that wanted a different one would have been silently overruled.
+        text: kit.banners.top,
         fontFamily: font,
         letterSpacing: 4,
         backgroundColor: bg,

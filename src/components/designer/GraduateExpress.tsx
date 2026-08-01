@@ -65,6 +65,7 @@ export function GraduateExpress({
           <span>Student&apos;s last name</span>
           <input
             type="text"
+            name="grad-name"
             value={name}
             onChange={(e) => onName(e.target.value)}
             placeholder="MILLER"
@@ -74,7 +75,7 @@ export function GraduateExpress({
         </label>
         <label className="msf-express-field msf-express-year">
           <span>Class year</span>
-          <select value={year} onChange={(e) => onYear(e.target.value)}>
+          <select name="grad-year" value={year} onChange={(e) => onYear(e.target.value)}>
             {years.map((y) => (
               <option key={y}>{y}</option>
             ))}
