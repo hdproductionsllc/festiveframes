@@ -29,8 +29,15 @@ export interface Buyer {
   activityLabel: string;
   /** Null hides the year field entirely — staff have no class year. */
   yearLabel: string | null;
-  /** How the year reads on the banner. `{y}` is the chosen year. */
-  taglineFor: (year: string) => string;
+  /**
+   * The line under the name.
+   *
+   * Takes the jersey NUMBER as well as the year, because a number belongs to the
+   * student the way a name does — it is not a property of whichever design they
+   * picked. An athlete's frame reads "#12 · CLASS OF 2027"; leave the number out
+   * and it reads exactly as it did before.
+   */
+  taglineFor: (year: string, number?: string) => string;
   /** Which years to offer. See `yearsFor`. */
   yearRange: "upcoming" | "past";
 }
@@ -43,7 +50,7 @@ export const BUYERS: Buyer[] = [
     namePlaceholder: "MILLER",
     activityLabel: "What they do",
     yearLabel: "Class year",
-    taglineFor: (y) => `CLASS OF ${y}`,
+    taglineFor: (y, n) => (n ? `#${n} · CLASS OF ${y}` : `CLASS OF ${y}`),
     yearRange: "upcoming",
   },
   {
@@ -53,7 +60,7 @@ export const BUYERS: Buyer[] = [
     namePlaceholder: "MILLER",
     activityLabel: "What you do",
     yearLabel: "Class year",
-    taglineFor: (y) => `CLASS OF ${y}`,
+    taglineFor: (y, n) => (n ? `#${n} · CLASS OF ${y}` : `CLASS OF ${y}`),
     yearRange: "upcoming",
   },
   {
@@ -75,7 +82,7 @@ export const BUYERS: Buyer[] = [
     namePlaceholder: "MILLER",
     activityLabel: "What you did",
     yearLabel: "Class year",
-    taglineFor: (y) => `CLASS OF ${y}`,
+    taglineFor: (y, n) => (n ? `#${n} · CLASS OF ${y}` : `CLASS OF ${y}`),
     yearRange: "past",
   },
   {

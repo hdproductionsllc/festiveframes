@@ -17,7 +17,7 @@ const SLOT_IDS = new Set(buildGrid(SCHOOL_FRAME_CONFIG).slots.map((s) => s.id));
 
 describe("the school presets", () => {
   it("offers three, with the graduate first", () => {
-    expect(SCHOOL_PRESETS.map((p) => p.id)).toEqual(["graduate", "athlete", "spirit"]);
+    expect(SCHOOL_PRESETS.map((p) => p.id)).toEqual(["graduate", "athlete", "lineup"]);
   });
 
   it.each(SCHOOL_PRESETS)("$id places only badges that exist", (preset) => {
@@ -87,6 +87,28 @@ describe("the school presets", () => {
     for (const [, p] of without) expect(getPiece(p)).toBeTruthy();
   });
 
+  it("makes the athlete design ASK for the sport rather than guess one", () => {
+    // It used to fall back to a stock trophy, which is the generic result the
+    // preset exists to avoid — and a claim about a season rather than a fact
+    // about a student.
+    const athlete = getPreset("athlete")!;
+    expect(athlete.needsActivity).toBe(true);
+    expect(athlete.wantsNumber).toBe(true);
+    // ...and it no longer pads the middle rows with hardware nobody earned.
+    const pieces = athlete.layout.map(([, p]) => p);
+    expect(pieces).not.toContain("hs:medal");
+    expect(pieces.filter((p) => p === ACTIVITY)).toHaveLength(4);
+    expect(pieces.filter((p) => p === MASCOT)).toHaveLength(4);
+  });
+
+  it("gives the full lineup FOUR different things, which is its whole point", () => {
+    // The design this replaced repeated one activity badge four times and filled
+    // the gaps with a generic star, so it read as one idea printed twice.
+    const lineup = getPreset("lineup")!;
+    const rows = [0, 2, 4, 6].map((i) => lineup.layout[i][1]);
+    expect(new Set(rows).size).toBe(4);
+  });
+
   it("owns the badges but NOT the words — the buyer owns the tagline", () => {
     // Applying "Graduate" as a grandparent used to produce "CLASS OF 2028",
     // because the preset overrode the one line that buyer is paying for.
@@ -101,8 +123,8 @@ describe("the school presets", () => {
     expect(presetsFor("grandparent")[0].id).toBe("graduate");
   });
 
-  it("leads an alum with school spirit, not a class-of banner for a kid", () => {
-    expect(presetsFor("alum")[0].id).toBe("spirit");
+  it("leads an alum with the full lineup, not a class-of banner for a kid", () => {
+    expect(presetsFor("alum")[0].id).toBe("lineup");
   });
 
   it("always offers every preset, whoever is buying", () => {

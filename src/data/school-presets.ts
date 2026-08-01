@@ -40,6 +40,16 @@ export interface SchoolPreset {
   layout: Array<[slot: string, piece: string]>;
   /** Used wherever `ACTIVITY` appears and the intake is empty. */
   fallbackActivity: string;
+  /**
+   * This design is ABOUT the activity, so applying it without one produces a
+   * frame that is not what the card promised. "Their sport" placed a stock
+   * trophy when nobody had picked a sport, which is exactly the generic result
+   * the preset exists to avoid — the builder now sends them to the sport picker
+   * instead of guessing.
+   */
+  needsActivity?: boolean;
+  /** Offer a jersey number with this design. Only athletes have one. */
+  wantsNumber?: boolean;
   // NOTE: a preset does NOT own the tagline. The BUYER does — see
   // frame-buyers.ts. Applying "Graduate" as a grandparent produced "CLASS OF
   // 2028" instead of "PROUD GRANDPARENT 2028", because the preset was overriding
@@ -91,37 +101,49 @@ export const SCHOOL_PRESETS: SchoolPreset[] = [
   {
     id: "athlete",
     name: "Their sport",
-    blurb: "Their team in every corner, with the hardware.",
-    icon: "🏆",
+    blurb: "Their sport and their number, with the school around it.",
+    icon: "🏅",
+    // THE SPORT AND THE SCHOOL, and nothing they did not earn. This used to pad
+    // the middle rows with a stock trophy and a stock medal, which is a claim
+    // about a season rather than a fact about a student — and it made the frame
+    // read as generic sports clip-art rather than as THEIR team. The number goes
+    // on the banner beside the year, where the name already is.
     layout: [
       ["frame:wing-left-0", ACTIVITY],
       ["frame:top-11", ACTIVITY],
-      ["frame:wing-left-2", "hs:trophy"],
-      ["frame:right-1", "hs:trophy"],
-      ["frame:wing-left-4", "hs:medal"],
-      ["frame:right-3", "hs:medal"],
+      ["frame:wing-left-2", MASCOT],
+      ["frame:right-1", MASCOT],
+      ["frame:wing-left-4", MASCOT],
+      ["frame:right-3", MASCOT],
       ["frame:wing-left-6", ACTIVITY],
       ["frame:bottom-11", ACTIVITY],
     ],
     fallbackActivity: "hs:trophy",
+    needsActivity: true,
+    wantsNumber: true,
     favouredBy: ["parent", "self"],
   },
   {
-    id: "spirit",
-    name: "School spirit",
-    blurb: "The crest, the colours, and what they're into.",
-    icon: "🎉",
+    id: "lineup",
+    name: "The full lineup",
+    blurb: "Four different badges — nobody fits on one.",
+    icon: "🎖️",
+    // FOUR DIFFERENT THINGS, which is the whole point of it. The design this
+    // replaces ("School spirit") repeated the same activity badge four times and
+    // filled the gaps with a generic star, so it read as one idea printed twice
+    // rather than as a life. Every row here is a different kind of thing: the
+    // school, what they do, what they achieved, and where they are going.
     layout: [
-      ["frame:wing-left-0", "hs:crest"],
-      ["frame:top-11", "hs:crest"],
+      ["frame:wing-left-0", MASCOT],
+      ["frame:top-11", MASCOT],
       ["frame:wing-left-2", ACTIVITY],
       ["frame:right-1", ACTIVITY],
-      ["frame:wing-left-4", "hs:star"],
-      ["frame:right-3", "hs:star"],
-      ["frame:wing-left-6", ACTIVITY],
-      ["frame:bottom-11", ACTIVITY],
+      ["frame:wing-left-4", "hs:honor-star"],
+      ["frame:right-3", "hs:honor-star"],
+      ["frame:wing-left-6", "hs:torch"],
+      ["frame:bottom-11", "hs:torch"],
     ],
-    fallbackActivity: "hs:star",
+    fallbackActivity: "hs:crest",
     favouredBy: ["alum", "staff", "parent"],
   },
 ];

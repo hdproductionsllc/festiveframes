@@ -200,6 +200,9 @@ export function SchoolDesigner({
   const [kidName, setKidName] = useState("");
   const [kidActivity, setKidActivity] = useState("");
   const [kidYear, setKidYear] = useState("");
+  // Jersey number. Belongs to the STUDENT alongside the name and the year, not to
+  // whichever design is picked, so it lives here and rides the buyer's tagline.
+  const [kidNumber, setKidNumber] = useState("");
 
   // Welcome-band chips deep-link presets via #preset=<pieceId>. On arrival or
   // click: compose the symmetric layout, preselect the activity, and put the
@@ -407,10 +410,10 @@ export function SchoolDesigner({
       api.setSectionMode("bottom", "text");
       api.setSectionText("bottom", {
         text: name,
-        ...(kidYear ? { tagline: buyer.taglineFor(kidYear) } : {}),
+        ...(kidYear ? { tagline: buyer.taglineFor(kidYear, kidNumber.trim() || undefined) } : {}),
       });
     } else if (kidYear) {
-      api.setSectionText("bottom", { tagline: buyer.taglineFor(kidYear) });
+      api.setSectionText("bottom", { tagline: buyer.taglineFor(kidYear, kidNumber.trim() || undefined) });
     }
     if (kidActivity) {
       // PRESET, not a sprinkle: picking an activity composes the whole frame
@@ -456,7 +459,17 @@ export function SchoolDesigner({
    * previous badges underneath produces a hybrid nobody chose. Uses the intake's
    * activity when there is one, so "Graduate" still carries their sport.
    */
+  const activityRef = useRef<HTMLSelectElement>(null);
+
   const applyFramePreset = (preset: SchoolPreset) => {
+    // A design that is ABOUT the sport must not guess one. Applying it with
+    // nothing chosen used to drop a stock trophy in, which is the generic result
+    // the preset exists to avoid.
+    if (preset.needsActivity && !kidActivity) {
+      activityRef.current?.focus();
+      activityRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
+      return;
+    }
     const api = storeApi.getState();
     api.clearAll();
     const SPAN = { cols: 2, rows: 2 };
@@ -467,7 +480,7 @@ export function SchoolDesigner({
     // The BUYER owns this line, not the preset: a grandparent applying
     // "Graduate" wants their relationship on it, which is the whole reason
     // they are buying a second frame for a student who already has one.
-    const tagline = kidYear ? buyer.taglineFor(kidYear) || undefined : undefined;
+    const tagline = kidYear ? buyer.taglineFor(kidYear, kidNumber.trim() || undefined) || undefined : undefined;
     if (name || tagline) {
       api.setSectionMode("bottom", "text");
       api.setSectionText("bottom", {
@@ -1004,6 +1017,7 @@ export function SchoolDesigner({
                 <label className="flex flex-col gap-1 text-[12px] font-medium text-stone-700 grow basis-32">
                   {buyer.activityLabel}
                   <select
+                    ref={activityRef}
                     name="kid-activity"
                     value={kidActivity}
                     onChange={(e) => setKidActivity(e.target.value)}
@@ -1054,6 +1068,24 @@ export function SchoolDesigner({
                     <option value="hs:honor-star">Honor Roll</option>
                   </select>
                 </label>
+                {/* JERSEY NUMBER. Optional, and only offered once a sport is
+                    chosen — a number means nothing next to "Robotics", and an
+                    always-visible field asks every parent a question that
+                    applies to a minority of them. */}
+                {kidActivity && (
+                  <label className="flex flex-col gap-1 text-[12px] font-medium text-stone-700 basis-20">
+                    Jersey #
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      name="kid-number"
+                      value={kidNumber}
+                      onChange={(e) => setKidNumber(e.target.value.replace(/\D/g, "").slice(0, 2))}
+                      placeholder="12"
+                      className="h-9 w-full rounded-lg border border-stone-300 px-2.5 text-[14px] text-stone-900 placeholder:text-stone-400"
+                    />
+                  </label>
+                )}
                 {buyer.yearLabel && (
                   <label className="flex flex-col gap-1 text-[12px] font-medium text-stone-700 basis-28">
                     {buyer.yearLabel}
