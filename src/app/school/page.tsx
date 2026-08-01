@@ -138,6 +138,19 @@ const ANSWERS = [
     q: "Will it fit my car?",
     a: "It's a standard US license-plate frame. It mounts with the hardware already on your car.",
   },
+  // Durability. These are the claims Festive Frames already makes and stands
+  // behind on the main site (see content/copy.ts) — carried over rather than
+  // re-invented, so the two products cannot end up promising different things.
+  // NOT carried over: "the tiles pop off in seconds". That is the modular
+  // snap-in product; a school frame is printed as one piece.
+  {
+    q: "How long will it last outside?",
+    a: "It's built for the weather your car already lives in — highway speeds, automatic car washes, and the full swing from icy winters to summer heat, sun and rain. The artwork is UV printed, so the colors stay bright rather than fading out over a season.",
+  },
+  {
+    q: "Will it fade, rust or peel in a car wash?",
+    a: "No. UV printing cures the ink into the surface instead of laying it on top, which is why it holds up to brushes, grit and sun. We've vetted these for everyday driving, and we stand behind every frame for 30 days — if something goes wrong, tell us and we'll make it right.",
+  },
   {
     q: "What if I mess up the design?",
     a: "You can't. Undo, rearrange, or start over as many times as you like — nothing prints until you send us a finished design.",
@@ -228,7 +241,7 @@ export default function MySchoolFramePage() {
         {/* The first thing a parent arriving from a group chat can act on. They
             know one fact — the name of their school — and everything the page
             offered before this was a builder with no school in it. */}
-        <FindMySchool schools={FIND_SCHOOLS} />
+        <FindMySchool schools={FIND_SCHOOLS} tone="dark" />
 
         <div className="msf-ctas">
           <Link href="/lab/school" className="msf-btn msf-btn-primary">

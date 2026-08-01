@@ -1,0 +1,98 @@
+/* ── Find my school ─────────────────────────────────────────────────────────
+   Lives WITH its component, not in school-landing.css, because it is used on
+   pages that never load that stylesheet (the Festive Frames homepage) and the
+   rules would silently not apply. Colours are literal for the same reason: there
+   is no `.msf` ancestor off the landing page to resolve its custom properties
+   against. `data-tone` picks light-on-dark or dark-on-light. */
+.msf-find {
+  max-width: 520px;
+  margin: 30px auto 26px;
+  text-align: left;
+}
+.msf-find-label {
+  display: block;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  font-weight: 700;
+  color: #5d6374;
+}
+.msf-find[data-tone="dark"] .msf-find-label {
+  color: #f8c53b;
+}
+.msf-find-input {
+  width: 100%;
+  box-sizing: border-box;
+  /* 16px MINIMUM: anything smaller makes iOS Safari zoom the page on focus,
+     which on a phone reads as the site breaking. */
+  font-size: 17px;
+  padding: 15px 16px;
+  border-radius: 12px;
+  border: 2px solid rgba(27, 42, 74, 0.18);
+  background: #fff;
+  color: #22273a;
+  font-family: inherit;
+}
+.msf-find-input:focus {
+  outline: none;
+  border-color: #b98a2f;
+  box-shadow: 0 0 0 4px rgba(185, 138, 47, 0.16);
+}
+.msf-find-list {
+  list-style: none;
+  padding: 0;
+  margin: 10px 0 0;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(27, 42, 74, 0.14);
+  background: #fff;
+}
+.msf-find-list li + li {
+  border-top: 1px solid rgba(27, 42, 74, 0.1);
+}
+.msf-find-list a {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 14px 16px;
+  text-decoration: none;
+  color: #22273a;
+  /* A comfortable tap target: this is a phone-first interaction. */
+  min-height: 44px;
+}
+.msf-find-list a:hover,
+.msf-find-list a:focus-visible {
+  background: #f2ede4;
+}
+.msf-find-list strong {
+  font-size: 16px;
+}
+.msf-find-list span {
+  font-size: 13.5px;
+  color: #5d6374;
+}
+.msf-find-miss {
+  margin-top: 12px;
+  padding: 16px;
+  border-radius: 12px;
+  background: #f2ede4;
+  border: 1px solid rgba(27, 42, 74, 0.12);
+}
+.msf-find[data-tone="dark"] .msf-find-miss {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(248, 197, 59, 0.35);
+  color: #eef1f7;
+}
+.msf-find-miss p {
+  margin: 0 0 12px;
+  font-size: 15px;
+}
+.msf-find-help {
+  margin: 10px 2px 0;
+  font-size: 13.5px;
+  color: #5d6374;
+}
+.msf-find[data-tone="dark"] .msf-find-help {
+  color: #c9d0e2;
+}

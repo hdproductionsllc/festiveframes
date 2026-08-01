@@ -11,6 +11,7 @@ import { HowItWorks } from "./_components/HowItWorks";
 import { WhyUs } from "./_components/WhyUs";
 import { TheKit } from "./_components/TheKit";
 import { CustomOrders } from "./_components/CustomOrders";
+import { SchoolSpotlight } from "./_components/SchoolSpotlight";
 import { OurStory } from "./_components/OurStory";
 import { Reviews } from "./_components/Reviews";
 import { SeoContent } from "./_components/SeoContent";
@@ -171,6 +172,7 @@ export default async function HomePage() {
         <HowItWorks />
         <WhyUs />
         <TheKit />
+        <SchoolSpotlight />
         <CustomOrders />
         <OurStory />
         <Reviews />

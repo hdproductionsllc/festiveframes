@@ -3,6 +3,8 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import "./find-my-school.css";
+
 // ─── Find my school ──────────────────────────────────────────────────────────
 //
 // A parent arriving from a group chat knows exactly one thing: the name of their
@@ -77,10 +79,15 @@ export function FindMySchool({
   schools,
   autoFocus = false,
   placeholder = "Start typing your school…",
+  /** "dark" for a navy ground, "light" for paper. Only affects the labels — the
+   *  input and results are a white card either way so the field always reads as
+   *  somewhere to type. */
+  tone = "light",
 }: {
   schools: SchoolChoice[];
   autoFocus?: boolean;
   placeholder?: string;
+  tone?: "light" | "dark";
 }) {
   const [q, setQ] = useState("");
   const router = useRouter();
@@ -90,7 +97,7 @@ export function FindMySchool({
   const searched = norm(q).length >= 2;
 
   return (
-    <div className="msf-find">
+    <div className="msf-find" data-tone={tone}>
       <label className="msf-find-label" htmlFor="msf-find-input">
         Find your school
       </label>
