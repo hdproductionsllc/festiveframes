@@ -156,6 +156,14 @@ const ANSWERS = [
     a: "A set dollar amount from every frame — not a percentage of profit after costs. Your booster club sees exactly what a season of frames earned it.",
   },
   {
+    q: "Is there a minimum order for our school?",
+    a: "No. Every frame is printed after it's ordered, so there's no minimum order quantity, no case pack and no pre-buy. If one parent orders one frame all season, that works. Your club never fronts money and never has stock left over.",
+  },
+  {
+    q: "What does our booster club have to do?",
+    a: "Approve the design and share a link. That's the whole job. We print, ship, and handle any problem with an order directly with the parent.",
+  },
+  {
     q: "Which activities have badges?",
     a: "Football, soccer, basketball, volleyball, baseball, softball, track, tennis, golf, cheer, band, marching band, drama, robotics, debate, chess, science, honor society, student council, yearbook and more — plus your own photos.",
   },
@@ -298,30 +306,41 @@ export default function MySchoolFramePage() {
         </dl>
       </section>
 
-      {/* ── Fundraising ── */}
+      {/* ── Fundraising ──
+          Leads with the RISK, not the reward. A booster club is not afraid of a
+          bad product, it is afraid of a closet full of unsold sweatshirts — so
+          print-on-demand and no minimum order is the whole pitch, and it used to
+          be a sub-clause in the middle of a bullet. */}
       <section id="fundraise" className="msf-band msf-band-navy">
-        <h2>Build yours. Give back to your school.</h2>
+        <h2>No minimums. No inventory. Nothing to front.</h2>
         <p className="msf-lede">
-          Every frame designed for your school sends a set donation back to your
-          booster club. Parents were going to buy team gear anyway — this turns
-          that into funding, with nothing for the club to run.
+          Every frame is printed one at a time, after a parent orders it. There
+          is no minimum order quantity, no case pack, no pre-buy and no leftover
+          stock — because nothing is made until somebody has already paid for it.
+          Your club never touches a box.
         </p>
         <ul className="msf-booster">
           <li>
-            <strong>No order forms, no upfront cost, runs itself.</strong>{" "}
-            Nothing to front, nothing to sort at practice, no minimums to hit.
-            Parents order direct; we print and ship direct.
+            <strong>Printed on demand, one frame at a time.</strong> No minimum
+            order, no bulk buy, no size runs to guess at. Order one or order
+            three hundred; it works the same either way, and there is nothing
+            left over at the end of the season.
           </li>
           <li>
-            <strong>A set dollar amount per frame — not a percentage after
+            <strong>Nothing to front and nothing to run.</strong> No order
+            forms, no envelopes of cash, no sorting bags at practice. Parents
+            order direct, we print and ship direct to their door.
+          </li>
+          <li>
+            <strong>A set dollar amount per frame, not a percentage after
             costs.</strong>{" "}
-            Fixed money back on every frame, so the club can count what a
-            season earned it.
+            Fixed money back on every single frame, so the club can count what a
+            season earned it instead of waiting for a settlement.
           </li>
           <li>
             <strong>Your school controls its brand.</strong> Your official
-            colors and crest, used with your school&apos;s permission — you
-            approve what carries your name.
+            colors and crest, used with your school&apos;s written permission.
+            You approve what carries your name before anything prints.
           </li>
         </ul>
         <div className="msf-ctas">
@@ -333,7 +352,7 @@ export default function MySchoolFramePage() {
           </a>
         </div>
         <p className="msf-trust msf-trust-light">
-          Takes one conversation. No contract, no upfront spend.
+          Takes one conversation. No contract, no minimum, no upfront spend.
         </p>
       </section>
 
