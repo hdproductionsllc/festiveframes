@@ -41,13 +41,13 @@ describe("school spirit set", () => {
   it("leads the palette with the real high-school art", () => {
     const pieces = getSetPieces("school");
     const hs = pieces.filter((p) => p.setId === "hs");
-    // 31 embroidered patches plus the 5 die-struck enamel pins. The six flat originals that used to pad this out
+    // The whole library, one make: 48 die-struck enamel badges. The six flat originals that used to pad this out
     // (DECA, FBLA, NHS, Mu Alpha Theta, FCA, Student Council) have been withdrawn —
     // they were another illustrator's flat style and, being other organisations'
     // registered marks, were never ours to print. Asserting the COUNT is deliberate
     // even though it needs editing whenever art lands: it is what catches a piece
     // silently dropping out of the palette, which `> 0` would sail past.
-    expect(hs.length).toBe(36);
+    expect(hs.length).toBe(48);
     // Real art first, so the collection is what you see on open.
     expect(pieces.slice(0, hs.length).every((p) => p.setId === "hs")).toBe(true);
     // Every one points at a committed local PNG (not an emoji/CDN placeholder).
@@ -148,7 +148,7 @@ describe("High School fields — every piece takes a standard field colour", () 
   });
 
   it("puts the white-on-colour logos on NAVY — they would vanish on white", () => {
-    for (const id of ["hs:laurel", "hs:gavel", "hs:trophy"]) {
+    for (const id of ["hs:honor-star", "hs:gavel", "hs:trophy"]) {
       expect(hs.find((p) => p.id === id)?.backgroundColor.toUpperCase()).toBe(TILE_BG.navy);
     }
   });

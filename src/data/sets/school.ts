@@ -111,7 +111,7 @@ function buildPresets(): DesignPreset[] {
       id: `${S}:champions`,
       name: "Champions",
       description: "Honours and leadership badges",
-      slots: cycle(["hs:laurel", "solid-navy", "hs:gavel", "hs:trophy"]),
+      slots: cycle(["hs:honor-star", "solid-navy", "hs:gavel", "hs:trophy"]),
       bottomBar: { text: "STATE CHAMPIONS", backgroundColor: CRIMSON, textColor: "#FFFFFF" },
     },
   ];

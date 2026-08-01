@@ -114,22 +114,28 @@ for (const file of readdirSync(src).filter((f) => /\.(webp|png|jpe?g)$/i.test(f)
     if (x < x0) x0 = x; if (x > x1) x1 = x;
     if (y < y0) y0 = y; if (y > y1) y1 = y;
   }
-  const bw = x1 - x0 + 1, bh = y1 - y0 + 1, side = Math.max(bw, bh);
-  const sq = createCanvas(side, side);
-  sq.getContext("2d").drawImage(cv, x0, y0, bw, bh, (side - bw) / 2, (side - bh) / 2, bw, bh);
+  // Trimmed to its OWN bounds and left at its own aspect — deliberately NOT padded
+  // back out to a square. Both renderers draw badge art with `contain`, so whatever
+  // this file's aspect is gets fitted to the tile: pad a tall racquet out to a
+  // square and `contain` fits the SQUARE, leaving the racquet small with dead space
+  // either side. The earlier version squared it and so undid its own trim, which is
+  // why the racquetball badge sat visibly smaller in its tile than its neighbours.
+  const bw = x1 - x0 + 1, bh = y1 - y0 + 1;
+  const cut = createCanvas(bw, bh);
+  cut.getContext("2d").drawImage(cv, x0, y0, bw, bh, 0, 0, bw, bh);
 
   const name = file.replace(/\.\w+$/, ".png");
-  const buf = await sharp(sq.toBuffer("image/png"))
+  const buf = await sharp(cut.toBuffer("image/png"))
     .resize(TARGET, TARGET, { fit: "inside", withoutEnlargement: true })
     .png({ compressionLevel: 9, palette: true, quality: 92 })
     .toBuffer();
   const { writeFileSync } = await import("node:fs");
   writeFileSync(path.join(out, name), buf);
 
-  const final = Math.min(TARGET, side);
+  const final = Math.min(TARGET, Math.max(bw, bh));
   const gate = final >= PRINT_FLOOR ? "OK  " : "SOFT";
   console.log(
-    `${gate} ${name.padEnd(18)} ${final}x${final}  ${(buf.length / 1024).toFixed(0)}KB` +
+    `${gate} ${name.padEnd(18)} ${final}px long side  ${(buf.length / 1024).toFixed(0)}KB` +
     (final >= PRINT_FLOOR ? "" : `  — under the ${PRINT_FLOOR}px floor for a 2x2 tile`)
   );
 }
