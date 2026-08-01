@@ -287,6 +287,44 @@ export const CHIP_PRESET_PIECE: Record<string, string> = {
   diving: "hs:swim-dive",
   "honor roll": "hs:honor-star",
   "honor society": "hs:honor-star",
+  // Speech has no badge of its own: the debate pin is a lectern and a microphone,
+  // which is what a speech event actually looks like.
+  speech: "hs:debate",
+  "speech and debate": "hs:debate",
+  debate: "hs:debate",
+  crew: "hs:crew",
+  rowing: "hs:crew",
+  sailing: "hs:sailing",
+  ski: "hs:ski",
+  skiing: "hs:ski",
+  snowboarding: "hs:ski",
+  weightlifting: "hs:weightlifting",
+  powerlifting: "hs:weightlifting",
+  "jazz band": "hs:jazz-band",
+  jazz: "hs:jazz-band",
+  "color guard": "hs:color-guard",
+  "colour guard": "hs:color-guard",
+  "winter guard": "hs:color-guard",
+  film: "hs:film",
+  video: "hs:film",
+  "film club": "hs:film",
+  ceramics: "hs:ceramics",
+  pottery: "hs:ceramics",
+  culinary: "hs:culinary",
+  cooking: "hs:culinary",
+  "model un": "hs:model-un",
+  "model united nations": "hs:model-un",
+  "campus ministry": "hs:campus-ministry",
+  "youth ministry": "hs:campus-ministry",
+  // GENERIC STAND-INS, deliberately. FFA and the Scouts' fleur-de-lis are other
+  // organisations' registered marks — the same reason DECA, FBLA, NHS and Mu Alpha
+  // Theta were withdrawn from the library. A school still finds its activity by
+  // name; what it gets is a sheaf of wheat and a compass rose, which are nobody's.
+  ffa: "hs:agriculture",
+  agriculture: "hs:agriculture",
+  "future farmers": "hs:agriculture",
+  scouts: "hs:scouts",
+  scouting: "hs:scouts",
 };
 
 export function getSchoolKit(slug: string): SchoolKit | undefined {

@@ -41,13 +41,20 @@ describe("school spirit set", () => {
   it("leads the palette with the real high-school art", () => {
     const pieces = getSetPieces("school");
     const hs = pieces.filter((p) => p.setId === "hs");
-    // The whole library, one make: 48 die-struck enamel badges. The six flat originals that used to pad this out
+    // The whole library, one make: 61 die-struck enamel badges. The six flat originals that used to pad this out
     // (DECA, FBLA, NHS, Mu Alpha Theta, FCA, Student Council) have been withdrawn —
     // they were another illustrator's flat style and, being other organisations'
     // registered marks, were never ours to print. Asserting the COUNT is deliberate
     // even though it needs editing whenever art lands: it is what catches a piece
     // silently dropping out of the palette, which `> 0` would sail past.
-    expect(hs.length).toBe(48);
+    //
+    // 48 -> 61: thirteen activities that had no badge at all (crew, sailing, ski,
+    // weightlifting, jazz band, colour guard, film, ceramics, Model UN, campus
+    // ministry, culinary, agriculture, scouting). Agriculture and scouting are
+    // GENERIC on purpose — a sheaf of wheat and a compass rose — because the FFA
+    // emblem and the Scouts' fleur-de-lis are registered marks, exactly like the
+    // six above.
+    expect(hs.length).toBe(61);
     // Real art first, so the collection is what you see on open.
     expect(pieces.slice(0, hs.length).every((p) => p.setId === "hs")).toBe(true);
     // Every one points at a committed local PNG (not an emoji/CDN placeholder).

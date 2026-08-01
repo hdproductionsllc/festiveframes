@@ -10,7 +10,40 @@ the product cannot sell on detail, so it has to sell on shine and contrast, whic
 is the same reason the bevel and the brass rim work.
 
 The rest of this file stands as the method. Everything below was written as a
-test plan; treat §3 as history and §5 as the work queue.
+test plan; treat §3 as history and §5 as the work queue — **§5 is now complete.**
+
+---
+
+## 0. What the last batch taught, which is worth more than the prompts
+
+The library went 48 → 61 in one pass: 13 activities that had no badge, plus 11
+existing badges redone. 24 subjects, 31 generations, $4.16. The three lessons:
+
+**When it fails the same way twice, change the SUBJECT, not the wording.** Three
+badges failed three times each while the instruction grew longer and more emphatic
+every round, which achieved nothing — the model has a prior and prose does not move
+it. What moved it was removing the thing the prior attaches to:
+
+| failure | attempts 1–3 | what actually worked |
+|---|---|---|
+| the red paint well rendered near-black | "flat", "one solid colour", "no dark area" | made it **vermilion** — a shadow in vermilion is still orange |
+| the red buzzer dome rendered black | "bright scarlet", "no speckles", "uniformly red" | made it a **gold desk bell** — no red to darken |
+| the violin came back photoreal wood | "not a photograph", "thick gold linework" | made the body **navy enamel** — nothing left to be photoreal *about* |
+
+Each had been asked correctly. The subject was carrying a prior stronger than the
+instruction, so the fix was to pick a subject that cannot express the failure.
+
+**The keyability gate pays for itself.** One of 24 came back on a backdrop
+measuring 81 magenta-ness where a clean one is 245 — the model had lit the
+backdrop. Gold reflecting the sweep reaches ~110, so at 81 the metal is *more*
+magenta than the field behind it and no keyer can separate them. `cut-enamel-pins`
+now refuses that source outright. One regeneration, $0.13, and it never reached the
+library. This is exactly the failure that silently wrecked five badges before.
+
+**Say the outline explicitly.** `CUT` — "cut to the silhouette of the subject, NOT
+inside a circle, disc, medallion or border" — is now part of every prompt. Without
+it cross-country came back as a round medallion twice while every neighbouring
+badge was a cut silhouette, which reads as a different product.
 
 ---
 

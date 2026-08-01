@@ -128,6 +128,15 @@ saw on dance, rotc and tennis is those pieces' own warm rim, not spill. The
 
 ---
 
+**All eleven were regenerated and are live.** Track is now a winged shoe, so it can
+no longer be mistaken for the wrestling boots; gymnastics has real open rings rather
+than two gold discs; robotics is navy enamel with gold linework; rotc's sabres are
+gold; rugby is the set's navy; baseball's stitches sit on white with no black band;
+cross-country is a cut silhouette rather than a medallion; the palette's five wells
+are each one flat colour with a real open thumb hole; quiz-bowl became a gold desk
+bell; orchestra a navy enamel violin. See §7 of the prompt library for why the last
+three took five attempts.
+
 ## 4. Gaps in coverage
 
 Against the tier list in `enamel-pin-ideogram-prompts.md` §5, still missing:
@@ -138,9 +147,18 @@ Against the tier list in `enamel-pin-ideogram-prompts.md` §5, still missing:
 - **Also worth having**: math club, environmental club, language club, drumline,
   unified/special olympics, fishing, archery
 
-No badge is *broken* in wiring — all 48 library pieces resolve to a file, all 48
-files are referenced, and no kit chip points at a missing piece. The gaps are
-coverage, not fallbacks.
+**All thirteen are now made and wired**, and the library is 61 pieces: crew,
+sailing, ski, weightlifting, jazz band, colour guard, film, ceramics, Model UN,
+campus ministry, culinary, agriculture, scouting. Speech maps to the debate badge,
+which is a lectern and a microphone — that is what a speech event looks like.
+
+Agriculture and scouting are deliberately GENERIC: a sheaf of wheat and a compass
+rose. The FFA emblem and the Scouts' fleur-de-lis are registered marks, the same
+reason DECA, FBLA, NHS and Mu Alpha Theta were withdrawn. The chip aliases map
+"ffa" and "scouts" onto them so a school still finds its activity by name.
+
+No badge is *broken* in wiring — all 61 library pieces resolve to a file, every file
+is referenced, and all 81 kit chip aliases point at a piece that exists.
 
 ---
 
