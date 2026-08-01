@@ -884,6 +884,23 @@
   padding: clamp(20px, 4vw, 44px);
 }
 
+/* THE MAT GOES THIN ON A PHONE, but does not go away.
+   Its whole job is the tonal break that makes the navy frame pop, and that
+   survives at 6px. What does not survive on a phone is spending 20px of padding
+   on all four sides of the one element the screen is for — that is 40px of the
+   vertical budget on a view where the frame is already capped at 34vh.
+
+   It has to sit AFTER `.school-skin .ff-stage` and carry the same specificity:
+   the first attempt at this was a plain `.ff-stage` inside the mobile media
+   query further up the file, which lost on both counts and changed nothing.
+   Desktop keeps the generous clamp — it has the room, and there the mat reads as
+   a mount rather than a margin. */
+@media (max-width: 1023px) {
+  .school-skin .ff-stage {
+    padding: 6px;
+  }
+}
+
 /* Contact shadow on a LIGHT ground: tighter and lighter than the dark-stage
    version, which was tuned to lift navy off black and reads as soot on white. */
 .school-skin .ff-stage > div:not(.ff-stage-hint) {

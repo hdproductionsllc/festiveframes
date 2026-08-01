@@ -58,6 +58,7 @@ function RailSlotInner({ slot, placedTile, covered, spanWidth, spanHeight }: Rai
   const sections = useDesignStore((s) => s.sections);
   const textBars = useDesignStore((s) => s.textBars);
   const selectedPieceId = usePaletteStore((s) => s.selectedPieceId);
+  const clearSelection = usePaletteStore((s) => s.clearSelection);
   const uploads = useDesignStore((s) => s.uploads);
   const soundEnabled = useUIStore((s) => s.soundEnabled);
 
@@ -121,6 +122,17 @@ function RailSlotInner({ slot, placedTile, covered, spanWidth, spanHeight }: Rai
     );
     emitTilePlaced(drop?.anchorSlotId ?? slot.id);
     if (soundEnabled) playSound("snap");
+    // DISARM once the tile has landed. Nothing cleared the selection before, so
+    // the "now tap any spot on your frame" banner stayed up after the parent had
+    // already done exactly that — instructions for a step they had just
+    // completed, sitting over the frame until they found the dismiss button.
+    //
+    // Clearing here rather than hiding the banner on its own: a still-armed tile
+    // with no banner is worse than either, because the next tap anywhere on the
+    // frame would drop a second badge with nothing on screen to warn them. One
+    // tap arms, one tap places, and placing the same badge again is one more tap
+    // on the palette.
+    clearSelection();
   };
 
   // A cell invites interaction when a tap would do something: place the armed
