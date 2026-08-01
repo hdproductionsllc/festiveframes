@@ -14,6 +14,7 @@
 
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { FirstRunTour } from "./FirstRunTour";
+import { BUYERS, DEFAULT_BUYER, getBuyer, yearsFor, type BuyerId } from "@/data/frame-buyers";
 import {
   useDesignStore,
   useDesignStoreApi,
@@ -157,6 +158,27 @@ export function SchoolDesigner({
     setTourOpen(false);
     try { localStorage.setItem("msf-tour-done", "1"); } catch {}
   };
+  // WHO IS BUYING. The intake used to be third-person throughout, which assumed
+  // a parent buying for a student — one real case out of several. See
+  // data/frame-buyers.ts for why the wording, the year range and the tagline all
+  // have to move together. Remembered, because an alum should not have to say so
+  // twice.
+  const [buyerId, setBuyerId] = useState<BuyerId>(DEFAULT_BUYER);
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("msf-buyer");
+      if (saved) setBuyerId(getBuyer(saved).id);
+    } catch {}
+  }, []);
+  const buyer = getBuyer(buyerId);
+  const chooseBuyer = (id: BuyerId) => {
+    setBuyerId(id);
+    // A year picked from one range is meaningless in another: 2029 is not an
+    // alumni class and 1994 is not an upcoming one.
+    if (getBuyer(id).yearRange !== buyer.yearRange) setKidYear("");
+    try { localStorage.setItem("msf-buyer", id); } catch {}
+  };
+
   const [kidName, setKidName] = useState("");
   const [kidActivity, setKidActivity] = useState("");
   const [kidYear, setKidYear] = useState("");
@@ -367,10 +389,10 @@ export function SchoolDesigner({
       api.setSectionMode("bottom", "text");
       api.setSectionText("bottom", {
         text: name,
-        ...(kidYear ? { tagline: `CLASS OF ${kidYear}` } : {}),
+        ...(kidYear ? { tagline: buyer.taglineFor(kidYear) } : {}),
       });
     } else if (kidYear) {
-      api.setSectionText("bottom", { tagline: `CLASS OF ${kidYear}` });
+      api.setSectionText("bottom", { tagline: buyer.taglineFor(kidYear) });
     }
     if (kidActivity) {
       // PRESET, not a sprinkle: picking an activity composes the whole frame
@@ -800,21 +822,47 @@ export function SchoolDesigner({
                   quick fields -> the frame is suddenly about THEIR kid. Writes
                   ordinary store state via applyKidIntake. */}
               <div data-intake className="flex flex-wrap items-end gap-2 rounded-xl border border-stone-300 bg-white px-3 py-2.5 shadow-sm">
+                {/* WHO IS BUYING. One row, five answers, and it rewords everything
+                    below it. A senior buying for their own car, a grandparent, an
+                    alum and a coach were all being asked for "their last name" and
+                    a class year from the next four. */}
+                <div className="flex w-full flex-col gap-1">
+                  <span className="text-[12px] font-medium text-stone-700">Who&apos;s it for?</span>
+                  <div role="radiogroup" aria-label="Who is this frame for?" className="flex flex-wrap gap-1.5">
+                    {BUYERS.map((b) => (
+                      <button
+                        key={b.id}
+                        type="button"
+                        role="radio"
+                        aria-checked={b.id === buyerId}
+                        onClick={() => chooseBuyer(b.id)}
+                        className={
+                          "min-h-[32px] rounded-full border px-3 text-[13px] font-semibold transition-colors " +
+                          (b.id === buyerId
+                            ? "border-stone-900 bg-stone-900 text-white"
+                            : "border-stone-300 bg-white text-stone-700 hover:border-stone-400")
+                        }
+                      >
+                        {b.chip}
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 <label className="flex flex-col gap-1 text-[12px] font-medium text-stone-700 grow basis-32">
-                  Their last name
+                  {buyer.nameLabel}
                   <input
                     type="text"
                     name="kid-name"
                     value={kidName}
                     onChange={(e) => setKidName(e.target.value)}
                     onKeyDown={(e) => { if (e.key === "Enter") applyKidIntake(); }}
-                    placeholder="MILLER"
+                    placeholder={buyer.namePlaceholder}
                     maxLength={14}
                     className="h-9 rounded-lg border border-stone-300 px-2.5 text-[14px] uppercase text-stone-900 placeholder:text-stone-400"
                   />
                 </label>
                 <label className="flex flex-col gap-1 text-[12px] font-medium text-stone-700 grow basis-32">
-                  What they do
+                  {buyer.activityLabel}
                   <select
                     name="kid-activity"
                     value={kidActivity}
@@ -824,7 +872,6 @@ export function SchoolDesigner({
                     <option value="">Pick one…</option>
                     <option value="hs:football-patch">Football</option>
                     <option value="hs:soccer-patch">Soccer</option>
-                    <option value="hs:football-patch">Football</option>
                     <option value="hs:basketball-patch">Basketball</option>
                     <option value="hs:volleyball-patch">Volleyball</option>
                     <option value="hs:baseball-patch">Baseball</option>
@@ -867,25 +914,25 @@ export function SchoolDesigner({
                     <option value="hs:honor-star">Honor Roll</option>
                   </select>
                 </label>
-                <label className="flex flex-col gap-1 text-[12px] font-medium text-stone-700 basis-28">
-                  Class year
-                  <select
-                    name="kid-year"
-                    value={kidYear}
-                    onChange={(e) => setKidYear(e.target.value)}
-                    className="h-9 rounded-lg border border-stone-300 bg-white px-2 text-[14px] text-stone-900"
-                  >
-                    <option value="">Year…</option>
-                    {/* Current students only: after June, the just-graduated
-                        class drops off and the incoming freshmen appear — the
-                        list can never go stale. */}
-                    {Array.from({ length: 4 }, (_, i) => {
-                      const now = new Date();
-                      const y = now.getFullYear() + (now.getMonth() >= 5 ? 1 : 0) + i;
-                      return <option key={y}>{y}</option>;
-                    })}
-                  </select>
-                </label>
+                {buyer.yearLabel && (
+                  <label className="flex flex-col gap-1 text-[12px] font-medium text-stone-700 basis-28">
+                    {buyer.yearLabel}
+                    <select
+                      name="kid-year"
+                      value={kidYear}
+                      onChange={(e) => setKidYear(e.target.value)}
+                      className="h-9 rounded-lg border border-stone-300 bg-white px-2 text-[14px] text-stone-900"
+                    >
+                      <option value="">Year…</option>
+                      {/* The RANGE follows the buyer. Current students only for a
+                          parent or a senior; sixty years back for an alum, who
+                          previously could not enter their own class at all. */}
+                      {yearsFor(buyer.yearRange).map((y) => (
+                        <option key={y}>{y}</option>
+                      ))}
+                    </select>
+                  </label>
+                )}
                 <button
                   type="button"
                   onClick={applyKidIntake}
