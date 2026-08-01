@@ -71,6 +71,69 @@ export const highSchoolSet: TileSet = {
   price: 0,
   // Ordered so related activities sit together in one flat palette.
   pieces: [
+    // ─── DIE-STRUCK ENAMEL series ──────────────────────────────
+    // A different make from the embroidered patches below, and deliberately so.
+    // At the size these are actually seen — about an inch, on a car, in a car
+    // park — every embroidered badge carries the same thread texture, so they
+    // blur toward each other and the sport is hard to read at a glance. Hard
+    // enamel gives each badge crisp high-contrast edges, and its polished metal
+    // borders sit closer to the frame's own brass rim than thread does. That is
+    // the premise of the whole product reading premium at distance: fake the
+    // shine, and let contrast do the work detail cannot do at that size.
+    //
+    // Generated on a magenta chroma field and cut with a GLOBAL chroma key, not
+    // the edge-connected fill the older art needs: a pin has real HOLES in it
+    // (the gap between the goggle lenses), and an enclosed hole is unreachable
+    // from the border, so an edge-connected fill leaves it filled — which it did,
+    // and the despill then turned it maroon. The style block forbids magenta in
+    // the artwork precisely so a global key is safe here. Then despilled, because
+    // magenta bouncing off a plated edge leaves a red rim that reads as a dirty
+    // outline on navy.
+    {
+      id: `${H}:racquetball`,
+      setId: H,
+      name: "Racquetball",
+      artworkUrl: `${A}/racquetball.png`,
+      emoji: "🎾",
+      backgroundColor: NAVY,
+      defaultSpan: PREFERRED,
+    },
+    {
+      id: `${H}:water-polo`,
+      setId: H,
+      name: "Water Polo",
+      artworkUrl: `${A}/water-polo.png`,
+      emoji: "🤽",
+      backgroundColor: NAVY,
+      defaultSpan: PREFERRED,
+    },
+    {
+      id: `${H}:rugby`,
+      setId: H,
+      name: "Rugby",
+      artworkUrl: `${A}/rugby.png`,
+      emoji: "🏉",
+      backgroundColor: NAVY,
+      defaultSpan: PREFERRED,
+    },
+    {
+      id: `${H}:swim-dive`,
+      setId: H,
+      name: "Swim & Dive",
+      artworkUrl: `${A}/swim-dive.png`,
+      emoji: "🏊",
+      backgroundColor: NAVY,
+      defaultSpan: PREFERRED,
+    },
+    {
+      id: `${H}:honor-star`,
+      setId: H,
+      name: "Honor Roll",
+      artworkUrl: `${A}/honor-star.png`,
+      emoji: "⭐",
+      backgroundColor: NAVY,
+      defaultSpan: PREFERRED,
+    },
     // ─── EMBROIDERED PATCH series ──────────────────────────────
     //
     // Generated art, cut from a magenta chroma field by chroma-plane keying with the

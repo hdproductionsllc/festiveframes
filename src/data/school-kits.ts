@@ -177,13 +177,13 @@ const KITS: SchoolKit[] = [
     // see THEIR mark on the frame before they read a word of the copy.
     seedSlots: {
       "frame:wing-left-0": { pieceId: "mark:sluh-jr-bills:billiken", setId: "mark", span: { cols: 2, rows: 2 } },
-      "frame:wing-left-2": { pieceId: "hs:soccer-patch", setId: "hs", span: { cols: 2, rows: 2 } },
-      "frame:wing-left-4": { pieceId: "hs:basketball-patch", setId: "hs", span: { cols: 2, rows: 2 } },
+      "frame:wing-left-2": { pieceId: "hs:racquetball", setId: "hs", span: { cols: 2, rows: 2 } },
+      "frame:wing-left-4": { pieceId: "hs:water-polo", setId: "hs", span: { cols: 2, rows: 2 } },
       "frame:wing-left-6": { pieceId: "hs:band", setId: "hs", span: { cols: 2, rows: 2 } },
       "frame:top-11": { pieceId: "mark:sluh-jr-bills:shield", setId: "mark", span: { cols: 2, rows: 2 } },
       "frame:right-1": { pieceId: "hs:robotics", setId: "hs", span: { cols: 2, rows: 2 } },
-      "frame:right-3": { pieceId: "hs:drama", setId: "hs", span: { cols: 2, rows: 2 } },
-      "frame:bottom-11": { pieceId: "hs:laurel", setId: "hs", span: { cols: 2, rows: 2 } },
+      "frame:right-3": { pieceId: "hs:swim-dive", setId: "hs", span: { cols: 2, rows: 2 } },
+      "frame:bottom-11": { pieceId: "hs:honor-star", setId: "hs", span: { cols: 2, rows: 2 } },
     },
     // Cut from the official files the owner supplied, both keyed to transparency
     // so they sit on the school's colour rather than on white cards.
@@ -259,8 +259,15 @@ export const CHIP_PRESET_PIECE: Record<string, string> = {
   theater: "hs:drama",
   drama: "hs:drama",
   robotics: "hs:robotics",
-  "honor roll": "hs:laurel",
-  "honor society": "hs:laurel",
+  racquetball: "hs:racquetball",
+  "water polo": "hs:water-polo",
+  rugby: "hs:rugby",
+  "swim & dive": "hs:swim-dive",
+  "swim and dive": "hs:swim-dive",
+  swimming: "hs:swim-dive",
+  diving: "hs:swim-dive",
+  "honor roll": "hs:honor-star",
+  "honor society": "hs:honor-star",
 };
 
 export function getSchoolKit(slug: string): SchoolKit | undefined {

@@ -833,7 +833,11 @@ export function SchoolDesigner({
                     <option value="hs:marching-band">Marching Band</option>
                     <option value="hs:drama">Drama</option>
                     <option value="hs:robotics">Robotics</option>
-                    <option value="hs:laurel">Honor Roll</option>
+                    <option value="hs:racquetball">Racquetball</option>
+                    <option value="hs:water-polo">Water Polo</option>
+                    <option value="hs:rugby">Rugby</option>
+                    <option value="hs:swim-dive">Swim &amp; Dive</option>
+                    <option value="hs:honor-star">Honor Roll</option>
                   </select>
                 </label>
                 <label className="flex flex-col gap-1 text-[12px] font-medium text-stone-700 basis-28">

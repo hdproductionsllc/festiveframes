@@ -1,5 +1,19 @@
 # Die-struck enamel pin — Ideogram test prompts
 
+**VERDICT: enamel wins, and the library moves to it.** The first five came back
+(the four SLUH gaps plus the honour-roll A/B twin) and went onto the frame beside
+their embroidered neighbours at actual size. It is not close: at an inch the
+embroidered trumpet reads as a brown blur and the robot as a grey mass, while the
+enamel pins hold their shape because the polished metal border gives every one a
+hard, high-contrast edge. That is the principle to carry forward — at this size
+the product cannot sell on detail, so it has to sell on shine and contrast, which
+is the same reason the bevel and the brass rim work.
+
+The rest of this file stands as the method. Everything below was written as a
+test plan; treat §3 as history and §5 as the work queue.
+
+---
+
 A style TEST, not a commitment. The current badge library is embroidered patches
 (gold merrow border, thread texture). The question is whether die-struck hard
 enamel reads better at the size these are actually seen: roughly one inch, on the
