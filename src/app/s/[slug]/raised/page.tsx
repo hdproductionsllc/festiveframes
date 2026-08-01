@@ -5,7 +5,6 @@ import "../../../lab/school/school-skin.css";
 import "../../../school/school-landing.css";
 import { allSchoolKits, getSchoolKit } from "@/data/school-kits";
 import { schoolTotals } from "@/lib/order/school-ledger";
-import { schoolOffer } from "@/config/offers";
 
 // ─── The booster page: /s/<slug>/raised ──────────────────────────────────────
 //
@@ -55,7 +54,6 @@ export default async function RaisedPage(
   if (!kit) notFound();
 
   const t = await schoolTotals(slug);
-  const perFrame = schoolOffer.schoolDonationCents;
   const started = when(t.firstAt);
   const last = when(t.lastAt);
 
@@ -76,8 +74,8 @@ export default async function RaisedPage(
           <p className="msf-lede msf-raised-empty">
             Nothing yet. This page fills in the moment the first parent orders,
             and the figure is the real one: every frame carrying{" "}
-            {kit.shortName} adds {money(perFrame)} to it automatically, with
-            nothing for the club to submit or reconcile.
+            {kit.shortName} adds a set donation to it automatically, with nothing
+            for the club to submit or reconcile.
           </p>
         ) : (
           <ul className="msf-raised-grid">
@@ -88,10 +86,6 @@ export default async function RaisedPage(
             <li>
               <span className="msf-raised-n">{money(t.raised30dCents)}</span>
               <span className="msf-raised-l">raised in the last 30 days</span>
-            </li>
-            <li>
-              <span className="msf-raised-n">{money(perFrame)}</span>
-              <span className="msf-raised-l">to {kit.shortName} per frame</span>
             </li>
             {last ? (
               <li>
@@ -112,9 +106,9 @@ export default async function RaisedPage(
             owed to {kit.shortName}, not interest.
           </li>
           <li>
-            <strong>A set amount per frame.</strong> {money(perFrame)} from every
-            frame, fixed, not a percentage of profit after costs. Multiply the
-            frame count and you get the total; there is no other arithmetic.
+            <strong>A set amount per frame.</strong> A fixed figure from every
+            frame, not a percentage of profit after costs. Multiply the frame
+            count and you get the total; there is no other arithmetic.
           </li>
           <li>
             <strong>Nothing to reconcile.</strong> No order forms to collect, no

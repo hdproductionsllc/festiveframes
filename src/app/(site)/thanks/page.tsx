@@ -3,7 +3,6 @@ import type Stripe from "stripe";
 
 import { copy } from "@/content/copy";
 import { getSchoolKit } from "@/data/school-kits";
-import { schoolOffer } from "@/config/offers";
 import { ShareYourFrame } from "@/components/school/ShareYourFrame";
 import { getKit } from "@/config/kits";
 import { getStripe } from "@/lib/stripe";
@@ -141,7 +140,6 @@ export default async function ThanksPage({ searchParams }: ThanksPageProps) {
     ? {
         shortName: shareKit.shortName,
         url: `${shareUrl.replace(/\/$/, "")}/s/${shareKit.slug}`,
-        donationLabel: `$${Math.round(schoolOffer.schoolDonationCents / 100)}`,
       }
     : null;
 
@@ -255,7 +253,6 @@ export default async function ThanksPage({ searchParams }: ThanksPageProps) {
             <ShareYourFrame
               schoolShortName={schoolShare.shortName}
               schoolUrl={schoolShare.url}
-              donationLabel={schoolShare.donationLabel}
             />
           </div>
         ) : (

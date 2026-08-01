@@ -2,7 +2,6 @@ import Link from "next/link";
 import Image from "next/image";
 import { FindMySchool } from "@/components/school/FindMySchool";
 import { allSchoolKits } from "@/data/school-kits";
-import { schoolOffer } from "@/config/offers";
 
 const INK = "#1e1b17";
 
@@ -28,8 +27,8 @@ const SCHOOLS = allSchoolKits().map((k) => ({
   city: k.city,
 }));
 
-const DONATION = `$${Math.round(schoolOffer.schoolDonationCents / 100)}`;
-
+// NO PRICE, NO PER-FRAME FIGURE. Pricing is parked until it is owner-confirmed,
+// and a number here is a promise to a booster club that we cannot make yet.
 /** Real print artwork, straight from the badge library. */
 const BADGES = ["football", "band", "cheer", "robotics", "drama", "medal"] as const;
 
@@ -56,7 +55,7 @@ export function SchoolSpotlight() {
           <p className="m-0 mb-1 max-w-[440px] text-lg font-bold leading-[1.5] text-[#c9d0e2]">
             A frame in your school&apos;s colors with your student&apos;s last
             name in varsity chenille, and a badge for everything they actually
-            do. Every one sends {DONATION} back to the school.
+            do. Every one sends a set donation back to the school.
           </p>
 
           <FindMySchool schools={SCHOOLS} tone="dark" />
@@ -96,7 +95,7 @@ export function SchoolSpotlight() {
           </p>
           <ul className="m-0 mb-6 list-none space-y-3 p-0">
             {[
-              [`${DONATION} per frame`, "A set dollar amount, not a percentage of profit after costs."],
+              ["A set amount per frame", "A fixed dollar figure, not a percentage of profit after costs."],
               ["A live running total", "Your club gets its own page, plus the figure by email every month."],
               ["You approve the design", "Your colors and crest, used with your written permission."],
             ].map(([title, body]) => (

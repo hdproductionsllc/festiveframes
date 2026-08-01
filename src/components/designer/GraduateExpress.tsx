@@ -12,6 +12,13 @@ import "./graduate-express.css";
 // frame behind it, and Order. The builder is still right there for anyone who
 // wants more, and one link away rather than in the way.
 //
+// SENDS, does not CHARGE. Direct checkout is parked until pricing is
+// owner-confirmed — the published path is send-your-design and we follow up with
+// ordering details. The first cut of this card wired its button to handleBuy and
+// walked straight past the `{false && ...}` guard that parks the Buy button in
+// the header, which would have put an unconfirmed price one tap from the front
+// door of a school page.
+//
 // Graduation earns the primary slot over general spirit for reasons that are
 // commercial rather than aesthetic: it has a deadline, it is a gift, and it sells
 // several frames per student — parents, both sets of grandparents, and the
@@ -24,7 +31,7 @@ export function GraduateExpress({
   year,
   onYear,
   years,
-  onOrder,
+  onSend,
   onCustomize,
   busy,
   disabled,
@@ -36,10 +43,10 @@ export function GraduateExpress({
   year: string;
   onYear: (v: string) => void;
   years: number[];
-  onOrder: () => void;
+  onSend: () => void;
   onCustomize: () => void;
   busy: boolean;
-  /** Order stays disabled until there is something worth printing. */
+  /** Stays disabled until there is something worth sending. */
   disabled: boolean;
 }) {
   return (
@@ -78,11 +85,15 @@ export function GraduateExpress({
       <button
         type="button"
         className="msf-express-order"
-        onClick={onOrder}
+        onClick={onSend}
         disabled={busy || disabled}
       >
-        {busy ? "Starting checkout…" : "Order this frame"}
+        {busy ? "Sending…" : "Send this design"}
       </button>
+      <p className="msf-express-note">
+        Nothing prints until you approve it. We&apos;ll follow up with ordering
+        details.
+      </p>
 
       <button type="button" className="msf-express-more" onClick={onCustomize}>
         Or customize it — badges, colours, their sport

@@ -908,7 +908,7 @@ export function SchoolDesigner({
                   year={kidYear}
                   onYear={setKidYear}
                   years={gradYears}
-                  onOrder={handleBuy}
+                  onSend={handleSubmit}
                   onCustomize={leaveExpress}
                   busy={buying || submitting || exporting}
                   disabled={!kidName.trim()}

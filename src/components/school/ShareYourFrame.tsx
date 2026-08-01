@@ -21,17 +21,18 @@ import "./share-your-frame.css";
 export function ShareYourFrame({
   schoolShortName,
   schoolUrl,
-  donationLabel,
 }: {
   schoolShortName: string;
   schoolUrl: string;
-  donationLabel: string;
 }) {
   const [state, setState] = useState<"idle" | "copied" | "shared">("idle");
 
+  // NO FIGURE. Pricing is parked until it is owner-confirmed, and this message is
+  // forwarded into a group chat where a wrong number would be repeated by people
+  // we cannot correct.
   const message =
     `I just made a ${schoolShortName} license plate frame with our kid's name on it. ` +
-    `Every one sends ${donationLabel} back to the school. Yours takes about a minute:`;
+    `Every one sends a donation back to the school. Yours takes about a minute:`;
 
   async function share() {
     // Web Share on a phone puts the school's link straight into the group chat
@@ -59,8 +60,8 @@ export function ShareYourFrame({
     <div className="msf-share">
       <h2 className="msf-share-title">Tell the other {schoolShortName} parents</h2>
       <p className="msf-share-body">
-        Every frame sends {donationLabel} to the school. The fastest way to make
-        that add up is the group chat you are already in.
+        Every frame sends a donation to the school. The fastest way to make that
+        add up is the group chat you are already in.
       </p>
       <button type="button" className="msf-share-btn" onClick={share}>
         {state === "copied"

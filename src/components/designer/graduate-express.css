@@ -133,3 +133,11 @@
 .msf-express-more:hover {
   color: #1b2a4a;
 }
+
+.msf-express-note {
+  margin: 8px 0 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: #5d6374;
+  text-align: center;
+}
