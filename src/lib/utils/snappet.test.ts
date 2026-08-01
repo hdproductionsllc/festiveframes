@@ -1055,9 +1055,21 @@ describe("minSpanFor — the floor belongs to the BUILDER, not the piece", () =>
     expect(minSpanFor(plain, MIN_ART_SPAN)).toEqual({ cols: 2, rows: 2 });
   });
 
-  it("takes the LARGER of the piece's own floor and the builder's", () => {
-    expect(minSpanFor(art, { cols: 3, rows: 1 })).toEqual({ cols: 3, rows: 2 });
+  it("applies the builder's floor to the LONG axis, keeping the art's shape", () => {
+    // This used to be a per-axis max, which read as "take the larger of the two"
+    // and asserted {3,1} over a 2x2 piece gives {3,2}. That is what deleted every
+    // portrait tile: per-axis max against the SQUARE {2,2} floor turns a {1,2}
+    // badge into {2,2}, so nothing could ever seat at the footprint it declared.
+    // The floor now sets the minimum long axis and the piece keeps its own aspect.
+    expect(minSpanFor(art, { cols: 3, rows: 1 })).toEqual({ cols: 3, rows: 3 });
     expect(minSpanFor(art, { cols: 1, rows: 1 })).toEqual(MIN_ART_SPAN);
+  });
+
+  it("leaves a non-square badge non-square", () => {
+    const tall = { defaultSpan: { cols: 1, rows: 2 }, spanRequired: undefined };
+    const wide = { defaultSpan: { cols: 2, rows: 1 }, spanRequired: undefined };
+    expect(minSpanFor(tall, MIN_ART_SPAN)).toEqual({ cols: 1, rows: 2 });
+    expect(minSpanFor(wide, MIN_ART_SPAN)).toEqual({ cols: 2, rows: 1 });
   });
 
   it("never pushes a spanRequired calibration tile around", () => {

@@ -443,10 +443,28 @@ export function minSpanFor(
   // A calibration tile's footprint is exact — its whole purpose is one specific
   // non-square size, so no floor may push it around.
   if (piece?.spanRequired) return { cols: 1, rows: 1 };
-  const own = piece?.defaultSpan ? MIN_ART_SPAN : { cols: 1, rows: 1 };
+  if (!piece?.defaultSpan) return floor;
+
+  // APPLY THE FLOOR TO THE LONG AXIS, KEEPING THE ART'S SHAPE.
+  //
+  // This used to be a per-axis `Math.max` against a square MIN_ART_SPAN, and that
+  // is what silently deleted every portrait tile: max({cols:1,rows:2}, {2,2}) is
+  // {2,2}, so a piece declared 1x2 was floored back to a square and `spanLadder`
+  // then had nothing between the two to offer. Nine pieces carried a TALL span and
+  // not one of them could ever seat at it.
+  //
+  // The readability rule the square floor was protecting does not actually require
+  // a square. Both renderers fit art with `contain`, which scales to the LONG axis —
+  // so a 1:2 badge in a 2x2 tile is drawn at exactly the same size it is drawn at in
+  // a 1x2 tile. The extra column is empty field, not extra artwork. Squaring a
+  // non-square badge therefore buys no legibility at all and costs a whole column of
+  // a frame that only has fourteen.
+  const own = piece.defaultSpan;
+  const longFloor = Math.max(floor.cols, floor.rows);
+  const k = Math.max(1, longFloor / Math.max(own.cols, own.rows));
   return {
-    cols: Math.max(own.cols, floor.cols),
-    rows: Math.max(own.rows, floor.rows),
+    cols: Math.max(1, Math.round(own.cols * k)),
+    rows: Math.max(1, Math.round(own.rows * k)),
   };
 }
 

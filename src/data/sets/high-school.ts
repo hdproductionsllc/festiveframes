@@ -46,20 +46,23 @@ const WHITE = TILE_BG.white;
 const NAVY = TILE_BG.navy;
 
 /**
- * Preferred footprint for this collection. Every piece is square (2000x2000
- * sources), and at a single 0.991" cell the art — especially the lockups with
- * text — is too small to read, so a 2x2 is the size these are meant to be seen at.
+ * FOOTPRINT FOLLOWS THE ART'S OWN SHAPE, and it is derived from the file rather
+ * than chosen by eye — `high-school.spans.test.ts` re-measures every PNG and fails
+ * if a declaration drifts from it.
  *
- * This is a PREFERENCE, not a requirement: a palette drag resolves through
- * `spanLadder`, so dropping one where 2x2 cannot seat (the one-row top/bottom
- * banners) seats the largest that does — 2x1 there — instead of refusing. Because
- * they still read fine at 1x1, they stay in the Fill All / Random pool as well.
+ * The intake trims each badge to its own bounds and deliberately does not pad it
+ * back out to a square, so the shipped aspects run from 0.50 (a trumpet lying flat)
+ * to 3.07 (an upright torch). Declaring all of them square — which is what the
+ * enamel rebuild did — puts a 3:1 torch in a 2x2 tile where `contain` fits it to the
+ * height and leaves two thirds of the tile empty navy. That is the same defect that
+ * made the racquetball look undersized, in a different disguise.
+ *
+ * The buckets are deliberately wide. Only art that is decisively one shape gets a
+ * non-square footprint; anything within about 3:2 stays square, because a footprint
+ * that tracks every small variation makes the palette look ragged.
  */
-/** Portrait pieces — a torch, a bat, a rolled diploma — are drawn 1:2. The renderer
- *  fits art with `objectFit: contain`, so a square footprint would letterbox them
- *  and waste half the tile. */
-const TALL: TileSpan = { cols: 1, rows: 2 };
-
+const TALL: TileSpan = { cols: 1, rows: 2 };   // h/w >= 1.45
+const WIDE: TileSpan = { cols: 2, rows: 1 };   // h/w <= 0.69
 const PREFERRED: TileSpan = { cols: 2, rows: 2 };
 
 export const highSchoolSet: TileSet = {
@@ -155,7 +158,7 @@ export const highSchoolSet: TileSet = {
       artworkUrl: `${A}/track.png`,
       emoji: "🏃",
       backgroundColor: NAVY,
-      defaultSpan: PREFERRED,
+      defaultSpan: WIDE,
     },
     {
       id: `${H}:cross-country`,
@@ -182,7 +185,7 @@ export const highSchoolSet: TileSet = {
       artworkUrl: `${A}/golf.png`,
       emoji: "⛳",
       backgroundColor: NAVY,
-      defaultSpan: PREFERRED,
+      defaultSpan: TALL,
     },
     {
       id: `${H}:swim-dive`,
@@ -209,7 +212,7 @@ export const highSchoolSet: TileSet = {
       artworkUrl: `${A}/racquetball.png`,
       emoji: "🎾",
       backgroundColor: NAVY,
-      defaultSpan: PREFERRED,
+      defaultSpan: TALL,
     },
     {
       id: `${H}:rugby`,
@@ -218,7 +221,7 @@ export const highSchoolSet: TileSet = {
       artworkUrl: `${A}/rugby.png`,
       emoji: "🏉",
       backgroundColor: NAVY,
-      defaultSpan: PREFERRED,
+      defaultSpan: TALL,
     },
     {
       id: `${H}:lacrosse`,
@@ -281,7 +284,7 @@ export const highSchoolSet: TileSet = {
       artworkUrl: `${A}/cheer.png`,
       emoji: "📣",
       backgroundColor: NAVY,
-      defaultSpan: PREFERRED,
+      defaultSpan: WIDE,
     },
     {
       id: `${H}:dance`,
@@ -290,7 +293,7 @@ export const highSchoolSet: TileSet = {
       artworkUrl: `${A}/dance.png`,
       emoji: "🩰",
       backgroundColor: NAVY,
-      defaultSpan: PREFERRED,
+      defaultSpan: TALL,
     },
     {
       id: `${H}:esports`,
@@ -310,7 +313,7 @@ export const highSchoolSet: TileSet = {
       artworkUrl: `${A}/band.png`,
       emoji: "🎺",
       backgroundColor: NAVY,
-      defaultSpan: PREFERRED,
+      defaultSpan: WIDE,
     },
     {
       id: `${H}:marching-band`,
@@ -420,7 +423,7 @@ export const highSchoolSet: TileSet = {
       artworkUrl: `${A}/chess.png`,
       emoji: "♞",
       backgroundColor: NAVY,
-      defaultSpan: PREFERRED,
+      defaultSpan: TALL,
     },
     {
       id: `${H}:debate`,
@@ -429,7 +432,7 @@ export const highSchoolSet: TileSet = {
       artworkUrl: `${A}/debate.png`,
       emoji: "🎙️",
       backgroundColor: NAVY,
-      defaultSpan: PREFERRED,
+      defaultSpan: TALL,
     },
     {
       id: `${H}:quiz-bowl`,
@@ -458,7 +461,7 @@ export const highSchoolSet: TileSet = {
       artworkUrl: `${A}/service.png`,
       emoji: "🤝",
       backgroundColor: NAVY,
-      defaultSpan: PREFERRED,
+      defaultSpan: WIDE,
     },
     {
       id: `${H}:rotc`,
@@ -496,7 +499,7 @@ export const highSchoolSet: TileSet = {
       artworkUrl: `${A}/medal.png`,
       emoji: "🥇",
       backgroundColor: NAVY,
-      defaultSpan: PREFERRED,
+      defaultSpan: TALL,
     },
     {
       id: `${H}:star`,
@@ -523,7 +526,7 @@ export const highSchoolSet: TileSet = {
       artworkUrl: `${A}/diploma.png`,
       emoji: "📜",
       backgroundColor: NAVY,
-      defaultSpan: PREFERRED,
+      defaultSpan: WIDE,
     },
     {
       id: `${H}:torch`,
@@ -532,7 +535,7 @@ export const highSchoolSet: TileSet = {
       artworkUrl: `${A}/torch.png`,
       emoji: "🔥",
       backgroundColor: NAVY,
-      defaultSpan: PREFERRED,
+      defaultSpan: TALL,
     },
   ],
   // No starter layouts yet — the collection is a palette of activities that each

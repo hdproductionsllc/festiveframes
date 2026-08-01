@@ -29,8 +29,32 @@ import { loadImage, createCanvas } from "@napi-rs/canvas";
 import { readdirSync, mkdirSync, existsSync } from "node:fs";
 import path from "node:path";
 
-const NEAR = 62;    // <= this distance from the backdrop: fully background
-const FAR = 132;    // >= this: fully art. Between: proportional feather.
+// KEY ON MAGENTA-NESS, min(r,b) - g, not RGB distance from the backdrop.
+//
+// This replaces a 62..132 RGB-distance feather that was quietly wrecking the set.
+// Polished gold is a MIRROR: it reflects the magenta sweep, and a gold pixel
+// carrying that reflection sits about 108 from the backdrop in RGB distance —
+// inside the feather band — so the metal linework came out PARTLY TRANSPARENT and
+// the navy field showed through it. Measured on the shipped library, the share of
+// inked pixels at partial alpha ran 58% on honor-star and 19.5% on volleyball
+// against 0.3-1.5% for a clean edge, and the gold read as tarnished grey.
+//
+// Magenta-ness separates them properly:
+//
+//   a clean backdrop  (252,3,249)   -> 246
+//   gold + reflection (230,90,200)  -> 110
+//   pure gold         (190,150,110) -> -40
+//   white / navy                    -> 0 / -30
+//
+// The thresholds are taken from the SAMPLED backdrop rather than hardcoded, because
+// the generator does not always return the same magenta and a fixed cut leaves a
+// dim one unkeyed.
+const KEY_IN = 0.83;  // x backdrop magenta-ness: at or above, fully background.
+const KEY_OUT = 0.62; // x backdrop: at or below, fully art. Between: feather.
+// A backdrop dimmer than this cannot be separated from gold at all — gold's own
+// reflection reaches ~110, so a backdrop at 68-93 is LESS magenta than the metal it
+// has to be told apart from. No threshold fixes that; the source has to be redone.
+const UNKEYABLE = 140;
 const ERODE = 3;    // px of matte shaved off the silhouette — see below.
 const TARGET = 1000; // long side. The 2x2 print floor is 595px; this keeps 1.7x.
 const TILE_INCHES = 0.991;
@@ -62,13 +86,25 @@ for (const file of readdirSync(src).filter((f) => /\.(webp|png|jpe?g)$/i.test(f)
     }
   const BR = sr / n, BG = sg / n, BB = sb / n;
 
+  // How magenta the backdrop actually is. Everything scales off this.
+  const B_MAG = Math.min(BR, BB) - BG;
+  if (B_MAG < UNKEYABLE) {
+    console.log(
+      `SKIP ${file.padEnd(18)} backdrop ${[BR, BG, BB].map(Math.round).join(",")} ` +
+      `is only ${Math.round(B_MAG)} magenta — gold reflects the sweep to ~110, so this ` +
+      `cannot be keyed. Regenerate on a flat field.`
+    );
+    continue;
+  }
+  const inAt = B_MAG * KEY_IN, outAt = B_MAG * KEY_OUT;
+
   for (let p = 0; p < W * H; p++) {
     const i = p * 4;
-    const dd = Math.hypot(d[i] - BR, d[i + 1] - BG, d[i + 2] - BB);
-    if (dd <= NEAR) { d[i + 3] = 0; continue; }
+    const mag = Math.min(d[i], d[i + 2]) - d[i + 1];
+    if (mag >= inAt) { d[i + 3] = 0; continue; }
     // Feather rather than hard-cut: a binary cut leaves a 1px ring of
     // backdrop-coloured pixels that reads as a dirty outline on a contrasting field.
-    if (dd < FAR) d[i + 3] = Math.round(255 * ((dd - NEAR) / (FAR - NEAR)));
+    if (mag > outAt) d[i + 3] = Math.round(255 * ((inAt - mag) / (inAt - outAt)));
     // UNSPILL, hard clamp rather than the partial pull used first. A partial pull
     // does not remove magenta, it CONVERTS it: r and b come down unevenly and the
     // result lands on red, which measured 14-21% of opaque pixels as a dark red
@@ -99,6 +135,13 @@ for (const file of readdirSync(src).filter((f) => /\.(webp|png|jpe?g)$/i.test(f)
         if (!prev[p]) continue;
         const l = x > 0 ? prev[p - 1] : 0, rr = x < W - 1 ? prev[p + 1] : 0;
         const u = y > 0 ? prev[p - W] : 0, dn = y < H - 1 ? prev[p + W] : 0;
+        // SILHOUETTE ONLY. This was a plain min-filter over every pixel, which is
+        // fine while the interior is solid but catastrophic the moment anything
+        // inside the art is less than opaque: three passes spread that pixel's alpha
+        // three px in every direction, turning a thin translucent line into a wide
+        // band. Paired with the old RGB-distance key it is what widened the
+        // half-transparent gold linework into the washed-out look on five badges.
+        if (Math.min(l, rr, u, dn) >= 250) continue;
         a[p] = Math.min(prev[p], l, rr, u, dn);
       }
     }
