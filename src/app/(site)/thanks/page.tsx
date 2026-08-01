@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import type Stripe from "stripe";
 
 import { copy } from "@/content/copy";
+import { getSchoolKit } from "@/data/school-kits";
+import { schoolOffer } from "@/config/offers";
+import { ShareYourFrame } from "@/components/school/ShareYourFrame";
 import { getKit } from "@/config/kits";
 import { getStripe } from "@/lib/stripe";
 import { EmailCaptureForm } from "@/components/site/home/EmailCaptureForm";
@@ -40,6 +43,8 @@ interface OrderView {
   /** Count of A-Z & 0-9 letter set add-ons purchased (0 when none). */
   alphabetQty: number;
   selection: "single" | "bundle" | null;
+  /** Slug of the school this frame raises money for, when it is a school order. */
+  school: string | null;
   /** Raw values for the analytics `purchase` event (primitives only). */
   analytics: {
     kitIds: string;
@@ -53,6 +58,10 @@ function buildOrderView(session: Stripe.Checkout.Session): OrderView {
   const selection =
     metadata.selection === "single" || metadata.selection === "bundle"
       ? metadata.selection
+      : null;
+  const school =
+    metadata.kind === "school-frame" && typeof metadata.school === "string" && metadata.school
+      ? metadata.school
       : null;
 
   // Kit names: prefer the trusted metadata ids mapped through the catalog;
@@ -92,7 +101,7 @@ function buildOrderView(session: Stripe.Checkout.Session): OrderView {
     quantity: quantity && Number.isFinite(quantity) ? quantity : 1,
   };
 
-  return { kitNames, quantityLabel, alphabetQty, selection, analytics };
+  return { kitNames, quantityLabel, alphabetQty, selection, school, analytics };
 }
 
 /** Safely retrieve and shape the order. Returns null on any failure. */
@@ -124,6 +133,17 @@ export default async function ThanksPage({ searchParams }: ThanksPageProps) {
 
   const order = sessionId ? await getOrderView(sessionId) : null;
   const shareUrl = process.env.SITE_URL || SITE_URL;
+
+  // Only when the kit is one we actually have a page for: sharing a link to a
+  // school whose page does not exist is worse than not asking.
+  const shareKit = order?.school ? getSchoolKit(order.school) : undefined;
+  const schoolShare = shareKit
+    ? {
+        shortName: shareKit.shortName,
+        url: `${shareUrl.replace(/\/$/, "")}/s/${shareKit.slug}`,
+        donationLabel: `$${Math.round(schoolOffer.schoolDonationCents / 100)}`,
+      }
+    : null;
 
   return (
     <section className="bg-[#faf0d6]">
@@ -226,18 +246,31 @@ export default async function ThanksPage({ searchParams }: ThanksPageProps) {
           </div>
         </div>
 
-        {/* Share prompt */}
-        <div className="mt-10">
-          <h2 className="s-display text-2xl font-bold tracking-[-0.5px] text-[#1e1b17]">
-            {copy.thanks.share.heading}
-          </h2>
-          <p className="mt-2 max-w-prose text-base font-medium text-[#3a352c]">
-            {copy.thanks.share.body}
-          </p>
-          <div className="mt-3">
-            <SharePrompt url={shareUrl} shareText={copy.thanks.share.shareText} />
+        {/* Share prompt. A SCHOOL order gets the school's own ask instead of the
+            house one: a fundraiser travels through the parent group chat, and
+            "this sends money to our booster club" is both a better reason to
+            forward it and the true one. */}
+        {schoolShare ? (
+          <div className="mt-10">
+            <ShareYourFrame
+              schoolShortName={schoolShare.shortName}
+              schoolUrl={schoolShare.url}
+              donationLabel={schoolShare.donationLabel}
+            />
           </div>
-        </div>
+        ) : (
+          <div className="mt-10">
+            <h2 className="s-display text-2xl font-bold tracking-[-0.5px] text-[#1e1b17]">
+              {copy.thanks.share.heading}
+            </h2>
+            <p className="mt-2 max-w-prose text-base font-medium text-[#3a352c]">
+              {copy.thanks.share.body}
+            </p>
+            <div className="mt-3">
+              <SharePrompt url={shareUrl} shareText={copy.thanks.share.shareText} />
+            </div>
+          </div>
+        )}
       </div>
     </section>
   );

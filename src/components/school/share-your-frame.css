@@ -1,0 +1,54 @@
+/* ── The share loop, on the confirmation page ────────────────────────────────
+   Lives with its component rather than in school-landing.css, because /thanks
+   does not load that stylesheet and these rules would silently never apply.
+   Colours are literal for the same reason: there is no `.msf` ancestor on that
+   page to resolve the landing page's custom properties against. */
+.msf-share {
+  border: 3px solid #1e1b17;
+  border-radius: 14px;
+  background: #fff9ec;
+  padding: 22px;
+  box-shadow: 4px 4px 0 #1e1b17;
+}
+.msf-share-title {
+  margin: 0 0 8px;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.4px;
+  color: #1e1b17;
+}
+.msf-share-body {
+  margin: 0 0 16px;
+  font-size: 16px;
+  line-height: 1.55;
+  color: #3a352c;
+  max-width: 46ch;
+}
+.msf-share-btn {
+  appearance: none;
+  border: 3px solid #1e1b17;
+  border-radius: 999px;
+  background: #ed5aa0;
+  color: #fff;
+  font: inherit;
+  font-weight: 800;
+  font-size: 16px;
+  padding: 13px 22px;
+  cursor: pointer;
+  box-shadow: 3px 3px 0 #1e1b17;
+  min-height: 44px;
+}
+.msf-share-btn:hover {
+  transform: translate(1px, 1px);
+  box-shadow: 2px 2px 0 #1e1b17;
+}
+.msf-share-btn:active {
+  transform: translate(3px, 3px);
+  box-shadow: 0 0 0 #1e1b17;
+}
+.msf-share-link {
+  margin: 12px 0 0;
+  font-size: 13px;
+  color: #6b6455;
+  word-break: break-all;
+}

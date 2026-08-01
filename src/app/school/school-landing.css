@@ -323,6 +323,21 @@
   letter-spacing: 0.03em;
 }
 
+/* The booster cards were written for the NAVY band and assume light-on-dark.
+   Dropped onto the paper band (the booster page's "How this number works") the
+   body copy came out pale grey on cream and was very nearly unreadable. Same
+   card, inverted for a light ground. */
+.msf-band-paper .msf-booster li,
+.msf-close .msf-booster li {
+  background: #fff;
+  border-color: rgba(27, 42, 74, 0.14);
+  color: var(--ink);
+}
+.msf-band-paper .msf-booster strong,
+.msf-close .msf-booster strong {
+  color: var(--navy);
+}
+
 /* ── Close ── */
 .msf-close {
   padding-bottom: 110px;
@@ -351,4 +366,167 @@
     width: 50px;
     height: 50px;
   }
+}
+
+/* ── The booster page: /s/<slug>/raised ──────────────────────────────────────
+   One number, big enough to read into minutes. A club treasurer is not looking
+   for a dashboard, they are looking for a figure they can repeat out loud. */
+.msf-raised .msf-brand {
+  margin-bottom: 8px;
+}
+.msf-raised h1 {
+  font-family: var(--font-display-marketing), Georgia, serif;
+  font-size: clamp(28px, 5vw, 44px);
+  color: #fff;
+  margin: 0 0 4px;
+}
+.msf-raised-figure {
+  font-family: var(--font-display-marketing), Georgia, serif;
+  font-size: clamp(56px, 14vw, 132px);
+  line-height: 1;
+  margin: 28px 0 10px;
+  color: var(--brass-bright);
+  /* Reads as struck brass rather than yellow text, matching the frame's rim. */
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.35);
+  letter-spacing: -0.01em;
+}
+.msf-raised-sub {
+  color: #c9d0e2;
+  font-size: 17px;
+  margin: 0;
+}
+.msf-raised-empty {
+  max-width: 620px;
+  margin: 26px auto 0;
+}
+.msf-raised-grid {
+  list-style: none;
+  padding: 0;
+  margin: 40px auto 0;
+  max-width: 760px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 14px;
+}
+.msf-raised-grid li {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(248, 197, 59, 0.3);
+  border-radius: 12px;
+  padding: 18px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.msf-raised-n {
+  font-family: var(--font-display-marketing), Georgia, serif;
+  font-size: 26px;
+  color: #fff;
+  line-height: 1.15;
+}
+.msf-raised-l {
+  font-size: 13.5px;
+  color: #c9d0e2;
+  line-height: 1.4;
+}
+
+/* ── Find my school ─────────────────────────────────────────────────────────
+   Sits in the hero above the CTAs because it is the only thing on the page a
+   parent arriving from a group chat can act on immediately: they know their
+   school's name and nothing else about us. */
+.msf-find {
+  max-width: 520px;
+  margin: 30px auto 26px;
+  text-align: left;
+}
+.msf-find-label {
+  display: block;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--dim);
+  margin-bottom: 8px;
+  font-weight: 700;
+}
+/* The hero is navy, and --dim is a mid grey chosen for the paper bands: the
+   label and helper text were charcoal-on-navy and close to unreadable. */
+.msf-hero .msf-find-label,
+.msf-band-navy .msf-find-label {
+  color: var(--brass-bright);
+}
+.msf-hero .msf-find-help,
+.msf-band-navy .msf-find-help {
+  color: #c9d0e2;
+}
+.msf-hero .msf-find-miss,
+.msf-band-navy .msf-find-miss {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(248, 197, 59, 0.35);
+  color: #eef1f7;
+}
+.msf-find-input {
+  width: 100%;
+  box-sizing: border-box;
+  /* 16px minimum: anything smaller makes iOS Safari zoom the page on focus,
+     which on a phone reads as the site breaking. */
+  font-size: 17px;
+  padding: 15px 16px;
+  border-radius: 12px;
+  border: 2px solid rgba(27, 42, 74, 0.18);
+  background: #fff;
+  color: var(--ink);
+  font-family: inherit;
+}
+.msf-find-input:focus {
+  outline: none;
+  border-color: var(--brass);
+  box-shadow: 0 0 0 4px rgba(185, 138, 47, 0.16);
+}
+.msf-find-list {
+  list-style: none;
+  padding: 0;
+  margin: 10px 0 0;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(27, 42, 74, 0.14);
+  background: #fff;
+}
+.msf-find-list li + li {
+  border-top: 1px solid rgba(27, 42, 74, 0.1);
+}
+.msf-find-list a {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 14px 16px;
+  text-decoration: none;
+  color: var(--ink);
+  /* A comfortable tap target: this is a phone-first interaction. */
+  min-height: 44px;
+}
+.msf-find-list a:hover,
+.msf-find-list a:focus-visible {
+  background: var(--paper-2);
+}
+.msf-find-list strong {
+  font-size: 16px;
+}
+.msf-find-list span {
+  font-size: 13.5px;
+  color: var(--dim);
+}
+.msf-find-miss {
+  margin-top: 12px;
+  padding: 16px;
+  border-radius: 12px;
+  background: var(--paper-2);
+  border: 1px solid rgba(27, 42, 74, 0.12);
+}
+.msf-find-miss p {
+  margin: 0 0 12px;
+  font-size: 15px;
+}
+.msf-find-help {
+  margin: 10px 2px 0;
+  font-size: 13.5px;
+  color: var(--dim);
 }

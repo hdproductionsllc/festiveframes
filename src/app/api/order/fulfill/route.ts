@@ -14,6 +14,7 @@ import type Stripe from "stripe";
 
 import { getStripe } from "@/lib/stripe";
 import { fulfillOrder, fulfillCart } from "@/lib/order/fulfill";
+import { recordSchoolOrder } from "@/lib/order/school-ledger";
 import type { PartsList } from "@/lib/order/parts-list";
 import type { OrderArtifacts } from "@/lib/order/store";
 
@@ -76,6 +77,19 @@ export async function POST(request: Request): Promise<NextResponse> {
   // Single custom-frame order.
   if ((session.metadata?.orderId ?? null) !== body.orderId) {
     return NextResponse.json({ error: "Order mismatch" }, { status: 400 });
+  }
+
+  // The fundraiser ledger, recorded here as well as in the webhook. Both paths
+  // fulfill, so both must count, and `recordSchoolOrder` is idempotent by orderId
+  // — whichever arrives second is a no-op. Recording in only one place would make
+  // a school's total depend on which trigger happened to win the race.
+  const meta = session.metadata ?? {};
+  if (meta.kind === "school-frame" && meta.school) {
+    await recordSchoolOrder({
+      orderId: body.orderId!,
+      school: meta.school,
+      donationCents: Number(meta.donationCents ?? 0),
+    });
   }
 
   const payload =

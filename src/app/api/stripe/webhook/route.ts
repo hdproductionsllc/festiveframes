@@ -14,6 +14,7 @@ import type Stripe from "stripe";
 
 import { getStripe } from "@/lib/stripe";
 import { fulfillOrder, fulfillCart } from "@/lib/order/fulfill";
+import { recordSchoolOrder } from "@/lib/order/school-ledger";
 
 export const runtime = "nodejs";
 
@@ -79,6 +80,19 @@ export async function POST(request: Request): Promise<NextResponse> {
     if (session.payment_status === "unpaid") {
       console.warn(`[stripe-webhook] session ${session.id} completed but UNPAID; skipping fulfillment.`);
       return NextResponse.json({ received: true }, { status: 200 });
+    }
+
+    // ── The fundraiser ledger. Recorded BEFORE fulfillment and independently of
+    // it: what a school is owed is a fact about a PAID order, not about whether
+    // we managed to print it, and the two must never be able to disagree. The
+    // call is idempotent by orderId and swallows its own errors — a failed ledger
+    // write must not make Stripe retry an order that was already fulfilled.
+    if (metadata.kind === "school-frame" && metadata.orderId && metadata.school) {
+      await recordSchoolOrder({
+        orderId: metadata.orderId,
+        school: metadata.school,
+        donationCents: Number(metadata.donationCents ?? 0),
+      });
     }
 
     // ── Custom builder order: fulfill from the in-memory draft (backup to the

@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { FindMySchool } from "@/components/school/FindMySchool";
+import { allSchoolKits } from "@/data/school-kits";
 import Image from "next/image";
 import { Graduate } from "next/font/google";
 import "./school-landing.css";
@@ -72,15 +74,20 @@ const STRUCTURED_DATA = {
   ],
 };
 
-/** Real print artwork from the badge library — the product sells itself. */
+/** Real print artwork from the badge library — the product sells itself.
+ *  FILENAMES, not piece ids: the pieces kept their `hs:football-patch` ids so
+ *  saved designs would resolve, but the enamel rebuild renamed the FILES to
+ *  football.png and soccer.png. This list pointed at the old names and both
+ *  images had been 404ing on the live marketing page since that commit, which
+ *  `school-badges.test.ts` now makes impossible to repeat. */
 const BADGES = [
-  ["football-patch", "Football"],
+  ["football", "Football"],
   ["band", "Band"],
   ["robotics", "Robotics"],
   ["cheer", "Cheer"],
   ["drama", "Drama"],
   ["medal", "Achievements"],
-  ["soccer-patch", "Soccer"],
+  ["soccer", "Soccer"],
   ["science", "Science"],
 ] as const;
 
@@ -169,6 +176,17 @@ const ANSWERS = [
   },
 ];
 
+// Derived from the kits so adding a school needs no edit here. Demo kits are
+// included: a demo page is exactly what a parent from that school should land on,
+// and `noindex` on the kit page is what keeps it out of search.
+const FIND_SCHOOLS = allSchoolKits().map((k) => ({
+  slug: k.slug,
+  schoolName: k.schoolName,
+  shortName: k.shortName,
+  mascot: k.mascot,
+  city: k.city,
+}));
+
 export default function MySchoolFramePage() {
   return (
     <main className="msf">
@@ -207,6 +225,11 @@ export default function MySchoolFramePage() {
           Type your last name. Watch it come up in varsity chenille across the
           bottom banner — jersey-style, in your school&apos;s colors.
         </p>
+        {/* The first thing a parent arriving from a group chat can act on. They
+            know one fact — the name of their school — and everything the page
+            offered before this was a builder with no school in it. */}
+        <FindMySchool schools={FIND_SCHOOLS} />
+
         <div className="msf-ctas">
           <Link href="/lab/school" className="msf-btn msf-btn-primary">
             See Your Name On It
@@ -336,6 +359,12 @@ export default function MySchoolFramePage() {
             costs.</strong>{" "}
             Fixed money back on every single frame, so the club can count what a
             season earned it instead of waiting for a settlement.
+          </li>
+          <li>
+            <strong>You can see what you&apos;ve earned, any time.</strong> Your
+            club gets its own page with a live running total: frames ordered,
+            dollars raised, and the last 30 days. We email you the same figure
+            at the start of every month, with the payout for the period.
           </li>
           <li>
             <strong>Your school controls its brand.</strong> Your official
