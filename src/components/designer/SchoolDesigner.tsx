@@ -49,6 +49,7 @@ import {
 import { SCHOOL_DEFAULT_SECTIONS } from "@/lib/constants/defaults";
 import { migrateSchoolDesign } from "@/lib/utils/school-migration";
 import { schoolTopLine } from "@/lib/utils/school-banner";
+import { ACTIVITIES, ACTIVITY_GROUPS, hasJerseyNumber } from "@/data/activities";
 import { kitSections, type SchoolKit } from "@/data/school-kits";
 import type { BannerPreview } from "@/lib/types";
 import type { SnappetPreview } from "@/lib/utils/snappet";
@@ -1049,59 +1050,34 @@ export function SchoolDesigner({
                     ref={activityRef}
                     name="kid-activity"
                     value={kidActivity}
-                    onChange={(e) => setKidActivity(e.target.value)}
+                    onChange={(e) => {
+                      setKidActivity(e.target.value);
+                      // Football 12 then Swim & Dive would otherwise keep the 12
+                      // and print it, from a field no longer on screen.
+                      if (!hasJerseyNumber(e.target.value)) setKidNumber("");
+                    }}
                     className="h-9 rounded-lg border border-stone-300 bg-white px-2 text-[14px] text-stone-900"
                   >
                     <option value="">Pick one…</option>
-                    <option value="hs:football-patch">Football</option>
-                    <option value="hs:soccer-patch">Soccer</option>
-                    <option value="hs:basketball-patch">Basketball</option>
-                    <option value="hs:volleyball-patch">Volleyball</option>
-                    <option value="hs:baseball-patch">Baseball</option>
-                    <option value="hs:softball-patch">Softball</option>
-                    <option value="hs:track">Track</option>
-                    <option value="hs:cross-country">Cross Country</option>
-                    <option value="hs:tennis">Tennis</option>
-                    <option value="hs:golf">Golf</option>
-                    <option value="hs:swim-dive">Swim &amp; Dive</option>
-                    <option value="hs:water-polo">Water Polo</option>
-                    <option value="hs:racquetball">Racquetball</option>
-                    <option value="hs:rugby">Rugby</option>
-                    <option value="hs:lacrosse">Lacrosse</option>
-                    <option value="hs:ice-hockey">Ice Hockey</option>
-                    <option value="hs:field-hockey">Field Hockey</option>
-                    <option value="hs:wrestling">Wrestling</option>
-                    <option value="hs:gymnastics">Gymnastics</option>
-                    <option value="hs:bowling">Bowling</option>
-                    <option value="hs:cheer">Cheer</option>
-                    <option value="hs:dance">Dance</option>
-                    <option value="hs:esports">Esports</option>
-                    <option value="hs:band">Band</option>
-                    <option value="hs:marching-band">Marching Band</option>
-                    <option value="hs:orchestra">Orchestra</option>
-                    <option value="hs:choir">Choir</option>
-                    <option value="hs:drama">Drama</option>
-                    <option value="hs:art-club">Art Club</option>
-                    <option value="hs:photography">Photography</option>
-                    <option value="hs:yearbook">Yearbook</option>
-                    <option value="hs:journalism">Journalism</option>
-                    <option value="hs:science">Science</option>
-                    <option value="hs:robotics">Robotics</option>
-                    <option value="hs:robotic-arm">Engineering</option>
-                    <option value="hs:chess">Chess</option>
-                    <option value="hs:debate">Debate</option>
-                    <option value="hs:quiz-bowl">Quiz Bowl</option>
-                    <option value="hs:gavel">Student Government</option>
-                    <option value="hs:service">Service</option>
-                    <option value="hs:rotc">ROTC</option>
-                    <option value="hs:honor-star">Honor Roll</option>
+                    {/* Grouped rather than one flat run of forty. A native
+                        select on a phone shows the group headers, which is the
+                        difference between scanning and scrolling. */}
+                    {ACTIVITY_GROUPS.map((group) => (
+                      <optgroup key={group} label={group}>
+                        {ACTIVITIES.filter((a) => a.group === group).map((a) => (
+                          <option key={a.id} value={a.id}>
+                            {a.label}
+                          </option>
+                        ))}
+                      </optgroup>
+                    ))}
                   </select>
                 </label>
-                {/* JERSEY NUMBER. Optional, and only offered once a sport is
-                    chosen — a number means nothing next to "Robotics", and an
-                    always-visible field asks every parent a question that
-                    applies to a minority of them. */}
-                {kidActivity && (
+                {/* JERSEY NUMBER. Only for the sports that actually wear one.
+                    It used to appear for any activity at all, which asked the
+                    parent of a swimmer, a wrestler or a cellist a question with
+                    no answer. See data/activities.ts for the call on each. */}
+                {hasJerseyNumber(kidActivity) && (
                   <label className="flex flex-col gap-1 text-[12px] font-medium text-stone-700 basis-20">
                     Jersey #
                     <input

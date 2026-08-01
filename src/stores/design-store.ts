@@ -57,6 +57,7 @@ import {
   type UploadedArt,
 } from "@/lib/utils/uploads";
 import { repairSections, sectionSupportsText, sectionSupportsTiles } from "@/lib/utils/sections";
+import { repairDanglingTopLine } from "@/lib/utils/school-banner";
 import { MAX_HISTORY_DEPTH } from "@/lib/constants/frame";
 
 /** The frame body's colour before any school branding is applied — the matte black
@@ -1777,6 +1778,10 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
         }
         if (merged.sections) {
           merged.sections = repairSections(merged.sections);
+          // "HOME OF THE" over a student's surname — see school-banner.ts. Every
+          // design saved before the intake was fixed still reads that way, and
+          // hydrate is the only place they can be reached.
+          merged.sections = repairDanglingTopLine(merged.sections, initialSections);
           // Refresh the SEEDED banner fonts. A section's font is persisted, so a
           // new default would otherwise only ever reach brand-new users. Only the
           // exact previously-seeded value is replaced — a deliberate pick from the

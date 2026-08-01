@@ -42,6 +42,16 @@ export const SEEDED_TOP_FRAGMENTS: readonly string[] = [
   "GO",
 ];
 
+/**
+ * Lines that belong to the STUDENT and can never stand in for the school.
+ *
+ * The kitless builder seeds its tagline as "CLASS OF 2027" — a placeholder that
+ * shows off the two-tier banner, not a school name — so a naive "promote the
+ * tagline" would have put the class year in the top strip and left the frame
+ * saying CLASS OF 2027 over OKAFOR over CLASS OF 2027.
+ */
+const STUDENT_LINE = /^CLASS OF\b|\b(18|19|20)\d{2}\b/;
+
 /** Banner text comparison: case, padding and inner runs of space do not count. */
 export function normalizeLine(text: string | null | undefined): string {
   return (text ?? "").trim().replace(/\s+/g, " ").toUpperCase();
@@ -89,8 +99,55 @@ export function schoolTopLine({
     // an earlier visit.
     if (line === person) continue;
     if (SEEDED_TOP_FRAGMENTS.includes(line)) continue;
+    if (STUDENT_LINE.test(line)) continue;
     if (line === top) continue;
     return line;
   }
   return null;
+}
+
+/**
+ * The same repair, for a design that is ALREADY SAVED reading "HOME OF THE
+ * OKAFOR".
+ *
+ * Fixing the intake only fixes the next frame somebody makes. Every design saved
+ * before it — which is every design anyone has made so far, including the one in
+ * the owner's own browser — hydrates straight back into the broken state, because
+ * nothing rewrites the banners on load.
+ *
+ * In MERGE and not `migrate`: migrate only runs when the stored version is behind,
+ * and these blobs are at the current version, so migrate would never see the one
+ * case the repair exists for. Returns the SAME object whenever there is nothing to
+ * do, so an ordinary hydrate does not churn renders.
+ *
+ * The test for "this design has been personalized" is that its bottom headline is
+ * no longer the one the builder seeded. An untouched HOME OF THE / JR. BILLS frame
+ * is a complete sentence and is left exactly as it is.
+ */
+type BannerSections = Record<string, { mode?: string; text?: { text?: string; tagline?: string } } | undefined>;
+
+export function repairDanglingTopLine<T extends BannerSections>(
+  sections: T,
+  seeded: BannerSections | undefined,
+): T {
+  const top = sections?.top?.text;
+  const bottom = sections?.bottom?.text;
+  const seededBottom = seeded?.bottom?.text;
+  if (!top?.text || !bottom?.text || !seededBottom?.text) return sections;
+  if (!SEEDED_TOP_FRAGMENTS.includes(normalizeLine(top.text))) return sections;
+  // Still the mascot the builder put there: the sentence is intact, leave it.
+  if (normalizeLine(bottom.text) === normalizeLine(seededBottom.text)) return sections;
+
+  const promoted = schoolTopLine({
+    // The identity as it was SEEDED — the persisted tagline has since become the
+    // class year, so the school's own name only survives here.
+    kit: { banners: { tagline: seededBottom.tagline, bottom: seededBottom.text } },
+    currentTop: top.text,
+    personName: bottom.text,
+  });
+  if (!promoted) return sections;
+  return {
+    ...sections,
+    top: { ...sections.top, mode: "text", text: { ...top, text: promoted } },
+  };
 }

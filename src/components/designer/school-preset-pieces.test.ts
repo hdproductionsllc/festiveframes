@@ -14,12 +14,19 @@ import { getPiece } from "@/data/sets";
  *
  * Reads the source rather than importing it: SchoolDesigner is a large client
  * component with CSS and store imports that a node test cannot evaluate.
+ *
+ * The activity list lives in its own module now (it grew facts about each entry,
+ * such as whether the sport wears a number), so both files are scanned — a guard
+ * that only watched the component would have gone quiet the moment the ids moved.
  */
 
-const SRC = path.join(process.cwd(), "src/components/designer/SchoolDesigner.tsx");
+const SOURCES = [
+  "src/components/designer/SchoolDesigner.tsx",
+  "src/data/activities.ts",
+].map((p) => path.join(process.cwd(), p));
 
 function pieceIds(): string[] {
-  const src = readFileSync(SRC, "utf8");
+  const src = SOURCES.map((p) => readFileSync(p, "utf8")).join("\n");
   return [...new Set([...src.matchAll(/"(hs:[a-z0-9-]+)"/g)].map((m) => m[1]))];
 }
 
