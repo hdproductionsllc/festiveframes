@@ -13,6 +13,7 @@
 // instance + its own persist key), so nothing it does can reach /build's design.
 
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { FirstRunTour } from "./FirstRunTour";
 import {
   useDesignStore,
   useDesignStoreApi,
@@ -143,7 +144,9 @@ export function SchoolDesigner({
   // intake writes is ordinary, fully editable state.
   // First-visit tour: three beats, dismissible, remembered. Starts false on
   // both server and client, then flips on after mount if not yet dismissed —
-  // hydration-safe by construction.
+  // hydration-safe by construction. Rendered as a FIXED first-run sheet (see
+  // FirstRunTour), not an inline band: as a band it cost three lines at the top
+  // of a phone screen, on the one view where vertical space is the whole budget.
   const [tourOpen, setTourOpen] = useState(false);
   useEffect(() => {
     try {
@@ -172,8 +175,8 @@ export function SchoolDesigner({
       const layout: Array<[string, string]> = [
         ["frame:wing-left-0", corners],
         ["frame:top-11", corners],
-        ["frame:wing-left-2", "hs:laurel"],
-        ["frame:right-1", "hs:laurel"],
+        ["frame:wing-left-2", "hs:honor-star"],
+        ["frame:right-1", "hs:honor-star"],
         ["frame:wing-left-4", "hs:trophy"],
         ["frame:right-3", "hs:trophy"],
         ["frame:wing-left-6", corners],
@@ -380,8 +383,8 @@ export function SchoolDesigner({
       const layout: Array<[string, string]> = [
         ["frame:wing-left-0", kidActivity],
         ["frame:top-11", kidActivity],
-        ["frame:wing-left-2", "hs:laurel"],
-        ["frame:right-1", "hs:laurel"],
+        ["frame:wing-left-2", "hs:honor-star"],
+        ["frame:right-1", "hs:honor-star"],
         ["frame:wing-left-4", "hs:trophy"],
         ["frame:right-3", "hs:trophy"],
         ["frame:wing-left-6", kidActivity],
@@ -892,17 +895,7 @@ export function SchoolDesigner({
                   See it on the frame
                 </button>
               </div>
-              {tourOpen && (
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 rounded-xl border border-amber-300 bg-amber-50 px-3.5 py-2.5 text-[13px] text-stone-800">
-                  <span className="font-semibold">Quick tour:</span>
-                  <span>1️⃣ Type their name. It lands on the banner.</span>
-                  <span>2️⃣ Tap a badge, then tap the frame. Or just drag it on.</span>
-                  <span>3️⃣ Love it? Send it. Nothing prints until you say so.</span>
-                  <button type="button" onClick={dismissTour} className="ff-chip ml-auto shrink-0">
-                    Got it
-                  </button>
-                </div>
-              )}
+              <FirstRunTour open={tourOpen} onClose={dismissTour} />
               {/* THE STAGE. The one zone on the page darker than its neighbours
                   (1.19:1 below the canvas, 1.28:1 below the cards) — everything else
                   is white or near-white, so the eye goes to the single tonal break

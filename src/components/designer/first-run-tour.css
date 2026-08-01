@@ -1,0 +1,127 @@
+/* ── First-run tour ─────────────────────────────────────────────────────────
+   Everything here is `fixed`, deliberately. The tour this replaced was an inline
+   band in the builder column, which cost three lines of vertical space at the
+   top of a phone screen — on the one view where vertical space is the whole
+   budget. Fixed positioning means the layout underneath is identical whether the
+   tour is showing or not, so the frame never moves when it is dismissed. */
+
+.msf-tour-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  background: rgba(12, 18, 32, 0.55);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0;
+  animation: msf-tour-fade 160ms ease-out;
+}
+
+.msf-tour {
+  width: 100%;
+  max-width: 520px;
+  background: #fff;
+  color: #22273a;
+  border-radius: 18px 18px 0 0;
+  padding: 22px 20px calc(20px + env(safe-area-inset-bottom, 0px));
+  box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.28);
+  animation: msf-tour-rise 200ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.msf-tour-title {
+  margin: 0 0 4px;
+  font-size: 21px;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+}
+
+.msf-tour-lede {
+  margin: 0 0 16px;
+  font-size: 15.5px;
+  line-height: 1.5;
+  color: #5d6374;
+}
+
+.msf-tour-steps {
+  list-style: none;
+  margin: 0 0 20px;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.msf-tour-steps li {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  font-size: 15.5px;
+  line-height: 1.45;
+}
+
+.msf-tour-n {
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: #1b2a4a;
+  color: #f8c53b;
+  font-size: 13px;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 1px;
+}
+
+.msf-tour-btn {
+  appearance: none;
+  width: 100%;
+  min-height: 48px;
+  border: none;
+  border-radius: 12px;
+  background: #1b2a4a;
+  color: #fff;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.msf-tour-btn:hover {
+  background: #24365e;
+}
+.msf-tour-btn:focus-visible {
+  outline: 3px solid #f8c53b;
+  outline-offset: 2px;
+}
+
+/* Desktop: a centred card rather than a sheet. Same markup. */
+@media (min-width: 640px) {
+  .msf-tour-scrim {
+    align-items: center;
+    padding: 24px;
+  }
+  .msf-tour {
+    border-radius: 18px;
+    padding: 26px 26px 24px;
+    box-shadow: 0 18px 60px rgba(0, 0, 0, 0.35);
+  }
+}
+
+@keyframes msf-tour-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes msf-tour-rise {
+  from { transform: translateY(14px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* Respect a reduced-motion preference: the sheet still appears, it just does
+   not slide. */
+@media (prefers-reduced-motion: reduce) {
+  .msf-tour-scrim,
+  .msf-tour {
+    animation: none;
+  }
+}
