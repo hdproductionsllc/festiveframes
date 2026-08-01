@@ -595,6 +595,33 @@ export const highSchoolSet: TileSet = {
 
     // ── Honours ──
     {
+      id: `${H}:grad-cap`,
+      setId: H,
+      name: "Graduation Cap",
+      artworkUrl: `${A}/grad-cap.png`,
+      emoji: "🎓",
+      backgroundColor: NAVY,
+      defaultSpan: WIDE,
+    },
+    {
+      id: `${H}:diploma-cap`,
+      setId: H,
+      name: "Cap & Diploma",
+      artworkUrl: `${A}/diploma-cap.png`,
+      emoji: "🎓",
+      backgroundColor: NAVY,
+      defaultSpan: PREFERRED,
+    },
+    {
+      id: `${H}:grad-tassel`,
+      setId: H,
+      name: "Tassel",
+      artworkUrl: `${A}/grad-tassel.png`,
+      emoji: "🎓",
+      backgroundColor: NAVY,
+      defaultSpan: TALL,
+    },
+    {
       id: `${H}:honor-star`,
       setId: H,
       name: "Honor Roll",

@@ -15,6 +15,7 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { FirstRunTour } from "./FirstRunTour";
 import { BUYERS, DEFAULT_BUYER, getBuyer, yearsFor, type BuyerId } from "@/data/frame-buyers";
+import { presetsFor, presetTiles, type SchoolPreset } from "@/data/school-presets";
 import {
   useDesignStore,
   useDesignStoreApi,
@@ -179,6 +180,7 @@ export function SchoolDesigner({
     try { localStorage.setItem("msf-buyer", id); } catch {}
   };
 
+  const [activePreset, setActivePreset] = useState<string | null>(null);
   const [kidName, setKidName] = useState("");
   const [kidActivity, setKidActivity] = useState("");
   const [kidYear, setKidYear] = useState("");
@@ -414,6 +416,35 @@ export function SchoolDesigner({
       ];
       for (const [slot, pieceId] of layout) api.placeTile(slot, pieceId, "hs", SPAN);
     }
+  };
+
+  /**
+   * APPLY A FINISHED DESIGN. The one-tap path, and the one most people will use.
+   *
+   * Clears first: a preset is a whole frame, not a sprinkle, and leaving the
+   * previous badges underneath produces a hybrid nobody chose. Uses the intake's
+   * activity when there is one, so "Graduate" still carries their sport.
+   */
+  const applyFramePreset = (preset: SchoolPreset) => {
+    const api = storeApi.getState();
+    api.clearAll();
+    const SPAN = { cols: 2, rows: 2 };
+    for (const [slot, pieceId] of presetTiles(preset, kidActivity || null)) {
+      api.placeTile(slot, pieceId, pieceId.split(":")[0], SPAN);
+    }
+    const name = kidName.trim().toUpperCase();
+    // The BUYER owns this line, not the preset: a grandparent applying
+    // "Graduate" wants their relationship on it, which is the whole reason
+    // they are buying a second frame for a student who already has one.
+    const tagline = kidYear ? buyer.taglineFor(kidYear) || undefined : undefined;
+    if (name || tagline) {
+      api.setSectionMode("bottom", "text");
+      api.setSectionText("bottom", {
+        ...(name ? { text: name } : {}),
+        ...(tagline ? { tagline } : {}),
+      });
+    }
+    setActivePreset(preset.id);
   };
 
   const handleBuy = async () => {
@@ -844,6 +875,36 @@ export function SchoolDesigner({
                         }
                       >
                         {b.chip}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {/* START FROM A DESIGN. The path most people take, and until now
+                    the only "preset" was an invisible #preset= deep link while the
+                    first-run copy promised one you could pick. Ordered for the
+                    buyer: a grandparent shopping a graduation gift sees Graduate
+                    first, an alum sees the crest. */}
+                <div className="flex w-full flex-col gap-1">
+                  <span className="text-[12px] font-medium text-stone-700">
+                    Start from a design <span className="font-normal text-stone-500">— or build your own below</span>
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {presetsFor(buyerId).map((preset) => (
+                      <button
+                        key={preset.id}
+                        type="button"
+                        onClick={() => applyFramePreset(preset)}
+                        aria-pressed={activePreset === preset.id}
+                        title={preset.blurb}
+                        className={
+                          "flex min-h-[38px] items-center gap-1.5 rounded-lg border px-2.5 text-[13px] font-semibold transition-colors " +
+                          (activePreset === preset.id
+                            ? "border-amber-500 bg-amber-50 text-stone-900"
+                            : "border-stone-300 bg-white text-stone-800 hover:border-stone-400")
+                        }
+                      >
+                        <span aria-hidden="true">{preset.icon}</span>
+                        {preset.name}
                       </button>
                     ))}
                   </div>
