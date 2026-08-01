@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
-// The builder web fonts (collegiate/varsity + script + display faces) live in
-// builder-fonts.css. It was previously imported ONLY on /build, so the school
-// builder's font picker fell back to system fonts — collegiate faces never loaded,
-// on-screen OR in the print canvas. Importing it here fixes both.
-import "../../builder-fonts.css";
+// The faces the FRAME is set in, served from our own origin so they cannot lose
+// the race and render as something heavier. The font picker's sixty-odd optional
+// Google faces used to come with them through a chain of render-blocking
+// @imports; they now arrive after paint, from the component below.
+import "../../school-fonts.css";
+import { BuilderFontsDeferred } from "../../BuilderFontsDeferred";
 // The "build skin" (cream workbench background + the bsk-panel / bsk-btn card styling)
 // also lived only on /build, so the school builder's control cards rendered dark and
 // low-contrast (unreadable headings). SchoolDesigner's root already has the `build-skin`
@@ -32,6 +33,8 @@ export default function SchoolFrameLabPage() {
   // has to stay. `school-skin` is what every override selector keys off.
   return (
     <div className="build-skin school-skin">
+      {/* The picker's optional faces, after paint — see the component. */}
+      <BuilderFontsDeferred />
       <SchoolBuilder />
     </div>
   );

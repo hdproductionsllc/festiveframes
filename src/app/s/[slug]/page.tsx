@@ -4,7 +4,8 @@ import { notFound } from "next/navigation";
 // Same three-layer stylesheet stack as /lab/school, same order, same reasons —
 // see that page's header comments. The builder is ONE engine; this route only
 // changes which kit seeds it.
-import "../../builder-fonts.css";
+import "../../school-fonts.css";
+import { BuilderFontsDeferred } from "../../BuilderFontsDeferred";
 import "../../build/build-skin.css";
 import "../../lab/school/school-skin.css";
 import { SchoolBuilder } from "@/components/designer/SchoolDesigner";
@@ -58,6 +59,9 @@ export default async function SchoolKitBuilderPage(
       className="build-skin school-skin"
       style={{ "--ff-school": kit.colors.frame } as React.CSSProperties}
     >
+      {/* The font picker's optional faces, loaded after paint so they cannot
+          block a parent seeing their school's frame. See the component. */}
+      <BuilderFontsDeferred />
       {/* School-branded welcome: the kit's own colors and banner voice, so a
           parent arriving from a QR or a booster link lands on THEIR school,
           not on our brand. Facts in the copy come from the kit, which is

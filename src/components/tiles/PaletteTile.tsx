@@ -1,6 +1,7 @@
 "use client";
 
 import type { TilePiece } from "@/lib/types";
+import { TileArtImg } from "./TileArtImg";
 import { useDragTile } from "@/hooks/useDragTile";
 import { usePaletteStore } from "@/stores/palette-store";
 import { useUIStore } from "@/stores/ui-store";
@@ -178,12 +179,14 @@ export function PaletteTile({ piece, size = "md", demo = false, upload, onRemove
         }}
       >
         {piece.artworkUrl ? (
-          <img
+          // Resized and lazy — the swatch is ~56px and the file behind it is a
+          // print master. See TileArtImg.
+          <TileArtImg
             src={piece.artworkUrl}
             alt={piece.name}
+            width={artW}
+            height={artH}
             className="rounded-md"
-            style={{ width: "100%", height: "100%", objectFit: "cover" }}
-            draggable={false}
           />
         ) : hasArt ? (
           <TileArtwork pieceId={piece.id} size={Math.min(artW, artH) - 4} />

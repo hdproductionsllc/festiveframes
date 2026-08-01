@@ -13,7 +13,12 @@
    and inline styles, so the rendered product and print files are untouched.
    --------------------------------------------------------------------------- */
 
-@import url("https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&display=swap");
+/* Nunito + Fredoka are SELF-HOSTED now (see self-hosted-fonts.css). This used to
+   be a Google @import at the top of the file, and an @import is render-blocking:
+   the browser could not paint anything on any page wearing this skin until a
+   third-party stylesheet and then its font files had come back. Same family
+   names below, so nothing else in this file changes. */
+@import url("../self-hosted-fonts.css");
 
 .build-skin {
   font-family: "Nunito", var(--font-sans);

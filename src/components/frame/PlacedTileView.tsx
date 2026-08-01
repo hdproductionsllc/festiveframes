@@ -1,6 +1,7 @@
 "use client";
 
 import { getPiece } from "@/data/sets";
+import { TileArtImg } from "@/components/tiles/TileArtImg";
 import {
   artInset,
   artShadowCss,
@@ -116,22 +117,25 @@ export function PlacedTileView({
   const bevelRadii = insetRadii(rimRadii, edge.rimWidth);
 
   const art = piece.artworkUrl ? (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
+    // Served at the size the frame actually draws it. These are print masters —
+    // the badges on a seeded kit frame were ~2MB of PNG for eight tiles the size
+    // of a postage stamp. `priority` because this IS the product and it is the
+    // first thing on the page; the palette below it lazy-loads instead.
+    <TileArtImg
       src={piece.artworkUrl}
       alt={piece.name}
+      width={width}
+      height={height}
+      priority
       // Cast shadow from the ART onto the field — the same two-layer read the
       // print path draws. Only works because the art is cut out to transparency.
       style={{
-        width: "100%",
-        height: "100%",
         // CONTAIN, not cover — see the print path's note. A badge is a mark on a
         // field; cropping a square logo to fit a 2x1 removes exactly the part that
         // carries the meaning.
         objectFit: "contain",
         filter: isDieCut ? undefined : artShadowCss(size),
       }}
-      draggable={false}
     />
   ) : hasCustomArtwork(pieceId) ? (
     <TileArtwork pieceId={pieceId} size={size} />

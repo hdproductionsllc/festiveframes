@@ -1,0 +1,15 @@
+/* ── The SCHOOL builder's fonts ──────────────────────────────────────────────
+   Only the faces we host. The font picker's sixty-odd optional Google faces used
+   to arrive through seven chained @import rules in builder-fonts.css, which are
+   RENDER-BLOCKING and serialized: the browser had to fetch our stylesheet, read
+   it, then fetch seven more before painting anything at all. On a phone that is
+   the single largest thing between a parent tapping a QR code and seeing their
+   school's frame.
+
+   They now load from <BuilderFontsDeferred>, after paint, in parallel. Nothing
+   the product itself is set in depends on them — Graduate, Oswald and Stars and
+   Stripes are all below — so the frame is correct on first paint and the picker
+   fills in a moment later. /build is deliberately left on the old path: it is the
+   live storefront, its text bars default to faces from that chain, and it is not
+   the page anyone is loading from a parking lot. */
+@import url('./self-hosted-fonts.css');

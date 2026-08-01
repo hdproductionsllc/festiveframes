@@ -1,0 +1,94 @@
+/* ── Fonts we serve OURSELVES ────────────────────────────────────────────────
+   The faces the PRODUCT is set in, as opposed to the optional ones the font
+   picker offers. They are here, on our own origin, because a face that arrives
+   late does not merely appear late: the browser paints the fallback, and the
+   fallbacks for these are heavier than the real thing, so the banner renders fat
+   and then reflows. That has now been reported twice.
+
+   Imported by both builder-fonts.css (/build) and school-fonts.css (the school
+   builder) — a LOCAL @import, resolved by the bundler at build time, so it costs
+   no request and there is one copy of these rules rather than two that drift. */
+
+/* ── Graduate, SELF-HOSTED ────────────────────────────────────────────────────
+   The collegiate slab on every school banner, and the single most visible face
+   in the product. It used to arrive through the @import chain above, which is
+   how it ended up "thicker on mobile": seven chained @imports race, phones lose
+   that race far more often than desktops, and the stack's next stop is Rockwell
+   or plain `serif` — Times, which is heavier and fills the letter counters.
+   Nothing was wrong with the CSS; the font simply had not arrived yet.
+
+   Served from our own origin it cannot lose that race, and the family name is
+   unchanged, so every `fontFamily` string in the app and both renderers keep
+   working untouched. Same fix already applied to the welcome-band headline via
+   next/font — this is the half that was missed, the frame itself. */
+@font-face {
+  font-family: 'Graduate';
+  src: url('/fonts/graduate.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  /* `block` rather than `swap`: this face is the school's name on the product.
+     A brief invisible moment is better than rendering it in Times and then
+     reflowing — which is precisely the flash being reported as "too thick". The
+     file is ~20KB from our own origin, so the block period is imperceptible. */
+  font-display: block;
+}
+
+/* ── Oswald, SELF-HOSTED ──────────────────────────────────────────────────────
+   The TAGLINE face on every school banner — "CLASS OF 2027" under the name —
+   and the exact same defect as Graduate above, one face further down. Graduate
+   was pulled out of the @import chain and self-hosted because phones lose that
+   race; Oswald was left in it. When it loses, the stack falls through
+   'Saira Condensed' (also in the chain, so it loses too) to plain sans-serif —
+   Arial, which is far wider and heavier than a condensed athletic face, and
+   reads as exactly the "fat on mobile" this was supposed to have fixed.
+
+   Latin subset of the variable face (200-700), 21KB from our own origin. The
+   banner asks for weight 800 with font-synthesis off, so it renders at 700 —
+   the same as it does from Google. Declared AFTER the @import chain, so ours is
+   the face that wins whether or not Google's copy ever arrives. */
+@font-face {
+  font-family: 'Oswald';
+  src: url('/fonts/oswald-latin.woff2') format('woff2');
+  font-weight: 200 700;
+  font-style: normal;
+  /* `block`, for the reason Graduate is: this is type on the product, and a
+     flash of Arial followed by a reflow is the thing being reported. */
+  font-display: block;
+}
+
+/* Stars & Stripes — a free font that isn't on a CDN. Drop the file at
+   public/fonts/stars-and-stripes.(woff2|ttf) and it becomes the default text-bar
+   face automatically; until then the stack falls back to Bebas Neue. */
+@font-face {
+  font-family: 'Stars and Stripes';
+  src: url('/fonts/stars-and-stripes.woff2') format('woff2'),
+       url('/fonts/stars-and-stripes.ttf') format('truetype');
+  font-weight: 400 700;
+  font-display: swap;
+}
+
+/* ── Nunito + Fredoka, SELF-HOSTED ───────────────────────────────────────────
+   The builder CHROME: Nunito on body text, Fredoka on headings. They arrived
+   through an @import at the top of build-skin.css, which is render-blocking on
+   every page that wears the skin — including every school page. With the picker
+   faces deferred, this pair was the last thing standing between the server's
+   response and a parent seeing anything at all.
+
+   Same family names, so nothing that references them changes. Latin subsets of
+   the variable faces, 39KB and 30KB, from our own origin. `swap` rather than
+   `block` here: this is interface text, not type on the product, and a fallback
+   for a moment costs nothing. */
+@font-face {
+  font-family: 'Nunito';
+  src: url('/fonts/nunito-latin.woff2') format('woff2');
+  font-weight: 400 800;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Fredoka';
+  src: url('/fonts/fredoka-latin.woff2') format('woff2');
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+}
