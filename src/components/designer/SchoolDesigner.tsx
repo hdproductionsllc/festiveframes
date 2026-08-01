@@ -15,7 +15,8 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { FirstRunTour } from "./FirstRunTour";
 import { BUYERS, DEFAULT_BUYER, getBuyer, yearsFor, type BuyerId } from "@/data/frame-buyers";
-import { presetsFor, presetTiles, type SchoolPreset } from "@/data/school-presets";
+import { presetsFor, presetTiles, getPreset, type SchoolPreset } from "@/data/school-presets";
+import { GraduateExpress } from "./GraduateExpress";
 import {
   useDesignStore,
   useDesignStoreApi,
@@ -178,6 +179,20 @@ export function SchoolDesigner({
     // alumni class and 1994 is not an upcoming one.
     if (getBuyer(id).yearRange !== buyer.yearRange) setKidYear("");
     try { localStorage.setItem("msf-buyer", id); } catch {}
+  };
+
+  // THE GRADUATE PLATE IS THE PRIMARY PATH. Open by default and dismissed for
+  // good once someone chooses to customize, because the builder is what they
+  // wanted at that point and re-offering the shortcut is noise.
+  const [expressOpen, setExpressOpen] = useState(false);
+  useEffect(() => {
+    try {
+      if (!localStorage.getItem("msf-express-done")) setExpressOpen(true);
+    } catch {}
+  }, []);
+  const leaveExpress = () => {
+    setExpressOpen(false);
+    try { localStorage.setItem("msf-express-done", "1"); } catch {}
   };
 
   const [activePreset, setActivePreset] = useState<string | null>(null);
@@ -446,6 +461,35 @@ export function SchoolDesigner({
     }
     setActivePreset(preset.id);
   };
+
+  const gradYears = yearsFor("upcoming");
+  useEffect(() => {
+    if (!expressOpen) return;
+    const preset = getPreset("graduate");
+    if (!preset) return;
+    const api = storeApi.getState();
+    api.clearAll();
+    for (const [slot, pieceId] of presetTiles(preset, null)) {
+      api.placeTile(slot, pieceId, pieceId.split(":")[0], { cols: 2, rows: 2 });
+    }
+    if (!kidYear) setKidYear(String(gradYears[0]));
+    // Once, on open. Deliberately not keyed on the name or the year: those only
+    // move the banner, handled below.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [expressOpen]);
+
+  // The banner follows the two fields live, so the frame on screen is always the
+  // frame the Order button will buy.
+  useEffect(() => {
+    if (!expressOpen) return;
+    const api = storeApi.getState();
+    const name = kidName.trim().toUpperCase();
+    api.setSectionMode("bottom", "text");
+    api.setSectionText("bottom", {
+      ...(name ? { text: name } : {}),
+      ...(kidYear ? { tagline: buyer.taglineFor(kidYear) } : {}),
+    });
+  }, [expressOpen, kidName, kidYear, buyer, storeApi]);
 
   const handleBuy = async () => {
     if (buying || submitting || exporting) return;
@@ -852,7 +896,26 @@ export function SchoolDesigner({
               {/* Make-it-theirs intake: the first thing a parent touches. Three
                   quick fields -> the frame is suddenly about THEIR kid. Writes
                   ordinary store state via applyKidIntake. */}
-              <div data-intake className="flex flex-wrap items-end gap-2 rounded-xl border border-stone-300 bg-white px-3 py-2.5 shadow-sm">
+              {/* THE PRIMARY PATH. Two fields and a button, above the frame it
+                  is describing. The builder's own intake is the "or customize"
+                  route and stays out of the way until asked for — offering both
+                  at once is offering a choice nobody came to make. */}
+              {expressOpen && (
+                <GraduateExpress
+                  schoolLabel={kit?.shortName ?? null}
+                  name={kidName}
+                  onName={setKidName}
+                  year={kidYear}
+                  onYear={setKidYear}
+                  years={gradYears}
+                  onOrder={handleBuy}
+                  onCustomize={leaveExpress}
+                  busy={buying || submitting || exporting}
+                  disabled={!kidName.trim()}
+                />
+              )}
+
+              <div data-intake hidden={expressOpen} className="flex flex-wrap items-end gap-2 rounded-xl border border-stone-300 bg-white px-3 py-2.5 shadow-sm">
                 {/* WHO IS BUYING. One row, five answers, and it rewords everything
                     below it. A senior buying for their own car, a grandparent, an
                     alum and a coach were all being asked for "their last name" and

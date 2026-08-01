@@ -595,6 +595,15 @@ export const highSchoolSet: TileSet = {
 
     // ── Honours ──
     {
+      id: `${H}:diploma-tall`,
+      setId: H,
+      name: "Diploma (upright)",
+      artworkUrl: `${A}/diploma-tall.png`,
+      emoji: "📜",
+      backgroundColor: NAVY,
+      defaultSpan: TALL,
+    },
+    {
       id: `${H}:grad-cap`,
       setId: H,
       name: "Graduation Cap",

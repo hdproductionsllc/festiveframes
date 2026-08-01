@@ -41,12 +41,16 @@ describe("school spirit set", () => {
   it("leads the palette with the real high-school art", () => {
     const pieces = getSetPieces("school");
     const hs = pieces.filter((p) => p.setId === "hs");
-    // The whole library, one make: 64 die-struck enamel badges. The six flat originals that used to pad this out
+    // The whole library, one make: 65 die-struck enamel badges. The six flat originals that used to pad this out
     // (DECA, FBLA, NHS, Mu Alpha Theta, FCA, Student Council) have been withdrawn —
     // they were another illustrator's flat style and, being other organisations'
     // registered marks, were never ours to print. Asserting the COUNT is deliberate
     // even though it needs editing whenever art lands: it is what catches a piece
     // silently dropping out of the palette, which `> 0` would sail past.
+    //
+    // 64 -> 65: an UPRIGHT diploma. The existing one lies flat, and a portrait
+    // 1x2 is the only badge footprint that fits a one-column wing without
+    // spilling into the rail beside it.
     //
     // 61 -> 64: graduation. The class year is the hero of the graduate preset,
     // and a mortarboard is what makes a frame read as a graduation gift rather
@@ -58,7 +62,7 @@ describe("school spirit set", () => {
     // GENERIC on purpose — a sheaf of wheat and a compass rose — because the FFA
     // emblem and the Scouts' fleur-de-lis are registered marks, exactly like the
     // six above.
-    expect(hs.length).toBe(64);
+    expect(hs.length).toBe(65);
     // Real art first, so the collection is what you see on open.
     expect(pieces.slice(0, hs.length).every((p) => p.setId === "hs")).toBe(true);
     // Every one points at a committed local PNG (not an emoji/CDN placeholder).
