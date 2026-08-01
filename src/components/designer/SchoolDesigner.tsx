@@ -16,6 +16,7 @@ import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "reac
 import { FirstRunTour } from "./FirstRunTour";
 import { BUYERS, DEFAULT_BUYER, getBuyer, yearsFor, type BuyerId } from "@/data/frame-buyers";
 import { presetsFor, presetTiles, getPreset, type SchoolPreset } from "@/data/school-presets";
+import { markPieceId } from "@/data/sets/school-marks";
 import { GraduateExpress } from "./GraduateExpress";
 import {
   useDesignStore,
@@ -434,6 +435,21 @@ export function SchoolDesigner({
   };
 
   /**
+   * THE SCHOOL'S MASCOT for a preset's corners, or null when this kit has none.
+   *
+   * Prefers a badge that is not the crest: a crest is the school's formal mark
+   * and already flanks the bottom banner, so putting it in the corners too says
+   * the same thing three times. SLUH has both a Billiken and a shield; the
+   * Billiken is the one a parent recognises across a car park.
+   */
+  const mascotPieceId = useMemo(() => {
+    const badges = kit?.marks?.badges;
+    if (!badges?.length || !kit) return null;
+    const notCrest = badges.find((b) => !/crest|shield|seal/i.test(`${b.key} ${b.name}`));
+    return markPieceId(kit.slug, (notCrest ?? badges[0]).key);
+  }, [kit]);
+
+  /**
    * APPLY A FINISHED DESIGN. The one-tap path, and the one most people will use.
    *
    * Clears first: a preset is a whole frame, not a sprinkle, and leaving the
@@ -444,7 +460,7 @@ export function SchoolDesigner({
     const api = storeApi.getState();
     api.clearAll();
     const SPAN = { cols: 2, rows: 2 };
-    for (const [slot, pieceId] of presetTiles(preset, kidActivity || null)) {
+    for (const [slot, pieceId] of presetTiles(preset, kidActivity || null, mascotPieceId)) {
       api.placeTile(slot, pieceId, pieceId.split(":")[0], SPAN);
     }
     const name = kidName.trim().toUpperCase();
@@ -469,14 +485,14 @@ export function SchoolDesigner({
     if (!preset) return;
     const api = storeApi.getState();
     api.clearAll();
-    for (const [slot, pieceId] of presetTiles(preset, null)) {
+    for (const [slot, pieceId] of presetTiles(preset, null, mascotPieceId)) {
       api.placeTile(slot, pieceId, pieceId.split(":")[0], { cols: 2, rows: 2 });
     }
     if (!kidYear) setKidYear(String(gradYears[0]));
     // Once, on open. Deliberately not keyed on the name or the year: those only
     // move the banner, handled below.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [expressOpen]);
+  }, [expressOpen, mascotPieceId]);
 
   // The banner follows the two fields live, so the frame on screen is always the
   // frame the Order button will buy.

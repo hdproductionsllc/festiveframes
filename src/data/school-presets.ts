@@ -51,23 +51,41 @@ export interface SchoolPreset {
 
 export const ACTIVITY = "__ACTIVITY__";
 
+/**
+ * The SCHOOL'S OWN MASCOT, resolved per kit at apply time.
+ *
+ * The corners used to be another graduation object (a torch), which made the
+ * graduate frame four kinds of the same idea. The corners are where the school
+ * belongs: they are the first thing read in a parking lot, and the mascot is what
+ * makes the frame that school's rather than a generic graduation frame.
+ *
+ * Falls back to the generic crest when a kit has no marks of its own, which is
+ * every school we have not been given artwork for — still the school's shape,
+ * still not another mortarboard.
+ */
+export const MASCOT = "__MASCOT__";
+
 export const SCHOOL_PRESETS: SchoolPreset[] = [
   {
     id: "graduate",
     name: "Graduate",
     blurb: "Their class year, front and centre.",
     icon: "🎓",
+    // The cap CARRIES its tassel and the diploma stands alone: `hs:diploma-cap`
+    // draws both objects in one badge, so pairing it with `hs:grad-cap` put the
+    // mortarboard on the frame twice. One cap, one diploma, and the school at
+    // both ends.
     layout: [
-      ["frame:wing-left-0", "hs:grad-cap"],
-      ["frame:top-11", "hs:grad-cap"],
-      ["frame:wing-left-2", "hs:diploma-cap"],
-      ["frame:right-1", "hs:diploma-cap"],
-      ["frame:wing-left-4", "hs:honor-star"],
-      ["frame:right-3", "hs:honor-star"],
-      ["frame:wing-left-6", ACTIVITY],
-      ["frame:bottom-11", ACTIVITY],
+      ["frame:wing-left-0", MASCOT],
+      ["frame:top-11", MASCOT],
+      ["frame:wing-left-2", "hs:grad-cap"],
+      ["frame:right-1", "hs:grad-cap"],
+      ["frame:wing-left-4", "hs:diploma-tall"],
+      ["frame:right-3", "hs:diploma-tall"],
+      ["frame:wing-left-6", MASCOT],
+      ["frame:bottom-11", MASCOT],
     ],
-    fallbackActivity: "hs:torch",
+    fallbackActivity: "hs:honor-star",
     favouredBy: ["parent", "grandparent", "self"],
   },
   {
@@ -128,11 +146,16 @@ export function presetsFor(buyer: BuyerId): SchoolPreset[] {
   });
 }
 
-/** The concrete tiles for a preset, with ACTIVITY resolved. */
+/** The concrete tiles for a preset, with ACTIVITY and MASCOT resolved. */
 export function presetTiles(
   preset: SchoolPreset,
   chosenActivity: string | null,
+  mascotPieceId?: string | null,
 ): Array<[string, string]> {
   const activity = chosenActivity || preset.fallbackActivity;
-  return preset.layout.map(([slot, piece]) => [slot, piece === ACTIVITY ? activity : piece]);
+  const mascot = mascotPieceId || "hs:crest";
+  return preset.layout.map(([slot, piece]) => [
+    slot,
+    piece === ACTIVITY ? activity : piece === MASCOT ? mascot : piece,
+  ]);
 }

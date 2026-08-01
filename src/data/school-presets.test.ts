@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { SCHOOL_PRESETS, ACTIVITY, presetsFor, presetTiles, getPreset } from "./school-presets";
+import { SCHOOL_PRESETS, ACTIVITY, MASCOT, presetsFor, presetTiles, getPreset } from "./school-presets";
 import { getPiece } from "@/data/sets";
 import { buildGrid } from "@/lib/utils/slot-generator";
 import { SCHOOL_FRAME_CONFIG } from "@/lib/constants/frame";
@@ -22,7 +22,7 @@ describe("the school presets", () => {
 
   it.each(SCHOOL_PRESETS)("$id places only badges that exist", (preset) => {
     for (const [, pieceId] of preset.layout) {
-      if (pieceId === ACTIVITY) continue;
+      if (pieceId === ACTIVITY || pieceId === MASCOT) continue;
       expect(getPiece(pieceId), `${preset.id} references unknown piece ${pieceId}`).toBeTruthy();
     }
     expect(getPiece(preset.fallbackActivity)).toBeTruthy();
@@ -41,8 +41,43 @@ describe("the school presets", () => {
     expect(new Set(preset.layout.map(([s]) => s)).size).toBe(8);
   });
 
-  it("resolves ACTIVITY to the parent's choice, and to a real badge without one", () => {
+  it("puts the SCHOOL in the graduate corners, not another mortarboard", () => {
+    // The corners used to be a torch, which made the graduate frame four kinds of
+    // the same idea. They are the first thing read in a car park and belong to
+    // the school.
     const grad = getPreset("graduate")!;
+    const corners = ["frame:wing-left-0", "frame:top-11", "frame:wing-left-6", "frame:bottom-11"];
+    for (const slot of corners) {
+      expect(grad.layout.find(([s]) => s === slot)?.[1]).toBe(MASCOT);
+    }
+  });
+
+  it("never draws the mortarboard twice in the graduate frame", () => {
+    // hs:diploma-cap draws a cap AND a scroll in one badge, so pairing it with
+    // hs:grad-cap put the cap on the frame twice. One cap, one standalone
+    // diploma.
+    const grad = getPreset("graduate")!;
+    const pieces = grad.layout.map(([, p]) => p);
+    expect(pieces).not.toContain("hs:diploma-cap");
+    expect(pieces).toContain("hs:grad-cap");
+    expect(pieces).toContain("hs:diploma-tall");
+  });
+
+  it("resolves MASCOT to the school's own badge, and to a crest without one", () => {
+    const grad = getPreset("graduate")!;
+    const withMascot = presetTiles(grad, null, "mark:sluh-jr-bills:billiken");
+    expect(withMascot.some(([, p]) => p === "mark:sluh-jr-bills:billiken")).toBe(true);
+    expect(withMascot.every(([, p]) => p !== MASCOT)).toBe(true);
+
+    // A school we have no artwork for still gets a school SHAPE, not a torch.
+    const without = presetTiles(grad, null, null);
+    expect(without.some(([, p]) => p === "hs:crest")).toBe(true);
+    expect(without.every(([, p]) => p !== MASCOT)).toBe(true);
+    for (const [, p] of without) expect(getPiece(p)).toBeTruthy();
+  });
+
+  it("resolves ACTIVITY to the parent's choice, and to a real badge without one", () => {
+    const grad = getPreset("athlete")!;
     const withChoice = presetTiles(grad, "hs:soccer-patch");
     expect(withChoice.some(([, p]) => p === "hs:soccer-patch")).toBe(true);
     expect(withChoice.every(([, p]) => p !== ACTIVITY)).toBe(true);
