@@ -33,10 +33,10 @@ export const metadata: Metadata = {
   // license plate frame", "school spirit license plate frame") — both SERPs are
   // Etsy aggregation pages and dated vendors, with no dedicated brand.
   title: {
-    absolute: "Custom School Spirit License Plate Frames | MySchoolFrame",
+    absolute: "Custom School Spirit & Graduation License Plate Frames | MySchoolFrame",
   },
   description:
-    "Put your student's last name in varsity chenille on a custom school license plate frame — their sport, their class year, their school colors. Made in USA.",
+    "The graduate plate takes two fields: their last name and their class year. A custom school license plate frame in your school's colors, with badges for their sport, band or club. Made in USA.",
 };
 
 // Structured data. Product+Offer earns merchant snippets with zero reviews;
@@ -163,6 +163,21 @@ const ANSWERS = [
     q: "What if our last name is long?",
     a: "You'll see it on the banner as you type — the frame in front of you is the frame we print. If it doesn't sit right, shorten it, switch to their first name, or drop to their number. Nothing prints until you send it.",
   },
+  // The builder asks who the frame is for and rewords itself accordingly
+  // (frame-buyers.ts). The page used to speak only to parents, which contradicted
+  // it and quietly told four other buyers this was not for them.
+  {
+    q: "Can I get one for my grandchild?",
+    a: "Yes, and it's one of the most common ones we make. Tell the builder it's for your grandchild and the banner says PROUD GRANDPARENT under their name and year, so it reads as your car rather than a second copy of their parents'.",
+  },
+  {
+    q: "I graduated years ago. Can I get my own class year?",
+    a: "Yes. Say you went there and the year picker goes back sixty years instead of forward four, so you can put your actual class on it.",
+  },
+  {
+    q: "I teach there. Is this only for students?",
+    a: "No. Say you work there and the class-year field disappears — you get your name, the school's colors and a badge for whatever you coach or teach.",
+  },
   {
     q: "Can I put their first name instead? Or a nickname?",
     a: "Anything you type. Most parents use the last name because that's how it reads jersey-style from a distance — but it's your frame.",
@@ -276,6 +291,45 @@ export default function MySchoolFramePage() {
       </section>
 
       {/* ── How it works ── */}
+      {/* ── The graduate plate ──
+          Leads, because the builder leads with it and because it is the case
+          that actually converts: it has a deadline, it is a gift, and it sells
+          several frames per student rather than one. Two fields is not a
+          simplification of the pitch — it is literally what the page it links to
+          asks for. */}
+      <section className="msf-band msf-band-navy">
+        <p className="msf-eyebrow">Class of 2027 · 2028 · 2029</p>
+        <h2>The graduate plate takes two fields.</h2>
+        <p className="msf-lede">
+          Their last name and their class year. That is the whole thing — the
+          frame builds itself in their school&apos;s colors, with the cap, the
+          diploma and the laurel already on it. Change anything you like, or
+          change nothing and send it.
+        </p>
+        <ul className="msf-booster">
+          <li>
+            <strong>For the graduate, and for everyone buying them one.</strong>{" "}
+            Parents, grandparents, and the graduate&apos;s own car. Tell us who
+            it&apos;s from and the banner says so.
+          </li>
+          <li>
+            <strong>It outlasts the day.</strong> The poster curls and the
+            blanket goes in a bin. A frame rides the back of the car through
+            graduation, through college, through the first job.
+          </li>
+          <li>
+            <strong>Order by the ceremony, not the week of it.</strong> Every
+            frame is printed to order, so give us a little room before the date
+            and tell us when it is.
+          </li>
+        </ul>
+        <div className="msf-ctas">
+          <Link href="/lab/school" className="msf-btn msf-btn-brass">
+            Get the graduate plate
+          </Link>
+        </div>
+      </section>
+
       <section className="msf-band">
         <h2>Three taps. Then it&apos;s theirs.</h2>
         <p className="msf-lede">
@@ -297,7 +351,7 @@ export default function MySchoolFramePage() {
       {/* ── Anatomy: name-first ── */}
       <section className="msf-band msf-band-paper">
         <h2>Their name is the whole point.</h2>
-        <p className="msf-lede">The school is the setting. Your kid is the star.</p>
+        <p className="msf-lede">The school is the setting. The person on it is the star.</p>
         <div className="msf-vignettes">
           {ANATOMY.map((v) => (
             <article key={v.title}>
@@ -321,12 +375,12 @@ export default function MySchoolFramePage() {
         <p className="msf-lede">
           Senior night gifts for football players, band seniors, cheerleaders,
           soccer players — the poster curls, the blanket goes in a bin, the
-          framed photo goes in a closet. A frame with his name, his number, and
-          his year rides the back of the car through graduation, through
+          framed photo goes in a closet. A frame with their name, their number
+          and their year rides the back of the car through graduation, through
           college, through the first job. This one is out where you see it,
           every single time you park.
         </p>
-        <p className="msf-tagline">Senior mom, this is the one they keep.</p>
+        <p className="msf-tagline">This is the one they keep.</p>
       </section>
 
       {/* ── Straight answers ── */}
