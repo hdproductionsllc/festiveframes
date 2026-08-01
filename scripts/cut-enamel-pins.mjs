@@ -31,6 +31,7 @@ import path from "node:path";
 
 const NEAR = 62;    // <= this distance from the backdrop: fully background
 const FAR = 132;    // >= this: fully art. Between: proportional feather.
+const ERODE = 3;    // px of matte shaved off the silhouette — see below.
 const TARGET = 1000; // long side. The 2x2 print floor is 595px; this keeps 1.7x.
 const TILE_INCHES = 0.991;
 const PRINT_FLOOR = Math.ceil(TILE_INCHES * 2 * 300);
@@ -68,15 +69,40 @@ for (const file of readdirSync(src).filter((f) => /\.(webp|png|jpe?g)$/i.test(f)
     // Feather rather than hard-cut: a binary cut leaves a 1px ring of
     // backdrop-coloured pixels that reads as a dirty outline on a contrasting field.
     if (dd < FAR) d[i + 3] = Math.round(255 * ((dd - NEAR) / (FAR - NEAR)));
-    // Magenta spill = red and blue both high, green low. Pull r and b back toward
-    // g by the excess, which leaves genuinely red art alone (red art has r >> b).
+    // UNSPILL, hard clamp rather than the partial pull used first. A partial pull
+    // does not remove magenta, it CONVERTS it: r and b come down unevenly and the
+    // result lands on red, which measured 14-21% of opaque pixels as a dark red
+    // band and is what the owner saw as "the magenta shadow cast". The standard
+    // fix is a clamp — no channel may exceed what the backdrop cannot have
+    // contributed — so magenta spill can leave no residue of any hue.
     const r = d[i], g = d[i + 1], b = d[i + 2];
-    const spill = Math.min(r, b) - g;
-    if (spill > 8) {
-      const k = Math.min(1, (spill - 8) / 45);
-      d[i] = Math.round(r - (r - g) * k * 0.95);
-      d[i + 2] = Math.round(b - (b - g) * k * 0.95);
+    if (Math.min(r, b) > g) {
+      const ceiling = g + Math.max(0, Math.min(r, b) - g) * 0.12; // a hair of warmth
+      if (r > ceiling) d[i] = Math.round(Math.max(g, ceiling));
+      if (b > ceiling) d[i + 2] = Math.round(Math.max(g, ceiling));
     }
+  }
+
+  // ERODE the matte. Spill concentrates in the outermost ring of the silhouette —
+  // the pixels that were part backdrop, part plated edge — and no despill fully
+  // recovers a pixel that was never wholly subject. Shaving a few px removes that
+  // contaminated band outright. At the source resolution this is a fraction of a
+  // percent of the width and is invisible once the badge is an inch wide; leaving
+  // it in is a dirty outline on every badge, which is not.
+  {
+    const a = new Uint8ClampedArray(W * H);
+    for (let p = 0; p < W * H; p++) a[p] = d[p * 4 + 3];
+    for (let pass = 0; pass < ERODE; pass++) {
+      const prev = Uint8ClampedArray.from(a);
+      for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+        const p = y * W + x;
+        if (!prev[p]) continue;
+        const l = x > 0 ? prev[p - 1] : 0, rr = x < W - 1 ? prev[p + 1] : 0;
+        const u = y > 0 ? prev[p - W] : 0, dn = y < H - 1 ? prev[p + W] : 0;
+        a[p] = Math.min(prev[p], l, rr, u, dn);
+      }
+    }
+    for (let p = 0; p < W * H; p++) d[p * 4 + 3] = a[p];
   }
   ctx.putImageData(id, 0, 0);
 
