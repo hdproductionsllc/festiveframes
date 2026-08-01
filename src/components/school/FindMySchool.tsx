@@ -141,16 +141,20 @@ export function FindMySchool({
             We don&apos;t have <strong>{q.trim()}</strong> pre-built yet, which is
             no problem at all.
           </p>
-          <a className="msf-btn msf-btn-primary" href="/lab/school">
+          <a className="msf-find-cta" href="/lab/school">
             Build it from your school&apos;s website
           </a>
         </div>
       ) : null}
 
       <p className="msf-find-help" id="msf-find-help">
-        {searched
-          ? "Tap your school to open its frame."
-          : "Type your school's name, nickname or mascot."}
+        {!searched
+          ? "Type your school's name, nickname or mascot."
+          : matches.length > 0
+            ? "Tap your school to open its frame."
+            // On a miss the panel above already says what to do, so this must not
+            // contradict it by telling them to tap a school that is not there.
+            : "Every school works — yours just isn't pre-built yet."}
       </p>
     </div>
   );

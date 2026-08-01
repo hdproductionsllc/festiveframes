@@ -96,3 +96,35 @@
 .msf-find[data-tone="dark"] .msf-find-help {
   color: #c9d0e2;
 }
+
+/* The miss-state button carries its OWN class. It used `msf-btn msf-btn-primary`,
+   which lives in school-landing.css — so on the Festive Frames homepage, where
+   that stylesheet is not loaded, the most common search outcome (a school we do
+   not have pre-built, which is nearly every school in the country) rendered as a
+   bare unstyled link. Same trap this file exists to avoid. */
+.msf-find-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 12px 20px;
+  border-radius: 999px;
+  background: #b98a2f;
+  color: #fff;
+  font-weight: 800;
+  font-size: 15px;
+  text-decoration: none;
+  border: 2px solid transparent;
+}
+.msf-find-cta:hover,
+.msf-find-cta:focus-visible {
+  background: #a2792a;
+}
+.msf-find[data-tone="dark"] .msf-find-cta {
+  background: #f8c53b;
+  color: #1e1b17;
+}
+.msf-find[data-tone="dark"] .msf-find-cta:hover,
+.msf-find[data-tone="dark"] .msf-find-cta:focus-visible {
+  background: #ffd35c;
+}
