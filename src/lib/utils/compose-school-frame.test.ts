@@ -13,6 +13,7 @@ import {
   SCHOOL_PRINT_DPI,
   SCHOOL_PANEL_BLEED_INCHES,
   type SchoolDesign,
+  type DrawableImage,
   type SchoolImageBundle,
 } from "./compose-school-frame";
 import { panelRects } from "@/lib/utils/panels";

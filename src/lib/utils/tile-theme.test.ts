@@ -10,6 +10,7 @@ import {
   tileBackground,
   bevelMetrics,
   bevelGradient,
+  bevelBand,
   chromeInset,
   rimMetrics,
   ringCss,
@@ -24,7 +25,6 @@ import {
   merrowThread,
   textChenilleCss,
   fieldForArtPixels,
-  TILE_BG,
 } from "./tile-theme";
 
 describe("luminance", () => {
@@ -150,12 +150,34 @@ describe("bevelGradient — the run that replaced the mitred trapezoids", () => 
     expect(stops[stops.length - 1][1]).toContain("0,0,0"); // shaded corner
   });
 
-  it("holds the middle stops close so the band reads faceted, not domed", () => {
-    const stops = bevelGradient(TILE_BG.navy);
-    const mid = stops.filter(([at]) => at > 0 && at < 1).map(([at]) => at);
-    expect(mid.length).toBeGreaterThanOrEqual(2);
-    // The roll from lit to shaded happens over a short run in the middle.
-    expect(Math.max(...mid) - Math.min(...mid)).toBeLessThan(0.35);
+  it("keeps the roll at the EDGES and leaves the face alone", () => {
+    // This used to assert the opposite — that the roll happened over a short run in
+    // the MIDDLE — and that is exactly what made a banner a different shade of blue
+    // from the tile beside it. A mid-run roll covers the small corner triangles of a
+    // square but a broad full-width band of a 6:1 bar, so the same stops paint far
+    // more of the bar. The roll now sits at each edge and the face is untouched.
+    const stops = bevelGradient(TILE_BG.navy, 120, 120);
+    const mid = stops.filter(([at]) => at > 0 && at < 1);
+    expect(mid.length).toBe(2);
+    expect(mid[0][0]).toBeLessThan(0.25); // lit band ends near the top edge
+    expect(mid[1][0]).toBeGreaterThan(0.75); // shaded band starts near the bottom
+    for (const [, colour] of mid) expect(alpha(colour)).toBe(0); // the face is bare
+  });
+
+  it("paints a bar's face and a badge's face the SAME — the banner-shade bug", () => {
+    // The defect the owner reported four or five times: banners a different shade of
+    // blue from the side panels, while both were handed the identical colour. The
+    // guarantee is that the face carries no bevel ink at all, whatever the box shape.
+    const badge = bevelGradient(TILE_BG.navy, 120, 120);
+    const banner = bevelGradient(TILE_BG.navy, 631, 56);
+    for (const stops of [badge, banner]) {
+      const face = stops.filter(([at]) => at > 0 && at < 1);
+      expect(face.every(([, c]) => alpha(c) === 0)).toBe(true);
+    }
+    // ...and the band is a constant PHYSICAL width, so it is a bigger fraction of a
+    // short bar's run than of a tall tile's.
+    expect(bevelBand(631, 56)).toBeGreaterThan(bevelBand(120, 248));
+    expect(bevelBand(120, 120)).toBeCloseTo(0.16, 5);
   });
 
   it("shows depth entirely in shadow on a light field — a white face cannot brighten", () => {
@@ -164,9 +186,14 @@ describe("bevelGradient — the run that replaced the mitred trapezoids", () => 
     }
   });
 
-  it("darkens monotonically on a light field", () => {
-    const a = bevelGradient(TILE_BG.white).map(([, c]) => alpha(c));
-    for (let i = 1; i < a.length; i++) expect(a[i]).toBeGreaterThan(a[i - 1]);
+  it("shades the bottom edge harder than the top on a light field", () => {
+    // Was "darkens monotonically", which the flat face now breaks by design: the run
+    // is 0.10 at the lit edge, nothing across the face, 0.28 at the shaded one. What
+    // has to hold is the relationship — a raised white face shows its depth in
+    // shadow, so the bottom edge is the darker of the two.
+    const a = bevelGradient(TILE_BG.white, 120, 120);
+    expect(alpha(a[a.length - 1][1])).toBeGreaterThan(alpha(a[0][1]));
+    expect(alpha(a[0][1])).toBeGreaterThan(0);
   });
 });
 

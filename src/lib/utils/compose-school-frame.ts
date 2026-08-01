@@ -217,7 +217,7 @@ function drawBevel(
   ctx.clip("evenodd");
   const ax = bevelAxis(bx, by, bw, bh);
   const bg = ctx.createLinearGradient(ax.x0, ax.y0, ax.x1, ax.y1);
-  for (const [at, colour] of bevelGradient(background)) bg.addColorStop(at, colour);
+  for (const [at, colour] of bevelGradient(background, bw, bh)) bg.addColorStop(at, colour);
   ctx.fillStyle = bg;
   ctx.fillRect(bx, by, bw, bh);
   ctx.restore();

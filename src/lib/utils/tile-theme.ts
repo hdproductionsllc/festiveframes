@@ -262,26 +262,61 @@ export function bevelMetrics(
  * has no seam to misalign: it is filled through a band that follows the rounded
  * contour, so the corner is simply where the run passes from lit to shaded.
  *
- * The middle stops sit close together on purpose. Spread evenly the band looks
- * domed, like a tube; held flat across the top and bottom with a quick roll between
- * them, it looks faceted — a cut edge catching light, which is what a bevel is.
+ * THE BAND IS GEOMETRIC, NOT A FIXED FRACTION OF THE RUN, and that distinction is
+ * the whole reason the banners never matched the panels.
+ *
+ * The stops used to sit at 0/42/58/100% of the gradient run whatever the box was.
+ * On a SQUARE badge the run is a diagonal, so its iso-lines are diagonal and the
+ * extreme stops only ever reach the small corner triangles — the face reads as flat
+ * navy with shaded corners. On a 6:1 BANNER the run is vertical, its iso-lines are
+ * full-width horizontal strips, and that same 42% now covers a broad band across the
+ * whole top of the bar at 55% white. Same colour, same stops, same code — and the
+ * banner reads several shades lighter than the tile beside it. It was reported four
+ * or five times and "fixed" twice in the wrong place, because both elements really
+ * were being handed the identical background colour; the mismatch was never in the
+ * colour, it was in how much of each shape the ramp's bright end covered.
+ *
+ * So the bevel is now a band of constant PHYSICAL width — a fraction of the box's
+ * short side — with a face that is left completely alone. The run always spans the
+ * full height (see `bevelAxis`), so `short / h` converts that width into a fraction
+ * of the run, and it comes out identical in both renderers. A tile's face and a
+ * banner's face are now the same colour, because both are simply the background.
+ *
+ * That is also what a bevel physically is: a narrow chamfer catching light at the
+ * edge, not a wash across the face.
  */
-export function bevelGradient(background: string = TILE_BG.navy): Array<[number, string]> {
+const BEVEL_BAND = 0.16;
+
+/** The bevel band as a fraction of the gradient run, for a box of `w` x `h`. */
+export function bevelBand(w: number = 1, h: number = 1): number {
+  const short = Math.min(w, h) || 1;
+  return Math.min(0.45, (BEVEL_BAND * short) / (h || 1));
+}
+
+export function bevelGradient(
+  background: string = TILE_BG.navy,
+  w: number = 1,
+  h: number = 1,
+): Array<[number, string]> {
   const light = luminance(background) > 0.6;
+  const b = bevelBand(w, h);
   // A raised white face cannot get brighter than white, so a light field shows its
   // depth entirely in shadow — the lit side merely shaded less. Same reasoning as
   // `bevelMetrics`, expressed as a run instead of a pair.
+  //
+  // The two middle stops are fully transparent, and each carries the HUE of the edge
+  // it belongs to so that neither half interpolates through the other's colour.
   return light
     ? [
-        [0, "rgba(0,0,0,0.03)"],
-        [0.42, "rgba(0,0,0,0.09)"],
-        [0.58, "rgba(0,0,0,0.16)"],
+        [0, "rgba(0,0,0,0.10)"],
+        [b, "rgba(0,0,0,0)"],
+        [1 - b, "rgba(0,0,0,0)"],
         [1, "rgba(0,0,0,0.28)"],
       ]
     : [
         [0, "rgba(255,255,255,0.55)"],
-        [0.42, "rgba(255,255,255,0.14)"],
-        [0.58, "rgba(0,0,0,0.14)"],
+        [b, "rgba(255,255,255,0)"],
+        [1 - b, "rgba(0,0,0,0)"],
         [1, "rgba(0,0,0,0.44)"],
       ];
 }
@@ -324,7 +359,7 @@ export function bevelGradientCss(
   const a = bevelAxis(0, 0, w, h);
   // CSS gradient angles run clockwise from "to top", which is what atan2(dx, dy) gives.
   const deg = (Math.atan2(a.x1 - a.x0, -(a.y1 - a.y0)) * 180) / Math.PI;
-  const stops = bevelGradient(background)
+  const stops = bevelGradient(background, w, h)
     .map(([at, colour]) => `${colour} ${(at * 100).toFixed(0)}%`)
     .join(", ");
   return `linear-gradient(${deg.toFixed(1)}deg, ${stops})`;
