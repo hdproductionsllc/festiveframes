@@ -193,3 +193,50 @@ laurel (honours) and the diploma (academics).
   the art fills the tile rather than floating in padding.
 - **The 1-inch test:** shrink it to 100 px and look. If the sport is not
   identifiable, the art is too detailed — regenerate simpler, do not sharpen.
+
+---
+
+## 7. Two badges the owner could not read — QUEUED, blocked on network egress
+
+Both were spotted on the frame, not in the library, which is the only place this
+kind of defect shows: a badge can be a perfectly good drawing of its subject and
+still fail, because the test is not "is this accurate" but "does a parent in a
+car park know what it is".
+
+`api.ideogram.ai` is **not in this environment's egress allowlist** (403 from the
+proxy), so neither could be regenerated here. Add the host in the environment's
+network settings and these two prompts run as-is.
+
+### volleyball — reads as a beach ball
+
+The current art is a blue-and-white **pinwheel**. That is a fair drawing of a
+modern rotary-panel ball, and it is unreadable: beside the soccer and basketball
+badges, which are instantly what they are, it reads as an abstract logo. The
+swirl is the model's prior for "volleyball", and §0's rule applies — do not argue
+with a prior, remove what it attaches to. Two colours in a spiral is what makes a
+beach ball, so the ball loses its second colour entirely and the only contrast
+left is the gold seam.
+
+```
+a classic indoor volleyball, all-white enamel ball, three groups of three
+straight parallel panel bands, gold metal seam lines separating the panels,
+[STYLE BLOCK]
+```
+
+### color-guard — reads as a national flag
+
+A rectangular flag flying horizontally from an upright pole is the shape of a
+country's flag, and that is what it reads as. Colour guard's actual visual
+language is a **swallowtail silk on a long pole held at a steep diagonal,
+mid-spin**, and the spin is the part that carries the meaning — it is what makes
+the object a performance prop rather than a national symbol. So the subject
+changes from "a flag" to "a silk being spun".
+
+```
+a swallowtail silk flag on a long pole held at a steep diagonal, mid-spin, a
+sweeping gold motion arc curving behind it, navy blue and light blue enamel silk,
+gold metal pole and arc, [STYLE BLOCK]
+```
+
+Both must clear §6's one-inch test before they go in: shrink to 100 px and look.
+That is the test the current pair fails.
