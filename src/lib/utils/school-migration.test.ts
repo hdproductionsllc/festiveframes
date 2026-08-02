@@ -1,8 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { migrateSchoolDesign } from "./school-migration";
-import { SCHOOL_FRAME_CONFIG } from "@/lib/constants/frame";
+import { dropRelocatedSlots, migrateSchoolDesign } from "./school-migration";
+import { SCHOOL_CLASSIC_FRAME_CONFIG, SCHOOL_FRAME_CONFIG } from "@/lib/constants/frame";
 import { SCHOOL_DEFAULT_SECTIONS } from "@/lib/constants/defaults";
-import { getAllSlotIds, wingRowCount } from "./slot-generator";
+import { buildGrid, getAllSlotIds, wingRowCount } from "./slot-generator";
 import type { PlacedTile } from "@/lib/types";
 
 // The v6 school frame: 3 wing columns per side, same row banding (fullWidthTopBar +
@@ -208,3 +208,92 @@ describe("migrateSchoolDesign (side panels can no longer hold text)", () => {
     expect(out.sections.top.text?.text).toBe("KEEP ME");
   });
 });
+
+// ─── dropRelocatedSlots — the 12 x 6 window change ───────────────────────────
+//
+// Runs from `merge`, not from `migrateSchoolDesign`: the blobs it is written for
+// are already at the current persist version, so `migrate` never sees them.
+
+describe("dropRelocatedSlots (the rail-model window change)", () => {
+  const t = (pieceId: string): PlacedTile => ({ pieceId, setId: "test" });
+
+  it("drops a bottom tile whose index re-banded when the rail got wider", () => {
+    // 12 -> 14 cells per bottom row. `frame:bottom-12` was the FIRST cell of the
+    // second row; it is now the thirteenth cell of the FIRST — the tile would
+    // reappear halfway along the banner, on the other axis, for no visible reason.
+    expect(rowColOf("frame:bottom-12", SCHOOL_CLASSIC_FRAME_CONFIG)).toEqual({ row: 7, col: 1 });
+    expect(rowColOf("frame:bottom-12", SCHOOL_FRAME_CONFIG)).toEqual({ row: 7, col: 13 });
+
+    const out = dropRelocatedSlots(
+      { "frame:bottom-12": t("a"), "frame:bottom-3": t("b") },
+      SCHOOL_CLASSIC_FRAME_CONFIG,
+      SCHOOL_FRAME_CONFIG,
+    );
+    expect("frame:bottom-12" in out).toBe(false);
+    // …while an index that did NOT re-band keeps its tile.
+    expect(out["frame:bottom-3"]).toEqual(t("b"));
+  });
+
+  it("drops the WING tiles that re-banded, and only those", () => {
+    // The wing's rows are banded (top corner, side rows, bottom rows) and the window
+    // change added a side row, so an index low enough to still land in the same band
+    // is the same cell and an index past it is not. Index 7 was the SECOND bottom
+    // row and is now the bottom rail itself.
+    expect(rowColOf("frame:wing-left-7", SCHOOL_CLASSIC_FRAME_CONFIG)).toEqual({ row: 7, col: 0 });
+    expect(rowColOf("frame:wing-left-7", SCHOOL_FRAME_CONFIG)).toEqual({ row: 7, col: 0 });
+
+    const out = dropRelocatedSlots(
+      {
+        "frame:wing-left-0": t("a"), // top corner in both
+        "frame:wing-left-3": t("b"), // third side row in both
+        "frame:wing-left-7": t("c"), // second bottom row -> bottom rail
+        "frame:wing-right-6": t("d"), // first bottom row -> last side row
+      },
+      SCHOOL_CLASSIC_FRAME_CONFIG,
+      SCHOOL_FRAME_CONFIG,
+    );
+    expect(out["frame:wing-left-0"]).toEqual(t("a"));
+    expect(out["frame:wing-left-3"]).toEqual(t("b"));
+    expect("frame:wing-left-7" in out).toBe(false);
+    expect("frame:wing-right-6" in out).toBe(false);
+  });
+
+  it("keeps top and side-rail tiles, whose indices never wrap", () => {
+    const slots = {
+      "frame:top-0": t("a"),
+      "frame:top-11": t("b"),
+      "frame:left-3": t("c"),
+      "frame:right-0": t("d"),
+    };
+    expect(dropRelocatedSlots(slots, SCHOOL_CLASSIC_FRAME_CONFIG, SCHOOL_FRAME_CONFIG)).toBe(slots);
+  });
+
+  it("returns the SAME object when the geometry did not change", () => {
+    const slots = { "frame:bottom-12": t("a"), "frame:wing-left-5": t("b") };
+    expect(dropRelocatedSlots(slots, SCHOOL_FRAME_CONFIG, SCHOOL_FRAME_CONFIG)).toBe(slots);
+  });
+
+  it("changes nothing when there is no usable record of the old geometry", () => {
+    // No proof anything moved, so no destruction. A stale id that names no cell is
+    // already inert everywhere downstream.
+    const slots = { "frame:bottom-12": t("a") };
+    expect(dropRelocatedSlots(slots, undefined, SCHOOL_FRAME_CONFIG)).toBe(slots);
+    expect(dropRelocatedSlots(slots, {} as never, SCHOOL_FRAME_CONFIG)).toBe(slots);
+  });
+
+  it("every SURVIVING id is a real slot of the new config", () => {
+    // The whole point: no tile is left addressing a cell that does not exist.
+    const all = Object.fromEntries(
+      getAllSlotIds(SCHOOL_CLASSIC_FRAME_CONFIG).map((id) => [id, t("x")]),
+    );
+    const out = dropRelocatedSlots(all, SCHOOL_CLASSIC_FRAME_CONFIG, SCHOOL_FRAME_CONFIG);
+    const live = new Set(getAllSlotIds(SCHOOL_FRAME_CONFIG));
+    for (const id of Object.keys(out)) expect(live.has(id)).toBe(true);
+    expect(Object.keys(out).length).toBeGreaterThan(0);
+  });
+});
+
+/** The grid cell a slot id lands on under a given config. */
+function rowColOf(id: string, config: typeof SCHOOL_FRAME_CONFIG) {
+  return buildGrid(config).coordOf(id);
+}

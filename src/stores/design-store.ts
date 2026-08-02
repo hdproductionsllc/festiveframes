@@ -58,6 +58,7 @@ import {
 } from "@/lib/utils/uploads";
 import { repairSections, sectionSupportsText, sectionSupportsTiles } from "@/lib/utils/sections";
 import { repairDanglingTopLine } from "@/lib/utils/school-banner";
+import { dropRelocatedSlots } from "@/lib/utils/school-migration";
 import { MAX_HISTORY_DEPTH } from "@/lib/constants/frame";
 
 /** The frame body's colour before any school branding is applied — the matte black
@@ -1765,6 +1766,29 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
         // saved after the toggle was removed. Merge runs on every hydrate, so the
         // repair is guaranteed. `sectionSupportsText` is the same source of truth the
         // UI and the renderer use.
+        // ─── Reconcile the GEOMETRY first ──────────────────────────────────────
+        //
+        // Owned geometry is not user data — the persisted copy is a cache of the
+        // product's shape at the time of the last save, so the live definition wins.
+        // (The persisted DESIGN is untouched; only the frame it sits on is refreshed.)
+        //
+        // This runs BEFORE the slot repairs below, because they build a grid from
+        // `merged.frameConfig` and would otherwise reason about the shape the design
+        // was saved against rather than the one it is about to be drawn on.
+        //
+        // The persisted config is also the only evidence of what the ids used to
+        // mean, so the reconciliation has to happen here, in the one place both
+        // shapes are still in hand.
+        if (ownedFrameConfig) {
+          if (merged.slots) {
+            merged.slots = dropRelocatedSlots(
+              merged.slots,
+              merged.frameConfig,
+              ownedFrameConfig,
+            );
+          }
+          merged.frameConfig = { ...ownedFrameConfig };
+        }
         // Grow any badge saved below its floor. The 2x2 minimum governs the DROP
         // and the RESIZE, so tiles already in a design — and anything Fill All or
         // Random wrote cell-by-cell — stayed 1x1 and the rule never reached them.
@@ -1810,10 +1834,6 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
             if (next !== sec.text) sec.text = next;
           }
         }
-        // Owned geometry is not user data — the persisted copy is a cache of the
-        // product's shape at the time of the last save, so the live definition wins.
-        // (The persisted DESIGN is untouched; only the frame it sits on is refreshed.)
-        if (ownedFrameConfig) merged.frameConfig = { ...ownedFrameConfig };
         const fc = merged.frameConfig;
         if (fc) {
           // Migrate legacy configs without wing properties
