@@ -140,7 +140,12 @@ export const SCHOOL_SLIM_FRAME_CONFIG: FrameConfig = getWingFrameConfig(
     fullWidthTopBar: true,
     // THE CHANGE. One row, and the tagline moves into the tab.
     bottomRows: 1,
-    bottomTab: { riseInches: 0.42, baseInches: 5, topInches: 3.9 },
+    // Bigger than the first pass, which read as a plinth rather than a keystone.
+    // It rises 0.60" into the opening on top of the 0.52" the bar already overlaps,
+    // so at the centre the frame covers 1.12" up from the plate's bottom edge —
+    // the number to check against a real plate, since some states print a motto
+    // there.
+    bottomTab: { riseInches: 0.6, baseInches: 6.2, topInches: 5 },
     overhangTiles: 1,
   },
   1 * DEFAULT_FRAME_CONFIG.tileSizeInches,
