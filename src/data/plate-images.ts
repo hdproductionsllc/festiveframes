@@ -36,9 +36,15 @@ const DEFAULT_DISPLAY: PlateImageDisplay = {
 const plateDisplay: Record<string, Partial<PlateImageDisplay>> = {
   // Tight crop, was getting clipped at the edges — show the whole plate.
   CA: { objectFit: "contain", scale: 1 },
-  // Pre-cropped tight to the plate bounds at ~2:1 (banner→dates, no bumper).
-  // Slightly < 1 so it sits a hair zoomed-out in the opening.
-  MO: { objectFit: "cover", scale: 0.92, objectPosition: "center" },
+  // Pre-cropped tight to the plate bounds at ~2:1 (banner→dates, no bumper), so
+  // it fills the opening at 1:1 with nothing to pull back from.
+  //
+  // It was 0.92 — a hair zoomed out — and that was right when the plate opening
+  // was 10 x 5 cells against a 12" x 6" plate rect: the frame lay across an inch
+  // of the plate on each side, so pulling the photo in kept its own edges clear of
+  // the overlap. The rail model opened the window to the full 12 x 6, and the same
+  // 8% pullback then reads as a gap of frame body all the way round the plate.
+  MO: { objectFit: "cover", scale: 1, objectPosition: "center" },
 };
 
 export function getPlateImageDisplay(stateAbbr: string): PlateImageDisplay {

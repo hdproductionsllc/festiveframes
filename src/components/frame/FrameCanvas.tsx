@@ -632,6 +632,7 @@ export const FrameCanvas = forwardRef<FrameCanvasHandle, FrameCanvasProps>(
                 pxPerInch={tileSize / frameConfig.tileSizeInches}
                 centerX={bottomBox.x + bottomBox.width / 2}
                 barTopY={bottomBox.y}
+                unit={tileSize}
                 />
               ) : null;
             })()}

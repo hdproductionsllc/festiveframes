@@ -1,7 +1,7 @@
 "use client";
 
 import type { BottomBarConfig, BottomTab } from "@/lib/types";
-import { tabClipPath, tabTextBox } from "@/lib/utils/bottom-tab";
+import { tabClipPath, tabSkirt, tabTextBox } from "@/lib/utils/bottom-tab";
 import { widthLimitedFont } from "@/lib/utils/banner-tiers";
 import { textChenilleCss, rimRamp } from "@/lib/utils/tile-theme";
 import { useDesignStore } from "@/stores/design-store";
@@ -25,6 +25,7 @@ export function BottomTabElement({
   pxPerInch,
   centerX,
   barTopY,
+  unit,
 }: {
   tab: BottomTab;
   /** The bottom banner's config — the tab wears its colours and carries its tagline. */
@@ -33,6 +34,8 @@ export function BottomTabElement({
   /** Frame-space x of the banner's centre, and y of its top edge. */
   centerX: number;
   barTopY: number;
+  /** ONE grid cell in px. The SKIRT is sized from this — see `tabSkirt`. */
+  unit: number;
 }) {
   const rimColor = useDesignStore((s) => s.rimColor);
   const line = config.tagline?.trim() ?? "";
@@ -46,9 +49,13 @@ export function BottomTabElement({
   // class of bug the banner lettering just had.
   const rimPx = Math.max(0.75, rise * 0.07);
   // The SKIRT: the tab's fill carried down past the bar's top edge to bury the
-  // rim the bar draws there. Without it the two read as a badge sitting ON a bar
-  // rather than as one piece of material, which is what they are.
-  const skirt = Math.max(2, rimPx * 3);
+  // chrome the bar draws there. Without it the two read as a badge sitting ON a
+  // bar rather than as one piece of material, which is what they are.
+  //
+  // Sized from ONE CELL, which is what the bar's chrome is measured against too, so
+  // the two cannot disagree. `tabSkirt` is shared with the print renderer for the
+  // same reason. See it for what went wrong when each side guessed.
+  const skirt = Math.max(2, tabSkirt(unit));
   const box = tabTextBox(tab, pxPerInch);
   const family = config.taglineFontFamily ?? config.fontFamily;
   // Rough em-width for the fitter. The canvas side measures with real metrics; a
@@ -69,15 +76,14 @@ export function BottomTabElement({
         // metal shows only along the two slopes and the top. Stroking a clip-path
         // is not possible in CSS, and a border would follow the box, not the shape.
         //
-        // NO SKIRT on this layer, which is the whole trick. A clipped layer paints
-        // wherever the fill does not cover it, so a rim carrying the skirt painted
-        // its two VERTICAL edges down past the bar's top rim and left a metal stub
-        // hanging below it at each base corner — the seam the skirt exists to
-        // remove, reintroduced by the thing drawing the edge. Stopping the rim at
-        // the base is what the canvas twin already does: it strokes points 1..4,
-        // the two slopes and the top, and never the skirt's sides.
+        // This layer KEEPS the skirt. Clipping it to skirt 0 also stops the rim at
+        // the base, which looks like the right fix and is not: `clip-path` clips
+        // descendants, so it takes the FILL's skirt with it, and the bar's rim and
+        // bevel then run straight across the tab's base as a hard line. The rim is
+        // stopped by the fill flaring to full width at the base instead — see
+        // `tabClipPath`'s `rimPx`.
         background: rimRamp(rimColor).mid,
-        clipPath: tabClipPath(tab, pxPerInch, 0),
+        clipPath: tabClipPath(tab, pxPerInch, skirt),
         // ABOVE the bar, including while the bar is selected, or the selection ring
         // paints the very seam the skirt exists to remove.
         zIndex: 4,
@@ -89,21 +95,17 @@ export function BottomTabElement({
           position: "absolute",
           inset: 0,
           background: config.backgroundColor,
-          // The same polygon brought inward, then pushed DOWN by the same amount,
-          // so the metal band lands on the slopes and the top edge and NOT on the
-          // base. The base is where the tab meets the bar: they are one piece of
-          // material there, and a line across it draws a seam through solid metal.
-          clipPath: tabClipPath(
-            {
-              ...tab,
-              riseInches: tab.riseInches - rimPx / pxPerInch,
-              baseInches: tab.baseInches - (rimPx * 2) / pxPerInch,
-              topInches: tab.topInches - (rimPx * 2) / pxPerInch,
-            },
-            pxPerInch,
-            skirt,
-          ),
-          transform: `translate(${rimPx}px, ${rimPx}px)`,
+          // The same polygon brought inward along the TOP and the SLOPES only, and
+          // flaring back to full width at the base. The metal band therefore lands
+          // on the slopes and the top edge and stops at the base — which is where
+          // the tab meets the bar, and they are one piece of material there, so a
+          // line across it draws a seam through solid metal.
+          //
+          // Full width below the base is also what lets the SKIRT do its job: it
+          // has to bury the bar's own rim and bevel edge to edge across the tab, or
+          // the join reads as a trapezoid sitting ON a bar rather than growing out
+          // of one.
+          clipPath: tabClipPath(tab, pxPerInch, skirt, rimPx),
           display: "flex",
           // Centred on the RISE, not on the box: the skirt is buried inside the bar
           // and must not pull the tagline down into it.

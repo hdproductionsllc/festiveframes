@@ -61,7 +61,7 @@ import {
 } from "@/lib/utils/sections";
 import { panelOverhangTiles, panelRects, type PanelRect } from "@/lib/utils/panels";
 import { bannerBands, trackingPx, widthLimitedFont } from "@/lib/utils/banner-tiers";
-import { frameTab, tabPath, tabTextBox } from "@/lib/utils/bottom-tab";
+import { frameTab, tabPath, tabSkirt, tabTextBox } from "@/lib/utils/bottom-tab";
 import { bannerConfigFor, bannerLogoLayout, sectionSupportsLogo } from "@/lib/utils/banner-logo";
 import { getPiece } from "@/data/sets";
 import {
@@ -686,8 +686,13 @@ function drawTextBlock(
   // to bury the rim, and its own rim runs the two slopes and the top only. The
   // result is one continuous body with one continuous edge.
   if (tab) {
+    // Deep enough to bury the bar's surround, rim AND the bevel inside it. It used
+    // to stop at rim + inset, which left the bevel's last eleven pixels running
+    // straight across the tab's base — a fainter version of the very seam the skirt
+    // exists to remove, and invisible unless you sample the pixels. Shared with the
+    // browser twin so the two cannot drift.
+    const skirt = tabSkirt(unit);
     const rim = rimMetrics(w, h, unit);
-    const skirt = rim.width + rim.inset + 1;
     const p = tabPath(tab.tab, x + w / 2, y, tab.pxPerInch, skirt);
     ctx.save();
     ctx.beginPath();

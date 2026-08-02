@@ -18,6 +18,7 @@ import {
   type SchoolImageBundle,
 } from "./compose-school-frame";
 import { panelOverhangTiles, panelRects, panelSizeInches } from "@/lib/utils/panels";
+import { tabSkirt } from "@/lib/utils/bottom-tab";
 import { SCHOOL_FRAME_CONFIG, SCHOOL_SLIM_FRAME_CONFIG } from "@/lib/constants/frame";
 import { getTotalWidthInches, getRenderHeightInches } from "@/lib/constants/frame";
 import type { BottomBarConfig, PlacedTextBar, PlacedTile, SectionState } from "@/lib/types";
@@ -502,5 +503,85 @@ describe("clearOutsideTab — the panel file describes the PART, not a rectangle
       expect(napi.getImageData(2, 2, 1, 1).data[3], `${id} was clipped`).toBe(255);
       expect(napi.getImageData(box.outW - 2, 2, 1, 1).data[3], `${id} was clipped`).toBe(255);
     }
+  });
+});
+
+describe("the keystone and the bar are ONE piece of material", () => {
+  // The owner's report was "I want continuity, no thin blue line". There were two
+  // sources and both were invisible without sampling pixels:
+  //
+  //  · the browser clipped the tab's OUTER layer to skirt 0 to stop its rim
+  //    hanging below the base. `clip-path` clips descendants, so that took the
+  //    FILL's skirt with it and the bar's rim and bevel ran straight across.
+  //  · the print sheet's skirt was `rim.width + rim.inset + 1`, which buries the
+  //    rim but not the bevel INSIDE it, leaving its last eleven pixels crossing
+  //    the base.
+  //
+  // Both are now `tabSkirt(unit)`, one cell-derived formula shared by both.
+
+  const cfg = SCHOOL_SLIM_FRAME_CONFIG;
+  const DPI = 300;
+
+  function column() {
+    const { width: W, height: H } = schoolCanvasSize(cfg, DPI);
+    const canvas = createCanvas(W, H);
+    const ctx = canvas.getContext("2d") as unknown as CanvasRenderingContext2D;
+    const bundle: SchoolImageBundle = {
+      plate: null, pieces: new Map(), snappets: new Map(), sections: new Map(), qr: null, logos: new Map(),
+    };
+    const design = {
+      frameConfig: cfg, slots: {}, textBars: [], qrCode: { enabled: false, url: "", size: 0 },
+      plateState: "MO",
+      sections: { bottom: { mode: "text", text: barConfig({ text: "WILDCATS", tagline: "CLASS OF 2027" }) } },
+      frameColor: "#1b2a4a",
+    } as unknown as SchoolDesign;
+    drawSchoolFrame(ctx, design, bundle, W);
+    void H;
+    const m = schoolRenderMetrics(cfg, W);
+    const napi = ctx as unknown as SKRSContext2D;
+    return {
+      barTop: Math.round(panelRects(cfg).bottom.row0 * cfg.tileSizeInches * m.scale),
+      underTab: Math.round(m.wingPx + (cfg.widthInches * m.scale) / 2),
+      besideTab: Math.round(m.wingPx + 2.5 * cfg.tileSizeInches * m.scale),
+      unit: cfg.tileSizeInches * m.scale,
+      rgb: (x: number, y: number) => [...napi.getImageData(x, y, 1, 1).data].slice(0, 3).join(","),
+    };
+  }
+
+  it("draws NOTHING across the join under the tab", () => {
+    const c = column();
+    const bg = c.rgb(c.underTab, c.barTop + 60); // deep inside the bar, past all chrome
+    // From above the base, through it, and past the full depth of the bar's chrome.
+    for (let y = c.barTop - 4; y <= c.barTop + tabSkirt(c.unit) - 2; y++) {
+      expect(c.rgb(c.underTab, y), `a line crosses the join at +${y - c.barTop}px`).toBe(bg);
+    }
+  });
+
+  it("…while the bar keeps its rim and bevel everywhere ELSE", () => {
+    // The other half of the assertion. A skirt that swallowed the bar's chrome
+    // along its whole length would pass the test above and ruin the banner.
+    const c = column();
+    const bg = c.rgb(c.besideTab, c.barTop + 60);
+    const band: string[] = [];
+    for (let y = c.barTop; y <= c.barTop + tabSkirt(c.unit) - 2; y++) band.push(c.rgb(c.besideTab, y));
+    expect(band.every((p) => p === bg), "the bar lost its own edge treatment").toBe(false);
+    // …and it is METAL, not just any difference: the rim is the brightest thing there.
+    const brightest = band
+      .map((p) => p.split(",").map(Number))
+      .reduce((a, b) => (a[0] + a[1] + a[2] > b[0] + b[1] + b[2] ? a : b));
+    expect(brightest[0], "no rim beside the tab").toBeGreaterThan(150);
+  });
+
+  it("keeps the rim ON the tab's own top edge and slopes", () => {
+    // The seam fix must not cost the tab its edge — that is the trade the first
+    // attempt made in the other direction.
+    const c = column();
+    const tabTop = c.barTop - Math.round(cfg.bottomTab!.riseInches * DPI);
+    const bg = c.rgb(c.underTab, c.barTop + 60);
+    const onEdge = c.rgb(c.underTab, tabTop + 2);
+    expect(onEdge, "the tab's top edge lost its rim").not.toBe(bg);
+    const [r, g, b] = onEdge.split(",").map(Number);
+    expect(r, "the tab's top edge is not metal").toBeGreaterThan(150);
+    expect(r, "a rim should be warm, not white").toBeGreaterThan(b);
   });
 });
