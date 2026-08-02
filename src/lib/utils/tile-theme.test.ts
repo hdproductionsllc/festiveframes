@@ -439,9 +439,29 @@ describe("the rim override reaches the lettering, not only the edge", () => {
   });
 
   it("is a straight substitution — the school colour lands on the gold's own stop", () => {
-    const silver = "#D9DCE1";
-    expect(merrowThread("#FFFFFF", silver)).toBe(rimRamp(silver).mid);
-    expect(merrowThread("#111111", silver)).toBe(rimRamp(silver).light);
+    const crimson = "#8C1D40";
+    expect(merrowThread("#FFFFFF", crimson)).toBe(rimRamp(crimson).mid);
+    expect(merrowThread("#111111", crimson)).toBe(rimRamp(crimson).light);
+  });
+
+  it("REFUSES a thread that cannot be seen against the type", () => {
+    // SLUH's rim is #FFFFFF and its banner type is #FFFFFF, so the "thread" came
+    // out white on white — not an outline, just 7.5% of an em of extra weight on
+    // every glyph. That is what "the bottom banner font is too fat" was, and the
+    // print path never had it because it passed no rim and kept the brass.
+    expect(merrowThread("#FFFFFF", "#FFFFFF")).toBe(BRASS.mid);
+    // A pale silver on white type is the same defect, one shade gentler.
+    expect(merrowThread("#FFFFFF", "#D9DCE1")).toBe(BRASS.mid);
+    // ...and dark type on the same rim is fine, so the guard must not fire there.
+    expect(merrowThread("#111111", "#FFFFFF")).toBe(rimRamp("#FFFFFF").light);
+  });
+
+  it("moves the thread off the type when even the brass is too close", () => {
+    // Gold lettering on a gold frame: both candidates fail, and an invisible
+    // outline is worse than a slightly off-hue one.
+    const gold = BRASS.mid;
+    const thread = merrowThread(gold, gold);
+    expect(Math.abs(luminance(thread) - luminance(gold))).toBeGreaterThan(0.25);
   });
 
   it("leaves the BRASS thread exactly where every existing frame was designed", () => {

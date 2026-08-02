@@ -531,15 +531,44 @@ export function rimRamp(override?: string | null): { light: string; mid: string;
 }
 
 /**
- * The thread colour for the merrow border round banner lettering — the letterman-jacket
- * outline. Straight substitution: wherever the gold was, the school colour goes, on the
- * SAME stop of the SAME ramp the brass used.
+ * How far the thread's luminance must sit from the type's before it counts as a
+ * border at all. Below this the "outline" is the same colour as the letter it is
+ * meant to outline, so all it does is make the letter thicker.
+ *
+ * 0.25 puts brass on white type (0.37) comfortably inside and a pale silver on
+ * white type (0.14) comfortably outside.
+ */
+const MERROW_MIN_CONTRAST = 0.25;
+
+/**
+ * The thread colour for the merrow border round banner lettering — the
+ * letterman-jacket outline. The school's rim colour substitutes for the gold, on
+ * the SAME stop of the SAME ramp the brass used.
+ *
+ * ...unless it cannot be seen. SLUH's rim is #FFFFFF and its banner type is
+ * #FFFFFF, so the "thread" came out white on white: not an outline, just 7.5% of
+ * an em of extra weight on every glyph plus a soft grey seat that reads as a
+ * halo. That is what "the bottom banner font is too fat" was — the face was never
+ * the problem, and the PRINT path never had it, because it passed no rim at all
+ * and therefore kept the brass.
+ *
+ * So contrast is now a requirement rather than an intention: fall back to the
+ * brass, which is picked to read against both light and dark type, and if even
+ * that is too close (gold lettering on a gold frame) move the thread away from
+ * the type instead of drawing an invisible one.
  */
 export function merrowThread(textColour: string, rimColor?: string | null): string {
-  const ramp = rimRamp(rimColor);
+  const lumText = luminance(textColour);
   // Light type takes the body stop, dark type the lit one — the brass rule, unchanged,
   // so a frame with no override is byte-identical to the one that shipped.
-  return luminance(textColour) > 0.6 ? ramp.mid : ramp.light;
+  const stop = (ramp: { light: string; mid: string }) => (lumText > 0.6 ? ramp.mid : ramp.light);
+  const reads = (colour: string) => Math.abs(luminance(colour) - lumText) >= MERROW_MIN_CONTRAST;
+
+  const override = stop(rimRamp(rimColor));
+  if (reads(override)) return override;
+  const brass = stop(BRASS);
+  if (reads(brass)) return brass;
+  return shift(textColour, lumText > 0.5 ? -0.55 : 0.55);
 }
 
 export function brassGradientCss(override?: string | null): string {

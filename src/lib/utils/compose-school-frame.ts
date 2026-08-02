@@ -591,7 +591,11 @@ function drawTextBlock(
     // stroked UNDER the fill, then the softened emboss on top. Order matters and is
     // outside-in — cast shadow, gold thread, dark seat, shade, lit edge, face. Stroke
     // before fill, always, or the thread eats the letterform's own weight.
-    const em = textChenille(fontPx, cfg.textColor);
+    // The rim override reaches the LETTERING too — see merrowThread. Omitting it
+    // here is why the print sheet kept the brass thread while the builder drew a
+    // white one: the two renderers were passing different arguments to the same
+    // function, which is exactly the drift tile-theme exists to prevent.
+    const em = textChenille(fontPx, cfg.textColor, rimColor);
     ctx.lineJoin = "round";
     ctx.miterLimit = 2;
     for (const ln of lines) {
