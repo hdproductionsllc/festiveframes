@@ -111,6 +111,53 @@ export const SCHOOL_FRAME_CONFIG: FrameConfig = getWingFrameConfig(
   1 * DEFAULT_FRAME_CONFIG.tileSizeInches,
 );
 
+
+export const SCHOOL_RAIL_FRAME_CONFIG: FrameConfig = getWingFrameConfig(
+  {
+    ...DEFAULT_FRAME_CONFIG,
+    // ─── THE RAIL MODEL — NOT YET LIVE ───────────────────────────────────────
+    //
+    // Wired to /lab/slim only. SCHOOL_FRAME_CONFIG above is untouched and still
+    // serves /s/<school>. Flipping the live builder onto this is a one-line
+    // change, and it is deliberately NOT made yet: see the header of this block
+    // for what still has to land first.
+    //
+    // The frame is a RAIL: one tile of structure all the way round a window the
+    // size of the plate. Bill 3D-prints the rail; what we make are the snap-ins
+    // that clip onto it. A snap-in larger than one cell registers to a rail cell
+    // and CANTILEVERS OUTBOARD, over air, away from the plate.
+    //
+    // It used to be two tiles of structure down each side, because a 2x2 badge was
+    // baked into the rail panel and the rail was widened to hold it. That shrank
+    // the window from 12x6 to 10x5, so the frame lay over 1.045" of the plate on
+    // each side — a print-file problem that had become a product problem, and the
+    // source of the "panels print too fat" report.
+    //
+    //   14 cols x 8 rows      1 rail + 12 window + 1 rail, 1 + 6 + 1
+    //   window                11.892" x 5.946", essentially the plate
+    //   structure             13.874" x 7.928"
+    //   needs flat surface    0.937" sides, 0.964" top and bottom
+    topSlots: 12,
+    bottomSlots: 12,
+    widthInches: 12 * DEFAULT_FRAME_CONFIG.tileSizeInches,
+    // 8 rows: heightInches must be tileSize * (leftSlots + 2), so leftSlots sets
+    // the height. The side SLOTS it would generate are suppressed below — the
+    // wings are the side rails.
+    leftSlots: 6,
+    rightSlots: 6,
+    heightInches: 8 * DEFAULT_FRAME_CONFIG.tileSizeInches,
+    sideRails: false,
+    minTileSpan: { cols: 2, rows: 2 },
+    fullWidthTopBar: true,
+    bottomRows: 1,
+    // One tile of gutter each side, which is exactly the cantilever a 2x2 snap-in
+    // throws past the rail.
+    overhangTiles: 1,
+  },
+  // One tile column per side — the rail.
+  1 * DEFAULT_FRAME_CONFIG.tileSizeInches,
+);
+
 /**
  * SCHOOL SLIM — the fitment redesign, and a FORK. The classic school frame above
  * is untouched and still the live one.

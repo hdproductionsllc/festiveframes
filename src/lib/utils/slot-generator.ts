@@ -129,11 +129,16 @@ export function generateSlots(
   // row and the wing bottom never move when extra rows are added below.
   const bottomY = baseHeightPx - tileSize;
 
-  // ─── Left Rail ─────────────────────────────────────────
+  // ─── Left / Right Rails ────────────────────────────────
+  // Skipped entirely on a frame whose side rails ARE its wings: those inner
+  // columns are window, and emitting rails there is what shrank the plate
+  // opening to 10x5. See FrameConfig.sideRails.
+  const innerSideRails = config.sideRails !== false;
+
   const leftColumnTotal = config.leftSlots + 2;
   const leftStep = columnSpan / (leftColumnTotal - 1);
 
-  for (let i = 0; i < config.leftSlots; i++) {
+  for (let i = 0; innerSideRails && i < config.leftSlots; i++) {
     slots.push({
       id: makeSlotId("left", i),
       zone: "left",
@@ -151,7 +156,7 @@ export function generateSlots(
   const rightColumnTotal = config.rightSlots + 2;
   const rightStep = columnSpan / (rightColumnTotal - 1);
 
-  for (let i = 0; i < config.rightSlots; i++) {
+  for (let i = 0; innerSideRails && i < config.rightSlots; i++) {
     slots.push({
       id: makeSlotId("right", i),
       zone: "right",

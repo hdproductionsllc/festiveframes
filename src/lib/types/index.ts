@@ -127,6 +127,17 @@ export interface FrameConfig {
    * that exists today.
    */
   bottomTab?: BottomTab;
+  /**
+   * Does the INNER frame carry its own left/right rail columns?
+   *
+   * The school frame's side rails are the WINGS, one tile each. The inner frame's
+   * own edge columns were also being emitted as rails, which made the side two
+   * tiles of structure instead of one and shrank the plate window from 12x6 to
+   * 10x5 — the frame ate an inch of the plate on each side to make room for a 2x2
+   * badge. Absent/true is the /build ring, which is built out of exactly those
+   * inner rails and must keep them.
+   */
+  sideRails?: boolean;
 }
 
 /** Geometry of the bottom bar's keystone, in inches. See `FrameConfig.bottomTab`. */
