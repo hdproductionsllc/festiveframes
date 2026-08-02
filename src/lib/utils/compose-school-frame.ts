@@ -520,55 +520,6 @@ function drawTextBlock(
   tab?: { tab: BottomTab; pxPerInch: number } | null,
 ) {
   const bevel = bevelMetrics(w, h, cfg.backgroundColor, unit);
-  // THE KEYSTONE, drawn BEFORE the bar clips itself: it lives above the bar's own
-  // box, so anything drawn after `ctx.clip()` below would be cut off at the bar's
-  // top edge. Same fill and rim as the bar, so it reads as one piece of material
-  // rather than a sticker on top of one. See lib/utils/bottom-tab.ts.
-  if (tab) {
-    const p = tabPath(tab.tab, x + w / 2, y, tab.pxPerInch);
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(p.points[0].x, p.points[0].y);
-    for (const pt of p.points.slice(1)) ctx.lineTo(pt.x, pt.y);
-    ctx.closePath();
-    ctx.fillStyle = cfg.backgroundColor;
-    ctx.fill();
-    // The rim runs up the two slopes and across the top only. The base is where it
-    // meets the bar, and a line there would draw a seam through solid material.
-    const rim = rimMetrics(p.base, p.rise, unit);
-    ctx.beginPath();
-    ctx.moveTo(p.points[0].x, p.points[0].y);
-    for (const pt of p.points.slice(1)) ctx.lineTo(pt.x, pt.y);
-    ctx.strokeStyle = rimRamp(rimColor).mid;
-    ctx.lineWidth = rim.width;
-    ctx.lineJoin = "round";
-    ctx.stroke();
-    ctx.restore();
-
-    // The tagline lives in the tab now, above the name instead of below it.
-    const line = cfg.tagline?.trim();
-    if (line) {
-      const box = tabTextBox(tab.tab, tab.pxPerInch);
-      const family = cfg.taglineFontFamily ?? cfg.fontFamily;
-      ctx.save();
-      ctx.font = `700 100px ${family}`;
-      const em = ctx.measureText(line).width / 100;
-      const fontPx = Math.min(box.height, widthLimitedFont(em, line.length, 0, box.width));
-      ctx.font = `800 ${fontPx}px ${family}`;
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      const ch = textChenille(fontPx, cfg.textColor, rimColor);
-      const cx = x + w / 2;
-      const cy = y - p.rise / 2;
-      ctx.lineJoin = "round";
-      ctx.strokeStyle = ch.merrow.thread;
-      ctx.lineWidth = ch.merrow.width;
-      ctx.strokeText(line, cx, cy);
-      ctx.fillStyle = cfg.textColor;
-      ctx.fillText(line, cx, cy);
-      ctx.restore();
-    }
-  }
   // A banner never reaches a frame corner on this geometry — the wings do, and they
   // run the full height on both sides. Ordinary radii all round.
   const radii = cornerRadii(unit, NO_CORNERS);
@@ -713,6 +664,63 @@ function drawTextBlock(
     }
   }
   ctx.restore();
+
+  // THE KEYSTONE, drawn LAST so it sits over the bar's own rim.
+  //
+  // The tab and the bar are ONE piece of material — Bill would 3D print them as a
+  // single part — so there must be no line where they meet. The bar strokes a rim
+  // around its whole rounded rectangle, including the top edge the tab stands on,
+  // so the tab carries a SKIRT: its fill continues down past that edge far enough
+  // to bury the rim, and its own rim runs the two slopes and the top only. The
+  // result is one continuous body with one continuous edge.
+  if (tab) {
+    const rim = rimMetrics(w, h, unit);
+    const skirt = rim.width + rim.inset + 1;
+    const p = tabPath(tab.tab, x + w / 2, y, tab.pxPerInch, skirt);
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(p.points[0].x, p.points[0].y);
+    for (const pt of p.points.slice(1)) ctx.lineTo(pt.x, pt.y);
+    ctx.closePath();
+    ctx.fillStyle = cfg.backgroundColor;
+    ctx.fill();
+    // Rim on the SLOPES AND TOP only — points 1..4. The skirt's two vertical edges
+    // are inside the bar, and stroking them would draw the very seam this exists
+    // to remove.
+    ctx.beginPath();
+    ctx.moveTo(p.points[1].x, p.points[1].y);
+    for (const pt of p.points.slice(2, 5)) ctx.lineTo(pt.x, pt.y);
+    ctx.strokeStyle = rimRamp(rimColor).mid;
+    ctx.lineWidth = rim.width;
+    ctx.lineJoin = "round";
+    ctx.lineCap = "butt";
+    ctx.stroke();
+    ctx.restore();
+
+    // The tagline lives in the tab now, above the name instead of below it.
+    const line = cfg.tagline?.trim();
+    if (line) {
+      const box = tabTextBox(tab.tab, tab.pxPerInch);
+      const family = cfg.taglineFontFamily ?? cfg.fontFamily;
+      ctx.save();
+      ctx.font = `700 100px ${family}`;
+      const em = ctx.measureText(line).width / 100;
+      const fontPx = Math.min(box.height, widthLimitedFont(em, line.length, 0, box.width));
+      ctx.font = `800 ${fontPx}px ${family}`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      const ch = textChenille(fontPx, cfg.textColor, rimColor);
+      const cx = x + w / 2;
+      const cy = y - p.rise / 2;
+      ctx.lineJoin = "round";
+      ctx.strokeStyle = ch.merrow.thread;
+      ctx.lineWidth = ch.merrow.width;
+      ctx.strokeText(line, cx, cy);
+      ctx.fillStyle = cfg.textColor;
+      ctx.fillText(line, cx, cy);
+      ctx.restore();
+    }
+  }
 }
 
 // ─── The pure drawer ─────────────────────────────────────────────────────────

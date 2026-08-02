@@ -44,6 +44,16 @@ export function tabPath(
   centerX: number,
   barTopY: number,
   pxPerInch: number,
+  /**
+   * How far the shape continues DOWN past the bar's top edge, same units.
+   *
+   * The tab and the bar are ONE piece of material — Bill would 3D print them as
+   * one part — so there must be no line where they meet. But the bar draws its own
+   * rim around its whole rounded rectangle, including across the top edge the tab
+   * stands on. The skirt is the tab's fill carried down over that rim, far enough
+   * to bury it, so the two read as a single continuous body.
+   */
+  skirt = 0,
 ): TabPath {
   const rise = tab.riseInches * pxPerInch;
   const base = tab.baseInches * pxPerInch;
@@ -51,27 +61,36 @@ export function tabPath(
   const halfB = base / 2;
   const halfT = top / 2;
   const topY = barTopY - rise;
+  const footY = barTopY + skirt;
   return {
     rise,
     base,
     top,
     left: centerX - halfB,
+    // Down the left skirt, up the left slope, across the top, down the right
+    // slope, down the right skirt. The base itself is never a drawn edge.
     points: [
+      { x: centerX - halfB, y: footY },
       { x: centerX - halfB, y: barTopY },
       { x: centerX - halfT, y: topY },
       { x: centerX + halfT, y: topY },
       { x: centerX + halfB, y: barTopY },
+      { x: centerX + halfB, y: footY },
     ],
   };
 }
 
-/** A `polygon()` clip-path for the CSS side, in px, relative to the tab's own box. */
-export function tabClipPath(tab: BottomTab, pxPerInch: number): string {
+/**
+ * A `polygon()` clip-path for the CSS side, in px, relative to the tab's own box.
+ * `skirt` carries the shape down past the bar's top edge — see `tabPath`.
+ */
+export function tabClipPath(tab: BottomTab, pxPerInch: number, skirt = 0): string {
   const rise = tab.riseInches * pxPerInch;
   const base = tab.baseInches * pxPerInch;
   const top = Math.min(base, tab.topInches * pxPerInch);
   const inset = (base - top) / 2;
-  return `polygon(${inset}px 0, ${base - inset}px 0, ${base}px ${rise}px, 0 ${rise}px)`;
+  const foot = rise + skirt;
+  return `polygon(${inset}px 0, ${base - inset}px 0, ${base}px ${rise}px, ${base}px ${foot}px, 0 ${foot}px, 0 ${rise}px)`;
 }
 
 /**

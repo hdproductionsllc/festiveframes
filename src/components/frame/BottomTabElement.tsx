@@ -45,6 +45,10 @@ export function BottomTabElement({
   // phone, where the whole tab is about eleven pixels tall — which is exactly the
   // class of bug the banner lettering just had.
   const rimPx = Math.max(0.75, rise * 0.07);
+  // The SKIRT: the tab's fill carried down past the bar's top edge to bury the
+  // rim the bar draws there. Without it the two read as a badge sitting ON a bar
+  // rather than as one piece of material, which is what they are.
+  const skirt = Math.max(2, rimPx * 3);
   const box = tabTextBox(tab, pxPerInch);
   const family = config.taglineFontFamily ?? config.fontFamily;
   // Rough em-width for the fitter. The canvas side measures with real metrics; a
@@ -60,13 +64,15 @@ export function BottomTabElement({
         left: centerX - base / 2,
         top: barTopY - rise,
         width: base,
-        height: rise,
+        height: rise + skirt,
         // Rim FIRST, as a slightly larger clipped layer behind the fill, so the
         // metal shows only along the two slopes and the top. Stroking a clip-path
         // is not possible in CSS, and a border would follow the box, not the shape.
         background: rimRamp(rimColor).mid,
-        clipPath: tabClipPath(tab, pxPerInch),
-        zIndex: 2,
+        clipPath: tabClipPath(tab, pxPerInch, skirt),
+        // ABOVE the bar, including while the bar is selected, or the selection ring
+        // paints the very seam the skirt exists to remove.
+        zIndex: 4,
         pointerEvents: "none",
       }}
     >
@@ -87,11 +93,15 @@ export function BottomTabElement({
               topInches: tab.topInches - (rimPx * 2) / pxPerInch,
             },
             pxPerInch,
+            skirt,
           ),
           transform: `translate(${rimPx}px, ${rimPx}px)`,
           display: "flex",
-          alignItems: "center",
+          // Centred on the RISE, not on the box: the skirt is buried inside the
+          // bar and must not pull the tagline down into it.
+          alignItems: "flex-start",
           justifyContent: "center",
+          paddingTop: Math.max(0, (rise - rimPx) / 2),
         }}
       >
         {line && (
