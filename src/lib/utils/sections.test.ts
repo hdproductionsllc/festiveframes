@@ -31,31 +31,31 @@ describe("panelSuppressed", () => {
 });
 
 describe("slotSuppressed — by PANEL, so it hides the corners too", () => {
-  it("LEFT panel hides all 16 left-panel cells, INCLUDING the corners", () => {
-    // The live bug this fixes: the old zone mapping hid only the 8 wing-column
-    // cells, filling half the panel. The panel owns all 16 (cols 0-1, rows 0-7).
-    expect(suppressedCells({ "wing-left": { mode: "image" } })).toBe(16);
+  it("LEFT panel hides all 18 left-panel cells, INCLUDING the corners", () => {
+    // The live bug this fixes: the old zone mapping hid only the wing-column
+    // cells, filling half the panel. The panel owns all 18 (cols 0-1, rows 0-8).
+    expect(suppressedCells({ "wing-left": { mode: "image" } })).toBe(18);
 
     // Spot-check the corners specifically — they are `top`/`bottom` ZONE slots but
     // LEFT-panel cells, so LEFT must hide them.
     const topLeftCorner = schoolGrid.cellAt(0, 1)!; // frame:top-0
-    const bottomLeftCorner = schoolGrid.cellAt(6, 1)!; // frame:bottom-0
+    const bottomLeftCorner = schoolGrid.cellAt(7, 1)!; // frame:bottom-0
     expect(topLeftCorner.zone).toBe("top");
     expect(bottomLeftCorner.zone).toBe("bottom");
     expect(slotSuppressed(topLeftCorner, { "wing-left": { mode: "image" } }, SCHOOL_FRAME_CONFIG)).toBe(true);
     expect(slotSuppressed(bottomLeftCorner, { "wing-left": { mode: "image" } }, SCHOOL_FRAME_CONFIG)).toBe(true);
   });
 
-  it("TOP panel hides only the 10 INNER top cells, not the corners", () => {
-    expect(suppressedCells({ top: { mode: "image" } })).toBe(10);
+  it("TOP panel hides only the 12 INNER top cells, not the corners", () => {
+    expect(suppressedCells({ top: { mode: "image" } })).toBe(12);
     // The corner is NOT hidden by TOP — it belongs to the LEFT panel.
     const topLeftCorner = schoolGrid.cellAt(0, 1)!;
     expect(slotSuppressed(topLeftCorner, { top: { mode: "image" } }, SCHOOL_FRAME_CONFIG)).toBe(false);
   });
 
-  it("BOTTOM panel hides 20 cells, RIGHT panel hides 16", () => {
-    expect(suppressedCells({ bottom: { mode: "text" } })).toBe(20);
-    expect(suppressedCells({ "wing-right": { mode: "image" } })).toBe(16);
+  it("BOTTOM panel hides 24 cells, RIGHT panel hides 18", () => {
+    expect(suppressedCells({ bottom: { mode: "text" } })).toBe(24);
+    expect(suppressedCells({ "wing-right": { mode: "image" } })).toBe(18);
   });
 
   it("suppresses nothing when no section is set (the /build case)", () => {
@@ -70,12 +70,12 @@ describe("slotSuppressed — by PANEL, so it hides the corners too", () => {
 });
 
 describe("sectionBounds — unions the PANEL cells, incl. corners", () => {
-  it("the LEFT panel box spans the full vertical (rows 0-7), both columns", () => {
+  it("the LEFT panel box spans the full vertical (rows 0-8), both columns", () => {
     const box = sectionBounds("wing-left", schoolGrid.slots, SCHOOL_FRAME_CONFIG)!;
     // Left edge is the wing column's x (col 0); top edge is row 0 (the top corner);
     // bottom edge is the last bottom row. Compare against the actual corner cells.
     const topCorner = schoolGrid.cellAt(0, 0)!; // wing top
-    const botCorner = schoolGrid.cellAt(7, 1)!; // rail, last bottom row
+    const botCorner = schoolGrid.cellAt(8, 1)!; // rail, last bottom row
     expect(box.x).toBeCloseTo(topCorner.x, 6);
     expect(box.y).toBeCloseTo(topCorner.y, 6);
     expect(box.y + box.height).toBeCloseTo(botCorner.y + botCorner.height, 6);
@@ -84,7 +84,7 @@ describe("sectionBounds — unions the PANEL cells, incl. corners", () => {
   it("the TOP panel box covers only the inner cells (starts at col 2, not col 1)", () => {
     const box = sectionBounds("top", schoolGrid.slots, SCHOOL_FRAME_CONFIG)!;
     const firstInner = schoolGrid.cellAt(0, 2)!; // frame:top-1
-    const lastInner = schoolGrid.cellAt(0, 11)!; // frame:top-10
+    const lastInner = schoolGrid.cellAt(0, 13)!; // frame:top-12
     expect(box.x).toBeCloseTo(firstInner.x, 6);
     expect(box.x + box.width).toBeCloseTo(lastInner.x + lastInner.width, 6);
     // Exactly one row tall.

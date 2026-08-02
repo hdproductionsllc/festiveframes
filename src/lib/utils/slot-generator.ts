@@ -48,7 +48,7 @@ export function wingRowCount(config: FrameConfig): number {
  *   heightInches === tileSizeInches * (leftSlots + 2) (leftStep === tileSize)
  *
  * Both DEFAULT_FRAME_CONFIG (12.883 = .991*13, 6.937 = .991*7) and
- * SCHOOL_FRAME_CONFIG (11.892 = .991*12, 6.937) satisfy it. If a future config
+ * SCHOOL_FRAME_CONFIG (13.874 = .991*14, 7.928 = .991*8) satisfy it. If a future config
  * does not, the rails render with a cumulative gap and every (row,col) below is
  * a lie — `gridInvariantHolds` is exported so tests can assert it.
  */
@@ -130,15 +130,10 @@ export function generateSlots(
   const bottomY = baseHeightPx - tileSize;
 
   // ─── Left / Right Rails ────────────────────────────────
-  // Skipped entirely on a frame whose side rails ARE its wings: those inner
-  // columns are window, and emitting rails there is what shrank the plate
-  // opening to 10x5. See FrameConfig.sideRails.
-  const innerSideRails = config.sideRails !== false;
-
   const leftColumnTotal = config.leftSlots + 2;
   const leftStep = columnSpan / (leftColumnTotal - 1);
 
-  for (let i = 0; innerSideRails && i < config.leftSlots; i++) {
+  for (let i = 0; i < config.leftSlots; i++) {
     slots.push({
       id: makeSlotId("left", i),
       zone: "left",
@@ -156,7 +151,7 @@ export function generateSlots(
   const rightColumnTotal = config.rightSlots + 2;
   const rightStep = columnSpan / (rightColumnTotal - 1);
 
-  for (let i = 0; innerSideRails && i < config.rightSlots; i++) {
+  for (let i = 0; i < config.rightSlots; i++) {
     slots.push({
       id: makeSlotId("right", i),
       zone: "right",

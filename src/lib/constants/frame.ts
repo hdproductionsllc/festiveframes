@@ -65,133 +65,137 @@ export function getStandardConfig(config: FrameConfig): FrameConfig {
 }
 
 /**
- * SCHOOL / fundraising frame — the live builder's geometry with a SINGLE-tile side
- * panel (wing) per side flanking the plate. The school builder (`/lab/school`) seeds
- * this so the real drag-drop + text-bar editor + plate all work, just with side
- * rails for the school's direct-print art. Everything else (the plate, the top/
- * bottom rails, text bars) is the standard frame.
+ * SCHOOL / fundraising frame — TODAY'S geometry, kept for reference and revert.
  *
- * WHY ONE WING COLUMN (and not three): this frame is DIRECT-PRINTED on the eufyMake
- * E1, whose bed is 16.5" x 13". At 3 wing columns the frame measured
- * 11.892 + 2*(3*0.991) = 17.838" wide — wider than 16.5", so it fit the bed in NO
- * orientation and simply could not be produced. At 1 column it is
- * 11.892 + 2*0.991 = 13.874" wide x 7.928" tall: it fits ROTATED (long axis along
- * the bed's 16.5" side) with 2.63" / 5.07" of margin. The wing count is therefore a
- * manufacturing constraint, not a styling choice — see the "eufyMake E1 bed fit"
- * tests in slot-generator.test.ts.
+ * A 12-unit inner frame with one wing column per side: 14 columns x 8 rows of
+ * material, 13.874" x 7.928" overall. Its plate WINDOW is only 10 x 5 cells
+ * (9.910" x 4.955"), because the side panels are two structural columns wide and
+ * the bottom is two structural rows tall. Against a 12" x 6" plate that is 1.045"
+ * of frame lying on the plate face down each side and 0.52" / 1.46" top and
+ * bottom — the "panels print too fat" report, and the reason the frame reads as
+ * heavier than any frame you can buy.
+ *
+ * NOT wired to anything. `SCHOOL_FRAME_CONFIG` below is the live one. To revert
+ * the window change, make that export equal this one.
  */
-export const SCHOOL_FRAME_CONFIG: FrameConfig = getWingFrameConfig(
+export const SCHOOL_CLASSIC_FRAME_CONFIG: FrameConfig = getWingFrameConfig(
   {
     ...DEFAULT_FRAME_CONFIG,
-    // One tile narrower than the standard ring: shrink the inner frame from 13 to
-    // 12 units so it's flush to the 12in plate (no extra ring column), which makes
-    // the school frame read one tile less wide.
     topSlots: 12,
     bottomSlots: 12,
-    // 12 gapless tiles = 11.892", NOT the plate's flat 12". Using 12 made
-    // slot-generator's topStep resolve to (12 - 0.991)/11 = 1.0008" — a 0.0098"
-    // gap per tile compounding to 0.108" across the row, so the rails were never
-    // actually gapless and the frame did not sit on an integer lattice. The 0.108"
-    // shortfall against the plate is hidden by the frame overlapping the plate's
-    // margin, exactly as the ring already does on /build.
     widthInches: 12 * DEFAULT_FRAME_CONFIG.tileSizeInches, // 11.892"
-    // Every badge on this frame is at least 2x2. One 0.991in cell is unreadable for
-    // artwork and a thumbnail for a photo.
     minTileSpan: { cols: 2, rows: 2 },
-    // School frame: top rail spans the full width (over the wings), and the bottom
-    // is 2 rows tall. Both are opt-in flags — /build never sets them.
     fullWidthTopBar: true,
     bottomRows: 2,
-    // The school frame is the one that takes multi-cell snappets, and a snappet
-    // may legally hang off the outer edge. One tile of bleed on every side is the
-    // room the canvas reserves for that overhang (see FrameConfig.overhangTiles).
     overhangTiles: 1,
   },
-  // One tile column per side — the widest the E1's 16.5" bed can take (see above).
-  1 * DEFAULT_FRAME_CONFIG.tileSizeInches,
-);
-
-
-export const SCHOOL_RAIL_FRAME_CONFIG: FrameConfig = getWingFrameConfig(
-  {
-    ...DEFAULT_FRAME_CONFIG,
-    // ─── THE RAIL MODEL — NOT YET LIVE ───────────────────────────────────────
-    //
-    // Wired to /lab/slim only. SCHOOL_FRAME_CONFIG above is untouched and still
-    // serves /s/<school>. Flipping the live builder onto this is a one-line
-    // change, and it is deliberately NOT made yet: see the header of this block
-    // for what still has to land first.
-    //
-    // The frame is a RAIL: one tile of structure all the way round a window the
-    // size of the plate. Bill 3D-prints the rail; what we make are the snap-ins
-    // that clip onto it. A snap-in larger than one cell registers to a rail cell
-    // and CANTILEVERS OUTBOARD, over air, away from the plate.
-    //
-    // It used to be two tiles of structure down each side, because a 2x2 badge was
-    // baked into the rail panel and the rail was widened to hold it. That shrank
-    // the window from 12x6 to 10x5, so the frame lay over 1.045" of the plate on
-    // each side — a print-file problem that had become a product problem, and the
-    // source of the "panels print too fat" report.
-    //
-    //   14 cols x 8 rows      1 rail + 12 window + 1 rail, 1 + 6 + 1
-    //   window                11.892" x 5.946", essentially the plate
-    //   structure             13.874" x 7.928"
-    //   needs flat surface    0.937" sides, 0.964" top and bottom
-    topSlots: 12,
-    bottomSlots: 12,
-    widthInches: 12 * DEFAULT_FRAME_CONFIG.tileSizeInches,
-    // 8 rows: heightInches must be tileSize * (leftSlots + 2), so leftSlots sets
-    // the height. The side SLOTS it would generate are suppressed below — the
-    // wings are the side rails.
-    leftSlots: 6,
-    rightSlots: 6,
-    heightInches: 8 * DEFAULT_FRAME_CONFIG.tileSizeInches,
-    sideRails: false,
-    minTileSpan: { cols: 2, rows: 2 },
-    fullWidthTopBar: true,
-    bottomRows: 1,
-    // One tile of gutter each side, which is exactly the cantilever a 2x2 snap-in
-    // throws past the rail.
-    overhangTiles: 1,
-  },
-  // One tile column per side — the rail.
   1 * DEFAULT_FRAME_CONFIG.tileSizeInches,
 );
 
 /**
- * SCHOOL SLIM — the fitment redesign, and a FORK. The classic school frame above
- * is untouched and still the live one.
+ * SCHOOL / fundraising frame — THE RAIL MODEL. The live builder.
  *
- * One row at the bottom instead of two. That single change takes the frame from
- * 7.93" to 6.94" tall and, more importantly, takes the clearance a car must have
- * BELOW the plate from 1.46" to 0.47" — the worst edge on the frame, on the part
- * of a bumper most likely to be obstructed. The frame becomes symmetric top to
- * bottom, and the fit check collapses to one rule: a quarter (0.955") clears
- * every edge, since the sides need 0.94" and the top and bottom 0.47".
+ * The frame is a RAIL: ONE tile of structure all the way round a window the size
+ * of the plate. Bill 3D-prints that rail in black; everything we print is a
+ * SNAP-IN that clips onto it. A snap-in bigger than one cell registers to a rail
+ * cell and CANTILEVERS OUTBOARD — out over air, away from the plate — which is
+ * how a 2x2 badge lives on a one-tile rail.
  *
- * The class year that lived on the second row moves into the KEYSTONE — a centre
- * section of the bar protruding up into the plate opening. It grows inward, over
- * the plate face, so it costs nothing in fitment. See lib/utils/bottom-tab.ts.
+ * That single fact is what fixes the window. The old geometry widened the
+ * structure to hold the badge, so a 2x2 side panel ate two columns of frame and
+ * the opening shrank to 10 x 5. Here the badge's second column is air, so the
+ * structure stays one tile and the opening opens back up to the full 12 x 6.
  *
- * 7 rows also means each side panel takes 2x2 / 2x3 / 2x2 exactly: three badges
- * with a taller feature in the middle, instead of four equal squares, which is
- * where every repetitive layout came from.
+ * The grid below IS the printed extent, cantilever included, which is why it needs
+ * no special cases anywhere in the placement engine — the outer ring of cells is
+ * simply the overhang, and a 2x2 anchored at column 0 covers [cantilever, rail]
+ * exactly as it always covered [wing, rail]:
+ *
+ *   col   0        1        2 .. 13        14       15
+ *         air      RAIL     WINDOW         RAIL     air
+ *   row   0        RAIL (top, no cantilever — nothing hangs above the plate)
+ *         1..6     WINDOW
+ *         7        RAIL (bottom)
+ *         8        air  (the bottom banner's second row hangs here)
+ *
+ *   window            12 x 6 cells = 11.892" x 5.946"  (the plate, near enough)
+ *   needs FLAT SURFACE  13.874" x 7.928"   — cols 1..14, rows 0..7: the rail
+ *   needs AIR           15.856" x 8.919"   — the whole printed extent
+ *
+ * The surface figure is unchanged from the classic frame above; only the air
+ * figure grows, and only where a car has room. That distinction is the whole
+ * point of the quarter test in the fit spec.
+ */
+export const SCHOOL_FRAME_CONFIG: FrameConfig = getWingFrameConfig(
+  {
+    ...DEFAULT_FRAME_CONFIG,
+    // 14 inner columns: rail + 12 of window + rail. The wings added below are the
+    // side CANTILEVER, not structure.
+    topSlots: 14,
+    bottomSlots: 14,
+    // 14 gapless tiles = 13.874", NOT 14 x a flat inch. The grid invariant in
+    // slot-generator requires widthInches === tileSizeInches * topSlots exactly, or
+    // the rail steps drift and every (row, col) below is a lie.
+    widthInches: 14 * DEFAULT_FRAME_CONFIG.tileSizeInches, // 13.874"
+    // 6 window rows between the top and bottom rails — the plate's 6" of height.
+    leftSlots: 6,
+    rightSlots: 6,
+    heightInches: 8 * DEFAULT_FRAME_CONFIG.tileSizeInches, // 7.928"
+    // Every badge on this frame is at least 2x2. One 0.991in cell is unreadable for
+    // artwork and a thumbnail for a photo.
+    minTileSpan: { cols: 2, rows: 2 },
+    // Top rail spans the full width (over the wings), and the bottom banner is two
+    // rows: the bottom rail plus one row of cantilever hanging below it.
+    fullWidthTopBar: true,
+    bottomRows: 2,
+    // A snappet may still hang past the outer edge while being dragged; one tile of
+    // bleed is the room the canvas reserves for that (see FrameConfig.overhangTiles).
+    overhangTiles: 1,
+  },
+  // One column per side — the side CANTILEVER.
+  1 * DEFAULT_FRAME_CONFIG.tileSizeInches,
+);
+
+/**
+ * SCHOOL SLIM — the HALF-cantilever variant, and a FORK at /lab/slim. The live
+ * frame above is untouched.
+ *
+ * Same rail, same 12 x 6 window, same side cantilever. The one change is that
+ * NOTHING hangs below the bottom rail: the bottom banner is the rail row and
+ * stops there. Cantilever is the thing that has to clear air, and air below a
+ * plate is the scarcest kind there is — a bumper valance, a step, a tow eye, a
+ * bike rack. The sides keep theirs because the space beside a plate is usually
+ * open, and it is where the badges live.
+ *
+ *   FULL (live)   needs air 15.856" x 8.919"   sides 1.928", top 0.964", bottom 1.955"
+ *   HALF (this)   needs air 15.856" x 7.928"   sides 1.928", top and bottom 0.964"
+ *
+ * Both need the same 13.874" x 7.928" of flat SURFACE, because the rail did not
+ * move. HALF simply stops asking for two inches of clear air under the plate.
+ *
+ * Losing the second bottom row loses the line the class year lived on, so it moves
+ * into the KEYSTONE — a centre section of the bar protruding UP into the plate
+ * opening, which is what every commercial frame does when it needs a second line.
+ * It grows inward over the plate face, so it costs nothing in fitment.
+ * See lib/utils/bottom-tab.ts.
  */
 export const SCHOOL_SLIM_FRAME_CONFIG: FrameConfig = getWingFrameConfig(
   {
     ...DEFAULT_FRAME_CONFIG,
-    topSlots: 12,
-    bottomSlots: 12,
-    widthInches: 12 * DEFAULT_FRAME_CONFIG.tileSizeInches,
+    topSlots: 14,
+    bottomSlots: 14,
+    widthInches: 14 * DEFAULT_FRAME_CONFIG.tileSizeInches, // 13.874"
+    leftSlots: 6,
+    rightSlots: 6,
+    heightInches: 8 * DEFAULT_FRAME_CONFIG.tileSizeInches, // 7.928"
     minTileSpan: { cols: 2, rows: 2 },
     fullWidthTopBar: true,
-    // THE CHANGE. One row, and the tagline moves into the tab.
+    // THE CHANGE. No bottom cantilever, and the tagline moves into the tab.
     bottomRows: 1,
-    // Bigger than the first pass, which read as a plinth rather than a keystone.
-    // It rises 0.60" into the opening on top of the 0.52" the bar already overlaps,
-    // so at the centre the frame covers 1.12" up from the plate's bottom edge —
-    // the number to check against a real plate, since some states print a motto
-    // there.
+    // The bar itself now overlaps the plate by only 0.027" (the rail sits on the
+    // plate's edge, not across its face), so the tab is doing all the work: it
+    // covers 0.627" up from the plate's bottom edge at the centre. That is the
+    // number to check against a real plate, since some states print a motto there.
     bottomTab: { riseInches: 0.6, baseInches: 6.2, topInches: 5 },
     overhangTiles: 1,
   },

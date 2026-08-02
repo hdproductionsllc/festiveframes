@@ -211,10 +211,10 @@ describe("buildPanelPartsList — section suppression (direct-print panels)", ()
     expect(right.rows[0].sku).toBe("PANEL-WING-RIGHT-TEXT");
     expect(right.rows[0].color).toBe("#0a2342");
     expect(right.rows[0].qty).toBe(1);
-    // wing-right panel is 2 cols × 8 rows on the school frame.
-    expect(right.rows[0].span).toEqual({ cols: 2, rows: 8 });
+    // wing-right panel is 2 cols × 9 rows on the school frame.
+    expect(right.rows[0].span).toEqual({ cols: 2, rows: 9 });
     expect(right.totalTiles).toBe(1);
-    expect(right.totalCells).toBe(16);
+    expect(right.totalCells).toBe(18);
     // The still-tiled top panel is untouched.
     const top = list.panels.find((p) => p.panel === "top")!;
     expect(top.rows.map((r) => r.pieceId)).toEqual(["test:star"]);
@@ -232,9 +232,9 @@ describe("buildPanelPartsList — section suppression (direct-print panels)", ()
     expect(flatPieces).not.toContain("test:corner");
     expect(flatPieces).toContain("panel:wing-right");
     expect(flatPieces).toContain("test:star");
-    // Totals reflect: 1 star tile + 1 direct-print panel = 2 parts, 1 + 16 cells.
+    // Totals reflect: 1 star tile + 1 direct-print panel = 2 parts, 1 + 18 cells.
     expect(list.totalTiles).toBe(2);
-    expect(list.totalCells).toBe(17);
+    expect(list.totalCells).toBe(19);
     const img = list.rows.find((r) => r.pieceId === "panel:wing-right")!;
     expect(img.sku).toBe("PANEL-WING-RIGHT-IMG");
     expect(img.color).toBe("#FFFFFF");

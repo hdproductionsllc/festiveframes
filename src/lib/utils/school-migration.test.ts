@@ -42,7 +42,7 @@ describe("migrateSchoolDesign (v6 → v7 wing trim)", () => {
   it("drops wing tiles on columns that no longer exist (indices 8..23)", () => {
     const out = migrateSchoolDesign(v6Blob()) as { slots: Record<string, PlacedTile> };
     const bound = SCHOOL_FRAME_CONFIG.wingColumns * wingRowCount(SCHOOL_FRAME_CONFIG);
-    expect(bound).toBe(8); // 1 column x 8 rows
+    expect(bound).toBe(9); // 1 column x 9 rows
 
     for (let i = 0; i < 3 * V6_WING_ROWS; i++) {
       const survives = i < bound;

@@ -489,7 +489,7 @@ describe("snappet spans", () => {
     // The span field is gone entirely — the ordinary two-key record is restored.
     expect(s().slots["frame:bottom-1"]).toEqual({ pieceId: "a", setId: "test" });
     // A cell that WAS covered is free again: dropping a tile there stands on its own.
-    const freed = grid.cellAt(6, 3)!.id; // (6,3), previously under the 2x2
+    const freed = grid.cellAt(7, 3)!.id; // (7,3), previously under the 2x2
     s().placeTile(freed, "c", "test");
     expect(s().slots[freed]).toEqual({ pieceId: "c", setId: "test" });
     expect(s().slots["frame:bottom-1"]).toEqual({ pieceId: "a", setId: "test" }); // untouched
@@ -560,11 +560,11 @@ describe("snappet spans", () => {
     const grid = buildGrid(SCHOOL_FRAME_CONFIG);
 
     // A 2x2 anchored in the LEFT wing that reaches into the (still-tiled) bottom rail.
-    s().placeTile("frame:wing-left-6", "mascot", "test", { cols: 2, rows: 2 });
-    const anchor = grid.coordOf("frame:wing-left-6")!;
+    s().placeTile("frame:wing-left-7", "mascot", "test", { cols: 2, rows: 2 });
+    const anchor = grid.coordOf("frame:wing-left-7")!;
     const footprintCell = grid.cellAt(anchor.row, anchor.col + 1)!; // (row, col+1)
     expect(footprintCell.zone).toBe("bottom"); // outside the wing-left section
-    expect(s().slots["frame:wing-left-6"].span).toEqual({ cols: 2, rows: 2 });
+    expect(s().slots["frame:wing-left-7"].span).toEqual({ cols: 2, rows: 2 });
 
     // Hide the LEFT panel: the anchor is suppressed, so the snappet paints nothing
     // and its bottom-rail cell renders as a normal empty cell.
@@ -572,8 +572,8 @@ describe("snappet spans", () => {
 
     // (1) TAP a plain tile onto that cell — placeTile's 1x1 branch.
     s().placeTile(footprintCell.id, "plain", "test");
-    expect(s().slots["frame:wing-left-6"]).toBeDefined(); // snappet survives
-    expect(s().slots["frame:wing-left-6"].span).toEqual({ cols: 2, rows: 2 });
+    expect(s().slots["frame:wing-left-7"]).toBeDefined(); // snappet survives
+    expect(s().slots["frame:wing-left-7"].span).toEqual({ cols: 2, rows: 2 });
     expect(s().slots[footprintCell.id]).toEqual({ pieceId: "plain", setId: "test" });
 
     // (2) DRAG a plain tile onto the OTHER suppressed footprint cell — moveTile's
@@ -581,7 +581,7 @@ describe("snappet spans", () => {
     const footprintCell2 = grid.cellAt(anchor.row + 1, anchor.col + 1)!; // (row+1, col+1)
     s().placeTile("frame:top-5", "dragme", "test");
     s().moveTile("frame:top-5", footprintCell2.id);
-    expect(s().slots["frame:wing-left-6"]).toBeDefined(); // still survives
+    expect(s().slots["frame:wing-left-7"]).toBeDefined(); // still survives
     expect(s().slots[footprintCell2.id]).toEqual({ pieceId: "dragme", setId: "test" });
 
     // (3) fillEmpty must not skip those cells as "covered" — with the anchor hidden
@@ -589,11 +589,11 @@ describe("snappet spans", () => {
     //     occupied by the two tiles above, so seed a fresh store to check the third.)
     const store2 = makeStore(SCHOOL_FRAME_CONFIG);
     const t = () => store2.getState();
-    t().placeTile("frame:wing-left-6", "mascot", "test", { cols: 2, rows: 2 });
+    t().placeTile("frame:wing-left-7", "mascot", "test", { cols: 2, rows: 2 });
     t().setSectionMode("wing-left", "image");
     t().fillEmpty([{ pieceId: "filler", setId: "test" }]);
     expect(t().slots[footprintCell.id]).toBeDefined(); // filled, not skipped
-    expect(t().slots["frame:wing-left-6"]).toBeDefined(); // and the snappet is untouched
+    expect(t().slots["frame:wing-left-7"]).toBeDefined(); // and the snappet is untouched
   });
 });
 
@@ -816,7 +816,7 @@ describe("uploads as reusable palette pieces", () => {
     const store = makeStore(SCHOOL_FRAME_CONFIG);
     const id = store.getState().addUpload(crest);
     const a = grid.cellAt(0, 0)!.id;
-    const b = grid.cellAt(0, 12)!.id;
+    const b = grid.cellAt(0, 14)!.id;
     store.getState().placeTile(a, id, "upload", { cols: 2, rows: 2 });
     store.getState().placeTile(b, id, "upload", { cols: 2, rows: 2 });
     const placed = Object.values(store.getState().slots).filter((t) => t.image);

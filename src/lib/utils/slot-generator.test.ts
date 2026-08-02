@@ -7,7 +7,13 @@ import {
   wingSlotIndex,
   gridInvariantHolds,
 } from "./slot-generator";
-import { DEFAULT_FRAME_CONFIG, SCHOOL_FRAME_CONFIG, getTotalWidthInches, getRenderHeightInches } from "@/lib/constants/frame";
+import {
+  DEFAULT_FRAME_CONFIG,
+  SCHOOL_CLASSIC_FRAME_CONFIG,
+  SCHOOL_FRAME_CONFIG,
+  getTotalWidthInches,
+  getRenderHeightInches,
+} from "@/lib/constants/frame";
 
 // ─── /build REGRESSION GATE ──────────────────────────────────
 //
@@ -186,10 +192,10 @@ describe("buildGrid", () => {
 // ─── wingRowCount ────────────────────────────────────────────
 
 describe("wingRowCount", () => {
-  it("is 8 for the school frame (1 top corner + 5 side + 2 bottom)", () => {
-    // The two store copies of this computed `leftSlots + 1` = 6, silently
+  it("is 9 for the school frame (1 top corner + 6 window rows + 2 bottom)", () => {
+    // The two store copies of this computed `leftSlots + 1` = 7, silently
     // dropping the top corner and the extra bottom row.
-    expect(wingRowCount(SCHOOL_FRAME_CONFIG)).toBe(8);
+    expect(wingRowCount(SCHOOL_FRAME_CONFIG)).toBe(9);
     expect(wingRowCount(SCHOOL_FRAME_CONFIG)).not.toBe(SCHOOL_FRAME_CONFIG.leftSlots + 1);
   });
 
@@ -210,18 +216,14 @@ describe("eufyMake E1 bed fit", () => {
   const BED_LONG = 16.5;
   const BED_SHORT = 13;
 
-  // Stage 1 landed the trim, so these now assert the LIVE school config. The
-  // previous revision modelled it locally as `TRIMMED` to prove the fit before
-  // committing; the assertions are unchanged, only the subject is real now.
-  const TRIMMED = SCHOOL_FRAME_CONFIG;
-
   it("the 3-column frame we trimmed FROM fit the bed in no orientation", () => {
-    // Why the trim was a hard requirement, not a styling choice. Reconstructed
-    // locally so this stays true as a historical fact — the live config has moved on.
+    // Why the wings were trimmed to one column, kept as a historical fact — the
+    // live config has moved on. Reconstructed from the CLASSIC geometry, which is
+    // the one that was trimmed.
     const threeColumn = {
-      ...SCHOOL_FRAME_CONFIG,
+      ...SCHOOL_CLASSIC_FRAME_CONFIG,
       wingColumns: 3,
-      wingWidthInches: 3 * SCHOOL_FRAME_CONFIG.tileSizeInches,
+      wingWidthInches: 3 * SCHOOL_CLASSIC_FRAME_CONFIG.tileSizeInches,
     };
     const w = getTotalWidthInches(threeColumn);
     expect(w).toBeCloseTo(17.838, 3);
@@ -229,7 +231,7 @@ describe("eufyMake E1 bed fit", () => {
     expect(w).toBeGreaterThan(BED_LONG);
   });
 
-  it("the school frame is now the trimmed 1-column config", () => {
+  it("the school frame keeps its 1-column wings — now the side CANTILEVER", () => {
     expect(SCHOOL_FRAME_CONFIG.wingColumns).toBe(1);
     expect(SCHOOL_FRAME_CONFIG.wingWidthInches).toBeCloseTo(
       SCHOOL_FRAME_CONFIG.tileSizeInches,
@@ -237,24 +239,71 @@ describe("eufyMake E1 bed fit", () => {
     );
   });
 
-  it("the trimmed frame is 13.874in x 7.928in", () => {
-    expect(getTotalWidthInches(TRIMMED)).toBeCloseTo(13.874, 3);
-    expect(getRenderHeightInches(TRIMMED)).toBeCloseTo(7.928, 3);
+  it("the printed extent is 15.856in x 8.919in and fits the bed", () => {
+    // THE PRINTED EXTENT, cantilever included — the whole 16 x 9 lattice. This is
+    // what has to fit the bed if the frame is ever laid out as one sheet, and it
+    // still does, in the same rotation as before.
+    expect(getTotalWidthInches(SCHOOL_FRAME_CONFIG)).toBeCloseTo(15.856, 3);
+    expect(getRenderHeightInches(SCHOOL_FRAME_CONFIG)).toBeCloseTo(8.919, 3);
+    expect(getTotalWidthInches(SCHOOL_FRAME_CONFIG)).toBeLessThanOrEqual(BED_LONG);
+    expect(getRenderHeightInches(SCHOOL_FRAME_CONFIG)).toBeLessThanOrEqual(BED_SHORT);
   });
 
-  it("the trimmed frame fits ROTATED (long axis along the bed's 16.5in side)", () => {
-    expect(getTotalWidthInches(TRIMMED)).toBeLessThanOrEqual(BED_LONG);
-    expect(getRenderHeightInches(TRIMMED)).toBeLessThanOrEqual(BED_SHORT);
+  it("the RAIL — the part Bill 3D-prints — is still 13.874in x 7.928in", () => {
+    // The structure did not move when the window opened up. Only the cantilever is
+    // new, and it hangs over air. `widthInches`/`heightInches` are the inner frame,
+    // which IS the rail: the wings and the extra bottom row are the overhang.
+    expect(SCHOOL_FRAME_CONFIG.widthInches).toBeCloseTo(13.874, 3);
+    expect(SCHOOL_FRAME_CONFIG.heightInches).toBeCloseTo(7.928, 3);
   });
 
-  it("the trimmed frame does NOT fit unrotated — rotation is required", () => {
-    expect(getTotalWidthInches(TRIMMED)).toBeGreaterThan(BED_SHORT);
+  it("the school frame is a 16 x 9 lattice with a 12 x 6 window", () => {
+    const grid = buildGrid(SCHOOL_FRAME_CONFIG);
+    expect(grid.cols).toBe(16);
+    expect(grid.rows).toBe(9);
+
+    const plate: Array<[number, number]> = [];
+    for (let row = 0; row < grid.rows; row++) {
+      for (let col = 0; col < grid.cols; col++) if (grid.isPlate(row, col)) plate.push([row, col]);
+    }
+    // 12 x 6 — the plate opening, at last. The classic frame's was 10 x 5.
+    expect(plate).toHaveLength(72);
+    expect(Math.min(...plate.map(([, c]) => c))).toBe(2);
+    expect(Math.max(...plate.map(([, c]) => c))).toBe(13);
+    expect(Math.min(...plate.map(([r]) => r))).toBe(1);
+    expect(Math.max(...plate.map(([r]) => r))).toBe(6);
   });
 
-  it("the trimmed frame is a 14 x 8 lattice", () => {
-    const grid = buildGrid(TRIMMED);
-    expect(grid.cols).toBe(14);
-    expect(grid.rows).toBe(8);
+  it("the WINDOW is within a hair of the 12in x 6in plate it has to clear", () => {
+    const c = SCHOOL_FRAME_CONFIG;
+    // 12 and 6 cells of the gapless lattice. Fractionally under the plate on each
+    // axis, which is correct: the rail must overlap the plate's edge to hold it.
+    expect(12 * c.tileSizeInches).toBeCloseTo(11.892, 3);
+    expect(6 * c.tileSizeInches).toBeCloseTo(5.946, 3);
+    expect(12 * c.tileSizeInches).toBeLessThan(c.plateWidthInches);
+    expect(6 * c.tileSizeInches).toBeLessThan(c.plateHeightInches);
+    // …and by well under a tenth of an inch, so the frame sits on the plate's
+    // margin rather than across its face. The classic frame covered 1.045" a side.
+    expect(c.plateWidthInches - 12 * c.tileSizeInches).toBeLessThan(0.12);
+    expect(c.plateHeightInches - 6 * c.tileSizeInches).toBeLessThan(0.06);
+  });
+
+  it("the CLASSIC frame it replaced covered an inch of the plate on each side", () => {
+    // The defect, pinned so nobody reintroduces it by widening a side panel again.
+    const grid = buildGrid(SCHOOL_CLASSIC_FRAME_CONFIG);
+    const cols = new Set<number>();
+    const rows = new Set<number>();
+    for (let row = 0; row < grid.rows; row++) {
+      for (let col = 0; col < grid.cols; col++) {
+        if (grid.isPlate(row, col)) { cols.add(col); rows.add(row); }
+      }
+    }
+    expect(cols.size).toBe(10);
+    expect(rows.size).toBe(5);
+    const overlapPerSide =
+      (SCHOOL_CLASSIC_FRAME_CONFIG.plateWidthInches -
+        cols.size * SCHOOL_CLASSIC_FRAME_CONFIG.tileSizeInches) / 2;
+    expect(overlapPerSide).toBeCloseTo(1.045, 3);
   });
 });
 

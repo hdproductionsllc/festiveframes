@@ -25,7 +25,12 @@ import {
   type PlacementContext,
 } from "./snappet";
 import { buildGrid } from "./slot-generator";
-import { DEFAULT_FRAME_CONFIG, SCHOOL_FRAME_CONFIG, getWingFrameConfig } from "@/lib/constants/frame";
+import {
+  DEFAULT_FRAME_CONFIG,
+  SCHOOL_FRAME_CONFIG,
+  SCHOOL_SLIM_FRAME_CONFIG,
+  getWingFrameConfig,
+} from "@/lib/constants/frame";
 import type { PlacedTile, TileSpan } from "@/lib/types";
 
 // The school grid is the one that matters here: 14 cols x 8 rows, wing column at
@@ -185,10 +190,10 @@ describe("canPlace", () => {
     expect(across.ok).toBe(false);
     expect(across.reason).toBe("panel");
 
-    // The bottom-left CORNER (6,1) is a LEFT cell; reaching one cell right lands in
+    // The bottom-left CORNER (7,1) is a LEFT cell; reaching one cell right lands in
     // the BOTTOM panel — rejected even though neither cell is the plate.
     const bottomCorner = schoolGrid.coordOf("frame:bottom-0")!;
-    expect(bottomCorner).toEqual({ row: 6, col: 1 });
+    expect(bottomCorner).toEqual({ row: 7, col: 1 });
     const spill = canPlace(ctx(), bottomCorner, { cols: 2, rows: 1 });
     expect(spill.ok).toBe(false);
     expect(spill.reason).toBe("panel");
@@ -419,19 +424,19 @@ describe("snappetRect — rendering geometry", () => {
     }
   });
 
-  it("11x2 — the full-width bottom banner spans the inner frame edge to edge", () => {
-    // The real 11x2 case: anchored on the bottom rail's first inner cell (col 1),
-    // 11 wide reaches col 11, 2 tall covers both bottom rows. No plate, no wings.
-    const anchor = schoolGrid.coordOf("frame:bottom-0")!;
-    expect(anchor).toEqual({ row: 6, col: 1 });
-    const span: TileSpan = { cols: 11, rows: 2 };
+  it("12x2 — the full-width bottom banner spans the BOTTOM panel edge to edge", () => {
+    // The real banner: anchored on the bottom panel's first cell (col 2), 12 wide
+    // reaches col 13, 2 tall covers the rail row and the cantilevered one below it.
+    const anchor = schoolGrid.coordOf("frame:bottom-1")!;
+    expect(anchor).toEqual({ row: 7, col: 2 });
+    const span: TileSpan = { cols: 12, rows: 2 };
     coversFootprint(anchor, span);
 
     const a = schoolGrid.cellAt(anchor.row, anchor.col)!;
     const rect = snappetRect(a, span, a.width);
-    // Eleven cells of width, with NO accumulated step error over the long run —
+    // Twelve cells of width, with NO accumulated step error over the long run —
     // the point of the gapless-lattice invariant.
-    expect(rect.width).toBeCloseTo(a.width * 11, 9);
+    expect(rect.width).toBeCloseTo(a.width * 12, 9);
     expect(rect.height).toBeCloseTo(a.height * 2, 9);
   });
 
@@ -505,15 +510,15 @@ describe("resolveSnappetDrop", () => {
   });
 
   it("anchors a footprint at the hovered cell — its TOP-LEFT", () => {
-    // A cell fully INSIDE the bottom panel (cols 2-11): row 6, col 2. A 2x2 grows
-    // right/down into row 7 (the second bottom row) and col 3 — all in the bottom
+    // A cell fully INSIDE the bottom panel (cols 2-13): row 7, col 2. A 2x2 grows
+    // right/down into row 8 (the cantilevered row) and col 3 — all in the bottom
     // panel, so it seats at the hovered cell with no nudge. (col 1 is the bottom-
     // left CORNER, owned by the LEFT panel, so a 2x2 there would cross a boundary.)
-    expect(schoolGrid.coordOf("frame:bottom-1")).toEqual({ row: 6, col: 2 });
+    expect(schoolGrid.coordOf("frame:bottom-1")).toEqual({ row: 7, col: 2 });
     const p = drop("frame:bottom-1", { cols: 2, rows: 2 })!;
     expect(p.valid).toBe(true);
     expect(p.anchorSlotId).toBe("frame:bottom-1");
-    expect([p.anchorRow, p.anchorCol, p.cols, p.rows]).toEqual([6, 2, 2, 2]);
+    expect([p.anchorRow, p.anchorCol, p.cols, p.rows]).toEqual([7, 2, 2, 2]);
   });
 
   it("does not RESOLVE a drop to a footprint hanging off the outer edge", () => {
@@ -576,25 +581,25 @@ describe("resolveSnappetDrop", () => {
     // the raw anchor would be col -9. Clamped to col 0, the first real column.
     const p = drop("frame:bottom-0", { cols: 11, rows: 1 }, {}, { grab: { dr: 0, dc: 10 } })!;
     expect(p.anchorCol).toBe(0);
-    expect(p.anchorRow).toBe(6);
+    expect(p.anchorRow).toBe(7);
   });
 
   it("ignores a grab offset that is larger than the footprint", () => {
     // dc clamps to cols-1 = 1, dr to rows-1 = 0 — one cell back, not nine.
-    expect(schoolGrid.coordOf("frame:bottom-4")).toEqual({ row: 6, col: 5 });
+    expect(schoolGrid.coordOf("frame:bottom-4")).toEqual({ row: 7, col: 5 });
     const p = drop("frame:bottom-4", { cols: 2, rows: 1 }, {}, { grab: { dr: 9, dc: 9 } })!;
-    expect([p.anchorRow, p.anchorCol]).toEqual([6, 4]);
+    expect([p.anchorRow, p.anchorCol]).toEqual([7, 4]);
   });
 
   it("PRESERVES the grab offset when moving a snappet — no teleport", () => {
-    // A 4x2 snappet in the BOTTOM panel (cols 2-11) anchored at (6,4), grabbed by
+    // A 4x2 snappet in the BOTTOM panel (cols 2-13) anchored at (7,4), grabbed by
     // its RIGHT end (dc 3). Hovering the cell that end is over must resolve back to
     // the SAME anchor, not slide the snappet three columns left. (A footprint may
     // not straddle two panels, so the widest movable case lives inside one panel.)
     const slots: Record<string, PlacedTile> = {
-      "frame:bottom-3": tile("banner", { cols: 4, rows: 2 }), // (6,4)..(7,7)
+      "frame:bottom-3": tile("banner", { cols: 4, rows: 2 }), // (7,4)..(8,7)
     };
-    const rightEnd = schoolGrid.cellAt(6, 7)!;
+    const rightEnd = schoolGrid.cellAt(7, 7)!;
     const p = drop(
       rightEnd.id,
       { cols: 4, rows: 2 },
@@ -608,12 +613,12 @@ describe("resolveSnappetDrop", () => {
 
     // …and one column to the right moves it exactly one column.
     const moved = drop(
-      schoolGrid.cellAt(6, 8)!.id,
+      schoolGrid.cellAt(7, 8)!.id,
       { cols: 4, rows: 2 },
       { slots },
       { grab: { dr: 0, dc: 3 }, excludeId: "frame:bottom-3" },
     )!;
-    expect([moved.anchorRow, moved.anchorCol]).toEqual([6, 5]);
+    expect([moved.anchorRow, moved.anchorCol]).toEqual([7, 5]);
   });
 
   it("a 1x1 resolves to exactly the hovered cell — the /build shape", () => {
@@ -636,15 +641,15 @@ describe("resolveSnappetResize", () => {
   });
 
   it("keeps the anchor fixed and validates a grown span in place", () => {
-    // A snappet anchored at the bottom panel (6,2). Grow it to 2x2 — grows into
-    // (6,3)/(7,2)/(7,3), all one panel, so it's valid at the SAME anchor.
+    // A snappet anchored at the bottom panel (7,2). Grow it to 2x2 — grows into
+    // (7,3)/(8,2)/(8,3), all one panel, so it's valid at the SAME anchor.
     const slots: Record<string, PlacedTile> = {
       "frame:bottom-1": tile("banner", { cols: 1, rows: 1 }),
     };
     const p = resolveSnappetResize(ctx({ slots }), "frame:bottom-1", 2, 2)!;
     expect(p.valid).toBe(true);
     expect(p.anchorSlotId).toBe("frame:bottom-1");
-    expect([p.anchorRow, p.anchorCol, p.cols, p.rows]).toEqual([6, 2, 2, 2]);
+    expect([p.anchorRow, p.anchorCol, p.cols, p.rows]).toEqual([7, 2, 2, 2]);
   });
 
   it("excludes the snappet from its own collision test — no self-evict on grow", () => {
@@ -778,16 +783,16 @@ describe("panelSnappetPlacement", () => {
 
   it("returns null when the panel is completely full", () => {
     const slots: Record<string, PlacedTile> = {
-      // One 2x8 snappet fills the entire left panel.
-      [schoolGrid.cellAt(0, 0)!.id]: tile("a", { cols: 2, rows: 8 }),
+      // One 2x9 snappet fills the entire left panel.
+      [schoolGrid.cellAt(0, 0)!.id]: tile("a", { cols: 2, rows: 9 }),
     };
     expect(panelSnappetPlacement(ctx({ slots }), "wing-left", 1)).toBeNull();
   });
 
   it("with allowEvict, still places on a FULL panel (evicting) instead of refusing", () => {
     const slots: Record<string, PlacedTile> = {
-      // The whole left panel is full (a 2x8 snappet).
-      [schoolGrid.cellAt(0, 0)!.id]: tile("a", { cols: 2, rows: 8 }),
+      // The whole left panel is full (a 2x9 snappet).
+      [schoolGrid.cellAt(0, 0)!.id]: tile("a", { cols: 2, rows: 9 }),
     };
     const placement = panelSnappetPlacement(ctx({ slots }), "wing-left", 2 / 3, { allowEvict: true });
     expect(placement).not.toBeNull();
@@ -1087,7 +1092,10 @@ describe("blockFill — Fill All / Random lay real footprints", () => {
     const slots = blockFill(ctx(), pick, MIN_ART_SPAN);
     expect(Object.keys(slots).length).toBeGreaterThan(0);
     for (const t of Object.values(slots)) {
-      expect(tileSpan(t)).toEqual({ cols: 2, rows: 2 });
+      const span = tileSpan(t);
+      // 2x2, or the stretched last block of an odd-height panel — never below the floor.
+      expect(span.cols).toBe(2);
+      expect(span.rows).toBeGreaterThanOrEqual(2);
     }
   });
 
@@ -1253,7 +1261,11 @@ describe("blockFill — no holes, nothing off the frame", () => {
   it("sizes blocks to the PANEL, so a wider side panel gets wider badges", () => {
     // A fixed 2x2 tiles a two-wide panel exactly and a three-wide one not at all —
     // it leaves a single column running the whole height.
-    expect([...coverage(SCHOOL_FRAME_CONFIG).sizes]).toEqual(["2x2"]);
+    // The side panel is 9 rows, so four 2x2s would strand the bottom row: the last
+    // block stretches to 2x3 instead. Both are square-ish and both clear the floor.
+    expect([...coverage(SCHOOL_FRAME_CONFIG).sizes].sort()).toEqual(["2x2", "2x3"]);
+    // …and on an EVEN-height panel nothing stretches at all.
+    expect([...coverage(SCHOOL_SLIM_FRAME_CONFIG).sizes]).toEqual(["2x2"]);
     const widened = [...coverage(wide).sizes];
     expect(widened.some((s) => s.startsWith("3x"))).toBe(true);
   });

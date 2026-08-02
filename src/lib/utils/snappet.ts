@@ -388,23 +388,36 @@ export interface SnappetDropRequest {
 }
 
 /**
- * The full extent (cols x rows) of the panel containing `coord`, ignoring occupancy.
+ * The bounding rectangle of the panel containing `coord`, ignoring occupancy.
  *
  * Occupancy is deliberately NOT considered: this answers "how big could art be in
  * this panel", and `spanLadder` + `canPlace` then walk that down to what is actually
  * seatable. Null when the coord isn't in a panel.
  */
-function panelExtent(
+function panelBounds(
   grid: PlacementContext["grid"],
   coord: GridCoord,
-): { cols: number; rows: number } | null {
+): { col0: number; col1: number; row0: number; row1: number } | null {
   const panelId = grid.panelAt(coord.row, coord.col);
   if (!panelId) return null;
   const inPanel = grid.slots.filter((s) => grid.panelAt(s.row, s.col) === panelId);
   if (inPanel.length === 0) return null;
-  const cols = Math.max(...inPanel.map((s) => s.col)) - Math.min(...inPanel.map((s) => s.col)) + 1;
-  const rows = Math.max(...inPanel.map((s) => s.row)) - Math.min(...inPanel.map((s) => s.row)) + 1;
-  return { cols, rows };
+  return {
+    col0: Math.min(...inPanel.map((s) => s.col)),
+    col1: Math.max(...inPanel.map((s) => s.col)),
+    row0: Math.min(...inPanel.map((s) => s.row)),
+    row1: Math.max(...inPanel.map((s) => s.row)),
+  };
+}
+
+/** The full extent (cols x rows) of that rectangle. */
+function panelExtent(
+  grid: PlacementContext["grid"],
+  coord: GridCoord,
+): { cols: number; rows: number } | null {
+  const b = panelBounds(grid, coord);
+  if (!b) return null;
+  return { cols: b.col1 - b.col0 + 1, rows: b.row1 - b.row0 + 1 };
 }
 
 /**
@@ -873,14 +886,34 @@ export function blockFill(
    * wrong.) Squaring the block to the panel's short side makes a three-wide panel
    * lay 3x3 and cover completely — the same rule a drag already follows when it
    * grows a badge to fit the panel it lands in.
+   *
+   * THE LAST BLOCK STRETCHES. A panel whose height is not a multiple of the block's
+   * leaves a strip too short for another block and too tall to ignore — the rail
+   * frame's side panel is 9 rows, so four 2x2s leave one dead row at the bottom
+   * corner. Refusing to place there is right (a 2x1 badge is exactly what the floor
+   * forbids) and leaving it empty is not, so the block that would strand the strip
+   * absorbs it instead: 2x2, 2x2, 2x2, 2x3. Stretch only ever grows a block, so a
+   * panel that already divides evenly is laid exactly as before.
    */
   const sizesFor = (anchor: GridCoord): TileSpan[] => {
-    const ext = panelExtent(grid, anchor);
-    const preferred = ext ? suggestSnappetSize(1, ext) : lo;
-    return spanLadder(
-      { cols: Math.max(preferred.cols, lo.cols), rows: Math.max(preferred.rows, lo.rows) },
-      lo,
-    );
+    const bounds = panelBounds(grid, anchor);
+    const ext = bounds
+      ? { cols: bounds.col1 - bounds.col0 + 1, rows: bounds.row1 - bounds.row0 + 1 }
+      : null;
+    const sq = ext ? suggestSnappetSize(1, ext) : lo;
+    const preferred: TileSpan = {
+      cols: Math.max(sq.cols, lo.cols),
+      rows: Math.max(sq.rows, lo.rows),
+    };
+    const ladder = spanLadder(preferred, lo);
+    if (!bounds) return ladder;
+    // Rows left in this panel from the anchor down. If one more block would leave
+    // behind a strip shorter than the floor, this block takes the lot.
+    const remaining = bounds.row1 - anchor.row + 1;
+    const leftover = remaining - preferred.rows;
+    if (leftover <= 0 || leftover >= lo.rows) return ladder;
+    const stretched: TileSpan = { cols: preferred.cols, rows: remaining };
+    return [stretched, ...ladder];
   };
 
   // Row-major, so blocks pack top-left and the leftovers collect at the far edge
