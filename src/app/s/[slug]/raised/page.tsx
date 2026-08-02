@@ -32,9 +32,14 @@ export async function generateMetadata(
 ): Promise<Metadata> {
   const { slug } = await params;
   const kit = getSchoolKit(slug);
-  if (!kit) return { title: "MySchoolFrame" };
+  if (!kit) return { title: { absolute: "MySchoolFrame" } };
+  const title = `${kit.shortName} fundraiser — MySchoolFrame`;
   return {
-    title: `${kit.shortName} fundraiser — MySchoolFrame`,
+    // `absolute` + siteName for the same reason as the builder page: the root
+    // layout's brand is Festive Frames, and this is the page a booster board
+    // reads. It was going out as "... — MySchoolFrame | Festive Frames".
+    title: { absolute: title },
+    openGraph: { siteName: "MySchoolFrame", title },
     robots: { index: false, follow: false },
   };
 }

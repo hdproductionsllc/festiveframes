@@ -22,7 +22,11 @@ import { SchoolBuilder } from "@/components/designer/SchoolDesigner";
 // builder (real drag-drop + text editor + plate), seeded with a school frame config
 // (wide 3-tile side panels via wings). Unlinked + noindex.
 export const metadata: Metadata = {
-  title: "MySchoolFrame — Frame Builder",
+  // `absolute` + siteName: next.config rewrites myschoolframe.com, and its own
+  // comment names this route as the builder on that domain, so this is a real
+  // front door and it was wearing the Festive Frames name and star.
+  title: { absolute: "MySchoolFrame — Frame Builder" },
+  openGraph: { siteName: "MySchoolFrame" },
   robots: { index: false, follow: false },
 };
 

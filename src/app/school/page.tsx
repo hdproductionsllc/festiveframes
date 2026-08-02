@@ -37,6 +37,10 @@ export const metadata: Metadata = {
   },
   description:
     "The graduate plate takes two fields: their last name and their class year. A custom school license plate frame in your school's colors, with badges for their sport, band or club. Made in USA.",
+  // The root layout sets siteName to the Festive Frames brand entity, which is
+  // correct for festiveframes.co and wrong here: this page IS myschoolframe.com,
+  // and every share of it carried the other brand's name under the card.
+  openGraph: { siteName: "MySchoolFrame" },
 };
 
 // Structured data. Product+Offer earns merchant snippets with zero reviews;
