@@ -124,6 +124,11 @@ const KITS: SchoolKit[] = [
     city: "Kirkwood, MO",
     colors: { frame: "#7A0E1F", tileField: "#7A0E1F", rim: "#FFFFFF" },
     banners: { top: "HOME OF THE", bottom: "PIONEERS", tagline: "KIRKWOOD HIGH SCHOOL", text: "#FFFFFF" },
+    // "PIONEERS" vanity mockup, generated from the SLUH plate photo via Gemini
+    // image editing (scripts/gen-plate.mjs) so every school's plate is the same
+    // photograph with new embossing. Conformed to the same 924x467 framing the
+    // plate-images.ts scale is tuned against.
+    plate: { state: "MO", src: "/plates/missouri-pioneers-centered.jpg" },
     status: "demo",
     colorSource: "red/white per MSHSAA + athletics site; shade approx (#C8102E family, deepened for the frame body) — confirm with KHS before print",
   },
