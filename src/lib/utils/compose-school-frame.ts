@@ -59,7 +59,7 @@ import {
   sectionSupportsText,
   slotSuppressed,
 } from "@/lib/utils/sections";
-import { panelRects, type PanelRect } from "@/lib/utils/panels";
+import { panelOverhangTiles, panelRects, type PanelRect } from "@/lib/utils/panels";
 import { bannerBands, trackingPx, widthLimitedFont } from "@/lib/utils/banner-tiers";
 import { frameTab, tabPath, tabTextBox } from "@/lib/utils/bottom-tab";
 import { bannerConfigFor, bannerLogoLayout, sectionSupportsLogo } from "@/lib/utils/banner-logo";
@@ -102,12 +102,24 @@ export const EUFY_BED_SHORT_INCHES = 13;
  * neighbouring panel, so the bleed never leaves a stray sliver of an adjacent tile at a
  * seam (which showed up as artifacts on spaced-apart panels). Pure — node-testable.
  */
-export function panelBleedBox(rc: PanelRect, tilePx: number, bleedPx: number) {
+export function panelBleedBox(
+  rc: PanelRect,
+  tilePx: number,
+  bleedPx: number,
+  /**
+   * Printed material OUTSIDE the cell rectangle, in TILES per side — see
+   * `panelOverhangTiles`. Today this is only the keystone, which rises out of the
+   * bottom panel into the plate opening and is therefore not a run of cells at all.
+   * Omit for a panel that is exactly its own rectangle, which is every panel on
+   * every frame without a tab.
+   */
+  overhang: { top: number; right: number; bottom: number; left: number } = { top: 0, right: 0, bottom: 0, left: 0 },
+) {
   const bleed = Math.max(0, Math.round(bleedPx));
-  const contentX = rc.col0 * tilePx;
-  const contentY = rc.row0 * tilePx;
-  const contentW = (rc.col1 - rc.col0 + 1) * tilePx;
-  const contentH = (rc.row1 - rc.row0 + 1) * tilePx;
+  const contentX = (rc.col0 - overhang.left) * tilePx;
+  const contentY = (rc.row0 - overhang.top) * tilePx;
+  const contentW = (rc.col1 - rc.col0 + 1 + overhang.left + overhang.right) * tilePx;
+  const contentH = (rc.row1 - rc.row0 + 1 + overhang.top + overhang.bottom) * tilePx;
   const outW = Math.max(1, Math.round(contentW) + 2 * bleed);
   const outH = Math.max(1, Math.round(contentH) + 2 * bleed);
   return { contentX, contentY, contentW, contentH, bleed, outW, outH };
@@ -1212,7 +1224,7 @@ export async function composeSchoolPanels(
 
   const out: SchoolPanelPng[] = [];
   for (const id of SECTION_IDS) {
-    const box = panelBleedBox(rects[id], tilePx, bleedPx);
+    const box = panelBleedBox(rects[id], tilePx, bleedPx, panelOverhangTiles(id, config));
 
     const c = document.createElement("canvas");
     c.width = box.outW;
@@ -1238,6 +1250,15 @@ export async function composeSchoolPanels(
       cx.drawImage(r.canvas, X + W2 - 1, Y + H2 - 1, 1, 1, b + W2, b + H2, b, b); // BR corner
     }
 
+    // The KEYSTONE's shoulders. The crop above the bar is a rectangle, but the PART
+    // is not: it is the bar plus a trapezoid. Everything in that band outside the
+    // tab is plate opening, and the render back-fills the whole canvas with the body
+    // colour (see `backFillTransparent`), so without this the file would describe a
+    // taller rectangle with a tab drawn on it rather than a keystone-shaped part.
+    //
+    // Erased AFTER the bleed, so the edge-clamped margin in that band goes with it.
+    clearOutsideTab(cx, box, config, tilePx, dpi);
+
     // Skip a panel that carries no ink at all (nothing to print).
     if (isCanvasBlank(cx, outW, outH)) continue;
 
@@ -1251,6 +1272,50 @@ export async function composeSchoolPanels(
     });
   }
   return out;
+}
+
+/**
+ * Knock out everything in a panel's TOP OVERHANG band that is not the keystone.
+ *
+ * Only ever does anything for the bottom panel of a frame with a tab: `box` carries
+ * no top overhang otherwise and this returns immediately, so every panel of every
+ * frame without a keystone is byte-identical.
+ *
+ * The geometry comes from `tabPath`, the same function the on-screen twin and the
+ * frame render both use, so the erased silhouette cannot drift from the drawn one.
+ * Filled `evenodd` with the band as the outer subpath and the tab as the inner, which
+ * is the whole knockout in one composite pass.
+ */
+export function clearOutsideTab(
+  cx: CanvasRenderingContext2D,
+  box: ReturnType<typeof panelBleedBox>,
+  config: FrameConfig,
+  tilePx: number,
+  pxPerInch: number,
+): void {
+  const tab = frameTab(config);
+  if (!tab) return;
+  const { contentW, bleed: b, outW } = box;
+  // The bar's top edge, measured DOWN from the crop's own top. The crop begins at
+  // the tab's apex — that is what the overhang is — so the offset is one rise, not
+  // `contentH - rise`. Getting that backwards erased the tab itself and kept a
+  // trapezoid of plate opening one rise too low; the render read 100% transparent
+  // where the tab should have been, which is why this is measured and not eyeballed.
+  const barTopY = b + tab.riseInches * pxPerInch;
+  if (barTopY <= b) return;
+  const centerX = b + contentW / 2;
+  const p = tabPath(tab, centerX, barTopY, pxPerInch, 0);
+
+  cx.save();
+  cx.globalCompositeOperation = "destination-out";
+  cx.beginPath();
+  cx.rect(0, 0, outW, barTopY);
+  cx.moveTo(p.points[0].x, p.points[0].y);
+  for (const pt of p.points.slice(1)) cx.lineTo(pt.x, pt.y);
+  cx.closePath();
+  cx.fill("evenodd");
+  cx.restore();
+  void tilePx;
 }
 
 /** True if every sampled pixel is fully transparent (a coarse step keeps it cheap). */

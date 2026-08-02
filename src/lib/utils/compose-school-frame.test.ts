@@ -3,6 +3,7 @@ import { createCanvas, loadImage, type SKRSContext2D } from "@napi-rs/canvas";
 import { writeFileSync, existsSync } from "node:fs";
 import path from "node:path";
 import {
+  clearOutsideTab,
   schoolCanvasSize,
   shouldRotateForBed,
   schoolBannerRect,
@@ -16,8 +17,8 @@ import {
   type DrawableImage,
   type SchoolImageBundle,
 } from "./compose-school-frame";
-import { panelRects } from "@/lib/utils/panels";
-import { SCHOOL_FRAME_CONFIG } from "@/lib/constants/frame";
+import { panelOverhangTiles, panelRects, panelSizeInches } from "@/lib/utils/panels";
+import { SCHOOL_FRAME_CONFIG, SCHOOL_SLIM_FRAME_CONFIG } from "@/lib/constants/frame";
 import { getTotalWidthInches, getRenderHeightInches } from "@/lib/constants/frame";
 import type { BottomBarConfig, PlacedTextBar, PlacedTile, SectionState } from "@/lib/types";
 
@@ -111,6 +112,69 @@ describe("panelBleedBox (per-panel export crop — bleed adds AREA via edge-clam
     expect(box.contentX).toBe(0 * tilePx);
     expect(box.contentY).toBe(0 * tilePx);
     expect(box.bleed).toBe(bleedPx);
+  });
+
+  // ─── The KEYSTONE is not a run of cells ──────────────────────────────────
+  //
+  // Every printed part used to be exactly its own rectangle of the lattice, so the
+  // crop could be the rectangle. The tab broke that: it rises out of the bottom
+  // panel into the plate opening, off the grid, and the crop cut it clean off.
+  // Nothing failed — the export produced a plain bar and a wrong print file.
+
+  it("crops the slim frame's bottom panel TALL enough to keep the tab", () => {
+    const cfg = SCHOOL_SLIM_FRAME_CONFIG;
+    const tab = cfg.bottomTab!;
+    const tilePx = cfg.tileSizeInches * 300;
+    const rect = panelRects(cfg).bottom;
+    const over = panelOverhangTiles("bottom", cfg);
+
+    const box = panelBleedBox(rect, tilePx, 0, over);
+    // The tab's topmost pixel, in the full render's coordinates.
+    const tabTopY = (rect.row0 * cfg.tileSizeInches - tab.riseInches) * 300;
+    expect(box.contentY).toBeCloseTo(tabTopY, 6);
+    // …and the crop still ends at the bar's bottom edge.
+    expect(box.contentY + box.contentH).toBeCloseTo((rect.row1 + 1) * tilePx, 6);
+    // It is exactly one rise taller than the row it sits on, and no wider.
+    expect(box.contentH - tilePx).toBeCloseTo(tab.riseInches * 300, 6);
+    expect(box.contentX).toBeCloseTo(rect.col0 * tilePx, 6);
+  });
+
+  it("WOULD have cut 178px off the tab without the overhang", () => {
+    // The defect, pinned. This is the call the export used to make.
+    const cfg = SCHOOL_SLIM_FRAME_CONFIG;
+    const tilePx = cfg.tileSizeInches * 300;
+    const naive = panelBleedBox(panelRects(cfg).bottom, tilePx, 0);
+    const fixed = panelBleedBox(panelRects(cfg).bottom, tilePx, 0, panelOverhangTiles("bottom", cfg));
+    expect(naive.contentY - fixed.contentY).toBeCloseTo(cfg.bottomTab!.riseInches * 300, 6);
+    expect(Math.round(naive.contentY - fixed.contentY)).toBe(178);
+  });
+
+  it("leaves every panel of a frame WITHOUT a tab exactly its own rectangle", () => {
+    // The overhang must be inert on the live frame, whose bottom banner is cells.
+    for (const id of ["wing-left", "wing-right", "top", "bottom"] as const) {
+      expect(panelOverhangTiles(id, SCHOOL_FRAME_CONFIG)).toEqual({ top: 0, right: 0, bottom: 0, left: 0 });
+      const rect = panelRects(SCHOOL_FRAME_CONFIG)[id];
+      const a = panelBleedBox(rect, 300, 12);
+      const b = panelBleedBox(rect, 300, 12, panelOverhangTiles(id, SCHOOL_FRAME_CONFIG));
+      expect(a).toEqual(b);
+    }
+    // …and only the BOTTOM panel of the slim frame carries one.
+    for (const id of ["wing-left", "wing-right", "top"] as const) {
+      expect(panelOverhangTiles(id, SCHOOL_SLIM_FRAME_CONFIG).top).toBe(0);
+    }
+    expect(panelOverhangTiles("bottom", SCHOOL_SLIM_FRAME_CONFIG).top).toBeGreaterThan(0);
+  });
+
+  it("gives the resolution gate the TALLER bottom panel to divide by", () => {
+    // The gate asks how big the part is. A part that is 1.586in tall must not be
+    // measured as 0.991in, or a low-res upload passes on a third less area than it
+    // is actually printed across.
+    const cfg = SCHOOL_SLIM_FRAME_CONFIG;
+    const size = panelSizeInches("bottom", cfg);
+    expect(size.height).toBeCloseTo(cfg.tileSizeInches + cfg.bottomTab!.riseInches, 6);
+    expect(size.height).toBeGreaterThan(cfg.tileSizeInches);
+    // Unchanged on the live frame.
+    expect(panelSizeInches("bottom", SCHOOL_FRAME_CONFIG).height).toBeCloseTo(2 * SCHOOL_FRAME_CONFIG.tileSizeInches, 6);
   });
 
   it("a zero bleed is an exact, unpadded panel crop", () => {
@@ -367,5 +431,76 @@ describe("uploaded art's field — the white-logo-vanishing fix", () => {
   it("keeps the legacy white field for designs saved before the field existed", () => {
     const [r, g, b] = renderAndProbe(designWith(undefined));
     expect(r + g + b).toBeGreaterThan(700); // white-ish, byte-compatible with old prints
+  });
+});
+
+describe("clearOutsideTab — the panel file describes the PART, not a rectangle", () => {
+  const cfg = SCHOOL_SLIM_FRAME_CONFIG;
+  const DPI = 300;
+  const tab = cfg.bottomTab!;
+
+  /** A bottom-panel crop, filled solid, then knocked out. Alpha is the silhouette. */
+  function silhouette() {
+    const tilePx = cfg.tileSizeInches * DPI;
+    const box = panelBleedBox(panelRects(cfg).bottom, tilePx, Math.round(0.04 * DPI), panelOverhangTiles("bottom", cfg));
+    const c = createCanvas(box.outW, box.outH);
+    const cx = c.getContext("2d") as unknown as CanvasRenderingContext2D;
+    cx.fillStyle = "#123456";
+    cx.fillRect(0, 0, box.outW, box.outH);
+    clearOutsideTab(cx, box, cfg, tilePx, DPI);
+    const napi = cx as unknown as SKRSContext2D;
+    const alphaAt = (x: number, y: number) => napi.getImageData(Math.round(x), Math.round(y), 1, 1).data[3];
+    return { box, alphaAt, tilePx };
+  }
+
+  it("keeps the bar solid and clears the shoulders beside the tab", () => {
+    const { box, alphaAt } = silhouette();
+    const barTopY = box.bleed + tab.riseInches * DPI;
+    // Well inside the bar: untouched.
+    expect(alphaAt(box.outW / 2, barTopY + 40)).toBe(255);
+    expect(alphaAt(box.bleed + 20, box.outH - box.bleed - 20)).toBe(255);
+    // Beside the tab, above the bar: gone, bleed margin included.
+    expect(alphaAt(box.bleed + 20, barTopY - 40)).toBe(0);
+    expect(alphaAt(box.outW - box.bleed - 20, barTopY - 40)).toBe(0);
+    expect(alphaAt(4, 4)).toBe(0);
+  });
+
+  it("keeps the tab itself, all the way up to its apex", () => {
+    const { box, alphaAt } = silhouette();
+    const cx = box.bleed + box.contentW / 2;
+    // The crop STARTS at the apex — that is what the overhang is — so a few pixels
+    // down from the top edge of the content is already inside the tab. Reading this
+    // as `contentH - rise` instead put the trapezoid a whole rise too low and erased
+    // the tab; the test that caught it was a pixel read, not a look.
+    expect(alphaAt(cx, box.bleed + 6)).toBe(255);
+    expect(alphaAt(cx, box.bleed + tab.riseInches * DPI - 6)).toBe(255);
+  });
+
+  it("clears OUTSIDE the sloped sides, not a bounding box", () => {
+    const { box, alphaAt } = silhouette();
+    const cx = box.bleed + box.contentW / 2;
+    const halfTop = (tab.topInches * DPI) / 2;
+    const halfBase = (tab.baseInches * DPI) / 2;
+    // Just past the narrow top edge, near the apex: outside the slope.
+    expect(alphaAt(cx - halfTop - 25, box.bleed + 8)).toBe(0);
+    expect(alphaAt(cx + halfTop + 25, box.bleed + 8)).toBe(0);
+    // Just inside the wide base, near the bar: the slope has opened out to here.
+    expect(alphaAt(cx - halfBase + 25, box.bleed + tab.riseInches * DPI - 8)).toBe(255);
+    expect(alphaAt(cx + halfBase - 25, box.bleed + tab.riseInches * DPI - 8)).toBe(255);
+  });
+
+  it("is INERT on a frame with no tab — every live panel is untouched", () => {
+    const tilePx = SCHOOL_FRAME_CONFIG.tileSizeInches * DPI;
+    for (const id of ["wing-left", "wing-right", "top", "bottom"] as const) {
+      const box = panelBleedBox(panelRects(SCHOOL_FRAME_CONFIG)[id], tilePx, 12, panelOverhangTiles(id, SCHOOL_FRAME_CONFIG));
+      const c = createCanvas(box.outW, box.outH);
+      const cx2 = c.getContext("2d") as unknown as CanvasRenderingContext2D;
+      cx2.fillStyle = "#123456";
+      cx2.fillRect(0, 0, box.outW, box.outH);
+      clearOutsideTab(cx2, box, SCHOOL_FRAME_CONFIG, tilePx, DPI);
+      const napi = cx2 as unknown as SKRSContext2D;
+      expect(napi.getImageData(2, 2, 1, 1).data[3], `${id} was clipped`).toBe(255);
+      expect(napi.getImageData(box.outW - 2, 2, 1, 1).data[3], `${id} was clipped`).toBe(255);
+    }
   });
 });

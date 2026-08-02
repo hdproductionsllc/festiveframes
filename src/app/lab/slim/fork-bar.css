@@ -1,0 +1,76 @@
+/* ─── The fork bar ───────────────────────────────────────────────────────────
+ *
+ * A strip across the top of /lab/slim saying which frame you are looking at and
+ * linking to every other version of it. Deliberately plain and unbranded: it is
+ * scaffolding for a decision, not part of the product, and it must not colour the
+ * judgement of the frame underneath it.
+ *
+ * Only /lab/slim imports this, so nothing on a school's real page can pick it up.
+ */
+
+.msf-fork-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.9rem;
+  padding: 0.55rem 1rem;
+  background: #14181f;
+  color: #aeb7c4;
+  font: 500 0.8rem/1.4 ui-sans-serif, system-ui, sans-serif;
+  border-bottom: 1px solid #2a3241;
+}
+
+.msf-fork-tag {
+  flex: none;
+  padding: 0.1rem 0.45rem;
+  border-radius: 2px;
+  background: #c8952f;
+  color: #14181f;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.msf-fork-note {
+  min-width: 0;
+}
+
+/* Pushed to the far end on a wide screen; wraps underneath on a phone, where the
+   note is two lines and a right-aligned nav would strand itself mid-row. */
+.msf-fork-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem 0.85rem;
+  margin-left: auto;
+}
+
+.msf-fork-links a {
+  color: #dbe2ec;
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  padding-bottom: 1px;
+}
+
+.msf-fork-links a:hover,
+.msf-fork-links a:focus-visible {
+  border-bottom-color: #c8952f;
+}
+
+.msf-fork-links a:focus-visible {
+  outline: 2px solid #c8952f;
+  outline-offset: 3px;
+}
+
+/* The page you are on is not a link you want to press. */
+.msf-fork-links a[aria-current="page"] {
+  color: #c8952f;
+  cursor: default;
+}
+
+@media (max-width: 34rem) {
+  .msf-fork-links {
+    margin-left: 0;
+    width: 100%;
+  }
+}

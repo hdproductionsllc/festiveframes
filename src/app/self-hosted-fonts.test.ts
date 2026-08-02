@@ -82,11 +82,33 @@ describe("the SCHOOL pages do not block paint on a third party", () => {
   });
 
   it("keeps the school pages off builder-fonts.css, which still has the chain", () => {
-    for (const page of ["src/app/s/[slug]/page.tsx", "src/app/lab/school/page.tsx"]) {
+    for (const page of [
+      "src/app/s/[slug]/page.tsx",
+      "src/app/lab/school/page.tsx",
+      "src/app/lab/slim/page.tsx",
+    ]) {
       const s = readFileSync(path.join(process.cwd(), page), "utf8");
       expect(s, `${page} still imports the blocking font chain`).not.toMatch(/builder-fonts\.css/);
       expect(s).toMatch(/school-fonts\.css/);
-      expect(s, `${page} never loads the picker's faces at all`).toMatch(/BuilderFontsDeferred/);
     }
+  });
+
+  it("still defers the picker's faces on every school page", () => {
+    // Checked through the RENDER chain rather than per file: /s/<slug> hands its
+    // body to SchoolKitPage (so the slim fork can serve the same page on a
+    // different geometry), and the deferred loader went with it. A per-file grep
+    // would have called that a regression, and a per-file grep that only knew
+    // about the old shape would have stopped checking anything at all.
+    const chain = [
+      "src/app/lab/school/page.tsx",
+      "src/app/lab/slim/page.tsx",
+      "src/components/designer/SchoolKitPage.tsx",
+    ].map((f) => readFileSync(path.join(process.cwd(), f), "utf8"));
+    for (const s of chain) {
+      expect(s, "a school page stopped deferring the picker's faces").toMatch(/BuilderFontsDeferred/);
+    }
+    // …and the kit route reaches it through the shared page body.
+    const kitRoute = readFileSync(path.join(process.cwd(), "src/app/s/[slug]/page.tsx"), "utf8");
+    expect(kitRoute).toMatch(/SchoolKitPage/);
   });
 });

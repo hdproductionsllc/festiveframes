@@ -69,23 +69,64 @@ export function panelOf(row: number, col: number, config: FrameConfig): SectionI
   return null;
 }
 
+/** Printed material OUTSIDE a panel's cell rectangle, in TILES, per side. */
+export interface PanelOverhang {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+}
+
+const NO_OVERHANG: PanelOverhang = { top: 0, right: 0, bottom: 0, left: 0 };
+
+/**
+ * How far a panel's PRINTED art reaches beyond the cells it owns.
+ *
+ * A panel is a rectangle of the lattice, and until the keystone every printed part
+ * was exactly that rectangle. The keystone is not: it rises out of the bottom
+ * panel, up into the plate opening, off the grid entirely — it is a shape on the
+ * bar rather than a run of cells.
+ *
+ * That made the per-panel export silently wrong. `panelBleedBox` cropped the
+ * bottom panel to its one row, so 0.595" of tab (178 px at 300 DPI) was cut clean
+ * off and the printed bar came out a plain rectangle. Worse, the edge-clamp bleed
+ * then replicated the crop's top row — which runs THROUGH the tab — outward, so
+ * the file carried a band of the tab's fill where it should have carried the bar's.
+ *
+ * The cell rectangle stays the cell rectangle: `panelOf` and the placement engine
+ * must keep answering in cells, because that is what they address. This is the
+ * separate question of how much material the part is made of.
+ */
+export function panelOverhangTiles(id: SectionId, config: FrameConfig): PanelOverhang {
+  const tab = config.bottomTab;
+  if (id !== "bottom" || !tab || tab.riseInches <= 0 || tab.baseInches <= 0) return NO_OVERHANG;
+  // Upward only. The tab grows INTO the plate opening, which is why it costs
+  // nothing in fitment and why the frame's outer envelope does not move.
+  return { ...NO_OVERHANG, top: tab.riseInches / config.tileSizeInches };
+}
+
 /**
  * Physical PRINT size of a panel, in inches — the denominator of the resolution
  * gate (see utils/print-resolution). A column is a wing column (tileSizeInches) or
  * an inner column (widthInches / topSlots); every row is one tile tall. On the
  * school frame the two column widths coincide (11.892" / 12 = 0.991" = tile), but
  * summing per-column keeps this correct for any geometry.
+ *
+ * Includes any overhang, because the gate is asking how big the PART is, and the
+ * bottom panel of a keystone frame is taller than the row it sits on.
  */
 export function panelSizeInches(id: SectionId, config: FrameConfig): { width: number; height: number } {
   const g = panelGeometry(config);
   const rect = panelRects(config)[id];
+  const over = panelOverhangTiles(id, config);
   const innerColWidth = config.topSlots > 0 ? config.widthInches / config.topSlots : config.tileSizeInches;
   let width = 0;
   for (let c = rect.col0; c <= rect.col1; c++) {
     const isWing = c <= g.leftRailCol - 1 || c >= g.rightRailCol + 1; // pure wing columns
     width += isWing ? config.tileSizeInches : innerColWidth;
   }
-  const height = (rect.row1 - rect.row0 + 1) * config.tileSizeInches;
+  width += (over.left + over.right) * config.tileSizeInches;
+  const height = (rect.row1 - rect.row0 + 1 + over.top + over.bottom) * config.tileSizeInches;
   return { width, height };
 }
 

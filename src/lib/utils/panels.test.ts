@@ -75,7 +75,7 @@ describe("panelRects — exact partition of the ring", () => {
   });
 
   it("partitions the ring: areas sum to every real slot, no overlap, no gap", () => {
-    for (const config of [SCHOOL_FRAME_CONFIG, DEFAULT_FRAME_CONFIG]) {
+    for (const config of [SCHOOL_FRAME_CONFIG, SCHOOL_SLIM_FRAME_CONFIG, DEFAULT_FRAME_CONFIG]) {
       const grid = buildGrid(config);
       const rects = panelRects(config);
 
