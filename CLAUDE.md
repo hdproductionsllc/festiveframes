@@ -26,6 +26,29 @@
 - Kit `status: "verified"` is flipped manually only — requires confirmed school
   colors AND written permission to use the school's name/marks.
 
+## Badge art generation — READ THIS BEFORE TOUCHING ART
+
+- **The generator is Google's Gemini image API ("nano banana"), NOT Ideogram.**
+  `api.ideogram.ai` is blocked by this environment's egress allowlist;
+  `generativelanguage.googleapis.com` is open. The key lives at
+  `scratchpad/.gkey` (chmod 600, never echoed, never committed) and is a GOOGLE
+  key — 53 chars, starts `AQ.`. Model: `gemini-2.5-flash-image`.
+  Working generator: `scratchpad/gen-badge.mjs`.
+- **This was forgotten once and cost a session.** The Ideogram-era docs in
+  `tasks/*.md` describe the METHOD (style block, subject-not-wording rule, the
+  one-inch test) — the vendor named in them is stale. When an endpoint 403s,
+  TEST THE KEY against the alternatives before reporting blocked.
+- **Gemini lights the magenta sweep and prose will not stop it.** Backdrop
+  magenta-ness comes back 66–91 where the batch keyer demands 150+, so
+  `scripts/cut-enamel-pins.mjs` refuses every Gemini source. Do not fight the
+  prior and do not lower that gate: key Gemini output with the app's ADAPTIVE
+  keyer (`src/lib/utils/key-background.ts` — measures the backdrop it is given),
+  then `trim({threshold: 1})`. Verified path: flatness 1.000, partial-alpha
+  edges ramp to gold not magenta, ≥595px after trim (the 300 DPI 2x2 gate).
+- Style block and per-badge prompts: `tasks/enamel-pin-ideogram-prompts.md`.
+  Every new badge still clears the ONE-INCH TEST (100px on navy, look at it)
+  before it ships.
+
 ## Per-school research kit (repeat for every school)
 
 The SLUH deep-dive is the template. For each school gather, with a source per

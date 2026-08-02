@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useDesignStore } from "@/stores/design-store";
 import { getPiece } from "@/data/sets";
@@ -66,17 +66,42 @@ export function SnappetSizeControl() {
   const resizeTile = useDesignStore((s) => s.resizeTile);
   const removeTile = useDesignStore((s) => s.removeTile);
 
-  // ESCAPE closes it. The only other ways out were the Done and Remove buttons, and
-  // the bar is `position: fixed` — so if it ever covered what you were reaching for,
-  // the gesture that dismisses it was underneath the thing doing the covering.
+  // The panel itself, for the outside-tap test below.
+  const panelRef = useRef<HTMLDivElement | null>(null);
+
+  // Every way OUT of this panel. It had three — Done, Remove, Escape — and the
+  // owner still reported it as stuck, which is the verdict that matters: Escape
+  // does not exist on a phone, and Done is an unlabelled grey button at the end of
+  // a crowded bar. Two more exits, both of them the ones people actually try:
+  //
+  //  · an X in the corner, because that is where forty years of windows put it;
+  //  · tapping ANYWHERE that is not the panel and not a frame tile. Clicking the
+  //    frame's empty space already cleared the selection (FrameCanvas), but a tap
+  //    on the page around the builder cleared nothing, so the panel followed you
+  //    down the page. Listening on pointerdown at the document catches those.
+  //    Taps on tiles are excluded so selecting a DIFFERENT badge swaps the panel
+  //    to it instead of closing it first.
+  //
   // Declared BEFORE the early returns: hooks may not sit behind a condition.
   useEffect(() => {
     if (!selectedId) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") selectSnappet(null);
     };
+    const onDown = (e: PointerEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (!t) return;
+      if (panelRef.current?.contains(t)) return; // using the panel
+      if (t.closest?.("[data-tile-cell]")) return; // picking a (different) tile
+      if (t.closest?.("[data-snappet-handle]")) return; // dragging a resize handle
+      selectSnappet(null);
+    };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    document.addEventListener("pointerdown", onDown, true);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.removeEventListener("pointerdown", onDown, true);
+    };
   }, [selectedId, selectSnappet]);
 
   if (typeof document === "undefined") return null;
@@ -196,7 +221,21 @@ export function SnappetSizeControl() {
 
   return createPortal(
     <div className="ff-school-portal fixed inset-x-0 bottom-0 z-[90] flex justify-center p-3 pointer-events-none">
-      <div className="ff-modal pointer-events-auto flex w-full max-w-[440px] flex-wrap items-center justify-between gap-3 px-4 py-2.5">
+      <div
+        ref={panelRef}
+        className="ff-modal pointer-events-auto relative flex w-full max-w-[440px] flex-wrap items-center justify-between gap-3 px-4 py-2.5"
+      >
+        {/* The exit everyone looks for first. */}
+        <button
+          type="button"
+          aria-label="Close tile options"
+          onClick={() => selectSnappet(null)}
+          className="absolute -right-2 -top-2 z-10 flex h-7 w-7 items-center justify-center rounded-full border border-[var(--ff-line-strong)] bg-[var(--ff-card)] text-[var(--ff-ink)] shadow-sm"
+        >
+          <svg aria-hidden width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <path d="M6 6l12 12M18 6L6 18" />
+          </svg>
+        </button>
         <div className="flex items-center gap-2">
           <span className="ff-label">Size{isPhoto ? " (photo)" : ""}</span>
           <span className="rounded-[6px] bg-[var(--ff-sunk)] px-1.5 py-0.5 text-[12px] tabular-nums text-[var(--ff-ink)]">

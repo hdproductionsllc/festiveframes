@@ -169,6 +169,7 @@ export function SnappetResizeHandles({
 
       {/* Right edge — width only. */}
       <div
+        data-snappet-handle
         role="slider"
         aria-label="Resize snappet width"
         aria-valuenow={shownSpan.cols}
@@ -182,6 +183,7 @@ export function SnappetResizeHandles({
 
       {/* Bottom edge — height only. */}
       <div
+        data-snappet-handle
         role="slider"
         aria-label="Resize snappet height"
         aria-valuenow={shownSpan.rows}
@@ -195,6 +197,7 @@ export function SnappetResizeHandles({
 
       {/* Bottom-right corner — width AND height. */}
       <div
+        data-snappet-handle
         role="slider"
         aria-label="Resize snappet"
         aria-valuenow={shownSpan.cols}

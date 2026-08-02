@@ -240,3 +240,16 @@ gold metal pole and arc, [STYLE BLOCK]
 
 Both must clear §6's one-inch test before they go in: shrink to 100 px and look.
 That is the test the current pair fails.
+
+### §7 resolution — 2026-08-02
+
+Both regenerated and SHIPPED, via **Google Gemini image** (`gemini-2.5-flash-image`)
+— the library's generator since the Ideogram egress block; see CLAUDE.md "Badge
+art generation". The §7 prompts ran as written against the §2 style block.
+
+Gemini note for the record: it lights the magenta sweep (backdrop magenta-ness
+66–91 across six generations; prose instructions to flatten it changed nothing),
+so the batch chroma keyer refuses its output BY DESIGN. The shipped cut-outs went
+through the app's adaptive keyer instead: flatness 1.000, partial-alpha 0.85% /
+3.68% with gold-ramping edges, 702px / 661px after trim. Both cleared the
+one-inch test on navy.
