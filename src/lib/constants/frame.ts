@@ -216,70 +216,79 @@ export const SCHOOL_SLIM_FRAME_CONFIG: FrameConfig = getWingFrameConfig(
   1 * DEFAULT_FRAME_CONFIG.tileSizeInches,
 );
 
-// ─── THE JULY REBASE — staged, NOT wired ─────────────────────────────────────
+// ─── THE JULY REBASE — staged, NOT wired, now CONFIRMED BY BILL'S PARTS ──────
 //
 // OWNER-ESTABLISHED GROUND TRUTH (2026-08-02): nothing newer than the July 4
-// builder has ever completed the loop from design tool to physical part. The
-// July ring — DEFAULT_FRAME_CONFIG, 13 x 7, one tile thick all round, window
-// 11 x 5 — was printed, assembled, and its tiles sat flush and continuous. Every
-// school geometry since (the 10 x 5 classic, the 12 x 6 rail model) is THEORY,
-// and the operator having to STRETCH school exports in eufyMake is the evidence
-// that the theory-era files do not match the physical rail. A frame that
-// overlaps the plate face by half an inch is also simply how real plate frames
-// work; the 12 x 6 window's near-zero overlap assumed a spec, not a part.
+// builder ever completed the loop from design tool to physical part, and Bill
+// had to STRETCH school exports in eufyMake. Then Bill texted his actual part
+// dimensions (2026-08-02, final printed dims within +/-0.015"):
 //
-// So these two derive the school frames from the VERIFIED core and nothing else:
-// the July ring's own topSlots/leftSlots/width/height, plus flags. The rail of
-// JULY_SLIM is the July ring to the millimetre — if the July part fits a car,
-// this structure fits that car, because it IS that structure.
+//   Side panel    8 x 2      Top runner    11 x 1      Bottom    11 x 2
 //
-//   JULY CORE   13 x 7   12.883" x 6.937"   window 11 x 5 = 10.901" x 4.955"
-//               overlaps a 12" x 6" plate 0.550" per side, 0.522" top/bottom
-//   JULY_SLIM   15 x 7   14.865" x 6.937"   + 1 cantilever column per side
-//   JULY_FULL   15 x 8   14.865" x 7.928"   + 1 cantilevered bottom row
+// Those three numbers close the case. His system is on a 1.000" GRID — flat
+// inches, not our 0.991" pitch — and his frame is the JULY SHAPE (13-slot inner
+// ring, one wing column per side, two bottom rows). The July-shaped config at
+// tileSizeInches 1.000 reproduces his parts EXACTLY through panelSizeInches:
+// side 2.000 x 8.000, top 11.000 x 1.000, bottom 11.000 x 2.000. Window when
+// assembled: 11 x 5 INCHES, overlapping a 12 x 6 plate 0.5" on every side —
+// which also answers the dressed-window question outright.
 //
-// Flip = point SCHOOL_FRAME_CONFIG / SCHOOL_SLIM_FRAME_CONFIG at these. Known
-// consequences to carry at flip time, all mechanical: preset stacks become
-// [2,2,2,2] (8-row side column) and [2,3,2] (7 rows); dropRelocatedSlots already
-// handles the saved-design migration; the keystone must shrink — the bar already
-// sits 0.522" up the plate face here, so the current 0.793" rise would reach
-// 1.315" and cross Missouri's date line at ~1.08" (0.55" rise clears it).
+// WHY JULY WORKED AND SCHOOL PANELS DIDN'T, same 0.991 files both times:
+// a single tile at 0.991 in a 1.000 window is 0.009 of slack — invisible, so
+// the per-tile July build sat flush. A PANEL accumulates the error: 10 cells at
+// 0.991 is 9.910 on an 11.000 sled, and our classic top panel was also a cell
+// SHORT (10 cells vs his 11" runner) — +11% stretch on the long axis, which is
+// exactly what Bill was doing in eufyMake. Pitch error is invisible per-tile
+// and fatal per-panel. That is the whole story of the stretch.
 //
-// DO NOT flip on a hunch: the gate is Bill measuring his rail (window opening,
-// tile pitch, rail thickness) against the July numbers above — or better, one
-// physical print of JULY_SLIM, with the standing rule that NOTHING is stretched
-// in eufyMake ever again. If a file does not fit the bed or the rail, the file
-// is wrong and comes back here.
-
+//   BILL'S SYSTEM  15 x 8 cells at 1.000" = 15" x 8"   rail 13 x 7   window 11 x 5
+//   FULL (below)   = that, exactly                     bed: 15.0 <= 16.5 rotated
+//   SLIM (below)   = same minus the second bottom row  -> 15 x 7
+//
+// Flip = point SCHOOL_FRAME_CONFIG / SCHOOL_SLIM_FRAME_CONFIG at these. At flip
+// time: preset stacks become [2,2,2,2] (8-row side) and [2,3,2] (7), the
+// dropRelocatedSlots migration already handles saved designs, and /build's
+// DEFAULT_FRAME_CONFIG stays at 0.991 — its per-tile product is verified as-is.
+// Remaining unknowns are Bill's to call, not ours to guess: he is actively
+// re-sizing for car fit (his 8"-tall build failed a Honda Pilot; his next guess
+// is 1.4 x 7 sides) and may shift the lower runner off-centre on the track.
+// Nothing here chases a guess he has not committed to.
+//
 export const SCHOOL_JULY_SLIM_FRAME_CONFIG: FrameConfig = getWingFrameConfig(
   {
-    ...DEFAULT_FRAME_CONFIG, // the verified core, untouched: 13 slots, 5 side rows
+    ...DEFAULT_FRAME_CONFIG, // the July SHAPE: 13 slots, 5 side rows...
+    tileSizeInches: 1, // ...on BILL'S 1.000" grid, per his measured parts
+    widthInches: 13,
+    heightInches: 7,
     minTileSpan: { cols: 2, rows: 2 },
     fullWidthTopBar: true,
     bottomRows: 1,
     overhangTiles: 1,
     bottomTab: {
-      // 0.55 of a cell, not the 0.8 the wide-window slim wears — see the flip
-      // notes above: the July bar overlaps the plate face, so rise rides on top
-      // of that overlap and 0.55 is what stays under a state's motto line.
-      riseInches: 0.55 * DEFAULT_FRAME_CONFIG.tileSizeInches,
-      baseInches: 6 * DEFAULT_FRAME_CONFIG.tileSizeInches,
-      topInches: 5 * DEFAULT_FRAME_CONFIG.tileSizeInches,
-      cornerRadiusInches: 0.25 * DEFAULT_FRAME_CONFIG.tileSizeInches,
+      // The bar sits 0.5" up the plate face here, so 0.55" of rise reaches
+      // 1.05" — just under Missouri's date line at ~1.08". Do not raise it
+      // without re-checking that number.
+      riseInches: 0.55,
+      baseInches: 6,
+      topInches: 5,
+      cornerRadiusInches: 0.25,
     },
   },
-  1 * DEFAULT_FRAME_CONFIG.tileSizeInches,
+  1,
 );
 
 export const SCHOOL_JULY_FULL_FRAME_CONFIG: FrameConfig = getWingFrameConfig(
   {
     ...DEFAULT_FRAME_CONFIG,
+    tileSizeInches: 1,
+    widthInches: 13,
+    heightInches: 7,
     minTileSpan: { cols: 2, rows: 2 },
     fullWidthTopBar: true,
-    bottomRows: 2, // the one extra row, cantilevered below the July ring
+    bottomRows: 2, // Bill's current build: the 11 x 2 bottom runner
     overhangTiles: 1,
   },
-  1 * DEFAULT_FRAME_CONFIG.tileSizeInches,
+  1,
 );
 
 /**

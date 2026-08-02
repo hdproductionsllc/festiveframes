@@ -174,13 +174,24 @@ error of 49/255 where the real figure was under 1/255.
   and it contaminates every conclusion drawn from those prints. STANDING RULE:
   nothing is ever stretched in eufyMake. A file that doesn't fit is wrong and
   comes back to the code.
+- **BILL'S PARTS, texted 2026-08-02 (final printed dims ±0.015"): side 8 × 2,
+  top runner 11 × 1, bottom 11 × 2.** These are FLAT INCHES — his system is on a
+  **1.000" grid, not our 0.991" pitch**, and his frame is the July SHAPE
+  (13-slot inner ring + 1 wing column + 2 bottom rows). The July-shaped config
+  at `tileSizeInches: 1` reproduces all three parts exactly; assembled window is
+  **11 × 5 inches** (0.5" plate overlap all round). THE STRETCH, EXPLAINED: a
+  lone tile at 0.991 in a 1.000 window has 0.009 slack (invisible — why July's
+  per-tile build sat flush), but a panel accumulates it, and our classic top
+  panel was also a cell short — 9.910" on his 11.000" sled, the +11% stretch.
+  Pitch error is invisible per-tile and fatal per-panel.
 - The rebase candidates `SCHOOL_JULY_SLIM_FRAME_CONFIG` / `SCHOOL_JULY_FULL_
-  FRAME_CONFIG` (in constants/frame.ts, staged, NOT wired) derive the school
-  frames from the verified July core + flags only; JULY_SLIM's rail IS the July
-  ring to the millimetre. **Flip gate:** Bill measures his rail (window opening,
-  tile pitch, rail thickness) against the July numbers, or one physical
-  unstretched print of JULY_SLIM. Do not flip, or re-litigate window size in
-  code, without a measurement of a physical part.
+  FRAME_CONFIG` (constants/frame.ts, staged, NOT wired) now encode exactly that
+  system: 15 × 8 (FULL) / 15 × 7 (SLIM) at 1.000". `/build`'s
+  DEFAULT_FRAME_CONFIG stays 0.991 — its per-tile product is verified as-is.
+  **Flip gate:** one unstretched print of a panel from these configs on Bill's
+  sleds. Bill is still re-sizing for car fit (8"-tall failed his Honda Pilot;
+  his uncommitted next guess is 1.4 × 7 sides) — do not chase a guess he has
+  not committed to.
 
 ## Geometry facts worth not re-deriving
 
