@@ -141,6 +141,26 @@ with a known fix. If a measurement looks extreme, question the method before
 reporting it: comparing RGB inside fully transparent regions once produced a bogus
 error of 49/255 where the real figure was under 1/255.
 
+## Geometry GROUND TRUTH (owner-established 2026-08-02) — read before any geometry work
+
+- **Nothing newer than the July 4 builder has ever completed design → physical
+  part.** The July ring (`DEFAULT_FRAME_CONFIG`, 13 × 7, one tile thick all
+  round, window 11 × 5 = 10.901" × 4.955", overlapping the plate face ~0.55"/
+  0.52") was printed and its tiles sat FLUSH. Every school geometry since —
+  the 10 × 5 classic, the 12 × 6 rail window — is unverified theory.
+- **Bill had to STRETCH school exports in eufyMake to make them fit.** That is
+  evidence of a dimensional mismatch between our files and his physical rail,
+  and it contaminates every conclusion drawn from those prints. STANDING RULE:
+  nothing is ever stretched in eufyMake. A file that doesn't fit is wrong and
+  comes back to the code.
+- The rebase candidates `SCHOOL_JULY_SLIM_FRAME_CONFIG` / `SCHOOL_JULY_FULL_
+  FRAME_CONFIG` (in constants/frame.ts, staged, NOT wired) derive the school
+  frames from the verified July core + flags only; JULY_SLIM's rail IS the July
+  ring to the millimetre. **Flip gate:** Bill measures his rail (window opening,
+  tile pitch, rail thickness) against the July numbers, or one physical
+  unstretched print of JULY_SLIM. Do not flip, or re-litigate window size in
+  code, without a measurement of a physical part.
+
 ## Geometry facts worth not re-deriving
 
 - eufyMake E1 bed: 16.5" × 13". School frame tile pitch 0.991".

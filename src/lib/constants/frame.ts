@@ -216,6 +216,72 @@ export const SCHOOL_SLIM_FRAME_CONFIG: FrameConfig = getWingFrameConfig(
   1 * DEFAULT_FRAME_CONFIG.tileSizeInches,
 );
 
+// ─── THE JULY REBASE — staged, NOT wired ─────────────────────────────────────
+//
+// OWNER-ESTABLISHED GROUND TRUTH (2026-08-02): nothing newer than the July 4
+// builder has ever completed the loop from design tool to physical part. The
+// July ring — DEFAULT_FRAME_CONFIG, 13 x 7, one tile thick all round, window
+// 11 x 5 — was printed, assembled, and its tiles sat flush and continuous. Every
+// school geometry since (the 10 x 5 classic, the 12 x 6 rail model) is THEORY,
+// and the operator having to STRETCH school exports in eufyMake is the evidence
+// that the theory-era files do not match the physical rail. A frame that
+// overlaps the plate face by half an inch is also simply how real plate frames
+// work; the 12 x 6 window's near-zero overlap assumed a spec, not a part.
+//
+// So these two derive the school frames from the VERIFIED core and nothing else:
+// the July ring's own topSlots/leftSlots/width/height, plus flags. The rail of
+// JULY_SLIM is the July ring to the millimetre — if the July part fits a car,
+// this structure fits that car, because it IS that structure.
+//
+//   JULY CORE   13 x 7   12.883" x 6.937"   window 11 x 5 = 10.901" x 4.955"
+//               overlaps a 12" x 6" plate 0.550" per side, 0.522" top/bottom
+//   JULY_SLIM   15 x 7   14.865" x 6.937"   + 1 cantilever column per side
+//   JULY_FULL   15 x 8   14.865" x 7.928"   + 1 cantilevered bottom row
+//
+// Flip = point SCHOOL_FRAME_CONFIG / SCHOOL_SLIM_FRAME_CONFIG at these. Known
+// consequences to carry at flip time, all mechanical: preset stacks become
+// [2,2,2,2] (8-row side column) and [2,3,2] (7 rows); dropRelocatedSlots already
+// handles the saved-design migration; the keystone must shrink — the bar already
+// sits 0.522" up the plate face here, so the current 0.793" rise would reach
+// 1.315" and cross Missouri's date line at ~1.08" (0.55" rise clears it).
+//
+// DO NOT flip on a hunch: the gate is Bill measuring his rail (window opening,
+// tile pitch, rail thickness) against the July numbers above — or better, one
+// physical print of JULY_SLIM, with the standing rule that NOTHING is stretched
+// in eufyMake ever again. If a file does not fit the bed or the rail, the file
+// is wrong and comes back here.
+
+export const SCHOOL_JULY_SLIM_FRAME_CONFIG: FrameConfig = getWingFrameConfig(
+  {
+    ...DEFAULT_FRAME_CONFIG, // the verified core, untouched: 13 slots, 5 side rows
+    minTileSpan: { cols: 2, rows: 2 },
+    fullWidthTopBar: true,
+    bottomRows: 1,
+    overhangTiles: 1,
+    bottomTab: {
+      // 0.55 of a cell, not the 0.8 the wide-window slim wears — see the flip
+      // notes above: the July bar overlaps the plate face, so rise rides on top
+      // of that overlap and 0.55 is what stays under a state's motto line.
+      riseInches: 0.55 * DEFAULT_FRAME_CONFIG.tileSizeInches,
+      baseInches: 6 * DEFAULT_FRAME_CONFIG.tileSizeInches,
+      topInches: 5 * DEFAULT_FRAME_CONFIG.tileSizeInches,
+      cornerRadiusInches: 0.25 * DEFAULT_FRAME_CONFIG.tileSizeInches,
+    },
+  },
+  1 * DEFAULT_FRAME_CONFIG.tileSizeInches,
+);
+
+export const SCHOOL_JULY_FULL_FRAME_CONFIG: FrameConfig = getWingFrameConfig(
+  {
+    ...DEFAULT_FRAME_CONFIG,
+    minTileSpan: { cols: 2, rows: 2 },
+    fullWidthTopBar: true,
+    bottomRows: 2, // the one extra row, cantilevered below the July ring
+    overhangTiles: 1,
+  },
+  1 * DEFAULT_FRAME_CONFIG.tileSizeInches,
+);
+
 /**
  * Total rendered width in inches (inner frame + both wings).
  */
