@@ -65,6 +65,16 @@ cutting across a rounded corner, and a brass rim so small on screen it read as a
 Every one would have been obvious in a render, and every one was found by the owner
 instead of by me.
 
+**A same-colour edge is not a subtle edge, it is extra weight.** The banner
+lettering read as "too fat" for three rounds; the cause was the merrow thread
+resolving to white on white type (SLUH's rim is `#FFFFFF`), so a 7.5%-of-em
+outward stroke added bulk and no border. Anything drawn as an outline, rim or
+highlight has to be checked against what it sits on — `merrowThread` now enforces
+a luminance gap rather than assuming one. And when a defect appears on screen but
+not in print, suspect the two renderers being handed different arguments before
+suspecting the drawing: that one was `textChenille(px, colour)` in print against
+`textChenille(px, colour, rimColor)` on screen.
+
 So before reporting any change to how something looks, do all of the following that
 apply. Attach the renders to the reply.
 
