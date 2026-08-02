@@ -701,12 +701,16 @@ function drawTextBlock(
     ctx.closePath();
     ctx.fillStyle = cfg.backgroundColor;
     ctx.fill();
-    // Rim on the SLOPES AND TOP only — points 1..4. The skirt's two vertical edges
-    // are inside the bar, and stroking them would draw the very seam this exists
-    // to remove.
+    // Rim on the SLOPES AND TOP only. The skirt's two vertical edges are inside the
+    // bar, and stroking them would draw the very seam this exists to remove.
+    //
+    // `p.rim` names that run rather than slicing it out of `p.points`, which is
+    // what this did before. The slice was `[1]` then `slice(2, 5)` — correct for a
+    // six-point trapezoid and quietly wrong the moment the corners were rounded and
+    // the outline grew twenty-two points.
     ctx.beginPath();
-    ctx.moveTo(p.points[1].x, p.points[1].y);
-    for (const pt of p.points.slice(2, 5)) ctx.lineTo(pt.x, pt.y);
+    ctx.moveTo(p.rim[0].x, p.rim[0].y);
+    for (const pt of p.rim.slice(1)) ctx.lineTo(pt.x, pt.y);
     ctx.strokeStyle = rimRamp(rimColor).mid;
     ctx.lineWidth = rim.width;
     ctx.lineJoin = "round";

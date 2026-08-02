@@ -192,18 +192,24 @@ export const SCHOOL_SLIM_FRAME_CONFIG: FrameConfig = getWingFrameConfig(
     fullWidthTopBar: true,
     // THE CHANGE. No bottom cantilever, and the tagline moves into the tab.
     bottomRows: 1,
-    // The bar itself now overlaps the plate by only 0.027" (the rail sits on the
+    // The bar itself overlaps the plate by only 0.027" (the rail sits on the
     // plate's edge, not across its face), so the tab is doing all the work: it
-    // covers 0.622" up from the plate's bottom edge at the centre. That is the
-    // number to check against a real plate, since some states print a motto there.
+    // covers 0.820" up from the plate's bottom edge at the centre. That is the
+    // number to check against a real plate, since some states print a motto or a
+    // date line down there — on the Missouri bicentennial plate the "1821 ★ 2021"
+    // line sits about 1.08" up, so this clears it.
     //
     // Stated in TILES, like everything else on this frame. It was 6.2" / 5" flat,
     // which is a hair off the lattice and would have put the one part Bill prints
     // as a single body on a different grid from the parts that clip into it.
     bottomTab: {
-      riseInches: 0.6 * DEFAULT_FRAME_CONFIG.tileSizeInches, // 0.595"
-      baseInches: 6 * DEFAULT_FRAME_CONFIG.tileSizeInches, // 5.946" — six banner cells
-      topInches: 5 * DEFAULT_FRAME_CONFIG.tileSizeInches, // 4.955" — five
+      riseInches: 0.8 * DEFAULT_FRAME_CONFIG.tileSizeInches, // 0.793"
+      baseInches: 7 * DEFAULT_FRAME_CONFIG.tileSizeInches, // 6.937" — seven banner cells
+      topInches: 6 * DEFAULT_FRAME_CONFIG.tileSizeInches, // 5.946" — six
+      // Softened top corners. The hard mitre read as a road sign; a radius makes it
+      // a moulded part, which is what everything else on this frame already is.
+      // The BASE corners stay sharp — they are where the tab meets the bar.
+      cornerRadiusInches: 0.25 * DEFAULT_FRAME_CONFIG.tileSizeInches, // 0.248"
     },
     overhangTiles: 1,
   },

@@ -398,9 +398,10 @@ describe("every dimension is an exact multiple of the tile pitch", () => {
     // clips into it.
     const t = SCHOOL_SLIM_FRAME_CONFIG.tileSizeInches;
     const tab = SCHOOL_SLIM_FRAME_CONFIG.bottomTab!;
-    expect(isTiles(tab.baseInches, 6, t)).toBe(true);
-    expect(isTiles(tab.topInches, 5, t)).toBe(true);
-    expect(tab.riseInches).toBe(0.6 * t);
+    expect(isTiles(tab.baseInches, 7, t)).toBe(true);
+    expect(isTiles(tab.topInches, 6, t)).toBe(true);
+    expect(tab.riseInches).toBe(0.8 * t);
+    expect(tab.cornerRadiusInches).toBe(0.25 * t);
     // …and it still fits inside the banner it stands on.
     expect(tab.baseInches).toBeLessThan(SCHOOL_SLIM_FRAME_CONFIG.widthInches);
     expect(tab.topInches).toBeLessThan(tab.baseInches);

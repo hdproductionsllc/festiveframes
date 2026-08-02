@@ -140,14 +140,16 @@ describe("panelBleedBox (per-panel export crop — bleed adds AREA via edge-clam
     expect(box.contentX).toBeCloseTo(rect.col0 * tilePx, 6);
   });
 
-  it("WOULD have cut 178px off the tab without the overhang", () => {
+  it("WOULD cut the whole rise off the tab without the overhang", () => {
     // The defect, pinned. This is the call the export used to make.
     const cfg = SCHOOL_SLIM_FRAME_CONFIG;
     const tilePx = cfg.tileSizeInches * 300;
     const naive = panelBleedBox(panelRects(cfg).bottom, tilePx, 0);
     const fixed = panelBleedBox(panelRects(cfg).bottom, tilePx, 0, panelOverhangTiles("bottom", cfg));
     expect(naive.contentY - fixed.contentY).toBeCloseTo(cfg.bottomTab!.riseInches * 300, 6);
-    expect(Math.round(naive.contentY - fixed.contentY)).toBe(178);
+    // A quarter of an inch at 300 DPI is 75px; anything on this scale is the whole
+    // second line of the lockup, not a rounding difference.
+    expect(naive.contentY - fixed.contentY).toBeGreaterThan(150);
   });
 
   it("leaves every panel of a frame WITHOUT a tab exactly its own rectangle", () => {

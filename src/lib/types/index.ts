@@ -137,6 +137,13 @@ export interface BottomTab {
   baseInches: number;
   /** Width at its top edge. Smaller than `baseInches`. */
   topInches: number;
+  /**
+   * Radius of the two TOP corners, where the slopes meet the top edge.
+   *
+   * The base corners stay sharp: that is where the tab meets the bar, and they are
+   * one piece of material there. Absent/0 gives the hard-mitred trapezoid.
+   */
+  cornerRadiusInches?: number;
 }
 
 // ─── Design State ───────────────────────────────────────────
