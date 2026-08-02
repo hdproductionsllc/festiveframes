@@ -47,3 +47,6 @@ next-env.d.ts
 /*.jpeg
 /*.JPG
 /*.webp
+
+# Generation working files (variants live locally; only conformed winners ship)
+scripts/out/
