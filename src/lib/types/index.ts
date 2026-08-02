@@ -112,6 +112,31 @@ export interface FrameConfig {
    * no gutter and no clip — the standard /build frame, byte-for-byte.
    */
   overhangTiles?: number;
+  /**
+   * The KEYSTONE: a centre section of the bottom bar that protrudes UP into the
+   * plate opening, carrying the banner's tagline above the name instead of below
+   * it.
+   *
+   * It is the idiom every commercial plate frame uses for a second line, and it
+   * is the only way to keep the two-tier lockup on a one-row bottom bar. Crucially
+   * it grows INWARD, over the plate face, so it costs nothing in fitment: the
+   * frame's outer envelope is unchanged.
+   *
+   * Wider at its base than at its top, so it reads as standing on the bar rather
+   * than balanced on it. Absent = a plain rectangular bar, which is every frame
+   * that exists today.
+   */
+  bottomTab?: BottomTab;
+}
+
+/** Geometry of the bottom bar's keystone, in inches. See `FrameConfig.bottomTab`. */
+export interface BottomTab {
+  /** How far it rises above the bar's top edge, into the plate opening. */
+  riseInches: number;
+  /** Width where it meets the bar. */
+  baseInches: number;
+  /** Width at its top edge. Smaller than `baseInches`. */
+  topInches: number;
 }
 
 // ─── Design State ───────────────────────────────────────────

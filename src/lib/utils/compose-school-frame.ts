@@ -32,6 +32,7 @@ import type {
   PlacedTextBar,
   PlacedTile,
   QRCodeConfig,
+  BottomTab,
   SectionId,
   SectionState,
   TextBarPlacement,
@@ -60,6 +61,7 @@ import {
 } from "@/lib/utils/sections";
 import { panelRects, type PanelRect } from "@/lib/utils/panels";
 import { bannerBands, trackingPx, widthLimitedFont } from "@/lib/utils/banner-tiers";
+import { frameTab, tabPath, tabTextBox } from "@/lib/utils/bottom-tab";
 import { bannerConfigFor, bannerLogoLayout, sectionSupportsLogo } from "@/lib/utils/banner-logo";
 import { getPiece } from "@/data/sets";
 import {
@@ -514,8 +516,59 @@ function drawTextBlock(
   rimColor?: string | null,
   /** The crest bitmap, when this banner carries one and it loaded. */
   logoImg?: DrawableImage | null,
+  /** The keystone, when this is a bottom bar on a frame that has one. */
+  tab?: { tab: BottomTab; pxPerInch: number } | null,
 ) {
   const bevel = bevelMetrics(w, h, cfg.backgroundColor, unit);
+  // THE KEYSTONE, drawn BEFORE the bar clips itself: it lives above the bar's own
+  // box, so anything drawn after `ctx.clip()` below would be cut off at the bar's
+  // top edge. Same fill and rim as the bar, so it reads as one piece of material
+  // rather than a sticker on top of one. See lib/utils/bottom-tab.ts.
+  if (tab) {
+    const p = tabPath(tab.tab, x + w / 2, y, tab.pxPerInch);
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(p.points[0].x, p.points[0].y);
+    for (const pt of p.points.slice(1)) ctx.lineTo(pt.x, pt.y);
+    ctx.closePath();
+    ctx.fillStyle = cfg.backgroundColor;
+    ctx.fill();
+    // The rim runs up the two slopes and across the top only. The base is where it
+    // meets the bar, and a line there would draw a seam through solid material.
+    const rim = rimMetrics(p.base, p.rise, unit);
+    ctx.beginPath();
+    ctx.moveTo(p.points[0].x, p.points[0].y);
+    for (const pt of p.points.slice(1)) ctx.lineTo(pt.x, pt.y);
+    ctx.strokeStyle = rimRamp(rimColor).mid;
+    ctx.lineWidth = rim.width;
+    ctx.lineJoin = "round";
+    ctx.stroke();
+    ctx.restore();
+
+    // The tagline lives in the tab now, above the name instead of below it.
+    const line = cfg.tagline?.trim();
+    if (line) {
+      const box = tabTextBox(tab.tab, tab.pxPerInch);
+      const family = cfg.taglineFontFamily ?? cfg.fontFamily;
+      ctx.save();
+      ctx.font = `700 100px ${family}`;
+      const em = ctx.measureText(line).width / 100;
+      const fontPx = Math.min(box.height, widthLimitedFont(em, line.length, 0, box.width));
+      ctx.font = `800 ${fontPx}px ${family}`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      const ch = textChenille(fontPx, cfg.textColor, rimColor);
+      const cx = x + w / 2;
+      const cy = y - p.rise / 2;
+      ctx.lineJoin = "round";
+      ctx.strokeStyle = ch.merrow.thread;
+      ctx.lineWidth = ch.merrow.width;
+      ctx.strokeText(line, cx, cy);
+      ctx.fillStyle = cfg.textColor;
+      ctx.fillText(line, cx, cy);
+      ctx.restore();
+    }
+  }
   // A banner never reaches a frame corner on this geometry — the wings do, and they
   // run the full height on both sides. Ordinary radii all round.
   const radii = cornerRadii(unit, NO_CORNERS);
@@ -556,7 +609,7 @@ function drawTextBlock(
   const contentW = Math.max(1, logoBox?.textWidth ?? w - pad * 2);
   const contentH = Math.max(1, h - pad * 2);
   const headline = cfg.text ?? "";
-  const tagline = cfg.tagline?.trim() ? cfg.tagline : "";
+  const taglineRaw = cfg.tagline?.trim() ? cfg.tagline : "";
   const fill = cfg.fontSize ?? 1;
   const ls = cfg.letterSpacing ?? 0;
   const contentTop = y + pad;
@@ -630,6 +683,9 @@ function drawTextBlock(
     try { (ctx as CanvasRenderingContext2D & { letterSpacing?: string }).letterSpacing = "0px"; } catch { /* unsupported */ }
   };
 
+  // With a keystone, the bar is ONE tier: the tagline moved up into the tab, so
+  // the name gets the whole bar rather than 60% of it.
+  const tagline = tab ? "" : taglineRaw;
   if (headline.length) {
     if (tagline) {
       const bands = bannerBands(contentH);
@@ -818,9 +874,15 @@ export function drawSchoolFrame(
     const box = sectionBounds(id, frameSlots, config);
     if (!box) continue;
     if (sec.mode === "text" && sec.text) {
+      // The keystone belongs to the BOTTOM bar only, and only on a frame that
+      // declares one. Everything else draws a plain rectangular bar exactly as
+      // it always has.
+      const tab = id === "bottom" && frameTab(config)
+        ? { tab: frameTab(config)!, pxPerInch: m.scale }
+        : null;
       drawTextBlock(
         ctx, bannerConfigFor(id, sec.text), box.x, box.y, box.width, box.height, m.tileSize,
-        design.rimColor, images.logos.get(id) ?? null,
+        design.rimColor, images.logos.get(id) ?? null, tab,
       );
     } else if (sec.mode === "image") {
       const img = images.sections.get(id);

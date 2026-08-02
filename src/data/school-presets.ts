@@ -37,7 +37,7 @@ export interface SchoolPreset {
    * in the intake, falling back to the preset's own default when they chose
    * nothing — so the preset is a finished frame either way.
    */
-  layout: Array<[slot: string, piece: string]>;
+  layout: Array<[slot: string, piece: string, span?: { cols: number; rows: number }]>;
   /** Used wherever `ACTIVITY` appears and the intake is empty. */
   fallbackActivity: string;
   /**
@@ -186,8 +186,65 @@ export const SCHOOL_PRESETS: SchoolPreset[] = [
   },
 ];
 
-export function getPreset(id: string): SchoolPreset | undefined {
-  return SCHOOL_PRESETS.find((p) => p.id === id);
+// ─── The FORK's presets: 2x2 / 2x3 / 2x2 ─────────────────────────────────────
+//
+// Seven rows means each side takes three badges with a taller feature in the
+// middle, instead of four equal squares. That hierarchy is the point: four equal
+// slots is where every repetitive layout came from, because nothing could lead.
+//
+// The middle 2x3 is a NEW aspect (2:3) that no existing badge is drawn for, so it
+// is reserved for the things that suit it — the school's mascot redrawn tall, a
+// jersey carrying their number, or the student's own photo. Square art placed
+// there letterboxes, which is why the presets below never put one in it.
+
+const SLIM_COL_LEFT = ["frame:wing-left-0", "frame:wing-left-2", "frame:wing-left-5"] as const;
+const SLIM_COL_RIGHT = ["frame:top-11", "frame:right-1", "frame:right-4"] as const;
+const SQ = { cols: 2, rows: 2 };
+const TALL3 = { cols: 2, rows: 3 };
+
+/** Mirror a three-badge column onto both sides, with the middle one 2x3. */
+function slimLayout(top: string, middle: string, bottom: string): SchoolPreset["layout"] {
+  const out: SchoolPreset["layout"] = [];
+  for (const col of [SLIM_COL_LEFT, SLIM_COL_RIGHT]) {
+    out.push([col[0], top, SQ], [col[1], middle, TALL3], [col[2], bottom, SQ]);
+  }
+  return out;
+}
+
+export const SLIM_PRESETS: SchoolPreset[] = [
+  {
+    id: "graduate",
+    name: "Graduate",
+    blurb: "Their cap, their diploma, and the school between them.",
+    icon: "\u{1F393}",
+    layout: slimLayout("hs:grad-cap", MASCOT, "hs:diploma-tall"),
+    fallbackActivity: "hs:honor-star",
+    favouredBy: ["parent", "grandparent", "self"],
+  },
+  {
+    id: "athlete",
+    name: "Their sport",
+    blurb: "Their sport top and bottom, the mascot leading in the middle.",
+    icon: "\u{1F3C5}",
+    layout: slimLayout(ACTIVITY, MASCOT, ACTIVITY),
+    fallbackActivity: "hs:trophy",
+    needsActivity: true,
+    wantsNumber: true,
+    favouredBy: ["parent", "self"],
+  },
+  {
+    id: "school",
+    name: "Just the school",
+    blurb: "The crest, the mascot, the crest. Nothing to fill in.",
+    icon: "\u{1F6E1}\uFE0F",
+    layout: slimLayout(MASCOT_ALT, MASCOT, MASCOT_ALT),
+    fallbackActivity: "hs:crest",
+    favouredBy: ["alum", "staff"],
+  },
+];
+
+export function getPreset(id: string, from: SchoolPreset[] = SCHOOL_PRESETS): SchoolPreset | undefined {
+  return from.find((p) => p.id === id);
 }
 
 /**
@@ -196,8 +253,8 @@ export function getPreset(id: string): SchoolPreset | undefined {
  * A grandparent is shopping for a graduation gift, an alum wants the crest.
  * Stable within each group so the strip does not reshuffle unpredictably.
  */
-export function presetsFor(buyer: BuyerId): SchoolPreset[] {
-  return [...SCHOOL_PRESETS].sort((a, b) => {
+export function presetsFor(buyer: BuyerId, from: SchoolPreset[] = SCHOOL_PRESETS): SchoolPreset[] {
+  return [...from].sort((a, b) => {
     const ai = a.favouredBy.indexOf(buyer);
     const bi = b.favouredBy.indexOf(buyer);
     const av = ai === -1 ? 99 : ai;
@@ -212,7 +269,7 @@ export function presetTiles(
   chosenActivity: string | null,
   mascotPieceId?: string | null,
   altMarkPieceId?: string | null,
-): Array<[string, string]> {
+): Array<[string, string, { cols: number; rows: number } | undefined]> {
   const activity = chosenActivity || preset.fallbackActivity;
   const mascot = mascotPieceId || "hs:crest";
   // A school with only one mark alternates against the generic crest, which is
@@ -222,8 +279,9 @@ export function presetTiles(
   const alt = altMarkPieceId && altMarkPieceId !== mascot
     ? altMarkPieceId
     : mascot === "hs:crest" ? "hs:honor-star" : "hs:crest";
-  return preset.layout.map(([slot, piece]) => [
+  return preset.layout.map(([slot, piece, span]) => [
     slot,
     piece === ACTIVITY ? activity : piece === MASCOT ? mascot : piece === MASCOT_ALT ? alt : piece,
+    span,
   ]);
 }

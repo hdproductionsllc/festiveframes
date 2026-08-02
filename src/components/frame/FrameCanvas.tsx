@@ -17,6 +17,8 @@ import { SnappetResizeHandles } from "./SnappetResizeHandles";
 import { LicensePlateArea } from "./LicensePlateArea";
 import { BottomTextBar } from "./BottomTextBar";
 import { SectionTextElement } from "./SectionTextElement";
+import { BottomTabElement } from "./BottomTabElement";
+import { frameTab } from "@/lib/utils/bottom-tab";
 
 interface FrameCanvasProps {
   frameConfig: FrameConfig;
@@ -121,6 +123,10 @@ export const FrameCanvas = forwardRef<FrameCanvasHandle, FrameCanvasProps>(
     const selectBar = useDesignStore((s) => s.selectBar);
     // Sections (school builder). Empty on /build, so all section logic below is inert.
     const sections = useDesignStore((s) => s.sections);
+    // The keystone: frame geometry, so it is resolved here rather than inside the
+    // banner. Null on every frame that does not declare one, which is all of them
+    // except the slim fork.
+    const bottomTab = frameTab(frameConfig);
     const selectedSectionId = useDesignStore((s) => s.selectedSectionId);
     const selectSection = useDesignStore((s) => s.selectSection);
     // Snappet resize (school builder). A selected snappet grows drag handles; both
@@ -596,7 +602,14 @@ export const FrameCanvas = forwardRef<FrameCanvasHandle, FrameCanvasProps>(
                     <SectionTextElement
                       width={box.width}
                       height={box.height}
-                      config={bannerConfigFor(id, sec.text)}
+                      // With a keystone the tagline has moved OUT of the bar and
+                      // into the tab, so the bar is one tier and the name gets the
+                      // whole of it. Same split the print path makes.
+                      config={
+                        id === "bottom" && bottomTab
+                          ? { ...bannerConfigFor(id, sec.text), tagline: undefined }
+                          : bannerConfigFor(id, sec.text)
+                      }
                       unit={tileSize}
                     />
                   ) : (
@@ -607,6 +620,21 @@ export const FrameCanvas = forwardRef<FrameCanvasHandle, FrameCanvasProps>(
                 </div>
               );
             })}
+            {/* The keystone, mounted OUTSIDE the banner's clipped wrapper — it
+                stands above that wrapper's top edge and a child would be cut off
+                at the base. Frame geometry, so the frame draws it. */}
+            {(() => {
+              const bottomBox = bottomTab ? sectionBounds("bottom", frameSlots, frameConfig) : null;
+              return bottomTab && bottomBox && sections.bottom?.text?.text ? (
+              <BottomTabElement
+                tab={bottomTab}
+                config={bannerConfigFor("bottom", sections.bottom.text)}
+                pxPerInch={tileSize / frameConfig.tileSizeInches}
+                centerX={bottomBox.x + bottomBox.width / 2}
+                barTopY={bottomBox.y}
+                />
+              ) : null;
+            })()}
 
           {/* Tile drop indicator — ONE element that glides to the target cell.
               It's always mounted (while the frame has size) and driven purely by

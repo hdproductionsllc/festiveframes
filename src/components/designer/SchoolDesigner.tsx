@@ -15,7 +15,7 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { FirstRunTour } from "./FirstRunTour";
 import { BUYERS, DEFAULT_BUYER, getBuyer, yearsFor, type BuyerId } from "@/data/frame-buyers";
-import { presetsFor, presetTiles, getPreset, type SchoolPreset } from "@/data/school-presets";
+import { presetsFor, presetTiles, getPreset, SLIM_PRESETS, type SchoolPreset } from "@/data/school-presets";
 import { markPieceId } from "@/data/sets/school-marks";
 import { GraduateExpress } from "./GraduateExpress";
 import {
@@ -513,8 +513,8 @@ export function SchoolDesigner({
     const api = storeApi.getState();
     api.clearAll();
     const SPAN = { cols: 2, rows: 2 };
-    for (const [slot, pieceId] of presetTiles(preset, kidActivity || null, schoolMarks.mascot, schoolMarks.alt)) {
-      api.placeTile(slot, pieceId, pieceId.split(":")[0], SPAN);
+    for (const [slot, pieceId, span] of presetTiles(preset, kidActivity || null, schoolMarks.mascot, schoolMarks.alt)) {
+      api.placeTile(slot, pieceId, pieceId.split(":")[0], span ?? SPAN);
     }
     // The BUYER owns this line, not the preset: a grandparent applying
     // "Graduate" wants their relationship on it, which is the whole reason
@@ -529,12 +529,12 @@ export function SchoolDesigner({
   const gradYears = yearsFor("upcoming");
   useEffect(() => {
     if (!expressOpen) return;
-    const preset = getPreset("graduate");
+    const preset = getPreset("graduate", frameConfig.bottomTab ? SLIM_PRESETS : undefined);
     if (!preset) return;
     const api = storeApi.getState();
     api.clearAll();
-    for (const [slot, pieceId] of presetTiles(preset, null, schoolMarks.mascot, schoolMarks.alt)) {
-      api.placeTile(slot, pieceId, pieceId.split(":")[0], { cols: 2, rows: 2 });
+    for (const [slot, pieceId, span] of presetTiles(preset, null, schoolMarks.mascot, schoolMarks.alt)) {
+      api.placeTile(slot, pieceId, pieceId.split(":")[0], span ?? { cols: 2, rows: 2 });
     }
     if (!kidYear) setKidYear(String(gradYears[0]));
     // Once, on open. Deliberately not keyed on the name or the year: those only
@@ -1018,7 +1018,7 @@ export function SchoolDesigner({
                     Start from a design <span className="font-normal text-stone-500">— or build your own below</span>
                   </span>
                   <div className="flex flex-wrap gap-1.5">
-                    {presetsFor(buyerId).map((preset) => (
+                    {presetsFor(buyerId, frameConfig.bottomTab ? SLIM_PRESETS : undefined).map((preset) => (
                       <button
                         key={preset.id}
                         type="button"
@@ -1213,7 +1213,20 @@ export function SchoolDesigner({
 // MUST sit above SchoolDesigner so that component's top-level store hooks read the
 // school store (not /build's). The store is created once on the client (lazy
 // useState init) with its OWN persist key, so it never touches /build's design.
-export function SchoolBuilder({ kit, hero }: { kit?: SchoolKit; hero?: React.ReactNode }) {
+export function SchoolBuilder({
+  kit,
+  hero,
+  frameConfig = SCHOOL_FRAME_CONFIG,
+  variant,
+}: {
+  kit?: SchoolKit;
+  hero?: React.ReactNode;
+  /** The geometry this builder owns. The FORK passes the slim frame; everything
+   *  else gets the classic one, byte for byte. */
+  frameConfig?: typeof SCHOOL_FRAME_CONFIG;
+  /** Scopes the persist key, so the fork's design can never touch the live one. */
+  variant?: string;
+}) {
   // The school store is configured two ways:
   //  - `frameConfig`: the school frame is ONE printable geometry (it must fit the
   //    eufyMake E1 bed), so the store owns it outright — initial state, and it wins
@@ -1227,8 +1240,10 @@ export function SchoolBuilder({ kit, hero }: { kit?: SchoolKit; hero?: React.Rea
   // The scoped key is what lets a family with kids at two schools hold two designs,
   // and it keeps /lab/school's original key untouched for existing users.
   const [store] = useState(() =>
-    createDesignStore(kit ? `${SCHOOL_PERSIST_KEY}:${kit.slug}` : SCHOOL_PERSIST_KEY, {
-      frameConfig: SCHOOL_FRAME_CONFIG,
+    createDesignStore(
+      [SCHOOL_PERSIST_KEY, variant, kit?.slug].filter(Boolean).join(":"),
+      {
+      frameConfig,
       migrateExtra: migrateSchoolDesign,
       // Top/bottom start as TEXT banners — kit-branded when there is a kit. Initial
       // state only; a returning user's persisted sections still win.
@@ -1246,7 +1261,8 @@ export function SchoolBuilder({ kit, hero }: { kit?: SchoolKit; hero?: React.Rea
             rimColor: kit.colors.rim,
           }
         : undefined,
-    })
+      },
+    )
   );
   return (
     <DesignStoreProvider store={store}>

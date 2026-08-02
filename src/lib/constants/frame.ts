@@ -112,6 +112,41 @@ export const SCHOOL_FRAME_CONFIG: FrameConfig = getWingFrameConfig(
 );
 
 /**
+ * SCHOOL SLIM — the fitment redesign, and a FORK. The classic school frame above
+ * is untouched and still the live one.
+ *
+ * One row at the bottom instead of two. That single change takes the frame from
+ * 7.93" to 6.94" tall and, more importantly, takes the clearance a car must have
+ * BELOW the plate from 1.46" to 0.47" — the worst edge on the frame, on the part
+ * of a bumper most likely to be obstructed. The frame becomes symmetric top to
+ * bottom, and the fit check collapses to one rule: a quarter (0.955") clears
+ * every edge, since the sides need 0.94" and the top and bottom 0.47".
+ *
+ * The class year that lived on the second row moves into the KEYSTONE — a centre
+ * section of the bar protruding up into the plate opening. It grows inward, over
+ * the plate face, so it costs nothing in fitment. See lib/utils/bottom-tab.ts.
+ *
+ * 7 rows also means each side panel takes 2x2 / 2x3 / 2x2 exactly: three badges
+ * with a taller feature in the middle, instead of four equal squares, which is
+ * where every repetitive layout came from.
+ */
+export const SCHOOL_SLIM_FRAME_CONFIG: FrameConfig = getWingFrameConfig(
+  {
+    ...DEFAULT_FRAME_CONFIG,
+    topSlots: 12,
+    bottomSlots: 12,
+    widthInches: 12 * DEFAULT_FRAME_CONFIG.tileSizeInches,
+    minTileSpan: { cols: 2, rows: 2 },
+    fullWidthTopBar: true,
+    // THE CHANGE. One row, and the tagline moves into the tab.
+    bottomRows: 1,
+    bottomTab: { riseInches: 0.42, baseInches: 5, topInches: 3.9 },
+    overhangTiles: 1,
+  },
+  1 * DEFAULT_FRAME_CONFIG.tileSizeInches,
+);
+
+/**
  * Total rendered width in inches (inner frame + both wings).
  */
 export function getTotalWidthInches(config: FrameConfig): number {
