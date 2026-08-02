@@ -191,7 +191,11 @@ error of 49/255 where the real figure was under 1/255.
   **Flip gate:** one unstretched print of a panel from these configs on Bill's
   sleds. Bill is still re-sizing for car fit (8"-tall failed his Honda Pilot;
   his uncommitted next guess is 1.4 × 7 sides) — do not chase a guess he has
-  not committed to.
+  not committed to. **The BOTTOM edge is the binding car-fit constraint**
+  (owner-confirmed): material below the plate's bottom edge is what fails the
+  Pilot, so bottom growth must go INWARD over the plate face (Lou Fusz offset /
+  keystone), never downward. The July ring's ~0.5" below plate bottom is the
+  most that has ever been shown to fit.
 
 ## Geometry facts worth not re-deriving
 
