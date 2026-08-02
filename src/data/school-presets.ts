@@ -1,4 +1,8 @@
 import type { BuyerId } from "@/data/frame-buyers";
+import type { FrameConfig, SectionId } from "@/lib/types";
+import { SCHOOL_FRAME_CONFIG, SCHOOL_SLIM_FRAME_CONFIG } from "@/lib/constants/frame";
+import { buildGrid } from "@/lib/utils/slot-generator";
+import { panelRects } from "@/lib/utils/panels";
 
 // ─── Start-from-a-preset ─────────────────────────────────────────────────────
 //
@@ -106,6 +110,67 @@ export const MASCOT_ALT = "__MASCOT_ALT__";
 //
 // `school-presets.test.ts` enforces 1 and 2.
 
+// ─── The badge column, DERIVED from the frame ────────────────────────────────
+//
+// These layouts used to be hand-written slot ids, and the window change is what
+// showed why that was wrong: `frame:top-11` was the top-right corner of a 12-cell
+// top rail and became an ordinary rail cell over the plate the moment the rail
+// grew to 14, so three of the six anchors in every preset silently stopped being
+// in the side panel at all. Nothing failed; the badges just landed somewhere else.
+//
+// So the column is computed from the grid. Give it the badge HEIGHTS and it walks
+// each side panel from its top row down, returning the anchor at the panel's own
+// left-hand column — which is the cantilever column, the one a 2-wide badge grows
+// rightward from onto the rail. Mirrored by construction, because the frame is
+// symmetrical and an asymmetric layout reads as unfinished.
+
+/** Anchor slot ids for a stack of badges `rowSpans` tall, down one side panel. */
+function sideAnchors(config: FrameConfig, side: SectionId, rowSpans: number[]): string[] {
+  const grid = buildGrid(config);
+  const rect = panelRects(config)[side];
+  const out: string[] = [];
+  let row = rect.row0;
+  for (const rows of rowSpans) {
+    const cell = grid.cellAt(row, rect.col0);
+    if (!cell) break; // the panel ran out — a shorter stack is better than a wrong one
+    out.push(cell.id);
+    row += rows;
+  }
+  return out;
+}
+
+/**
+ * A full mirrored layout from a run of [piece, height] down one side.
+ *
+ * The heights must sum to the side panel's row count or the bottom corner is left
+ * bare, which is why they are stated per frame rather than assumed: the live frame
+ * is 9 rows (2+2+2+3) and the slim fork is 8 (2+4+2).
+ */
+function mirrored(
+  config: FrameConfig,
+  run: Array<[piece: string, rows: number]>,
+): SchoolPreset["layout"] {
+  const heights = run.map(([, rows]) => rows);
+  const out: SchoolPreset["layout"] = [];
+  for (const side of ["wing-left", "wing-right"] as const) {
+    const anchors = sideAnchors(config, side, heights);
+    anchors.forEach((slot, i) => out.push([slot, run[i][0], { cols: 2, rows: heights[i] }]));
+  }
+  return out;
+}
+
+/**
+ * The live frame's column: three squares and a taller badge in the bottom corner.
+ *
+ * 9 rows does not divide by 2, and the odd row is at the BOTTOM — beside the
+ * banner's cantilevered second row. Left empty it is a notch in both bottom
+ * corners; absorbed into the last badge it is part of the frame. Square art drawn
+ * into a 2x3 fits to its long axis and leaves a strip of field below it, which is
+ * exactly what the empty notch would have looked like anyway, except it belongs to
+ * the badge instead of being a hole in the design.
+ */
+const FULL_STACK = [2, 2, 2, 3];
+
 export const SCHOOL_PRESETS: SchoolPreset[] = [
   {
     id: "graduate",
@@ -116,16 +181,12 @@ export const SCHOOL_PRESETS: SchoolPreset[] = [
     // draws both objects in one badge, so pairing it with `hs:grad-cap` put the
     // mortarboard on the frame twice. One cap, one diploma, and the school at
     // both ends of the run.
-    layout: [
-      ["frame:wing-left-0", MASCOT],
-      ["frame:top-11", MASCOT],
-      ["frame:wing-left-2", "hs:grad-cap"],
-      ["frame:right-1", "hs:grad-cap"],
-      ["frame:wing-left-4", "hs:diploma-tall"],
-      ["frame:right-3", "hs:diploma-tall"],
-      ["frame:wing-left-6", MASCOT],
-      ["frame:bottom-11", MASCOT],
-    ],
+    layout: mirrored(SCHOOL_FRAME_CONFIG, [
+      [MASCOT, FULL_STACK[0]],
+      ["hs:grad-cap", FULL_STACK[1]],
+      ["hs:diploma-tall", FULL_STACK[2]],
+      [MASCOT, FULL_STACK[3]],
+    ]),
     fallbackActivity: "hs:honor-star",
     favouredBy: ["parent", "grandparent", "self"],
   },
@@ -139,16 +200,12 @@ export const SCHOOL_PRESETS: SchoolPreset[] = [
     // the two mascots sat directly on top of each other and read as the same
     // badge placed twice by accident. Alternating gives the same two ideas the
     // same amount of room and never repeats itself.
-    layout: [
-      ["frame:wing-left-0", ACTIVITY],
-      ["frame:top-11", ACTIVITY],
-      ["frame:wing-left-2", MASCOT],
-      ["frame:right-1", MASCOT],
-      ["frame:wing-left-4", ACTIVITY],
-      ["frame:right-3", ACTIVITY],
-      ["frame:wing-left-6", MASCOT],
-      ["frame:bottom-11", MASCOT],
-    ],
+    layout: mirrored(SCHOOL_FRAME_CONFIG, [
+      [ACTIVITY, FULL_STACK[0]],
+      [MASCOT, FULL_STACK[1]],
+      [ACTIVITY, FULL_STACK[2]],
+      [MASCOT, FULL_STACK[3]],
+    ]),
     fallbackActivity: "hs:trophy",
     needsActivity: true,
     wantsNumber: true,
@@ -171,44 +228,39 @@ export const SCHOOL_PRESETS: SchoolPreset[] = [
     // put a crest badge in the bottom corner right beside it — four of the same
     // fleur in a row across the bottom of the frame. Same defect as the stacked
     // mascots, one step further down, and only visible in a render.
-    layout: [
-      ["frame:wing-left-0", MASCOT_ALT],
-      ["frame:top-11", MASCOT_ALT],
-      ["frame:wing-left-2", MASCOT],
-      ["frame:right-1", MASCOT],
-      ["frame:wing-left-4", MASCOT_ALT],
-      ["frame:right-3", MASCOT_ALT],
-      ["frame:wing-left-6", MASCOT],
-      ["frame:bottom-11", MASCOT],
-    ],
+    layout: mirrored(SCHOOL_FRAME_CONFIG, [
+      [MASCOT_ALT, FULL_STACK[0]],
+      [MASCOT, FULL_STACK[1]],
+      [MASCOT_ALT, FULL_STACK[2]],
+      [MASCOT, FULL_STACK[3]],
+    ]),
     fallbackActivity: "hs:crest",
     favouredBy: ["alum", "staff"],
   },
 ];
 
-// ─── The FORK's presets: 2x2 / 2x3 / 2x2 ─────────────────────────────────────
+// ─── The FORK's presets: 2x2 / 2x4 / 2x2 ─────────────────────────────────────
 //
-// Seven rows means each side takes three badges with a taller feature in the
-// middle, instead of four equal squares. That hierarchy is the point: four equal
-// slots is where every repetitive layout came from, because nothing could lead.
+// The slim frame has no bottom cantilever, so its side panel is 8 rows — three
+// badges with a taller feature in the middle, instead of four equal squares. That
+// hierarchy is the point: four equal slots is where every repetitive layout came
+// from, because nothing could lead.
 //
-// The middle 2x3 is a NEW aspect (2:3) that no existing badge is drawn for, so it
-// is reserved for the things that suit it — the school's mascot redrawn tall, a
-// jersey carrying their number, or the student's own photo. Square art placed
-// there letterboxes, which is why the presets below never put one in it.
+// The middle badge is 2x4, i.e. exactly 1:2 — which is the aspect the TALL pieces
+// in the high-school set are already drawn at (`hs:diploma-tall`, `hs:medal`,
+// `hs:grad-tassel`), so they fill it edge to edge with no letterboxing at all. It
+// is also the natural home for a school's mascot redrawn upright, a jersey
+// carrying their number, or the student's own photo.
 
-const SLIM_COL_LEFT = ["frame:wing-left-0", "frame:wing-left-2", "frame:wing-left-5"] as const;
-const SLIM_COL_RIGHT = ["frame:top-11", "frame:right-1", "frame:right-4"] as const;
-const SQ = { cols: 2, rows: 2 };
-const TALL3 = { cols: 2, rows: 3 };
+const SLIM_STACK = [2, 4, 2];
 
-/** Mirror a three-badge column onto both sides, with the middle one 2x3. */
+/** Mirror a three-badge column onto both sides, with the middle one 2x4. */
 function slimLayout(top: string, middle: string, bottom: string): SchoolPreset["layout"] {
-  const out: SchoolPreset["layout"] = [];
-  for (const col of [SLIM_COL_LEFT, SLIM_COL_RIGHT]) {
-    out.push([col[0], top, SQ], [col[1], middle, TALL3], [col[2], bottom, SQ]);
-  }
-  return out;
+  return mirrored(SCHOOL_SLIM_FRAME_CONFIG, [
+    [top, SLIM_STACK[0]],
+    [middle, SLIM_STACK[1]],
+    [bottom, SLIM_STACK[2]],
+  ]);
 }
 
 export const SLIM_PRESETS: SchoolPreset[] = [

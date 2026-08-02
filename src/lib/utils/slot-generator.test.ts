@@ -11,6 +11,7 @@ import {
   DEFAULT_FRAME_CONFIG,
   SCHOOL_CLASSIC_FRAME_CONFIG,
   SCHOOL_FRAME_CONFIG,
+  SCHOOL_SLIM_FRAME_CONFIG,
   getTotalWidthInches,
   getRenderHeightInches,
 } from "@/lib/constants/frame";
@@ -324,5 +325,84 @@ describe("wingSlotIndex", () => {
     expect(wingSlotIndex("frame:bottom-11")).toBeNull();
     expect(wingSlotIndex("frame:wing-left-")).toBeNull();
     expect(wingSlotIndex("frame:wing-left-2a")).toBeNull();
+  });
+});
+
+// ─── Everything on the 0.991in lattice ───────────────────────────────────────
+
+describe("every dimension is an exact multiple of the tile pitch", () => {
+  // The frame is a gapless integer lattice, and the ONE time a dimension was
+  // written as a flat inch figure instead of a multiple of the pitch — 12" for
+  // what should have been 12 x 0.991" — the rail step resolved to 1.0008" and
+  // compounded a 0.108" gap across the row. The lattice looked fine and was not:
+  // every (row, col) in the whole engine was a lie by an eighth of an inch.
+  //
+  // So the configs COMPUTE from `tileSizeInches` rather than stating inches, and
+  // this asserts the result is exact to the last bit, not merely close.
+  const CONFIGS = [
+    { label: "school (FULL)", config: SCHOOL_FRAME_CONFIG, rows: 9 },
+    { label: "school (HALF / slim)", config: SCHOOL_SLIM_FRAME_CONFIG, rows: 8 },
+    { label: "classic", config: SCHOOL_CLASSIC_FRAME_CONFIG, rows: 8 },
+  ];
+
+  /** Exactly `tiles` cells, to the bit — not `toBeCloseTo`. */
+  const isTiles = (v: number, tiles: number, t: number) => v === tiles * t;
+
+  it.each(CONFIGS)("$label: the lattice invariant holds", ({ config }) => {
+    expect(gridInvariantHolds(config)).toBe(true);
+  });
+
+  it.each(CONFIGS)("$label: every DECLARED dimension is a whole number of tiles", ({ config }) => {
+    // Bitwise, because these are stated in the config and there is no arithmetic
+    // between the statement and the assertion. A `toBeCloseTo` here would pass for
+    // the flat 12" that caused the original 0.108" drift.
+    const t = config.tileSizeInches;
+    expect(isTiles(config.widthInches, config.topSlots, t)).toBe(true);
+    expect(isTiles(config.heightInches, config.leftSlots + 2, t)).toBe(true);
+    expect(isTiles(config.wingWidthInches, config.wingColumns, t)).toBe(true);
+  });
+
+  it.each(CONFIGS)("$label: the DERIVED extents are a whole number of tiles", ({ config, rows }) => {
+    // NOT bitwise. `getTotalWidthInches` sums `widthInches + 2 * wingWidthInches`,
+    // and float addition is not associative: on the classic frame
+    // (12 * t) + (2 * t) and 14 * t differ in the last bit, by 1.8e-15 inches. The
+    // tolerance below is 1e-9 in — about a three-hundred-thousandth of a printer
+    // dot at 300 DPI — so it still fails on any real drift while not pretending
+    // IEEE 754 rounds the way arithmetic does.
+    const t = config.tileSizeInches;
+    const cols = config.wingColumns * 2 + config.topSlots;
+    expect(getTotalWidthInches(config) - cols * t).toBeLessThan(1e-9);
+    expect(getRenderHeightInches(config) - rows * t).toBeLessThan(1e-9);
+    expect(Math.round(getTotalWidthInches(config) / t)).toBe(cols);
+    expect(Math.round(getRenderHeightInches(config) / t)).toBe(rows);
+  });
+
+  it.each(CONFIGS)("$label: every rail step is exactly one tile — no compounding gap", ({ config }) => {
+    const t = config.tileSizeInches;
+    const slots = generateSlots(config, getTotalWidthInches(config)); // 1px === 1in
+    for (const zone of ["top", "bottom"] as const) {
+      const row = slots.filter((s) => s.zone === zone && s.row === (zone === "top" ? 0 : config.leftSlots + 1))
+        .sort((a, b) => a.col - b.col);
+      for (let i = 1; i < row.length; i++) {
+        // The end of the run is where a fractional step would have accumulated.
+        expect(row[i].x - row[i - 1].x).toBeCloseTo(t, 12);
+      }
+      const last = row[row.length - 1];
+      expect(last.x + last.width).toBeCloseTo(config.wingWidthInches + config.widthInches, 12);
+    }
+  });
+
+  it("the keystone is on the lattice too", () => {
+    // It is the one part Bill prints as a single body with the bar, so a tab off
+    // the grid would put that body on a different lattice from everything that
+    // clips into it.
+    const t = SCHOOL_SLIM_FRAME_CONFIG.tileSizeInches;
+    const tab = SCHOOL_SLIM_FRAME_CONFIG.bottomTab!;
+    expect(isTiles(tab.baseInches, 6, t)).toBe(true);
+    expect(isTiles(tab.topInches, 5, t)).toBe(true);
+    expect(tab.riseInches).toBe(0.6 * t);
+    // …and it still fits inside the banner it stands on.
+    expect(tab.baseInches).toBeLessThan(SCHOOL_SLIM_FRAME_CONFIG.widthInches);
+    expect(tab.topInches).toBeLessThan(tab.baseInches);
   });
 });

@@ -68,8 +68,16 @@ export function BottomTabElement({
         // Rim FIRST, as a slightly larger clipped layer behind the fill, so the
         // metal shows only along the two slopes and the top. Stroking a clip-path
         // is not possible in CSS, and a border would follow the box, not the shape.
+        //
+        // NO SKIRT on this layer, which is the whole trick. A clipped layer paints
+        // wherever the fill does not cover it, so a rim carrying the skirt painted
+        // its two VERTICAL edges down past the bar's top rim and left a metal stub
+        // hanging below it at each base corner — the seam the skirt exists to
+        // remove, reintroduced by the thing drawing the edge. Stopping the rim at
+        // the base is what the canvas twin already does: it strokes points 1..4,
+        // the two slopes and the top, and never the skirt's sides.
         background: rimRamp(rimColor).mid,
-        clipPath: tabClipPath(tab, pxPerInch, skirt),
+        clipPath: tabClipPath(tab, pxPerInch, 0),
         // ABOVE the bar, including while the bar is selected, or the selection ring
         // paints the very seam the skirt exists to remove.
         zIndex: 4,
@@ -97,11 +105,21 @@ export function BottomTabElement({
           ),
           transform: `translate(${rimPx}px, ${rimPx}px)`,
           display: "flex",
-          // Centred on the RISE, not on the box: the skirt is buried inside the
-          // bar and must not pull the tagline down into it.
-          alignItems: "flex-start",
+          // Centred on the RISE, not on the box: the skirt is buried inside the bar
+          // and must not pull the tagline down into it.
+          //
+          // Done by SHORTENING the content box to the rise and centring in it. The
+          // previous version padded down by half the rise and aligned to flex-start,
+          // which centres the text's TOP EDGE at mid-rise rather than the text — so
+          // the glyphs hung below the base by half their height and the clip ate
+          // them. Invisible on desktop, where the tagline is small next to a 40px
+          // rise; on a phone the rise is about eleven pixels and it cut "CLASS OF
+          // 2027" clean in half. The canvas twin has always drawn it at
+          // `y - rise / 2` with a middle baseline, i.e. correctly, so this was pure
+          // drift between the two renderers.
+          alignItems: "center",
           justifyContent: "center",
-          paddingTop: Math.max(0, (rise - rimPx) / 2),
+          paddingBottom: skirt + rimPx,
         }}
       >
         {line && (

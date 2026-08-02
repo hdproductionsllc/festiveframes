@@ -1,8 +1,43 @@
 import { describe, it, expect } from "vitest";
-import { SCHOOL_PRESETS, ACTIVITY, MASCOT, MASCOT_ALT, presetsFor, presetTiles, getPreset } from "./school-presets";
+import {
+  SCHOOL_PRESETS,
+  SLIM_PRESETS,
+  ACTIVITY,
+  MASCOT,
+  MASCOT_ALT,
+  presetsFor,
+  presetTiles,
+  getPreset,
+} from "./school-presets";
 import { getPiece } from "@/data/sets";
 import { buildGrid } from "@/lib/utils/slot-generator";
-import { SCHOOL_FRAME_CONFIG } from "@/lib/constants/frame";
+import { occupiedCoords, tileSpan } from "@/lib/utils/snappet";
+import { SCHOOL_FRAME_CONFIG, SCHOOL_SLIM_FRAME_CONFIG } from "@/lib/constants/frame";
+import type { FrameConfig } from "@/lib/types";
+import type { SchoolPreset } from "./school-presets";
+
+/**
+ * A preset's badges down each side, top to bottom.
+ *
+ * Read off the GRID, never off a list of slot ids. The ids a preset resolves to
+ * move whenever the frame's geometry does — the 12 x 6 window change turned
+ * `frame:top-11` from the top-right corner into an ordinary rail cell over the
+ * plate — and a test that spells them out simply stops testing anything at that
+ * point, without failing to say so.
+ */
+function columnsOf(preset: SchoolPreset, config: FrameConfig): { left: string[]; right: string[] } {
+  const grid = buildGrid(config);
+  const rows = { left: [] as Array<[number, string]>, right: [] as Array<[number, string]> };
+  for (const [slot, piece] of preset.layout) {
+    const anchor = grid.coordOf(slot);
+    if (!anchor) continue;
+    const panel = grid.panelAt(anchor.row, anchor.col);
+    if (panel === "wing-left") rows.left.push([anchor.row, piece]);
+    else if (panel === "wing-right") rows.right.push([anchor.row, piece]);
+  }
+  const order = (xs: Array<[number, string]>) => xs.sort((a, b) => a[0] - b[0]).map(([, p]) => p);
+  return { left: order(rows.left), right: order(rows.right) };
+}
 
 /**
  * The one-tap path, which most people will use and which did not exist: the only
@@ -45,10 +80,27 @@ describe("the school presets", () => {
     // The corners used to be a torch, which made the graduate frame four kinds of
     // the same idea. They are the first thing read in a car park and belong to
     // the school.
+    //
+    // Derived from the grid rather than named by slot id: the ids the corners
+    // resolve to move whenever the frame's geometry does, and a test that spells
+    // them out just stops testing the corners at that point without failing.
     const grad = getPreset("graduate")!;
-    const corners = ["frame:wing-left-0", "frame:top-11", "frame:wing-left-6", "frame:bottom-11"];
-    for (const slot of corners) {
-      expect(grad.layout.find(([s]) => s === slot)?.[1]).toBe(MASCOT);
+    const grid = buildGrid(SCHOOL_FRAME_CONFIG);
+    const corners: Array<[number, number]> = [
+      [0, 0],
+      [0, grid.cols - 1],
+      [grid.rows - 1, 0],
+      [grid.rows - 1, grid.cols - 1],
+    ];
+    for (const [row, col] of corners) {
+      const held = grad.layout.find(([slot, , span]) => {
+        const anchor = grid.coordOf(slot);
+        if (!anchor) return false;
+        return occupiedCoords(anchor, tileSpan({ span })).some(
+          (c) => c.row === row && c.col === col,
+        );
+      });
+      expect(held?.[1], `the badge on corner (${row},${col})`).toBe(MASCOT);
     }
   });
 
@@ -106,18 +158,13 @@ describe("the school presets", () => {
   // The frame is a column of four badges down each side, mirrored. Rule 1 is
   // about what touches; rule 2 is about what is true.
 
-  const COLUMNS = [
-    ["frame:wing-left-0", "frame:wing-left-2", "frame:wing-left-4", "frame:wing-left-6"],
-    ["frame:top-11", "frame:right-1", "frame:right-3", "frame:bottom-11"],
-  ];
-
   it.each(SCHOOL_PRESETS)("$id never puts the same badge in adjacent positions", (preset) => {
     // "Their sport" ran sport, mascot, mascot, sport, so two Billikens sat
     // directly on top of each other and read as the same badge placed twice by
     // accident. Mirrored across the plate is symmetry; touching is a duplicate.
-    const at = (slot: string) => preset.layout.find(([s]) => s === slot)?.[1];
-    for (const column of COLUMNS) {
-      const run = column.map(at);
+    const cols = columnsOf(preset, SCHOOL_FRAME_CONFIG);
+    for (const run of [cols.left, cols.right]) {
+      expect(run.length, `${preset.id} places nothing down one side`).toBeGreaterThan(1);
       for (let i = 1; i < run.length; i++) {
         expect(run[i], `${preset.id} repeats ${run[i]} at position ${i}`).not.toBe(run[i - 1]);
       }
@@ -138,11 +185,12 @@ describe("the school presets", () => {
     // The bottom banner wears the school's crest either side of the name. A crest
     // badge in the bottom corner puts four of the same mark in a row across the
     // bottom of the frame — the stacked-mascot defect, one step further down.
-    for (const slot of ["frame:wing-left-6", "frame:bottom-11"]) {
-      expect(preset.layout.find(([s]) => s === slot)?.[1], `${preset.id} ends on the crest`)
-        .not.toBe(MASCOT_ALT);
+    const cols = columnsOf(preset, SCHOOL_FRAME_CONFIG);
+    for (const run of [cols.left, cols.right]) {
+      expect(run[run.length - 1], `${preset.id} ends on the crest`).not.toBe(MASCOT_ALT);
     }
   });
+
 
   it("resolves the alternating school design to the school's OWN two marks", () => {
     const school = getPreset("school")!;
@@ -206,6 +254,66 @@ describe("the school presets", () => {
   it("always offers every preset, whoever is buying", () => {
     for (const buyer of ["parent", "self", "grandparent", "alum", "staff"] as const) {
       expect(presetsFor(buyer)).toHaveLength(SCHOOL_PRESETS.length);
+    }
+  });
+});
+
+// ─── The layouts are DERIVED, so assert what derivation has to guarantee ─────
+
+describe("every preset covers its side panels exactly", () => {
+  const cases = [
+    { label: "live frame", presets: SCHOOL_PRESETS, config: SCHOOL_FRAME_CONFIG },
+    { label: "slim fork", presets: SLIM_PRESETS, config: SCHOOL_SLIM_FRAME_CONFIG },
+  ];
+
+  it.each(cases)("$label: no badge leaves its panel or reaches the plate", ({ presets, config }) => {
+    const grid = buildGrid(config);
+    for (const preset of presets) {
+      for (const [slot, , span] of preset.layout) {
+        const anchor = grid.coordOf(slot);
+        expect(anchor, `${preset.id}: ${slot} is not a cell of this frame`).not.toBeNull();
+        const panel = grid.panelAt(anchor!.row, anchor!.col);
+        expect(panel, `${preset.id}: ${slot} anchors outside the side panels`).toMatch(/^wing-/);
+        for (const c of occupiedCoords(anchor!, tileSpan({ span }))) {
+          expect(grid.isPlate(c.row, c.col), `${preset.id}: ${slot} covers the plate`).toBe(false);
+          expect(grid.panelAt(c.row, c.col), `${preset.id}: ${slot} straddles panels`).toBe(panel);
+        }
+      }
+    }
+  });
+
+  it.each(cases)("$label: fills BOTH side panels with no bare row", ({ presets, config }) => {
+    // A gap reads as a notch in the frame, and the bottom corner is the one that
+    // strands: the live frame's side panel is 9 rows, which 2x2 badges cannot tile.
+    const grid = buildGrid(config);
+    for (const preset of presets) {
+      const covered = new Set<string>();
+      for (const [slot, , span] of preset.layout) {
+        const anchor = grid.coordOf(slot)!;
+        for (const c of occupiedCoords(anchor, tileSpan({ span }))) covered.add(`${c.row}:${c.col}`);
+      }
+      for (const cell of grid.slots) {
+        if (!grid.panelAt(cell.row, cell.col)?.startsWith("wing-")) continue;
+        expect(
+          covered.has(`${cell.row}:${cell.col}`),
+          `${preset.id}: (${cell.row},${cell.col}) is bare`,
+        ).toBe(true);
+      }
+    }
+  });
+
+  it.each(cases)("$label: is MIRRORED — the two sides run the same badges", ({ presets, config }) => {
+    const grid = buildGrid(config);
+    for (const preset of presets) {
+      const bySide = { left: [] as string[], right: [] as string[] };
+      for (const [slot, piece] of preset.layout) {
+        const anchor = grid.coordOf(slot)!;
+        const panel = grid.panelAt(anchor.row, anchor.col);
+        if (panel === "wing-left") bySide.left.push(piece);
+        else if (panel === "wing-right") bySide.right.push(piece);
+      }
+      expect(bySide.left.length, `${preset.id} places nothing on the left`).toBeGreaterThan(0);
+      expect(bySide.right, `${preset.id} is not mirrored`).toEqual(bySide.left);
     }
   });
 });
