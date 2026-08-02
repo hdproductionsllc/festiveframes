@@ -239,6 +239,8 @@ const KITS: SchoolKit[] = [
     city: "St. Louis, MO",
     colors: { frame: "#04463D", tileField: "#04463D", rim: "#BCBBB6" },
     banners: { top: "HOME OF THE", bottom: "RAMS", tagline: "MICDS", text: "#FFFFFF" },
+    // "RAMS" vanity mockup from the per-school plate pipeline (scripts/gen-plate.mjs).
+    plate: { state: "MO", src: "/plates/missouri-rams-centered.jpg" },
     status: "demo",
     colorSource: "OFFICIAL — MICDS Color Palette PDF (red #D12229, forest green #04463D, warm gray #BCBBB6). Demo until brand office authorizes use.",
   },

@@ -33,7 +33,8 @@
   `generativelanguage.googleapis.com` is open. The key lives at
   `scratchpad/.gkey` (chmod 600, never echoed, never committed) and is a GOOGLE
   key — 53 chars, starts `AQ.`. Model: `gemini-2.5-flash-image`.
-  Working generator: `scratchpad/gen-badge.mjs`.
+  Working generator: `scripts/gen-badge.mjs` (committed; reads GEMINI_API_KEY /
+  GEMINI_API_KEY_FILE).
 - **This was forgotten once and cost a session.** The Ideogram-era docs in
   `tasks/*.md` describe the METHOD (style block, subject-not-wording rule, the
   one-inch test) — the vendor named in them is stale. When an endpoint 403s,
@@ -48,6 +49,21 @@
 - Style block and per-badge prompts: `tasks/enamel-pin-ideogram-prompts.md`.
   Every new badge still clears the ONE-INCH TEST (100px on navy, look at it)
   before it ships.
+
+## Per-school PLATE mockups — the pipeline, with its one trap
+
+- `scripts/gen-plate.mjs` makes each school's vanity plate (JRBILLS, PIONEERS,
+  RAMS) by feeding the verified SLUH plate photo to Gemini image EDITING and
+  changing only the embossed characters — one source photograph per state, so the
+  set cannot drift. `--conform` then seats the winner in the exact 924x467
+  framing `plate-images.ts` is tuned against; no per-school display entry needed.
+- **THE TRAP: embossed lettering is where image models misspell, and it looks
+  perfect.** "PIONEERS" came back "PIONERS" one run in three, in flawless
+  stamped metal. Always generate ≥3 variants and read every one letter by
+  letter before conforming. Spell the word out in the prompt
+  ("letter-for-letter P, I, O, ...") — it lowers the rate but does not zero it.
+- Prompt shape that works: name what the source says now, demand ONE change,
+  spell the new text, then "Do not change anything else about the image."
 
 ## Per-school research kit (repeat for every school)
 
