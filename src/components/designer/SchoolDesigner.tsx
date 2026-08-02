@@ -471,19 +471,26 @@ export function SchoolDesigner({
   };
 
   /**
-   * THE SCHOOL'S MASCOT for a preset's corners, or null when this kit has none.
+   * THE SCHOOL'S TWO MARKS: the mascot (its character) and the crest (its shield).
    *
-   * Prefers a badge that is not the crest: a crest is the school's formal mark
-   * and already flanks the bottom banner, so putting it in the corners too says
-   * the same thing three times. SLUH has both a Billiken and a shield; the
-   * Billiken is the one a parent recognises across a car park.
+   * Presets alternate between them rather than repeating one, so a school with
+   * real artwork gets a frame made entirely of its own marks instead of one made
+   * of stock trophies. The mascot is whichever badge is NOT a crest — SLUH has
+   * both a Billiken and a shield, and the Billiken is the one a parent recognises
+   * across a car park. Either may be null; `presetTiles` handles that.
    */
-  const mascotPieceId = useMemo(() => {
+  const schoolMarks = useMemo(() => {
     const badges = kit?.marks?.badges;
-    if (!badges?.length || !kit) return null;
-    const notCrest = badges.find((b) => !/crest|shield|seal/i.test(`${b.key} ${b.name}`));
-    return markPieceId(kit.slug, (notCrest ?? badges[0]).key);
+    if (!badges?.length || !kit) return { mascot: null, alt: null };
+    const isCrest = (b: { key: string; name: string }) => /crest|shield|seal/i.test(`${b.key} ${b.name}`);
+    const mascot = badges.find((b) => !isCrest(b)) ?? badges[0];
+    const alt = badges.find((b) => b !== mascot && isCrest(b)) ?? badges.find((b) => b !== mascot);
+    return {
+      mascot: markPieceId(kit.slug, mascot.key),
+      alt: alt ? markPieceId(kit.slug, alt.key) : null,
+    };
   }, [kit]);
+  const mascotPieceId = schoolMarks.mascot;
 
   /**
    * APPLY A FINISHED DESIGN. The one-tap path, and the one most people will use.
@@ -506,7 +513,7 @@ export function SchoolDesigner({
     const api = storeApi.getState();
     api.clearAll();
     const SPAN = { cols: 2, rows: 2 };
-    for (const [slot, pieceId] of presetTiles(preset, kidActivity || null, mascotPieceId)) {
+    for (const [slot, pieceId] of presetTiles(preset, kidActivity || null, schoolMarks.mascot, schoolMarks.alt)) {
       api.placeTile(slot, pieceId, pieceId.split(":")[0], SPAN);
     }
     // The BUYER owns this line, not the preset: a grandparent applying
@@ -526,7 +533,7 @@ export function SchoolDesigner({
     if (!preset) return;
     const api = storeApi.getState();
     api.clearAll();
-    for (const [slot, pieceId] of presetTiles(preset, null, mascotPieceId)) {
+    for (const [slot, pieceId] of presetTiles(preset, null, schoolMarks.mascot, schoolMarks.alt)) {
       api.placeTile(slot, pieceId, pieceId.split(":")[0], { cols: 2, rows: 2 });
     }
     if (!kidYear) setKidYear(String(gradYears[0]));

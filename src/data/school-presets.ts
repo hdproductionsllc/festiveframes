@@ -75,16 +75,47 @@ export const ACTIVITY = "__ACTIVITY__";
  */
 export const MASCOT = "__MASCOT__";
 
+/**
+ * The school's SECOND mark — its crest, where the mascot is its character.
+ *
+ * A frame has four badge positions down each side, and the honest material for
+ * filling them is short: the school, the occasion, and whatever the student
+ * actually does. Stock trophies and torches are the alternative, and they are a
+ * claim nobody earned. A school's own crest is neither filler nor a repeat, so
+ * it is what the pattern alternates with when there is nothing else true to say.
+ *
+ * Falls back to the generic crest, which is still a school shape.
+ */
+export const MASCOT_ALT = "__MASCOT_ALT__";
+
+// ─── The rules these three obey ──────────────────────────────────────────────
+//
+// The frame gives each design EIGHT badge positions: a column of four down the
+// left, a mirrored column of four down the right. That is the whole canvas, and
+// three rules make the difference between a design and a mistake.
+//
+//   1. NEVER the same badge twice in a row. Two Billikens stacked on top of each
+//      other read as a duplicate, not as a pattern — which is exactly what the
+//      first "Their sport" did (sport, mascot, mascot, sport) and how it was
+//      caught. Mirrored across the plate is fine: that reads as symmetry. Touching
+//      is not.
+//   2. NOTHING NOBODY EARNED. No stock trophy, no stock medal, no torch. Every
+//      badge is the school, the occasion, or what this student actually does.
+//   3. EACH ONE ANSWERS A DIFFERENT QUESTION — the occasion, the activity, the
+//      school. Three designs that differ only in decoration are one design.
+//
+// `school-presets.test.ts` enforces 1 and 2.
+
 export const SCHOOL_PRESETS: SchoolPreset[] = [
   {
     id: "graduate",
     name: "Graduate",
-    blurb: "Their class year, front and centre.",
-    icon: "🎓",
+    blurb: "Their cap, their diploma, their school.",
+    icon: "\u{1F393}",
     // The cap CARRIES its tassel and the diploma stands alone: `hs:diploma-cap`
     // draws both objects in one badge, so pairing it with `hs:grad-cap` put the
     // mortarboard on the frame twice. One cap, one diploma, and the school at
-    // both ends.
+    // both ends of the run.
     layout: [
       ["frame:wing-left-0", MASCOT],
       ["frame:top-11", MASCOT],
@@ -101,22 +132,22 @@ export const SCHOOL_PRESETS: SchoolPreset[] = [
   {
     id: "athlete",
     name: "Their sport",
-    blurb: "Their sport and their number, with the school around it.",
-    icon: "🏅",
-    // THE SPORT AND THE SCHOOL, and nothing they did not earn. This used to pad
-    // the middle rows with a stock trophy and a stock medal, which is a claim
-    // about a season rather than a fact about a student — and it made the frame
-    // read as generic sports clip-art rather than as THEIR team. The number goes
-    // on the banner beside the year, where the name already is.
+    blurb: "Their sport and the mascot, alternating down both sides.",
+    icon: "\u{1F3C5}",
+    // ALTERNATING, which is the whole fix. This used to run the sport in the
+    // corners and the mascot in the middle — sport, mascot, mascot, sport — so
+    // the two mascots sat directly on top of each other and read as the same
+    // badge placed twice by accident. Alternating gives the same two ideas the
+    // same amount of room and never repeats itself.
     layout: [
       ["frame:wing-left-0", ACTIVITY],
       ["frame:top-11", ACTIVITY],
       ["frame:wing-left-2", MASCOT],
       ["frame:right-1", MASCOT],
-      ["frame:wing-left-4", MASCOT],
-      ["frame:right-3", MASCOT],
-      ["frame:wing-left-6", ACTIVITY],
-      ["frame:bottom-11", ACTIVITY],
+      ["frame:wing-left-4", ACTIVITY],
+      ["frame:right-3", ACTIVITY],
+      ["frame:wing-left-6", MASCOT],
+      ["frame:bottom-11", MASCOT],
     ],
     fallbackActivity: "hs:trophy",
     needsActivity: true,
@@ -124,27 +155,34 @@ export const SCHOOL_PRESETS: SchoolPreset[] = [
     favouredBy: ["parent", "self"],
   },
   {
-    id: "lineup",
-    name: "The full lineup",
-    blurb: "Four different badges — nobody fits on one.",
-    icon: "🎖️",
-    // FOUR DIFFERENT THINGS, which is the whole point of it. The design this
-    // replaces ("School spirit") repeated the same activity badge four times and
-    // filled the gaps with a generic star, so it read as one idea printed twice
-    // rather than as a life. Every row here is a different kind of thing: the
-    // school, what they do, what they achieved, and where they are going.
+    id: "school",
+    name: "Just the school",
+    blurb: "The mascot and the crest. Nothing to fill in.",
+    icon: "\u{1F6E1}\uFE0F",
+    // THE ONE THAT NEEDS NOTHING. It replaces "The full lineup", which claimed to
+    // show four different sides of a student and actually showed a torch and a
+    // laurel wreath — decoration standing in for facts we never collected. This
+    // asks for no sport, no year and no name, which makes it the design for an
+    // alum, a teacher, a grandparent who only knows the school, and any parent
+    // who just wants the frame. It is also the best-looking of the three on a
+    // school with real artwork, because every badge on it is that school's.
+    // CREST FIRST, so the run ENDS on the mascot. The bottom banner already wears
+    // the school's crest either side of the name, and the first version of this
+    // put a crest badge in the bottom corner right beside it — four of the same
+    // fleur in a row across the bottom of the frame. Same defect as the stacked
+    // mascots, one step further down, and only visible in a render.
     layout: [
-      ["frame:wing-left-0", MASCOT],
-      ["frame:top-11", MASCOT],
-      ["frame:wing-left-2", ACTIVITY],
-      ["frame:right-1", ACTIVITY],
-      ["frame:wing-left-4", "hs:honor-star"],
-      ["frame:right-3", "hs:honor-star"],
-      ["frame:wing-left-6", "hs:torch"],
-      ["frame:bottom-11", "hs:torch"],
+      ["frame:wing-left-0", MASCOT_ALT],
+      ["frame:top-11", MASCOT_ALT],
+      ["frame:wing-left-2", MASCOT],
+      ["frame:right-1", MASCOT],
+      ["frame:wing-left-4", MASCOT_ALT],
+      ["frame:right-3", MASCOT_ALT],
+      ["frame:wing-left-6", MASCOT],
+      ["frame:bottom-11", MASCOT],
     ],
     fallbackActivity: "hs:crest",
-    favouredBy: ["alum", "staff", "parent"],
+    favouredBy: ["alum", "staff"],
   },
 ];
 
@@ -168,16 +206,24 @@ export function presetsFor(buyer: BuyerId): SchoolPreset[] {
   });
 }
 
-/** The concrete tiles for a preset, with ACTIVITY and MASCOT resolved. */
+/** The concrete tiles for a preset, with ACTIVITY, MASCOT and MASCOT_ALT resolved. */
 export function presetTiles(
   preset: SchoolPreset,
   chosenActivity: string | null,
   mascotPieceId?: string | null,
+  altMarkPieceId?: string | null,
 ): Array<[string, string]> {
   const activity = chosenActivity || preset.fallbackActivity;
   const mascot = mascotPieceId || "hs:crest";
+  // A school with only one mark alternates against the generic crest, which is
+  // still a school shape. It must never resolve to the mascot itself: that would
+  // put the same badge in adjacent positions, which is the defect this preset
+  // pattern exists to avoid.
+  const alt = altMarkPieceId && altMarkPieceId !== mascot
+    ? altMarkPieceId
+    : mascot === "hs:crest" ? "hs:honor-star" : "hs:crest";
   return preset.layout.map(([slot, piece]) => [
     slot,
-    piece === ACTIVITY ? activity : piece === MASCOT ? mascot : piece,
+    piece === ACTIVITY ? activity : piece === MASCOT ? mascot : piece === MASCOT_ALT ? alt : piece,
   ]);
 }
