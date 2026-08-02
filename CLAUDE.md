@@ -64,6 +64,11 @@
   ("letter-for-letter P, I, O, ...") — it lowers the rate but does not zero it.
 - Prompt shape that works: name what the source says now, demand ONE change,
   spell the new text, then "Do not change anything else about the image."
+- **Second trap: letter PITCH.** Models kern like typography; real dies stamp on
+  a fixed pitch, and the first shipped RAMS had a final gap HALF its first
+  (30% spread) — obvious to the owner at a glance. The prompt now demands
+  "fixed pitch, every gap identical, no typographic kerning" (cuts spread to
+  8-13%), and `--gaps` measures it: ship nothing over ~15%.
 
 ## Per-school research kit (repeat for every school)
 

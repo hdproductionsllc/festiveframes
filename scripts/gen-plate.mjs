@@ -17,7 +17,7 @@
 // writes N variants and a human reads every one before anything ships. Conform
 // the winner to the builder's framing with:
 //
-//   node scripts/gen-plate.mjs --conform <variant.png> <out.jpg>
+//   node scripts/gen-plate.mjs --gaps scripts/out/plate-*.png   (pitch check)\n//   node scripts/gen-plate.mjs --conform <variant.png> <out.jpg>
 //
 // which scales its body to 903x461 and composites it at (7,1) onto the SLUH
 // photo's own backdrop ring — the 924x467 framing plate-images.ts tunes its
@@ -53,6 +53,45 @@ if (process.argv[2] === "--conform") {
   process.exit(0);
 }
 
+// ── gaps mode ────────────────────────────────────────────────────────────────
+// Real dies stamp on a fixed pitch, so uneven gaps read fake instantly — and the
+// first shipped RAMS had a last gap HALF its first (spread 30%). Measured, not
+// squinted at: threshold the navy letter band, project to columns, report the
+// spread of the inter-letter gaps. Ship nothing over ~15%.
+if (process.argv[2] === "--gaps") {
+  const { default: sharp } = await import("sharp");
+  for (const f of process.argv.slice(3)) {
+    const { data, info } = await sharp(f).raw().toBuffer({ resolveWithObject: true });
+    const { width: W, height: H, channels: C } = info;
+    const y0 = Math.round(H * 0.38), y1 = Math.round(H * 0.72);
+    const dark = new Array(W).fill(0);
+    for (let y = y0; y < y1; y++) for (let x = 0; x < W; x++) {
+      const i = (y * W + x) * C;
+      if (data[i + 2] > data[i] && data[i] < 120 && data[i + 1] < 120) dark[x]++;
+    }
+    const on = dark.map((v) => v > (y1 - y0) * 0.08);
+    const runs = [];
+    let st = -1;
+    for (let x = 0; x < W; x++) {
+      if (on[x] && st < 0) st = x;
+      if (!on[x] && st >= 0) { runs.push([st, x - 1]); st = -1; }
+    }
+    if (st >= 0) runs.push([st, W - 1]);
+    const letters = runs.filter(([a, b]) => b - a > W * 0.02);
+    const gapList = [];
+    for (let i = 1; i < letters.length; i++) gapList.push(letters[i][0] - letters[i - 1][1]);
+    const mean = gapList.reduce((a, b) => a + b, 0) / gapList.length;
+    const cv = Math.sqrt(gapList.reduce((a, g) => a + (g - mean) ** 2, 0) / gapList.length) / mean;
+    console.log(
+      path.basename(f).padEnd(24),
+      "letters", letters.length,
+      "| gap spread", (cv * 100).toFixed(0) + "%",
+      cv > 0.15 ? " <-- uneven, do not ship" : "",
+    );
+  }
+  process.exit(0);
+}
+
 // ── generate mode ────────────────────────────────────────────────────────────
 const [text, name, countRaw] = process.argv.slice(2);
 if (!text || !name) {
@@ -71,8 +110,10 @@ const prompt =
   `ONE change: the embossed characters now read exactly "${text}" — spelled ` +
   `letter-for-letter ${text.split("").join(", ")}, nothing more. Same dark navy ` +
   `embossed lettering style, same size and baseline, centred as a registration ` +
-  `number, same plate, same screws, same lighting, same background, same crop. ` +
-  `Do not change anything else about the image.`;
+  `number. The characters are stamped on a FIXED PITCH like a real embossing ` +
+  `die: every gap between adjacent characters is identical, monospaced, with no ` +
+  `typographic kerning. Same plate, same screws, same lighting, same background, ` +
+  `same crop. Do not change anything else about the image.`;
 
 for (let i = 1; i <= count; i++) {
   const res = await fetch(
