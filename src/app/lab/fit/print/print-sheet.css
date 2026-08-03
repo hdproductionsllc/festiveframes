@@ -1,0 +1,403 @@
+/* ─── /lab/fit/print — paper, at true scale ───────────────────────────────────
+ *
+ * Two rules govern this file.
+ *
+ * 1. TEMPLATE GEOMETRY IS IN CSS PHYSICAL INCHES. Never px, never rem, never a
+ *    percentage, never a transform, on anything a ruler will be laid against.
+ *    A CSS inch is 96px by definition and printers honour it, so `width: 6in`
+ *    prints six inches at 100 percent scale. Type and chrome may use pt/rem
+ *    freely; only the drawn parts are load bearing.
+ *
+ * 2. LINES ARE BORDERS. Browsers strip background colours and shadows from
+ *    print by default, so a cut line drawn as a background is a cut line that
+ *    does not exist on paper. Every outline here is a border, and the sheet asks
+ *    for exact colour anyway in case anything shaded slips in.
+ *
+ * Only this route imports the file, so nothing in the product can pick it up.
+ */
+
+.fitprint {
+  --fp-ink: #111;
+  --fp-line: #000;
+  box-sizing: border-box;
+  background: #fff;
+  color: var(--fp-ink);
+  font: 400 10pt/1.45 ui-sans-serif, system-ui, "Helvetica Neue", Arial, sans-serif;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+
+.fitprint *,
+.fitprint *::before,
+.fitprint *::after {
+  box-sizing: border-box;
+}
+
+/* The app's global body is near black. A print page must be paper. */
+body:has(.fitprint) {
+  background: #fff;
+  color: var(--fp-ink, #111);
+}
+
+/* ─── Screen chrome, never printed ──────────────────────────────────────── */
+
+.fitprint .fp-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  padding: 0.6rem 1rem;
+  background: #fdf5df;
+  border-bottom: 1px solid #c8952f;
+  font-size: 0.85rem;
+}
+
+.fitprint .fp-print-btn {
+  margin-left: auto;
+  padding: 0.35rem 1.1rem;
+  border: 1px solid #14181f;
+  border-radius: 3px;
+  background: #14181f;
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.fitprint .fp-print-btn:hover,
+.fitprint .fp-print-btn:focus-visible {
+  background: #2a3241;
+}
+
+/* ─── Pages ─────────────────────────────────────────────────────────────── */
+
+.fitprint .fp-page {
+  padding: 0.4in;
+  break-after: page;
+  page-break-after: always;
+}
+
+.fitprint .fp-page-last {
+  break-after: auto;
+  page-break-after: auto;
+}
+
+.fitprint .fp-h1 {
+  margin: 0 0 0.14in;
+  font-size: 13pt;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.fitprint .fp-h2 {
+  margin: 0.18in 0 0.08in;
+  font-size: 10.5pt;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.fitprint .fp-instruction {
+  max-width: 7in;
+  margin: 0 0 0.16in;
+  font-size: 12pt;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.fitprint .fp-instruction-quiet {
+  font-size: 9.5pt;
+  font-weight: 400;
+  max-width: 8.4in;
+}
+
+/* ─── Page 1: the scale proof ───────────────────────────────────────────── */
+
+/* EXACTLY six inches, outer edge to outer edge: border-box sizing means the
+   1px borders live inside the 6in, so a ruler laid on the printed bar reads 6.
+   Ticks are offset by 1px because absolutely positioned children measure from
+   the padding box, which starts one border in. */
+.fitprint .fp-ruler {
+  position: relative;
+  width: 6in;
+  height: 0.5in;
+  border: 1px solid var(--fp-line);
+}
+
+.fitprint .fp-tick {
+  position: absolute;
+  top: 0;
+  bottom: 0.22in;
+  width: 0;
+  border-left: 1px solid var(--fp-line);
+}
+
+.fitprint .fp-tick-num {
+  position: absolute;
+  bottom: 0.03in;
+  transform: translateX(-50%);
+  font-size: 8pt;
+  font-weight: 700;
+}
+
+/* The end numerals sit inside the bar rather than hanging off the paper edge. */
+.fitprint .fp-tick-num-first {
+  transform: translateX(1px);
+}
+
+.fitprint .fp-tick-num-last {
+  transform: translateX(-100%) translateX(-2px);
+}
+
+.fitprint .fp-ruler-foot {
+  margin: 0.06in 0 0.2in;
+  font-size: 8.5pt;
+}
+
+.fitprint .fp-square-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.25in;
+}
+
+.fitprint .fp-square {
+  flex: none;
+  width: 2in;
+  height: 2in;
+  border: 1px solid var(--fp-line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8pt;
+  font-weight: 700;
+}
+
+.fitprint .fp-square-note {
+  margin: 0;
+  max-width: 5.6in;
+  font-size: 9pt;
+}
+
+.fitprint .fp-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 8.5pt;
+}
+
+.fitprint .fp-table th,
+.fitprint .fp-table td {
+  border: 1px solid #666;
+  padding: 0.04in 0.07in;
+  text-align: left;
+  vertical-align: top;
+}
+
+.fitprint .fp-table th {
+  width: 1.5in;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.fitprint .fp-table td:nth-child(2) {
+  width: 2.5in;
+  font-variant-numeric: tabular-nums;
+}
+
+.fitprint .fp-flags {
+  margin-top: 0.12in;
+  padding: 0.08in 0.12in;
+  border: 1px solid var(--fp-line);
+  font-size: 9pt;
+}
+
+.fitprint .fp-flags ul {
+  margin: 0.05in 0 0;
+  padding-left: 0.22in;
+}
+
+.fitprint .fp-clean {
+  margin: 0.12in 0 0;
+  font-size: 9pt;
+}
+
+.fitprint .fp-query {
+  margin: 0.14in 0 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 7pt;
+  word-break: break-all;
+  color: #444;
+}
+
+/* ─── Template drawings ─────────────────────────────────────────────────── */
+
+.fitprint .fp-sheet-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 0.2in;
+}
+
+.fitprint .fp-drawing {
+  flex: none;
+}
+
+/* A window onto plate space. Sized in inches by the component; clips whatever
+   falls outside, which is how a half template stays a half template. */
+.fitprint .fp-region {
+  position: relative;
+  overflow: hidden;
+}
+
+.fitprint .fp-part {
+  position: absolute;
+}
+
+.fitprint .fp-part-rect {
+  border: 1px solid var(--fp-line);
+  background: transparent;
+}
+
+/* The polygon's stroke is centred on the path, so half of it would be clipped
+   by the SVG viewport. Let it paint outside. */
+.fitprint .fp-part-poly {
+  overflow: visible;
+}
+
+.fitprint .fp-plate {
+  position: absolute;
+  border: 1px dashed #777;
+}
+
+.fitprint .fp-part-label {
+  position: absolute;
+  font-size: 7pt;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+/* A 0.5in strip has no room for horizontal type. writing-mode turns the label
+   down the strip without a transform, so nothing measurable is scaled. */
+.fitprint .fp-part-label-v {
+  writing-mode: vertical-rl;
+}
+
+/* The cut-and-flip edge. Heavy on purpose: it is the one line that must not be
+   mistaken for a part outline. */
+.fitprint .fp-centerline {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  border-left: 3px solid var(--fp-line);
+}
+
+.fitprint .fp-centerline-note {
+  width: 100%;
+  margin: 0.06in 0 0;
+  font-size: 8.5pt;
+  font-weight: 700;
+}
+
+/* Reference rules: plate bottom edge (horizontal), plate side edge (vertical). */
+.fitprint .fp-rule-h {
+  position: absolute;
+  height: 0;
+  border-top: 1px dashed #444;
+}
+
+.fitprint .fp-rule-v {
+  position: absolute;
+  width: 0;
+  border-left: 1px dashed #444;
+}
+
+/* The drawing takes the width it takes (it is true scale and cannot shrink), so
+   the callout column takes the rest, and wraps under the drawing rather than
+   pushing it off the paper when a wide geometry leaves it no room. */
+.fitprint .fp-callouts {
+  flex: 1 1 2.3in;
+  min-width: 2.3in;
+  font-size: 8.5pt;
+}
+
+.fitprint .fp-callouts dl {
+  margin: 0;
+}
+
+.fitprint .fp-callouts dt {
+  margin-top: 0.08in;
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 7.5pt;
+  letter-spacing: 0.05em;
+}
+
+.fitprint .fp-callouts dd {
+  margin: 0.01in 0 0;
+}
+
+.fitprint .fp-check {
+  margin: 0.16in 0 0;
+  padding: 0.08in 0.1in;
+  border: 1px solid var(--fp-line);
+  font-size: 8.5pt;
+}
+
+.fitprint .fp-quarter-row {
+  display: flex;
+  align-items: center;
+  gap: 0.14in;
+  margin-top: 0.18in;
+}
+
+/* True scale: a US quarter is 0.955 in across. */
+.fitprint .fp-quarter {
+  flex: none;
+  width: 0.955in;
+  height: 0.955in;
+  border: 1px solid var(--fp-line);
+  border-radius: 50%;
+}
+
+.fitprint .fp-quarter-row p {
+  margin: 0;
+  font-size: 8.5pt;
+}
+
+/* ─── Screen only: pages read as sheets of paper ────────────────────────── */
+
+@media screen {
+  .fitprint .fp-page {
+    max-width: 10.2in;
+    margin: 0.4rem auto;
+    border: 1px solid #d5d5d5;
+    background: #fff;
+  }
+}
+
+/* ─── Print ─────────────────────────────────────────────────────────────── */
+
+@page {
+  size: letter landscape;
+  margin: 0.4in;
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  body:has(.fitprint) {
+    background: #fff;
+  }
+
+  .fitprint .fp-page {
+    /* The @page margin is the paper margin; the page box adds none of its own. */
+    padding: 0;
+    border: 0;
+    margin: 0;
+  }
+}

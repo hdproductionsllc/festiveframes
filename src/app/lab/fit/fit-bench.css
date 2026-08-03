@@ -1,0 +1,335 @@
+/* ─── /lab/fit — engineering bench skin ──────────────────────────────────────
+ *
+ * Everything is scoped under .fit-bench so this file can never reach another
+ * route. Deliberately plain: system faces, near-white ground, 1px rules, square
+ * corners. This is an instrument, not a storefront card.
+ */
+
+.fit-bench {
+  --fb-ink: #17191c;
+  --fb-ink-soft: #55595f;
+  --fb-line: #c9c8c2;
+  --fb-line-hard: #8d8d86;
+  --fb-ground: #fafaf8;
+  --fb-panel: #ffffff;
+  --fb-warn-bg: #fdf3d8;
+  --fb-warn-line: #d9ad3c;
+  --fb-ok-bg: #e6f4e6;
+  --fb-ok-line: #6aa96a;
+
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial,
+    sans-serif;
+  color: var(--fb-ink);
+  background: var(--fb-ground);
+  min-height: 100vh;
+  padding: 20px 20px 56px;
+  line-height: 1.45;
+}
+
+.fit-bench * {
+  box-sizing: border-box;
+}
+
+.fit-bench .fb-head {
+  max-width: 1400px;
+  margin: 0 auto 18px;
+  border-bottom: 1px solid var(--fb-line);
+  padding-bottom: 14px;
+}
+
+.fit-bench .fb-head h1 {
+  margin: 0 0 6px;
+  font-size: 20px;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+}
+
+.fit-bench .fb-head p {
+  margin: 0;
+  max-width: 78ch;
+  font-size: 13px;
+  color: var(--fb-ink-soft);
+}
+
+.fit-bench .fb-grid {
+  max-width: 1400px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: minmax(300px, 380px) minmax(0, 1fr);
+  gap: 22px;
+  align-items: start;
+}
+
+@media (max-width: 880px) {
+  .fit-bench {
+    padding: 16px 12px 48px;
+  }
+  .fit-bench .fb-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
+  }
+}
+
+/* ── controls ─────────────────────────────────────────────────────────────── */
+
+.fit-bench .fb-block {
+  border: 1px solid var(--fb-line);
+  background: var(--fb-panel);
+  padding: 12px 12px 14px;
+  margin-bottom: 14px;
+}
+
+.fit-bench .fb-block h2 {
+  margin: 0 0 10px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--fb-ink-soft);
+}
+
+.fit-bench .fb-block-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.fit-bench .fb-block-note {
+  margin: 0 0 12px;
+  font-size: 12px;
+  color: var(--fb-ink-soft);
+}
+
+.fit-bench .fb-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.fit-bench .fb-preset {
+  font: inherit;
+  font-size: 12px;
+  padding: 6px 10px;
+  border: 1px solid var(--fb-line-hard);
+  background: #f3f2ee;
+  color: var(--fb-ink);
+  cursor: pointer;
+  border-radius: 0;
+}
+
+.fit-bench .fb-preset:hover {
+  background: #e9e8e3;
+}
+
+.fit-bench .fb-preset.is-on {
+  background: var(--fb-ink);
+  border-color: var(--fb-ink);
+  color: #fff;
+}
+
+.fit-bench .fb-dial {
+  padding: 8px 0;
+  border-top: 1px solid #eceae4;
+}
+
+.fit-bench .fb-dial:first-of-type {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.fit-bench .fb-dial-head {
+  display: block;
+  margin-bottom: 5px;
+}
+
+.fit-bench .fb-dial-label {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.fit-bench .fb-dial-hint {
+  display: block;
+  font-size: 11px;
+  color: var(--fb-ink-soft);
+}
+
+.fit-bench .fb-dial-body {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.fit-bench .fb-range {
+  flex: 1 1 auto;
+  min-width: 0;
+  accent-color: #17191c;
+}
+
+.fit-bench .fb-number {
+  flex: 0 0 82px;
+  width: 82px;
+  font: inherit;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  padding: 4px 6px;
+  border: 1px solid var(--fb-line-hard);
+  background: #fff;
+  color: var(--fb-ink);
+  border-radius: 0;
+}
+
+.fit-bench .fb-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--fb-ink-soft);
+  cursor: pointer;
+}
+
+.fit-bench .fb-toggle input {
+  accent-color: #17191c;
+}
+
+.fit-bench .fb-share {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.fit-bench .fb-action {
+  font: inherit;
+  font-size: 13px;
+  padding: 8px 12px;
+  border: 1px solid var(--fb-ink);
+  background: var(--fb-ink);
+  color: #fff;
+  cursor: pointer;
+  text-decoration: none;
+  border-radius: 0;
+}
+
+.fit-bench .fb-action:hover {
+  background: #000;
+}
+
+.fit-bench .fb-action-link {
+  background: #fff;
+  color: var(--fb-ink);
+}
+
+.fit-bench .fb-action-link:hover {
+  background: #f0efea;
+}
+
+/* ── view ─────────────────────────────────────────────────────────────────── */
+
+.fit-bench .fb-figure {
+  border: 1px solid var(--fb-line);
+  background: var(--fb-panel);
+  padding: 12px;
+  margin-bottom: 14px;
+}
+
+.fit-bench .fb-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.fit-bench .fb-svg-dim,
+.fit-bench .fb-svg-note {
+  fill: #4a4d52;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial,
+    sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The halo is what makes the note legible over a dark part as well as over the
+ * pale plate. paint-order puts the white stroke UNDER the fill. */
+.fit-bench .fb-svg-note {
+  fill: #96631a;
+  paint-order: stroke;
+  stroke: rgba(255, 255, 255, 0.85);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+}
+
+.fit-bench .fb-legend {
+  margin: 10px 0 0;
+  font-size: 11px;
+  color: var(--fb-ink-soft);
+}
+
+.fit-bench .fb-readout {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid var(--fb-line);
+  background: var(--fb-panel);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  margin-bottom: 14px;
+}
+
+.fit-bench .fb-readout caption {
+  text-align: left;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--fb-ink-soft);
+  padding: 0 0 6px;
+}
+
+.fit-bench .fb-readout th,
+.fit-bench .fb-readout td {
+  border-bottom: 1px solid #eceae4;
+  padding: 6px 10px;
+  text-align: left;
+}
+
+.fit-bench .fb-readout tr:last-child th,
+.fit-bench .fb-readout tr:last-child td {
+  border-bottom: 0;
+}
+
+.fit-bench .fb-readout th {
+  font-weight: 500;
+  color: var(--fb-ink-soft);
+  width: 58%;
+}
+
+.fit-bench .fb-readout td {
+  font-weight: 600;
+}
+
+.fit-bench .fb-yes {
+  color: #2f6a2f;
+}
+
+.fit-bench .fb-no {
+  color: #9a2222;
+}
+
+/* ── flags ────────────────────────────────────────────────────────────────── */
+
+.fit-bench .fb-flag-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.fit-bench .fb-flag {
+  margin: 0 0 6px;
+  padding: 8px 10px;
+  font-size: 13px;
+  border: 1px solid var(--fb-warn-line);
+  background: var(--fb-warn-bg);
+}
+
+.fit-bench .fb-flag-ok {
+  border-color: var(--fb-ok-line);
+  background: var(--fb-ok-bg);
+}
