@@ -320,6 +320,9 @@ body:has(.fitprint) {
 .fitprint .fp-callouts {
   flex: 1 1 2.3in;
   min-width: 2.3in;
+  /* A narrow template leaves the callouts the rest of the sheet, and 7in of
+     8.5pt text is an unreadable measure. Cap it and let the paper be empty. */
+  max-width: 4.2in;
   font-size: 8.5pt;
 }
 

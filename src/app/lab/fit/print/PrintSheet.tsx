@@ -227,23 +227,34 @@ export default function PrintSheet() {
     (badgesRightPart ? boxOf(badgesRightPart)?.x : null) ??
     PLATE.widthInches - spec.sideInwardInches;
 
-  // ─── Page 3 rectangle: one side column, full height ────────────────────────
-  const sideIds = ["rail-right", "badges-right"];
-  const sideBoxes = sideIds
-    .map((id) => parts.find((p) => p.id === id))
-    .filter((p): p is FitPart => Boolean(p))
-    .map(boxOf)
-    .filter((b): b is Box => Boolean(b));
+  // ─── Page 3 rectangle: the right side column, full height ──────────────────
+  //
+  // Chosen by GEOMETRY, not by part id: anything whose right edge passes the
+  // plate's right edge and which starts outboard of the plate centre is part of
+  // the side stack. The bench's part list is still moving (rail columns have
+  // come and gone), and a page that hardcodes ids prints an empty box the day
+  // one is renamed.
+  const sideParts = parts.filter((part) => {
+    const box = boxOf(part);
+    return Boolean(box && box.x >= centerX && box.x + box.w > PLATE.widthInches);
+  });
+  const sideBoxes = sideParts.map(boxOf).filter((b): b is Box => Boolean(b));
   const sideX0 = sideBoxes.length
     ? Math.min(...sideBoxes.map((b) => b.x))
     : PLATE.widthInches - spec.sideInwardInches;
   const sideX1 = sideBoxes.length
     ? Math.max(...sideBoxes.map((b) => b.x + b.w))
     : PLATE.widthInches + sideOutboard;
-  const sideY0 = sideBoxes.length ? Math.min(...sideBoxes.map((b) => b.y)) : 0;
   const sideY1 = sideBoxes.length
     ? Math.max(...sideBoxes.map((b) => b.y + b.h))
     : PLATE.heightInches;
+  const sideNaturalY0 = sideBoxes.length ? Math.min(...sideBoxes.map((b) => b.y)) : 0;
+  // Letter landscape leaves 7.7in of paper; the headings take the rest. If the
+  // column is taller than that, clip the TOP and keep the bottom edge true: the
+  // bottom is the edge that fails on a car, so it is the edge that must be real.
+  const SIDE_MAX_HEIGHT_INCHES = 6.2;
+  const sideClipped = sideY1 - sideNaturalY0 > SIDE_MAX_HEIGHT_INCHES;
+  const sideY0 = sideClipped ? sideY1 - SIDE_MAX_HEIGHT_INCHES : sideNaturalY0;
   const plateEdgeX = PLATE.widthInches;
 
   return (
@@ -446,7 +457,10 @@ export default function PrintSheet() {
                 </Mark>
               )}
             </Region>
-            <p className="fp-centerline-note">
+            {/* Pinned to the drawing's own width. The drawing column is sized by
+                its widest content, so an unconstrained caption under a narrow
+                template silently widens the column and squeezes the callouts. */}
+            <p className="fp-centerline-note" style={{ width: inch(frameRight - centerX) }}>
               CENTERLINE. Align with plate center, template covers the right half; flip
               for the left.
             </p>
@@ -500,7 +514,7 @@ export default function PrintSheet() {
       {/* ── PAGE 3 ─────────────────────────────────────────────────────────── */}
       <section className="fp-page fp-page-last">
         <h1 className="fp-h1">
-          Page 3 of 3. Side profile. One side column, full height, true scale.
+          Page 3 of 3. Side profile. One side column at true scale.
         </h1>
         <p className="fp-instruction fp-instruction-quiet">
           Cut this out and hold it against the plate&rsquo;s right edge with the dashed
@@ -515,7 +529,7 @@ export default function PrintSheet() {
               y0={sideY0}
               x1={sideX1}
               y1={sideY1}
-              parts={parts.filter((p) => sideIds.includes(p.id))}
+              parts={sideParts}
               showPlate={false}
             >
               <span
@@ -524,10 +538,7 @@ export default function PrintSheet() {
                 aria-hidden="true"
               />
               <Mark left={0.06} top={0.06}>
-                Side rail cell
-              </Mark>
-              <Mark left={0.06} top={0.24}>
-                Badge column
+                Side column
               </Mark>
               <Mark left={plateEdgeX - sideX0 - 0.2} top={0.6} vertical>
                 Flat surface. Plate face.
@@ -536,19 +547,29 @@ export default function PrintSheet() {
                 Air. Nothing behind this.
               </Mark>
               <Mark left={plateEdgeX - sideX0 + 0.07} top={sideY1 - sideY0 - 0.22}>
-                Plate side edge, dashed
+                Plate edge
               </Mark>
             </Region>
           </div>
 
           <div className="fp-callouts">
             <h2 className="fp-h2">Side callouts</h2>
+            {sideClipped && (
+              <p className="fp-centerline-note">
+                The column is {num(sideY1 - sideNaturalY0, 2)} in tall and is cut off at
+                the TOP to fit the paper. The bottom edge and both side edges are true.
+              </p>
+            )}
             <dl>
-              <dt>Side rail cell</dt>
-              <dd>{num(spec.pitchInches)} in wide, one cell of pitch.</dd>
+              <dt>Cell pitch</dt>
+              <dd>
+                {num(spec.pitchInches)} in. One cell of the rail grid. Bill&rsquo;s
+                system is on a 1.000 in grid.
+              </dd>
               <dt>Badge column</dt>
               <dd>
-                {spec.sideBadgeCells} cells, {num(badgeColW)} in wide overall.
+                {spec.sideBadgeCells} cells, {num(badgeColW)} in wide overall. Drawn
+                width {num(sideX1 - sideX0, 2)} in.
               </dd>
               <dt>Inward, over the plate face</dt>
               <dd>
