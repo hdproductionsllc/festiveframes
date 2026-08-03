@@ -23,7 +23,22 @@
 //  · Snap-ins register by a stud at the CENTER of a rail cell; oversize pieces
 //    split their overhang inward/outward, and the split is a per-edge choice.
 
-export const PLATE = { widthInches: 12, heightInches: 6 } as const;
+import { DEFAULT_FRAME_CONFIG, SCHOOL_JULY_SLIM_FRAME_CONFIG } from "@/lib/constants/frame";
+import type { BottomTab } from "@/lib/types";
+import type { Pt } from "@/lib/utils/bottom-tab";
+
+/** The plate the whole bench is measured against, from the frame configs' own
+ *  source of truth rather than a second copy of 12 x 6. */
+export const PLATE = {
+  widthInches: DEFAULT_FRAME_CONFIG.plateWidthInches,
+  heightInches: DEFAULT_FRAME_CONFIG.plateHeightInches,
+} as const;
+
+/** eufyMake E1 printable bed. These numbers MIRROR EUFY_BED_LONG_INCHES /
+ *  EUFY_BED_SHORT_INCHES in `compose-school-frame.ts`; a follow-up will unify
+ *  them in one constants module. They are not imported from there on purpose —
+ *  that module drags in qrcode and IndexedDB, which this leaf must stay free of
+ *  so the engine and its tests remain pure. */
 export const BED = { longInches: 16.5, shortInches: 13 } as const;
 /** US quarter diameter — the field fit test. */
 export const QUARTER_INCHES = 0.955;
@@ -40,12 +55,37 @@ export const MO_DATE_LINE_INCHES = 1.08;
  *  Bill's 8.0" and ~7.5" builds both failed, 7" (July) is believed good. */
 export const PILOT_HEIGHT_CEILING_INCHES = 7;
 
-export interface KeystoneSpec {
-  riseInches: number;
-  baseInches: number;
-  topInches: number;
-  cornerRadiusInches: number;
-}
+// ─── Rule thresholds ────────────────────────────────────────────────────────
+//
+// These live HERE, not in the engine, because the bench's copy quotes them too:
+// a dial hint that says one number while the flag fires at another is exactly
+// the drift this file exists to prevent. Each is a physical fact, not a
+// preference:
+//  - belowPlate: the July ring's 0.469" is the most ever shown to fit a car.
+//  - sideInward: embossed characters start ~0.75" in; 0.6" leaves margin.
+//  - bottomFullWidth / topInward: full-width coverage past ~0.55" starts eating
+//    registration stickers at the bottom and the state name at the top.
+export const MAX_BELOW_PLATE_INCHES = 0.5;
+export const MAX_SIDE_INWARD_INCHES = 0.6;
+export const MAX_BOTTOM_FULL_WIDTH_INCHES = 0.55;
+export const MAX_TOP_INWARD_INCHES = 0.55;
+
+/**
+ * The keystone, which is the product's `BottomTab` with nothing optional.
+ *
+ * NOT a second declaration of the same four fields: the bench dials a corner
+ * radius that always has a value, so it is `Required<BottomTab>` and feeds
+ * `tabPath` directly. One shape, one renderer, no chance of the bench drawing a
+ * keystone the printer would not.
+ */
+export type KeystoneSpec = Required<BottomTab>;
+
+/** The keystone the staged shipping config carries, so the bench's default IS
+ *  the geometry on the table rather than a hand-copied echo of it. */
+export const DEFAULT_KEYSTONE: KeystoneSpec = {
+  ...SCHOOL_JULY_SLIM_FRAME_CONFIG.bottomTab!,
+  cornerRadiusInches: SCHOOL_JULY_SLIM_FRAME_CONFIG.bottomTab!.cornerRadiusInches ?? 0.25,
+};
 
 /** One candidate physical geometry. Everything the bench can dial. */
 export interface FitSpec {
@@ -70,21 +110,15 @@ export interface FitSpec {
   topInwardInches: number;
 }
 
-/** A named, drawable piece of the assembled frame, in plate coordinates. */
+/** A named, drawable piece of the assembled frame, in plate coordinates. The id
+ *  union is exactly what `outlineParts` emits — the fabricator's four parts plus
+ *  the optional keystone. A consumer that switches on it is total. */
 export interface FitPart {
-  id:
-    | "rail-top"
-    | "rail-bottom"
-    | "rail-left"
-    | "rail-right"
-    | "runner-bottom"
-    | "badges-left"
-    | "badges-right"
-    | "keystone";
+  id: "rail-top" | "runner-bottom" | "badges-left" | "badges-right" | "keystone";
   label: string;
   /** Axis-aligned parts use rect; the keystone uses polygon. Exactly one is set. */
   rect?: { x: number; y: number; w: number; h: number };
-  polygon?: Array<{ x: number; y: number }>;
+  polygon?: Pt[];
 }
 
 /** Everything the readout panel shows. All inches unless named otherwise. */
@@ -152,7 +186,7 @@ export const CANDIDATE_SPEC: FitSpec = {
   windowRows: 5,
   bottomDropInches: 0.5,
   runnerHeightInches: 1,
-  keystone: { riseInches: 0.55, baseInches: 6, topInches: 5, cornerRadiusInches: 0.25 },
+  keystone: { ...DEFAULT_KEYSTONE },
   sideBadgeCells: 2,
   sideInwardInches: 0.5,
   topInwardInches: 0.5,
@@ -166,7 +200,12 @@ export const PRESETS: Array<{ key: string; label: string; spec: FitSpec }> = [
 
 // URL round-trip, so a dialled-in configuration is a textable link. Short keys on
 // purpose; the URL is the interchange format between Henry's phone and Bill's.
-const NUM_KEYS: Array<[keyof FitSpec & string, string]> = [
+
+/** The FitSpec fields that are plain numbers — everything except `keystone`. */
+type NumberKeyOf<T> = { [K in keyof T]-?: T[K] extends number ? K : never }[keyof T];
+type FitSpecNumberKey = NumberKeyOf<FitSpec>;
+
+const NUM_KEYS: Array<[FitSpecNumberKey, string]> = [
   ["pitchInches", "p"],
   ["windowCols", "wc"],
   ["windowRows", "wr"],
@@ -177,11 +216,21 @@ const NUM_KEYS: Array<[keyof FitSpec & string, string]> = [
   ["topInwardInches", "ti"],
 ];
 
+/**
+ * The spec as a query string.
+ *
+ * `kr` is ALWAYS written, 0 when there is no keystone. That one byte is what
+ * makes the round trip lossless: without it a keystone-less spec was
+ * indistinguishable from "said nothing about the keystone", so parsing a July
+ * link against a keystone-bearing base handed it back a keystone it never had,
+ * and every caller had to know to pass a keystone-nulled base. The codec owns
+ * that now, not its callers.
+ */
 export function specToQuery(spec: FitSpec): string {
   const q = new URLSearchParams();
   for (const [field, key] of NUM_KEYS) q.set(key, String(spec[field]));
+  q.set("kr", String(spec.keystone ? spec.keystone.riseInches : 0));
   if (spec.keystone) {
-    q.set("kr", String(spec.keystone.riseInches));
     q.set("kb", String(spec.keystone.baseInches));
     q.set("kt", String(spec.keystone.topInches));
     q.set("kc", String(spec.keystone.cornerRadiusInches));
@@ -191,22 +240,32 @@ export function specToQuery(spec: FitSpec): string {
 
 export function specFromQuery(q: URLSearchParams, base: FitSpec = CANDIDATE_SPEC): FitSpec {
   const num = (key: string, fallback: number) => {
-    const v = Number(q.get(key));
-    return Number.isFinite(v) && q.get(key) !== null && q.get(key) !== "" ? v : fallback;
+    const raw = q.get(key);
+    if (raw === null || raw === "") return fallback;
+    const v = Number(raw);
+    return Number.isFinite(v) ? v : fallback;
   };
   const spec: FitSpec = { ...base, keystone: base.keystone ? { ...base.keystone } : null };
   for (const [field, key] of NUM_KEYS) {
-    (spec as unknown as Record<string, number>)[field] = num(key, spec[field] as number);
+    spec[field] = num(key, spec[field]);
   }
+
+  // Absent kr means an old link that predates the always-written key: keep the
+  // base's keystone, which is what those links have always meant. Present and at
+  // or below zero means "no keystone", explicitly.
   const kr = q.get("kr");
-  if (kr !== null) {
-    spec.keystone = {
-      riseInches: num("kr", 0.55),
-      baseInches: num("kb", 6),
-      topInches: num("kt", 5),
-      cornerRadiusInches: num("kc", 0.25),
-    };
-    if (spec.keystone.riseInches <= 0) spec.keystone = null;
+  if (kr !== null && kr !== "") {
+    const rise = num("kr", 0);
+    const from = base.keystone ?? DEFAULT_KEYSTONE;
+    spec.keystone =
+      rise > 0
+        ? {
+            riseInches: rise,
+            baseInches: num("kb", from.baseInches),
+            topInches: num("kt", from.topInches),
+            cornerRadiusInches: num("kc", from.cornerRadiusInches),
+          }
+        : null;
   }
   return spec;
 }

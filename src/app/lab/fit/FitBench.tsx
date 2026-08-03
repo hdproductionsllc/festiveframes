@@ -1,15 +1,18 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { computeFit, outlineParts } from "@/lib/fit/geometry";
+import { useEffect, useState } from "react";
+import { computeFit, outlineParts, partBox, unionBoxes } from "@/lib/fit/geometry";
+import { useUrlSpec } from "./use-url-spec";
 import {
-  CANDIDATE_SPEC,
+  CHARACTER_MARGIN_INCHES,
+  DEFAULT_KEYSTONE,
+  JULY_SPEC,
+  MAX_SIDE_INWARD_INCHES,
   MO_DATE_LINE_INCHES,
   PILOT_HEIGHT_CEILING_INCHES,
   PLATE,
   PRESETS,
   STICKER_ZONE_INCHES,
-  specFromQuery,
   specToQuery,
   type FitPart,
   type FitSpec,
@@ -25,12 +28,20 @@ import {
 
 const SCALE = 40; // user units per inch
 const PAD_INCHES = 1.1; // room around the frame for dimension labels
-const DEFAULT_KEYSTONE: KeystoneSpec = {
-  riseInches: 0.55,
-  baseInches: 6,
-  topInches: 5,
-  cornerRadiusInches: 0.25,
-};
+
+// Type sizes are in SVG user units, so they must scale with SCALE or a bigger
+// drawing would come with proportionally smaller labels. These land on 10 and 12
+// at SCALE 40. The STROKE widths live in fit-bench.css instead (.fb-part,
+// .fb-ref, .fb-dim-line): they are shared by a dozen elements, and a stroke that
+// varied with SCALE could not be expressed there. They are constant on purpose.
+const LABEL_FONT = SCALE * 0.25;
+const DIM_FONT = SCALE * 0.3;
+
+/** How long a dial can be dragged before the URL is rewritten. A single slider
+ *  drag fires a change per pixel; Safari throws after 100 replaceState calls in
+ *  30 seconds and takes the page down with it. The URL is the document, but it
+ *  does not have to be the document on every animation frame. */
+const URL_WRITE_DEBOUNCE_MS = 200;
 
 const inches = (n: number) => `${n.toFixed(3)}"`;
 
@@ -42,6 +53,16 @@ function clamp(n: number, min: number, max: number): number {
 function quantise(n: number, step: number): number {
   const snapped = Math.round(n / step) * step;
   return Number(snapped.toFixed(4));
+}
+
+/** One parse for both halves of a dial: the slider's value and the number box's
+ *  typed string arrive here and leave on the dial's own grid, or as null when
+ *  what was typed is not a number yet. Quantising HERE is what keeps a typed
+ *  0.5300000000000001 out of the URL — the slider was already clean. */
+function parseDialValue(raw: string, step: number): number | null {
+  if (raw.trim() === "") return null;
+  const n = Number(raw);
+  return Number.isFinite(n) ? quantise(n, step) : null;
 }
 
 // ─── One dial: slider and number box, driving the same value ─────────────────
@@ -70,8 +91,13 @@ function Dial({ label, hint, value, min, max, step, onChange }: DialProps) {
 
   const commit = (raw: string) => {
     setDraft(raw);
-    const n = Number(raw);
-    if (raw.trim() !== "" && Number.isFinite(n)) onChange(n);
+    const next = parseDialValue(raw, step);
+    if (next === null) return;
+    // Take credit for our own write. Without this the quantised number comes back
+    // as an "outside" change and overwrites the string being typed: type 0.53 on
+    // a 0.05 step and the box would rewrite itself to 0.55 under the cursor.
+    setSeen(next);
+    onChange(next);
   };
 
   return (
@@ -88,7 +114,10 @@ function Dial({ label, hint, value, min, max, step, onChange }: DialProps) {
           max={max}
           step={step}
           value={clamp(value, min, max)}
-          onChange={(e) => onChange(quantise(Number(e.target.value), step))}
+          onChange={(e) => {
+            const next = parseDialValue(e.target.value, step);
+            if (next !== null) onChange(next);
+          }}
           aria-label={`${label} slider`}
         />
         <input
@@ -101,8 +130,8 @@ function Dial({ label, hint, value, min, max, step, onChange }: DialProps) {
           value={draft}
           onChange={(e) => commit(e.target.value)}
           onBlur={() => {
-            const n = Number(draft);
-            const next = Number.isFinite(n) && draft.trim() !== "" ? clamp(quantise(n, step), min, max) : value;
+            const parsed = parseDialValue(draft, step);
+            const next = parsed === null ? value : clamp(parsed, min, max);
             setDraft(String(next));
             onChange(next);
           }}
@@ -114,30 +143,16 @@ function Dial({ label, hint, value, min, max, step, onChange }: DialProps) {
 
 // ─── The drawing ─────────────────────────────────────────────────────────────
 
+/** The drawn extent, never smaller than the plate itself: a frame that covers
+ *  less than the plate must still be seen against the whole plate. */
 function partBounds(parts: FitPart[]) {
-  // Annotated as number: PLATE is `as const`, so its members are literal types
-  // and an inferred `let` would refuse every widening assignment below.
-  let minX: number = 0;
-  let minY: number = 0;
-  let maxX: number = PLATE.widthInches;
-  let maxY: number = PLATE.heightInches;
-  for (const part of parts) {
-    if (part.rect) {
-      minX = Math.min(minX, part.rect.x);
-      minY = Math.min(minY, part.rect.y);
-      maxX = Math.max(maxX, part.rect.x + part.rect.w);
-      maxY = Math.max(maxY, part.rect.y + part.rect.h);
-    }
-    if (part.polygon) {
-      for (const pt of part.polygon) {
-        minX = Math.min(minX, pt.x);
-        minY = Math.min(minY, pt.y);
-        maxX = Math.max(maxX, pt.x);
-        maxY = Math.max(maxY, pt.y);
-      }
-    }
-  }
-  return { minX, minY, maxX, maxY };
+  const b = unionBoxes(parts.map(partBox), {
+    x: 0,
+    y: 0,
+    w: PLATE.widthInches,
+    h: PLATE.heightInches,
+  });
+  return { minX: b.x, minY: b.y, maxX: b.x + b.w, maxY: b.y + b.h };
 }
 
 function FrontView({ parts, widthLabel, heightLabel, dropLabel }: {
@@ -172,7 +187,7 @@ function FrontView({ parts, widthLabel, heightLabel, dropLabel }: {
       className="fb-svg"
       viewBox={`${viewX} ${viewY} ${viewW} ${viewH}`}
       role="img"
-      aria-label="Front view of the frame over a 12 by 6 inch plate"
+      aria-label={`Front view of the frame over a ${plateW} by ${plateH} inch plate`}
     >
       {/* PLATE first, so everything the frame covers reads as covered. */}
       <rect
@@ -189,23 +204,19 @@ function FrontView({ parts, widthLabel, heightLabel, dropLabel }: {
         part.rect ? (
           <rect
             key={part.id}
+            className="fb-part"
             x={part.rect.x * SCALE}
             y={part.rect.y * SCALE}
             width={part.rect.w * SCALE}
             height={part.rect.h * SCALE}
-            fill="rgba(32,36,42,0.74)"
-            stroke="#14171b"
-            strokeWidth={1.25}
           >
             <title>{part.label}</title>
           </rect>
         ) : part.polygon ? (
           <polygon
             key={part.id}
+            className="fb-part"
             points={part.polygon.map((pt) => `${pt.x * SCALE},${pt.y * SCALE}`).join(" ")}
-            fill="rgba(32,36,42,0.74)"
-            stroke="#14171b"
-            strokeWidth={1.25}
           >
             <title>{part.label}</title>
           </polygon>
@@ -221,56 +232,51 @@ function FrontView({ parts, widthLabel, heightLabel, dropLabel }: {
       {corners.map((c, i) => (
         <rect
           key={`zone-${i}`}
+          className="fb-ref"
           x={c.x * SCALE}
           y={c.y * SCALE}
           width={zone * SCALE}
           height={zone * SCALE}
-          fill="none"
-          stroke="#c1852b"
-          strokeWidth={1.25}
-          strokeDasharray="5 4"
         />
       ))}
       <line
+        className="fb-ref"
         x1={0}
         y1={dateY * SCALE}
         x2={plateW * SCALE}
         y2={dateY * SCALE}
-        stroke="#c1852b"
-        strokeWidth={1.25}
-        strokeDasharray="5 4"
       />
       <text
         className="fb-svg-note"
         x={(zone + 0.2) * SCALE}
         y={(dateY - 0.13) * SCALE}
-        fontSize={10}
+        fontSize={LABEL_FONT}
       >
         MO date line
       </text>
 
       {/* Dimensions. */}
-      <line x1={b.minX * SCALE} y1={dimTop} x2={b.maxX * SCALE} y2={dimTop} stroke="#5a5a54" strokeWidth={1} />
-      <line x1={b.minX * SCALE} y1={dimTop - 5} x2={b.minX * SCALE} y2={dimTop + 5} stroke="#5a5a54" strokeWidth={1} />
-      <line x1={b.maxX * SCALE} y1={dimTop - 5} x2={b.maxX * SCALE} y2={dimTop + 5} stroke="#5a5a54" strokeWidth={1} />
+      <line className="fb-dim-line" x1={b.minX * SCALE} y1={dimTop} x2={b.maxX * SCALE} y2={dimTop} />
+      <line className="fb-dim-line" x1={b.minX * SCALE} y1={dimTop - 5} x2={b.minX * SCALE} y2={dimTop + 5} />
+      <line className="fb-dim-line" x1={b.maxX * SCALE} y1={dimTop - 5} x2={b.maxX * SCALE} y2={dimTop + 5} />
       <text
         className="fb-svg-dim"
         x={((b.minX + b.maxX) / 2) * SCALE}
         y={dimTop - 9}
-        fontSize={12}
+        fontSize={DIM_FONT}
         textAnchor="middle"
       >
         {widthLabel}
       </text>
 
-      <line x1={dimLeft} y1={b.minY * SCALE} x2={dimLeft} y2={b.maxY * SCALE} stroke="#5a5a54" strokeWidth={1} />
-      <line x1={dimLeft - 5} y1={b.minY * SCALE} x2={dimLeft + 5} y2={b.minY * SCALE} stroke="#5a5a54" strokeWidth={1} />
-      <line x1={dimLeft - 5} y1={b.maxY * SCALE} x2={dimLeft + 5} y2={b.maxY * SCALE} stroke="#5a5a54" strokeWidth={1} />
+      <line className="fb-dim-line" x1={dimLeft} y1={b.minY * SCALE} x2={dimLeft} y2={b.maxY * SCALE} />
+      <line className="fb-dim-line" x1={dimLeft - 5} y1={b.minY * SCALE} x2={dimLeft + 5} y2={b.minY * SCALE} />
+      <line className="fb-dim-line" x1={dimLeft - 5} y1={b.maxY * SCALE} x2={dimLeft + 5} y2={b.maxY * SCALE} />
       <text
         className="fb-svg-dim"
         x={dimLeft - 9}
         y={((b.minY + b.maxY) / 2) * SCALE}
-        fontSize={12}
+        fontSize={DIM_FONT}
         textAnchor="middle"
         transform={`rotate(-90 ${dimLeft - 9} ${((b.minY + b.maxY) / 2) * SCALE})`}
       >
@@ -278,19 +284,18 @@ function FrontView({ parts, widthLabel, heightLabel, dropLabel }: {
       </text>
 
       <line
+        className="fb-dim-line"
         x1={(plateW / 2) * SCALE}
         y1={plateH * SCALE}
         x2={(plateW / 2) * SCALE}
         y2={dimBottom - 12}
-        stroke="#5a5a54"
-        strokeWidth={1}
         strokeDasharray="4 3"
       />
       <text
         className="fb-svg-dim"
         x={(plateW / 2) * SCALE}
         y={dimBottom}
-        fontSize={12}
+        fontSize={DIM_FONT}
         textAnchor="middle"
       >
         {dropLabel}
@@ -302,66 +307,52 @@ function FrontView({ parts, widthLabel, heightLabel, dropLabel }: {
 // ─── The bench itself ────────────────────────────────────────────────────────
 
 export function FitBench() {
-  // SSR renders the default spec; the URL is read after mount so the server and
-  // the first client render agree. Without that guard a link-borne spec is a
-  // hydration mismatch every time.
-  const [spec, setSpec] = useState<FitSpec>(CANDIDATE_SPEC);
-  const [hydrated, setHydrated] = useState(false);
+  // SSR renders the default spec; the URL is adopted after mount. See useUrlSpec.
+  const [spec, setSpec] = useUrlSpec();
   const [copied, setCopied] = useState(false);
-  const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => {
-    const q = new URLSearchParams(window.location.search);
-    // Base the parse on a KEYSTONE-LESS spec. specToQuery omits the k* keys
-    // entirely when there is no keystone, so parsing against the default base
-    // (which has one) hands a July link back a keystone it never had. The base
-    // argument exists for exactly this; without it the round trip is lossy.
-    if (Array.from(q.keys()).length > 0) {
-      setSpec(specFromQuery(q, { ...CANDIDATE_SPEC, keystone: null }));
-    }
-    setHydrated(true);
-  }, []);
+  // One query string per render, shared by the three things that need it: which
+  // preset is lit, the copied link, and the print sheet's href. Building it three
+  // times invited three answers.
+  const currentQuery = specToQuery(spec);
 
   // The URL IS the document. replaceState rather than push so the back button
-  // still leaves the page instead of walking back through every slider tick.
+  // still leaves the page instead of walking back through every slider tick, and
+  // debounced so a drag writes once at the end rather than once per tick. This
+  // effect is declared AFTER the read above, so on mount the read has already
+  // landed by the time the timer fires and the equivalent-query write it would
+  // otherwise do is cancelled by its own cleanup.
   useEffect(() => {
-    if (!hydrated) return;
-    const query = specToQuery(spec);
-    window.history.replaceState(null, "", `${window.location.pathname}?${query}`);
-  }, [spec, hydrated]);
+    const timer = setTimeout(() => {
+      window.history.replaceState(null, "", `${window.location.pathname}?${currentQuery}`);
+    }, URL_WRITE_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [currentQuery]);
 
-  useEffect(() => () => {
-    if (copyTimer.current) clearTimeout(copyTimer.current);
-  }, []);
-
-  const set = useCallback(<K extends keyof FitSpec>(key: K, value: FitSpec[K]) => {
+  const set = <K extends keyof FitSpec>(key: K, value: FitSpec[K]) => {
     setSpec((prev) => ({ ...prev, [key]: value }));
-  }, []);
+  };
 
-  const setKeystone = useCallback((key: keyof KeystoneSpec, value: number) => {
+  const setKeystone = (key: keyof KeystoneSpec, value: number) => {
     setSpec((prev) => ({
       ...prev,
       keystone: { ...(prev.keystone ?? DEFAULT_KEYSTONE), [key]: value },
     }));
-  }, []);
+  };
 
-  const readout = useMemo(() => computeFit(spec), [spec]);
-  const parts = useMemo(() => outlineParts(spec), [spec]);
+  const readout = computeFit(spec);
+  const parts = outlineParts(spec);
 
   const copyLink = async () => {
-    const url = `${window.location.origin}${window.location.pathname}?${specToQuery(spec)}`;
+    const url = `${window.location.origin}${window.location.pathname}?${currentQuery}`;
     try {
       await navigator.clipboard.writeText(url);
       setCopied(true);
-      if (copyTimer.current) clearTimeout(copyTimer.current);
-      copyTimer.current = setTimeout(() => setCopied(false), 2000);
+      setTimeout(() => setCopied(false), 2000);
     } catch {
       window.prompt("Copy this link", url);
     }
   };
-
-  const specMatchesPreset = (candidate: FitSpec) =>
-    specToQuery(candidate) === specToQuery(spec);
 
   const ks = spec.keystone;
 
@@ -387,7 +378,7 @@ export function FitBench() {
                 <button
                   key={p.key}
                   type="button"
-                  className={`fb-preset${specMatchesPreset(p.spec) ? " is-on" : ""}`}
+                  className={`fb-preset${specToQuery(p.spec) === currentQuery ? " is-on" : ""}`}
                   onClick={() => setSpec(p.spec)}
                 >
                   {p.label}
@@ -400,7 +391,7 @@ export function FitBench() {
             <h2>Grid and window</h2>
             <Dial
               label="Tile pitch"
-              hint="in. Bill's sleds read 1.000; the July files were 0.991."
+              hint={`in. Bill's sleds read 1.000; the July files were ${JULY_SPEC.pitchInches.toFixed(3)}.`}
               value={spec.pitchInches}
               min={0.75}
               max={1.1}
@@ -431,7 +422,7 @@ export function FitBench() {
             <h2>Bottom edge</h2>
             <Dial
               label="Below plate drop"
-              hint="in. July sat at 0.469, the most ever shown to fit a car."
+              hint={`in. July sat at ${JULY_SPEC.bottomDropInches.toFixed(3)}, the most ever shown to fit a car.`}
               value={spec.bottomDropInches}
               min={0}
               max={2}
@@ -462,7 +453,12 @@ export function FitBench() {
             />
             <Dial
               label="Side inward"
-              hint="in. Past 0.750 it starts covering the embossed characters."
+              // The hint quoted the embossed-character margin and read as the
+              // limit, but the flag fires at MAX_SIDE_INWARD_INCHES, which is
+              // lower. Both numbers, each doing its own job.
+              hint={`in. Flagged past ${MAX_SIDE_INWARD_INCHES.toFixed(
+                2,
+              )}; embossed characters start about ${CHARACTER_MARGIN_INCHES.toFixed(2)} in from the edge.`}
               value={spec.sideInwardInches}
               min={0}
               max={1.2}
@@ -527,7 +523,7 @@ export function FitBench() {
                 />
                 <Dial
                   label="Corner radius"
-                  hint="in."
+                  hint="in. Rounding on the keystone's two top corners."
                   value={ks.cornerRadiusInches}
                   min={0}
                   max={0.5}
@@ -542,7 +538,7 @@ export function FitBench() {
             <button type="button" className="fb-action" onClick={copyLink}>
               {copied ? "Link copied" : "Copy link"}
             </button>
-            <a className="fb-action fb-action-link" href={`/lab/fit/print?${specToQuery(spec)}`}>
+            <a className="fb-action fb-action-link" href={`/lab/fit/print?${currentQuery}`}>
               Print the 1:1 paper templates
             </a>
           </div>
@@ -558,9 +554,10 @@ export function FitBench() {
               dropLabel={`${inches(readout.belowPlateInches)} below plate`}
             />
             <p className="fb-legend">
-              Light rectangle is the 12 x 6 plate. Dashed squares are the registration sticker
-              zones, dashed line is the Missouri date line. Dark shapes are frame parts, drawn
-              semi-opaque so plate coverage is visible.
+              Light rectangle is the {PLATE.widthInches} x {PLATE.heightInches} plate. Dashed
+              squares are the registration sticker zones, dashed line is the Missouri date
+              line. Dark shapes are frame parts, drawn semi-opaque so plate coverage is
+              visible.
             </p>
           </div>
 

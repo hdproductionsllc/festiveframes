@@ -2,6 +2,10 @@ import {
   BED,
   CHARACTER_MARGIN_INCHES,
   JULY_SPEC,
+  MAX_BELOW_PLATE_INCHES,
+  MAX_BOTTOM_FULL_WIDTH_INCHES,
+  MAX_SIDE_INWARD_INCHES,
+  MAX_TOP_INWARD_INCHES,
   MO_DATE_LINE_INCHES,
   PILOT_HEIGHT_CEILING_INCHES,
   PLATE,
@@ -10,6 +14,7 @@ import {
   type FitReadout,
   type FitSpec,
 } from "@/lib/fit/spec";
+import { tabPath } from "@/lib/utils/bottom-tab";
 
 // ─── The fitment bench's geometry engine ────────────────────────────────────
 //
@@ -49,15 +54,39 @@ import {
  *  the flag that watches it. */
 const EPS = 1e-9;
 
-/** Rule thresholds. Each is a physical fact, not a preference:
- *  - belowPlate: the July ring's 0.469" is the most ever shown to fit a car.
- *  - sideInward: embossed characters start ~0.75" in; 0.6" leaves margin.
- *  - bottomFullWidth / topInward: full-width coverage past ~0.55" starts eating
- *    registration stickers at the bottom and the state name at the top. */
-const MAX_BELOW_PLATE_INCHES = 0.5;
-const MAX_SIDE_INWARD_INCHES = 0.6;
-const MAX_BOTTOM_FULL_WIDTH_INCHES = 0.55;
-const MAX_TOP_INWARD_INCHES = 0.55;
+/** An axis-aligned rectangle in plate coordinates. */
+export interface FitBox {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+/** A part's bounding box, rect or polygon. The one place either shape is turned
+ *  into a box, so the bench, the print sheet and the readout all measure the
+ *  same thing. */
+export function partBox(part: FitPart): FitBox {
+  if (part.rect) return { ...part.rect };
+  const pts = part.polygon;
+  if (!pts || pts.length === 0) return { x: 0, y: 0, w: 0, h: 0 };
+  const xs = pts.map((p) => p.x);
+  const ys = pts.map((p) => p.y);
+  const x = Math.min(...xs);
+  const y = Math.min(...ys);
+  return { x, y, w: Math.max(...xs) - x, h: Math.max(...ys) - y };
+}
+
+/** The smallest box containing them all, optionally around a seed box (the plate,
+ *  a centreline, a page origin). Empty and seedless gives a zero box. */
+export function unionBoxes(boxes: FitBox[], seed?: FitBox): FitBox {
+  const all = seed ? [seed, ...boxes] : boxes;
+  if (all.length === 0) return { x: 0, y: 0, w: 0, h: 0 };
+  const x = Math.min(...all.map((b) => b.x));
+  const y = Math.min(...all.map((b) => b.y));
+  const right = Math.max(...all.map((b) => b.x + b.w));
+  const bottom = Math.max(...all.map((b) => b.y + b.h));
+  return { x, y, w: right - x, h: bottom - y };
+}
 
 /** Every derived edge, once, so computeFit and outlineParts cannot disagree
  *  about where a part is. */
@@ -69,8 +98,8 @@ interface FrameBox {
   windowRight: number;
   windowTop: number;
   windowBottom: number;
-  frameTop: number;
   frameBottom: number;
+  frameHeight: number;
   bannerTop: number;
   topRailTop: number;
   topRailBottom: number;
@@ -114,8 +143,11 @@ function frameBox(spec: FitSpec): FrameBox {
     windowRight,
     windowTop,
     windowBottom,
-    frameTop: topRailTop,
     frameBottom,
+    // The side columns span the whole frame: from the top rail's top edge down to
+    // the pinned bottom. Derived once here, because outlineParts sizing a column
+    // and computeFit reporting a height must be the same number.
+    frameHeight: frameBottom - topRailTop,
     bannerTop,
     topRailTop,
     topRailBottom,
@@ -133,14 +165,13 @@ export function computeFit(spec: FitSpec): FitReadout {
   // case nothing is above the plate at all — hence the floor at 0. totalHeight
   // stays the frame's true extent either way.
   const abovePlateInches = Math.max(0, -box.topRailTop);
-  const totalHeightInches = box.frameBottom - box.topRailTop;
 
-  // Union of the actual parts. The side columns are always the widest thing now
-  // that the runners stop at the window's edges, but taking the union keeps this
-  // honest if a spec ever puts a runner outboard of its own side pieces.
-  const leftExtent = Math.min(box.windowLeft, box.badgeLeftX);
-  const rightExtent = Math.max(box.windowRight, box.badgeRightX + box.badgeWidth);
-  const totalWidthInches = rightExtent - leftExtent;
+  // The frame's extent IS the union of the parts that get drawn, measured off the
+  // same list the renderers draw. Deriving it separately is how a readout and a
+  // picture start disagreeing about the same frame.
+  const extent = unionBoxes(outlineParts(spec).map(partBox));
+  const totalWidthInches = extent.w;
+  const totalHeightInches = extent.h;
 
   // Face coverage per edge. The side number is the worse of the two things that
   // reach in from that side: the rail cell itself (windowLeft, because the window
@@ -257,11 +288,9 @@ export function computeFit(spec: FitSpec): FitReadout {
  *
  * There is no `rail-bottom` (the banner IS the bottom part, one piece) and no
  * `rail-left` / `rail-right` (the side column already contains the rail cell).
- * The FitPart union still names them; emitting a subset is deliberate.
  */
 export function outlineParts(spec: FitSpec): FitPart[] {
   const box = frameBox(spec);
-  const frameHeight = box.frameBottom - box.frameTop;
 
   const parts: FitPart[] = [
     {
@@ -282,32 +311,27 @@ export function outlineParts(spec: FitSpec): FitPart[] {
     {
       id: "badges-left",
       label: "Left badge column",
-      rect: { x: box.badgeLeftX, y: box.frameTop, w: box.badgeWidth, h: frameHeight },
+      rect: { x: box.badgeLeftX, y: box.topRailTop, w: box.badgeWidth, h: box.frameHeight },
     },
     {
       id: "badges-right",
       label: "Right badge column",
-      rect: { x: box.badgeRightX, y: box.frameTop, w: box.badgeWidth, h: frameHeight },
+      rect: { x: box.badgeRightX, y: box.topRailTop, w: box.badgeWidth, h: box.frameHeight },
     },
   ];
 
   if (spec.keystone) {
-    // A plain 4-point trapezoid standing on the banner's top edge, centred on the
-    // plate. The spec's cornerRadiusInches is IGNORED here on purpose: the bench
-    // is a fitment tool and 0.25" of corner radius changes no number it reports.
-    // `bottom-tab.ts` owns the sampled, rounded outline that actually prints.
-    const { riseInches, baseInches, topInches } = spec.keystone;
-    const cx = PLATE.widthInches / 2;
-    const apexY = box.bannerTop - riseInches;
+    // THE REAL OUTLINE, from the module that draws the shipping part: `tabPath`
+    // at one unit per inch hands back inches, so the bench's template carries the
+    // same rounded top corners the physical keystone has instead of a hand-built
+    // trapezoid that would print a different silhouette. `rim` runs base corner
+    // to base corner, so it already is the closed polygon — the base itself is
+    // the implicit closing edge, and it is never a drawn line.
+    const path = tabPath(spec.keystone, PLATE.widthInches / 2, box.bannerTop, 1, 0);
     parts.push({
       id: "keystone",
       label: "Keystone",
-      polygon: [
-        { x: cx - baseInches / 2, y: box.bannerTop },
-        { x: cx + baseInches / 2, y: box.bannerTop },
-        { x: cx + topInches / 2, y: apexY },
-        { x: cx - topInches / 2, y: apexY },
-      ],
+      polygon: path.rim.map((pt) => ({ x: pt.x, y: pt.y })),
     });
   }
 

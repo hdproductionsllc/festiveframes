@@ -1,17 +1,18 @@
 "use client";
 
-import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
+import { useMemo, type CSSProperties, type ReactNode } from "react";
 
-import { computeFit, outlineParts } from "@/lib/fit/geometry";
+import { computeFit, outlineParts, partBox, unionBoxes, type FitBox } from "@/lib/fit/geometry";
+import { useUrlSpec } from "../use-url-spec";
 import {
-  CANDIDATE_SPEC,
+  BED,
+  MO_DATE_LINE_INCHES,
+  PILOT_HEIGHT_CEILING_INCHES,
   PLATE,
   QUARTER_INCHES,
-  specFromQuery,
+  STICKER_ZONE_INCHES,
   specToQuery,
   type FitPart,
-  type FitReadout,
-  type FitSpec,
 } from "@/lib/fit/spec";
 
 // ─── TRUE SCALE, and how it is held ──────────────────────────────────────────
@@ -33,7 +34,9 @@ import {
 // backgrounds from print by default, and a cut line that does not print is worse
 // than no cut line at all.
 
-type Box = { x: number; y: number; w: number; h: number };
+/** The tallest side column letter landscape can hold once the headings have
+ *  taken their share. A column taller than this is clipped at the TOP. */
+const SIDE_MAX_HEIGHT_INCHES = 6.2;
 
 /** CSS physical inches. Rounded only to keep the attribute readable. */
 function inch(value: number): string {
@@ -45,18 +48,7 @@ function num(value: number | undefined, dp = 3): string {
   return Number.isFinite(value) ? (value as number).toFixed(dp) : "n/a";
 }
 
-function boxOf(part: FitPart): Box | null {
-  if (part.rect) return { ...part.rect };
-  const pts = part.polygon;
-  if (!pts || pts.length === 0) return null;
-  const xs = pts.map((p) => p.x);
-  const ys = pts.map((p) => p.y);
-  const x = Math.min(...xs);
-  const y = Math.min(...ys);
-  return { x, y, w: Math.max(...xs) - x, h: Math.max(...ys) - y };
-}
-
-function boxStyle(box: Box, ox: number, oy: number): CSSProperties {
+function boxStyle(box: FitBox, ox: number, oy: number): CSSProperties {
   return {
     left: inch(box.x - ox),
     top: inch(box.y - oy),
@@ -69,8 +61,8 @@ function boxStyle(box: Box, ox: number, oy: number): CSSProperties {
  *  is a polygon, so it gets an inline SVG whose viewport is sized in inches and
  *  whose viewBox units ARE those inches. One scale, both cases. */
 function PartShape({ part, ox, oy }: { part: FitPart; ox: number; oy: number }) {
-  const box = boxOf(part);
-  if (!box || box.w <= 0 || box.h <= 0) return null;
+  const box = partBox(part);
+  if (box.w <= 0 || box.h <= 0) return null;
   const style = boxStyle(box, ox, oy);
 
   if (part.polygon) {
@@ -163,96 +155,67 @@ function Region({
   );
 }
 
-/** computeFit / outlineParts are pure, but the spec comes from a URL a human
- *  typed. A thrown geometry must not white-screen the sheet Bill is standing at
- *  the printer for: fall back to null and let the page say so. */
-function safely<T>(fn: () => T): T | null {
-  try {
-    return fn();
-  } catch {
-    return null;
-  }
-}
-
 export default function PrintSheet() {
-  // Server render and first client render must agree, so start on the candidate
-  // and adopt the query only after mount.
-  const [spec, setSpec] = useState<FitSpec>(CANDIDATE_SPEC);
-  const [query, setQuery] = useState<string>(specToQuery(CANDIDATE_SPEC));
+  // Server render and first client render must agree, so the query is adopted
+  // after mount. Shared with the bench: see useUrlSpec.
+  const [spec] = useUrlSpec();
 
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (Array.from(params.keys()).length === 0) return;
-    setSpec(specFromQuery(params));
-    setQuery(params.toString());
-  }, []);
+  // The printed configuration line is the spec RE-ENCODED, not the query string
+  // that arrived. Those differ whenever a link omits a key or carries a stale
+  // one, and the sheet must quote the geometry it actually drew.
+  const query = useMemo(() => specToQuery(spec), [spec]);
 
-  const readout: FitReadout | null = useMemo(() => safely(() => computeFit(spec)), [spec]);
-  const parts: FitPart[] = useMemo(() => safely(() => outlineParts(spec)) ?? [], [spec]);
+  // `computeFit` and `outlineParts` are total over every FitSpec the codec can
+  // produce, so there is no failure branch to hedge against here. There used to
+  // be one, and its fallbacks quietly printed DIFFERENT numbers from the engine
+  // (total height came out 6.991 where the engine says 6.938) — a calibration
+  // sheet whose backup path lies is worse than one that does not print.
+  const readout = useMemo(() => computeFit(spec), [spec]);
+  const parts: FitPart[] = useMemo(() => outlineParts(spec), [spec]);
 
-  // Spec-derived numbers, independent of the geometry module so the callouts
-  // still print if it is unhappy.
   const windowW = spec.windowCols * spec.pitchInches;
   const windowH = spec.windowRows * spec.pitchInches;
   const badgeColW = spec.sideBadgeCells * spec.pitchInches;
   const sideOutboard = badgeColW - spec.sideInwardInches;
-  const totalW = readout?.totalWidthInches ?? PLATE.widthInches + 2 * sideOutboard;
-  const totalH =
-    readout?.totalHeightInches ??
-    PLATE.heightInches + spec.bottomDropInches + spec.topInwardInches;
-  const belowPlate = readout?.belowPlateInches ?? spec.bottomDropInches;
+  const totalH = readout.totalHeightInches;
+  const belowPlate = readout.belowPlateInches;
 
   // ─── Page 2 rectangle: the bottom band, centreline rightward ───────────────
   const centerX = PLATE.widthInches / 2;
-  const partRight = parts.reduce((acc, part) => {
-    const box = boxOf(part);
-    return box ? Math.max(acc, box.x + box.w) : acc;
-  }, centerX);
-  const frameRight = Math.max(centerX + totalW / 2, partRight);
-  const frameBottom = parts.reduce(
-    (acc, part) => {
-      const box = boxOf(part);
-      return box ? Math.max(acc, box.y + box.h) : acc;
-    },
-    PLATE.heightInches + belowPlate,
-  );
-  const bannerTop = ["runner-bottom", "rail-bottom"].reduce((acc, id) => {
-    const part = parts.find((p) => p.id === id);
-    const box = part ? boxOf(part) : null;
-    return box ? Math.min(acc, box.y) : acc;
-  }, PLATE.heightInches + spec.bottomDropInches - spec.runnerHeightInches);
+  const extent = unionBoxes(parts.map(partBox));
+  const frameRight = extent.x + extent.w;
+  const frameBottom = extent.y + extent.h;
+  const runnerBox = parts.find((p) => p.id === "runner-bottom");
+  const bannerTop = runnerBox
+    ? partBox(runnerBox).y
+    : PLATE.heightInches + spec.bottomDropInches - spec.runnerHeightInches;
   const bottomY0 = bannerTop - 1;
-  const badgesRightPart = parts.find((p) => p.id === "badges-right");
-  const badgeLeftEdge =
-    (badgesRightPart ? boxOf(badgesRightPart)?.x : null) ??
-    PLATE.widthInches - spec.sideInwardInches;
+  const badgesRight = parts.find((p) => p.id === "badges-right");
+  const badgeLeftEdge = badgesRight
+    ? partBox(badgesRight).x
+    : PLATE.widthInches - spec.sideInwardInches;
 
   // ─── Page 3 rectangle: the right side column, full height ──────────────────
   //
-  // Chosen by GEOMETRY, not by part id: anything whose right edge passes the
-  // plate's right edge and which starts outboard of the plate centre is part of
-  // the side stack. The bench's part list is still moving (rail columns have
-  // come and gone), and a page that hardcodes ids prints an empty box the day
-  // one is renamed.
-  const sideParts = parts.filter((part) => {
-    const box = boxOf(part);
-    return Boolean(box && box.x >= centerX && box.x + box.w > PLATE.widthInches);
-  });
-  const sideBoxes = sideParts.map(boxOf).filter((b): b is Box => Boolean(b));
-  const sideX0 = sideBoxes.length
-    ? Math.min(...sideBoxes.map((b) => b.x))
-    : PLATE.widthInches - spec.sideInwardInches;
-  const sideX1 = sideBoxes.length
-    ? Math.max(...sideBoxes.map((b) => b.x + b.w))
-    : PLATE.widthInches + sideOutboard;
-  const sideY1 = sideBoxes.length
-    ? Math.max(...sideBoxes.map((b) => b.y + b.h))
-    : PLATE.heightInches;
-  const sideNaturalY0 = sideBoxes.length ? Math.min(...sideBoxes.map((b) => b.y)) : 0;
-  // Letter landscape leaves 7.7in of paper; the headings take the rest. If the
-  // column is taller than that, clip the TOP and keep the bottom edge true: the
-  // bottom is the edge that fails on a car, so it is the edge that must be real.
-  const SIDE_MAX_HEIGHT_INCHES = 6.2;
+  // By id, which is now safe to do: `FitPart["id"]` is exactly the five ids
+  // `outlineParts` emits, so a renamed part is a type error here rather than a
+  // silently empty box on paper.
+  const sideParts = parts.filter((part) => part.id === "badges-right");
+  const side = sideParts.length
+    ? unionBoxes(sideParts.map(partBox))
+    : {
+        x: PLATE.widthInches - spec.sideInwardInches,
+        y: 0,
+        w: spec.sideInwardInches + sideOutboard,
+        h: PLATE.heightInches,
+      };
+  const sideX0 = side.x;
+  const sideX1 = side.x + side.w;
+  const sideY1 = side.y + side.h;
+  const sideNaturalY0 = side.y;
+  // If the column is taller than the paper allows, clip the TOP and keep the
+  // bottom edge true: the bottom is the edge that fails on a car, so it is the
+  // edge that must be real.
   const sideClipped = sideY1 - sideNaturalY0 > SIDE_MAX_HEIGHT_INCHES;
   const sideY0 = sideClipped ? sideY1 - SIDE_MAX_HEIGHT_INCHES : sideNaturalY0;
   const plateEdgeX = PLATE.widthInches;
@@ -371,36 +334,31 @@ export default function PrintSheet() {
             <tr>
               <th scope="row">Total size</th>
               <td>
-                {num(totalW)} by {num(totalH)} in
+                {num(readout.totalWidthInches)} by {num(totalH)} in
               </td>
               <td>
-                Honda Pilot ceiling is 7 in tall. eufyMake E1 bed is 16.5 by 13 in.
+                Honda Pilot ceiling is {num(PILOT_HEIGHT_CEILING_INCHES, 0)} in tall.
+                eufyMake E1 bed is {num(BED.longInches, 1)} by {num(BED.shortInches, 0)}{" "}
+                in.
               </td>
             </tr>
           </tbody>
         </table>
 
-        {readout ? (
-          readout.flags.length > 0 ? (
-            <div className="fp-flags">
-              <strong>Flags on this geometry</strong>
-              <ul>
-                {readout.flags.map((flag) => (
-                  <li key={flag}>{flag}</li>
-                ))}
-              </ul>
-            </div>
-          ) : (
-            <p className="fp-clean">
-              No rule flags on this geometry. Bed fit rotated:{" "}
-              {readout.fitsBedRotated ? "yes" : "no"}. Under the Pilot ceiling:{" "}
-              {readout.underPilotCeiling ? "yes" : "no"}.
-            </p>
-          )
+        {readout.flags.length > 0 ? (
+          <div className="fp-flags">
+            <strong>Flags on this geometry</strong>
+            <ul>
+              {readout.flags.map((flag) => (
+                <li key={flag}>{flag}</li>
+              ))}
+            </ul>
+          </div>
         ) : (
           <p className="fp-clean">
-            Readout unavailable for this query. The numbers above are taken straight
-            from the spec.
+            No rule flags on this geometry. Bed fit rotated:{" "}
+            {readout.fitsBedRotated ? "yes" : "no"}. Under the Pilot ceiling:{" "}
+            {readout.underPilotCeiling ? "yes" : "no"}.
           </p>
         )}
 
@@ -478,18 +436,14 @@ export default function PrintSheet() {
               <dd>{num(spec.runnerHeightInches)} in total for the bottom part.</dd>
               <dt>Face intrusion, full width</dt>
               <dd>
-                {num(readout?.faceCoverage.bottomFullWidth ?? Math.max(0, spec.runnerHeightInches - spec.bottomDropInches))} in
-                of plate face covered across the whole bottom.
+                {num(readout.faceCoverage.bottomFullWidth)} in of plate face covered
+                across the whole bottom.
               </dd>
               <dt>Face intrusion at centre</dt>
               <dd>
-                {num(
-                  readout?.faceCoverage.bottomCenter ??
-                    Math.max(0, spec.runnerHeightInches - spec.bottomDropInches) +
-                      (spec.keystone?.riseInches ?? 0),
-                )}{" "}
-                in, keystone included. Missouri prints its date line 1.08 in up from the
-                plate bottom, so this is the number that hides registration text.
+                {num(readout.faceCoverage.bottomCenter)} in, keystone included. Missouri
+                prints its date line {num(MO_DATE_LINE_INCHES, 2)} in up from the plate
+                bottom, so this is the number that hides registration text.
               </dd>
               <dt>Keystone rise</dt>
               <dd>
@@ -497,8 +451,8 @@ export default function PrintSheet() {
               </dd>
               <dt>Corner clear</dt>
               <dd>
-                {num(readout?.cornerClearInches)} in at the tightest plate corner.
-                Registration stickers want about 1.75 in clear.
+                {num(readout.cornerClearInches)} in at the tightest plate corner.
+                Registration stickers want about {num(STICKER_ZONE_INCHES, 2)} in clear.
               </dd>
             </dl>
             <p className="fp-check">
@@ -591,7 +545,14 @@ export default function PrintSheet() {
             </dl>
 
             <div className="fp-quarter-row">
-              <div className="fp-quarter" aria-label="US quarter, 0.955 inch diameter" />
+              {/* Sized from QUARTER_INCHES, not a second copy of 0.955 in the
+                  stylesheet: this circle is a scale CHECK, so the one number it
+                  is checked against has to be the one the engine uses. */}
+              <div
+                className="fp-quarter"
+                style={{ width: inch(QUARTER_INCHES), height: inch(QUARTER_INCHES) }}
+                aria-label={`US quarter, ${QUARTER_INCHES} inch diameter`}
+              />
               <p>
                 US quarter at true scale, {num(QUARTER_INCHES)} in. Lay a real quarter on
                 this circle as a third scale check, then lay it on the inward strip.

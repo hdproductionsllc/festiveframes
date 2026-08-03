@@ -356,11 +356,10 @@ body:has(.fitprint) {
   margin-top: 0.18in;
 }
 
-/* True scale: a US quarter is 0.955 in across. */
+/* True scale. The DIAMETER is set inline from QUARTER_INCHES so this file cannot
+   drift from the engine's constant; only the appearance lives here. */
 .fitprint .fp-quarter {
   flex: none;
-  width: 0.955in;
-  height: 0.955in;
   border: 1px solid var(--fp-line);
   border-radius: 50%;
 }
