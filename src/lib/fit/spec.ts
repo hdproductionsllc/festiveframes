@@ -137,13 +137,21 @@ export const BILL_CURRENT_SPEC: FitSpec = {
 };
 
 /** The recommendation on the table: 7" total, bottom edge AT the July line,
- *  banner height bought inward, keystone centre-deep, corners clear. */
+ *  banner height bought inward, keystone centre-deep, corners clear.
+ *
+ *  The runner is 1.0", NOT the 1.5" first proposed: the engine's own arithmetic
+ *  caught that a 1.5" runner on a 0.5" drop intrudes a full 1.0" over the plate
+ *  face and pushes the keystone centre past Missouri's 1.08" date line. At 1.0"
+ *  the stack closes exactly (0.5 drop + 1.0 runner + 5 window + 1 top rail =
+ *  7.00" with the rail's bottom edge meeting the window's top), face intrusion
+ *  is 0.5", and the keystone centre reaches 1.05". Extra lockup height comes
+ *  from the keystone, never from a taller full-width bar. */
 export const CANDIDATE_SPEC: FitSpec = {
   pitchInches: 1,
   windowCols: 11,
   windowRows: 5,
   bottomDropInches: 0.5,
-  runnerHeightInches: 1.5,
+  runnerHeightInches: 1,
   keystone: { riseInches: 0.55, baseInches: 6, topInches: 5, cornerRadiusInches: 0.25 },
   sideBadgeCells: 2,
   sideInwardInches: 0.5,
