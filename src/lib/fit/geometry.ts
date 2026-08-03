@@ -245,55 +245,49 @@ export function computeFit(spec: FitSpec): FitReadout {
 }
 
 /**
- * The assembled frame as drawable pieces, in plate coordinates.
+ * The assembled frame as drawable pieces, in plate coordinates. FOUR parts plus
+ * an optional keystone, matching what actually gets printed:
  *
- * There is no `rail-bottom`: the banner IS the bottom part. Bill's parts list
- * reads "bottom 11 x 2", one piece, and splitting it into a rail plus a runner
- * here would invent a seam the printed part does not have.
+ *  · Two runners, the WINDOW's width, top and bottom. The fabricator's are "11
+ *    long" at a 1" pitch on an 11-cell window; they butt against the side
+ *    columns rather than running over them.
+ *  · Two full-height side columns, one per side, each spanning the frame's whole
+ *    height. His is "8 x 2": the 2" is the badge column, and its height is the
+ *    frame, not the window.
  *
- * Side rails and side badge columns both span the WINDOW's vertical extent,
- * because that is what "flanking the window" means. The top rail is on its own
- * dial and may therefore overlap them or leave a gap; see the header note.
+ * There is no `rail-bottom` (the banner IS the bottom part, one piece) and no
+ * `rail-left` / `rail-right` (the side column already contains the rail cell).
+ * The FitPart union still names them; emitting a subset is deliberate.
  */
 export function outlineParts(spec: FitSpec): FitPart[] {
   const box = frameBox(spec);
-  const outerWidth = box.outerRight - box.outerLeft;
+  const frameHeight = box.frameBottom - box.frameTop;
 
   const parts: FitPart[] = [
     {
       id: "rail-top",
-      label: "Top rail",
-      rect: { x: box.outerLeft, y: box.topRailTop, w: outerWidth, h: box.pitch },
-    },
-    {
-      id: "rail-left",
-      label: "Left rail",
-      rect: { x: box.outerLeft, y: box.windowTop, w: box.pitch, h: box.windowHeight },
-    },
-    {
-      id: "rail-right",
-      label: "Right rail",
-      rect: { x: box.windowRight, y: box.windowTop, w: box.pitch, h: box.windowHeight },
+      label: "Top runner",
+      rect: { x: box.windowLeft, y: box.topRailTop, w: box.windowWidth, h: box.pitch },
     },
     {
       id: "runner-bottom",
       label: "Bottom banner",
       rect: {
-        x: box.outerLeft,
+        x: box.windowLeft,
         y: box.bannerTop,
-        w: outerWidth,
+        w: box.windowWidth,
         h: spec.runnerHeightInches,
       },
     },
     {
       id: "badges-left",
       label: "Left badge column",
-      rect: { x: box.badgeLeftX, y: box.windowTop, w: box.badgeWidth, h: box.windowHeight },
+      rect: { x: box.badgeLeftX, y: box.frameTop, w: box.badgeWidth, h: frameHeight },
     },
     {
       id: "badges-right",
       label: "Right badge column",
-      rect: { x: box.badgeRightX, y: box.windowTop, w: box.badgeWidth, h: box.windowHeight },
+      rect: { x: box.badgeRightX, y: box.frameTop, w: box.badgeWidth, h: frameHeight },
     },
   ];
 

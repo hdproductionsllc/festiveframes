@@ -45,8 +45,11 @@ describe("computeFit — the July ring (the only verified build)", () => {
     expect(r.faceCoverage.bottomCenter).toBeCloseTo(r.faceCoverage.bottomFullWidth, 6);
   });
 
-  it("is 12.883 in wide and clears the bed and the Pilot", () => {
-    expect(r.totalWidthInches).toBeCloseTo(12.883, 6);
+  it("is 12.882 in wide and clears the bed and the Pilot", () => {
+    // Width now comes from the side columns alone: the runners stop at the
+    // window's edges. One 0.991 cell reaching 0.55 in over each plate edge puts
+    // 0.441 outboard on each side, so 12 + 2 x 0.441.
+    expect(r.totalWidthInches).toBeCloseTo(12.882, 6);
     expect(r.fitsBedRotated).toBe(true);
     expect(r.underPilotCeiling).toBe(true);
   });
@@ -92,7 +95,7 @@ describe("computeFit — Bill's current parts (2026-08-02 text)", () => {
   });
 });
 
-describe("computeFit — the candidate (7 in tall, height bought inward)", () => {
+describe("computeFit — the candidate (7 in tall, 1.0 in runner)", () => {
   const r = computeFit(CANDIDATE_SPEC);
 
   it("lands exactly on the Pilot ceiling and exactly on the July bottom line", () => {
@@ -103,37 +106,44 @@ describe("computeFit — the candidate (7 in tall, height bought inward)", () =>
     expect(r.underPilotCeiling).toBe(true);
     expect(r.belowPlateInches).toBeCloseTo(0.5, 6);
     expect(r.abovePlateInches).toBeCloseTo(0.5, 6);
+    expect(r.totalWidthInches).toBeCloseTo(15, 6);
+    expect(r.fitsBedRotated).toBe(true);
   });
 
-  it("buys the banner's height over the plate face: 1.00 in full width, 1.55 in at centre", () => {
-    // Banner top edge = 6 + 0.5 drop - 1.5 runner = 5.00, so 1.00 in of face is
+  it("closes the stack: the top rail's bottom edge meets the window's top edge", () => {
+    // This is the tell that the four dials are consistent, and it is what the
+    // 1.5 in runner broke. 0.5 drop + 1.0 runner + 5 window rows = the frame
+    // bottom back up to y = 0.5, which is exactly topInward. No overlap, no gap.
+    const parts = outlineParts(CANDIDATE_SPEC);
+    const topRail = parts.find((p) => p.id === "rail-top")?.rect;
+    const banner = parts.find((p) => p.id === "runner-bottom")?.rect;
+    expect(topRail).toBeDefined();
+    expect(banner).toBeDefined();
+    if (!topRail || !banner) return;
+
+    const windowTop = banner.y - CANDIDATE_SPEC.windowRows * CANDIDATE_SPEC.pitchInches;
+    expect(topRail.y + topRail.h).toBeCloseTo(windowTop, 9);
+    expect(topRail.y + topRail.h).toBeCloseTo(CANDIDATE_SPEC.topInwardInches, 9);
+  });
+
+  it("keeps face intrusion at 0.5 in and the keystone at 1.05 in, under the MO date line", () => {
+    // Banner top edge = 6 + 0.5 drop - 1.0 runner = 5.50, so 0.50 in of face is
     // under the full-width banner. The keystone's 0.55 rise stands on that edge,
-    // reaching 1.55 in up the plate.
-    expect(r.faceCoverage.bottomFullWidth).toBeCloseTo(1, 6);
-    expect(r.faceCoverage.bottomCenter).toBeCloseTo(1.55, 6);
+    // reaching 1.05 in up the plate against Missouri's 1.08 in date line: three
+    // hundredths of margin, which is the whole reason the runner is 1.0.
+    expect(r.faceCoverage.bottomFullWidth).toBeCloseTo(0.5, 6);
+    expect(r.faceCoverage.bottomCenter).toBeCloseTo(1.05, 6);
     expect(r.faceCoverage.bottomCenter).toBeGreaterThan(r.faceCoverage.bottomFullWidth);
-    expect(r.cornerClearInches).toBeCloseTo(0.75, 6);
+    expect(r.faceCoverage.bottomCenter).toBeLessThan(MO_DATE_LINE_INCHES);
+    expect(r.faceCoverage.left).toBeCloseTo(0.5, 6);
+    expect(r.faceCoverage.top).toBeCloseTo(0.5, 6);
+    expect(r.cornerClearInches).toBeCloseTo(1.25, 6);
   });
 
-  it("flags the banner coverage AND the keystone against Missouri's date line", () => {
-    // Worth stating plainly, because the candidate was pitched as clean: at a 1"
-    // pitch this geometry only reaches 7" total by eating 1.00 in of plate face
-    // with the full-width banner, and the keystone then stands on TOP of that at
-    // 1.55 in — past MO's 1.08 in date line. The drop (0.50) and the top rail
-    // (0.50) are both on the right side of their rules; the bottom is not.
-    expect(r.faceCoverage.bottomCenter).toBeGreaterThan(MO_DATE_LINE_INCHES);
-    expect(r.flags).toHaveLength(2);
-    expect(r.flags[0]).toBe(
-      "The full width banner covers 1.00 in of plate face. Corner registration stickers are at risk.",
-    );
-    expect(r.flags[1]).toBe(
-      "The keystone reaches 1.55 in up the plate. Missouri prints its date line at about 1.08 in.",
-    );
-    // Specifically NOT flagged: sitting on a threshold is passing it.
-    expect(r.flags.some((f) => f.startsWith("Bottom edge hangs"))).toBe(false);
-    expect(r.flags.some((f) => f.startsWith("Total height"))).toBe(false);
-    expect(r.flags.some((f) => f.startsWith("Side pieces"))).toBe(false);
-    expect(r.flags.some((f) => f.startsWith("Top rail"))).toBe(false);
+  it("raises no flags", () => {
+    // Drop 0.50, side 0.50, top 0.50 and the banner's 0.50 all sit at or under
+    // their thresholds, and the keystone clears the date line. Clean.
+    expect(r.flags).toEqual([]);
   });
 });
 
@@ -188,10 +198,44 @@ describe("outlineParts", () => {
         }
       });
 
-      it("emits the banner instead of a separate bottom rail", () => {
+      it("emits the fabricator's four parts and no invented seams", () => {
+        // One piece per printed part: two runners, two full-height side columns.
+        // rail-bottom would split the banner; rail-left / rail-right would split
+        // the side column and double-count material at the corners.
         const ids = parts.map((p) => p.id);
+        expect(ids).toContain("rail-top");
         expect(ids).toContain("runner-bottom");
+        expect(ids).toContain("badges-left");
+        expect(ids).toContain("badges-right");
         expect(ids).not.toContain("rail-bottom");
+        expect(ids).not.toContain("rail-left");
+        expect(ids).not.toContain("rail-right");
+      });
+
+      it("cuts both runners to the window's width, centred on the plate", () => {
+        const windowWidth = spec.windowCols * spec.pitchInches;
+        const windowLeft = (12 - windowWidth) / 2;
+        for (const id of ["rail-top", "runner-bottom"] as const) {
+          const rect = parts.find((p) => p.id === id)?.rect;
+          expect(rect).toBeDefined();
+          expect(rect?.w).toBeCloseTo(windowWidth, 9);
+          expect(rect?.x).toBeCloseTo(windowLeft, 9);
+        }
+      });
+
+      it("runs both side columns the full height of the frame", () => {
+        const r = computeFit(spec);
+        for (const id of ["badges-left", "badges-right"] as const) {
+          const rect = parts.find((p) => p.id === id)?.rect;
+          expect(rect).toBeDefined();
+          expect(rect?.h).toBeCloseTo(r.totalHeightInches, 9);
+          expect(rect?.w).toBeCloseTo(spec.sideBadgeCells * spec.pitchInches, 9);
+        }
+        // And they are what sets the frame's width.
+        const left = parts.find((p) => p.id === "badges-left")?.rect;
+        const right = parts.find((p) => p.id === "badges-right")?.rect;
+        expect(left?.x).toBeCloseTo(spec.sideInwardInches - spec.sideBadgeCells * spec.pitchInches, 9);
+        expect(right?.x).toBeCloseTo(12 - spec.sideInwardInches, 9);
       });
 
       it("puts nothing below the frame's bottom edge", () => {

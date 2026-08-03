@@ -312,7 +312,13 @@ export function FitBench() {
 
   useEffect(() => {
     const q = new URLSearchParams(window.location.search);
-    if (Array.from(q.keys()).length > 0) setSpec(specFromQuery(q));
+    // Base the parse on a KEYSTONE-LESS spec. specToQuery omits the k* keys
+    // entirely when there is no keystone, so parsing against the default base
+    // (which has one) hands a July link back a keystone it never had. The base
+    // argument exists for exactly this; without it the round trip is lossy.
+    if (Array.from(q.keys()).length > 0) {
+      setSpec(specFromQuery(q, { ...CANDIDATE_SPEC, keystone: null }));
+    }
     setHydrated(true);
   }, []);
 

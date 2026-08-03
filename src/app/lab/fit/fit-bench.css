@@ -233,10 +233,14 @@
   margin-bottom: 14px;
 }
 
+/* max-height so a wild spec from a pasted link (windowRows=99) letterboxes
+ * instead of growing a several-thousand-pixel figure that pushes the readout,
+ * the part that would explain it, off the screen. */
 .fit-bench .fb-svg {
   display: block;
   width: 100%;
   height: auto;
+  max-height: 72vh;
 }
 
 .fit-bench .fb-svg-dim,
