@@ -11,10 +11,13 @@ import {
   PLATE,
   STICKER_ZONE_INCHES,
   type FitPart,
+  type FitBox,
   type FitReadout,
   type FitSpec,
 } from "@/lib/fit/spec";
 import { tabPath } from "@/lib/utils/bottom-tab";
+
+export type { FitBox } from "@/lib/fit/spec";
 
 // ─── The fitment bench's geometry engine ────────────────────────────────────
 //
@@ -38,9 +41,12 @@ import { tabPath } from "@/lib/utils/bottom-tab";
 // (topInward), because how far the frame comes down over the state name is an
 // independent question from how the bottom is packed. When the two do not close
 // the parts overlap or gap on screen and the readout shows the numbers. That is
-// the point of the bench; it is not reconciled away silently. The candidate
-// closes exactly (rail bottom edge == window top edge); July misses by 0.001",
-// which is the 3dp rounding in its quoted numbers, not a real gap.
+// the point of the bench; it is not reconciled away silently. Every preset now
+// closes exactly (rail bottom edge == window top edge) — July used to miss by
+// 0.001", and that was written off here as harmless 3dp rounding rather than
+// chased. It was not harmless: it made the one verified build measure 12.882 x
+// 6.938 against a real 13 x 7 ring of 12.883 x 6.937. `every preset closes on
+// its own grid` in the tests now enforces what this paragraph used to excuse.
 //
 // PART BREAKDOWN follows the fabricator's actual parts, not an idealised ring:
 // the runners are the WINDOW's width and run BETWEEN the side columns (his
@@ -54,12 +60,20 @@ import { tabPath } from "@/lib/utils/bottom-tab";
  *  the flag that watches it. */
 const EPS = 1e-9;
 
-/** An axis-aligned rectangle in plate coordinates. */
-export interface FitBox {
-  x: number;
-  y: number;
-  w: number;
-  h: number;
+/**
+ * Snap a readout number off the float grid.
+ *
+ * Every number here is a sum or difference of inch values a human typed, so the
+ * arithmetic leaves dust in the sixteenth decimal place: the July ring's below-
+ * plate came out 0.4684999999999997 while its above-plate — the same distance,
+ * by construction — came out exactly 0.4685. At three decimals the readout then
+ * showed 0.468 against 0.469 for one physical measurement, which on a bench
+ * whose entire claim is dimensional truth reads as a bug in the frame rather
+ * than in the printf. Snapping to a millionth of an inch is far below anything
+ * that can be printed, measured, or meant.
+ */
+function snap(n: number): number {
+  return Math.round(n * 1e6) / 1e6;
 }
 
 /** A part's bounding box, rect or polygon. The one place either shape is turned
@@ -262,13 +276,23 @@ export function computeFit(spec: FitSpec): FitReadout {
     );
   }
 
+  // Snapped on the way OUT only: the flags above compare raw values against
+  // their thresholds with EPS, so rounding cannot flip a rule verdict.
   return {
-    totalWidthInches,
-    totalHeightInches,
-    belowPlateInches,
-    abovePlateInches,
-    faceCoverage,
-    cornerClearInches,
+    totalWidthInches: snap(totalWidthInches),
+    totalHeightInches: snap(totalHeightInches),
+    windowWidthInches: snap(box.windowWidth),
+    windowHeightInches: snap(box.windowHeight),
+    belowPlateInches: snap(belowPlateInches),
+    abovePlateInches: snap(abovePlateInches),
+    faceCoverage: {
+      left: snap(faceCoverage.left),
+      right: snap(faceCoverage.right),
+      top: snap(faceCoverage.top),
+      bottomFullWidth: snap(faceCoverage.bottomFullWidth),
+      bottomCenter: snap(faceCoverage.bottomCenter),
+    },
+    cornerClearInches: snap(cornerClearInches),
     fitsBedRotated,
     underPilotCeiling,
     flags,

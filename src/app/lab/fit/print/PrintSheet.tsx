@@ -1,11 +1,12 @@
 "use client";
 
-import { useMemo, type CSSProperties, type ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 
 import { computeFit, outlineParts, partBox, unionBoxes, type FitBox } from "@/lib/fit/geometry";
 import { useUrlSpec } from "../use-url-spec";
 import {
   BED,
+  JULY_SPEC,
   MO_DATE_LINE_INCHES,
   PILOT_HEIGHT_CEILING_INCHES,
   PLATE,
@@ -44,8 +45,8 @@ function inch(value: number): string {
 }
 
 /** Engineering display: three decimals, the tolerance Bill texts in. */
-function num(value: number | undefined, dp = 3): string {
-  return Number.isFinite(value) ? (value as number).toFixed(dp) : "n/a";
+function num(value: number, dp = 3): string {
+  return value.toFixed(dp);
 }
 
 function boxStyle(box: FitBox, ox: number, oy: number): CSSProperties {
@@ -163,18 +164,26 @@ export default function PrintSheet() {
   // The printed configuration line is the spec RE-ENCODED, not the query string
   // that arrived. Those differ whenever a link omits a key or carries a stale
   // one, and the sheet must quote the geometry it actually drew.
-  const query = useMemo(() => specToQuery(spec), [spec]);
+  const query = specToQuery(spec);
 
   // `computeFit` and `outlineParts` are total over every FitSpec the codec can
   // produce, so there is no failure branch to hedge against here. There used to
   // be one, and its fallbacks quietly printed DIFFERENT numbers from the engine
-  // (total height came out 6.991 where the engine says 6.938) — a calibration
+  // (total height came out 6.991 where the engine says 6.937) — a calibration
   // sheet whose backup path lies is worse than one that does not print.
-  const readout = useMemo(() => computeFit(spec), [spec]);
-  const parts: FitPart[] = useMemo(() => outlineParts(spec), [spec]);
+  const readout = computeFit(spec);
+  const parts: FitPart[] = outlineParts(spec);
 
-  const windowW = spec.windowCols * spec.pitchInches;
-  const windowH = spec.windowRows * spec.pitchInches;
+  /** The box of a part the engine always emits. `FitPart["id"]` is exactly the
+   *  five ids `outlineParts` produces, so a missing one is a programming error,
+   *  not a runtime case to paper over with a hand-derived fallback — which is
+   *  precisely what the deleted try/catch did, in different numbers. */
+  const boxOf = (id: FitPart["id"]): FitBox => {
+    const part = parts.find((p) => p.id === id);
+    if (!part) throw new Error(`outlineParts emitted no ${id}`);
+    return partBox(part);
+  };
+
   const badgeColW = spec.sideBadgeCells * spec.pitchInches;
   const sideOutboard = badgeColW - spec.sideInwardInches;
   const totalH = readout.totalHeightInches;
@@ -185,39 +194,18 @@ export default function PrintSheet() {
   const extent = unionBoxes(parts.map(partBox));
   const frameRight = extent.x + extent.w;
   const frameBottom = extent.y + extent.h;
-  const runnerBox = parts.find((p) => p.id === "runner-bottom");
-  const bannerTop = runnerBox
-    ? partBox(runnerBox).y
-    : PLATE.heightInches + spec.bottomDropInches - spec.runnerHeightInches;
+  const bannerTop = boxOf("runner-bottom").y;
   const bottomY0 = bannerTop - 1;
-  const badgesRight = parts.find((p) => p.id === "badges-right");
-  const badgeLeftEdge = badgesRight
-    ? partBox(badgesRight).x
-    : PLATE.widthInches - spec.sideInwardInches;
+  const badgeLeftEdge = boxOf("badges-right").x;
 
   // ─── Page 3 rectangle: the right side column, full height ──────────────────
-  //
-  // By id, which is now safe to do: `FitPart["id"]` is exactly the five ids
-  // `outlineParts` emits, so a renamed part is a type error here rather than a
-  // silently empty box on paper.
-  const sideParts = parts.filter((part) => part.id === "badges-right");
-  const side = sideParts.length
-    ? unionBoxes(sideParts.map(partBox))
-    : {
-        x: PLATE.widthInches - spec.sideInwardInches,
-        y: 0,
-        w: spec.sideInwardInches + sideOutboard,
-        h: PLATE.heightInches,
-      };
-  const sideX0 = side.x;
-  const sideX1 = side.x + side.w;
-  const sideY1 = side.y + side.h;
-  const sideNaturalY0 = side.y;
+  const side = boxOf("badges-right");
   // If the column is taller than the paper allows, clip the TOP and keep the
   // bottom edge true: the bottom is the edge that fails on a car, so it is the
   // edge that must be real.
-  const sideClipped = sideY1 - sideNaturalY0 > SIDE_MAX_HEIGHT_INCHES;
-  const sideY0 = sideClipped ? sideY1 - SIDE_MAX_HEIGHT_INCHES : sideNaturalY0;
+  const sideClipped = side.h > SIDE_MAX_HEIGHT_INCHES;
+  const sideY0 = sideClipped ? side.y + side.h - SIDE_MAX_HEIGHT_INCHES : side.y;
+  const sideY1 = side.y + side.h;
   const plateEdgeX = PLATE.widthInches;
 
   return (
@@ -288,8 +276,7 @@ export default function PrintSheet() {
             <tr>
               <th scope="row">Window</th>
               <td>
-                {spec.windowCols} by {spec.windowRows} cells, {num(windowW)} by{" "}
-                {num(windowH)} in
+                {spec.windowCols} by {spec.windowRows} cells, {num(readout.windowWidthInches)} by {num(readout.windowHeightInches)} in
               </td>
               <td>
                 Plate is {num(PLATE.widthInches, 1)} by {num(PLATE.heightInches, 1)} in,
@@ -300,8 +287,8 @@ export default function PrintSheet() {
               <th scope="row">Below plate drop</th>
               <td>{num(belowPlate)} in</td>
               <td>
-                The binding car fit number. July was 0.469 and is the most ever shown to
-                fit.
+                The binding car fit number. July was {num(JULY_SPEC.bottomDropInches, 4)}{" "}
+                and is the most ever shown to fit.
               </td>
             </tr>
             <tr>
@@ -430,7 +417,8 @@ export default function PrintSheet() {
               <dt>Below plate drop</dt>
               <dd>
                 {num(belowPlate)} in. Material under the plate&rsquo;s bottom edge. This
-                is what fails the Pilot. July&rsquo;s ring was 0.469 in.
+                is what fails the Pilot. July&rsquo;s ring was{" "}
+                {num(JULY_SPEC.bottomDropInches, 4)} in.
               </dd>
               <dt>Banner height</dt>
               <dd>{num(spec.runnerHeightInches)} in total for the bottom part.</dd>
@@ -479,28 +467,28 @@ export default function PrintSheet() {
         <div className="fp-sheet-row">
           <div className="fp-drawing">
             <Region
-              x0={sideX0}
+              x0={side.x}
               y0={sideY0}
-              x1={sideX1}
+              x1={side.x + side.w}
               y1={sideY1}
-              parts={sideParts}
+              parts={parts.filter((p) => p.id === "badges-right")}
               showPlate={false}
             >
               <span
                 className="fp-rule-v"
-                style={{ left: inch(plateEdgeX - sideX0), top: 0, height: inch(sideY1 - sideY0) }}
+                style={{ left: inch(plateEdgeX - side.x), top: 0, height: inch(sideY1 - sideY0) }}
                 aria-hidden="true"
               />
               <Mark left={0.06} top={0.06}>
                 Side column
               </Mark>
-              <Mark left={plateEdgeX - sideX0 - 0.2} top={0.6} vertical>
+              <Mark left={plateEdgeX - side.x - 0.2} top={0.6} vertical>
                 Flat surface. Plate face.
               </Mark>
-              <Mark left={plateEdgeX - sideX0 + 0.07} top={0.6} vertical>
+              <Mark left={plateEdgeX - side.x + 0.07} top={0.6} vertical>
                 Air. Nothing behind this.
               </Mark>
-              <Mark left={plateEdgeX - sideX0 + 0.07} top={sideY1 - sideY0 - 0.22}>
+              <Mark left={plateEdgeX - side.x + 0.07} top={sideY1 - sideY0 - 0.22}>
                 Plate edge
               </Mark>
             </Region>
@@ -510,7 +498,7 @@ export default function PrintSheet() {
             <h2 className="fp-h2">Side callouts</h2>
             {sideClipped && (
               <p className="fp-centerline-note">
-                The column is {num(sideY1 - sideNaturalY0, 2)} in tall and is cut off at
+                The column is {num(side.h, 2)} in tall and is cut off at
                 the TOP to fit the paper. The bottom edge and both side edges are true.
               </p>
             )}
@@ -523,7 +511,7 @@ export default function PrintSheet() {
               <dt>Badge column</dt>
               <dd>
                 {spec.sideBadgeCells} cells, {num(badgeColW)} in wide overall. Drawn
-                width {num(sideX1 - sideX0, 2)} in.
+                width {num(side.w, 2)} in.
               </dd>
               <dt>Inward, over the plate face</dt>
               <dd>
@@ -539,7 +527,7 @@ export default function PrintSheet() {
               </dd>
               <dt>Window height</dt>
               <dd>
-                {num(windowH)} in, {spec.windowRows} rows. Frame total height{" "}
+                {num(readout.windowHeightInches)} in, {spec.windowRows} rows. Frame total height{" "}
                 {num(totalH)} in.
               </dd>
             </dl>

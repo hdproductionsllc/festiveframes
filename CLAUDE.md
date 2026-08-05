@@ -166,9 +166,13 @@ error of 49/255 where the real figure was under 1/255.
 
 - **Nothing newer than the July 4 builder has ever completed design → physical
   part.** The July ring (`DEFAULT_FRAME_CONFIG`, 13 × 7, one tile thick all
-  round, window 11 × 5 = 10.901" × 4.955", overlapping the plate face ~0.55"/
-  0.52") was printed and its tiles sat FLUSH. Every school geometry since —
-  the 10 × 5 classic, the 12 × 6 rail window — is unverified theory.
+  round, window 11 × 5 = 10.901" × 4.955", overlapping the plate face
+  EXACTLY 0.5495" per side and 0.5225" top and bottom, hanging 0.4685" past the
+  plate top and bottom — derive these, never round them to the "~0.55/~0.52"
+  shorthand: doing that in /lab/fit made the ring measure 12.882 × 6.938 instead
+  of its true 12.883 × 6.937) was printed and its tiles sat FLUSH. Every school
+  geometry since — the 10 × 5 classic, the 12 × 6 rail window — is unverified
+  theory.
 - **Bill had to STRETCH school exports in eufyMake to make them fit.** That is
   evidence of a dimensional mismatch between our files and his physical rail,
   and it contaminates every conclusion drawn from those prints. STANDING RULE:

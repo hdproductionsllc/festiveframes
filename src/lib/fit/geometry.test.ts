@@ -7,6 +7,9 @@ import {
   CANDIDATE_SPEC,
   JULY_SPEC,
   MO_DATE_LINE_INCHES,
+  PLATE,
+  PRESETS,
+  STICKER_ZONE_INCHES,
   specFromQuery,
   specToQuery,
   type FitSpec,
@@ -22,41 +25,48 @@ import { panelSizeInches } from "@/lib/utils/panels";
 describe("computeFit — the July ring (the only verified build)", () => {
   const r = computeFit(JULY_SPEC);
 
-  it("is 6.937 in tall, give or take the rounding in Bill's quoted numbers", () => {
-    // Nominal stack is 7 cells x 0.991 = 6.937. The spec's quoted drop (0.469)
-    // and top inward (0.522) are 3dp roundings of that ring and sum to exactly
-    // one pitch, which lands the true extent at 6.938 — one thou over nominal,
-    // and about a tenth of the tolerance on Bill's printed parts (+/- 0.015).
-    expect(r.totalHeightInches).toBeCloseTo(6.938, 6);
+  it("is exactly 7 cells tall, the ring as it was actually printed", () => {
+    // 7 x 0.991. Asserted against the GRID rather than a typed 6.937, because a
+    // typed number is what let this drift to 6.938 in the first place.
+    expect(r.totalHeightInches).toBeCloseTo(7 * JULY_SPEC.pitchInches, 6);
   });
 
-  it("hangs 0.469 in below the plate and the same above it", () => {
-    expect(r.belowPlateInches).toBeCloseTo(0.469, 6);
-    expect(r.abovePlateInches).toBeCloseTo(0.469, 6);
+  it("hangs 0.4685 in below the plate and the same above it", () => {
+    // Symmetric by construction: one tile all round, so what the ring does not
+    // spend covering the plate face it spends hanging past the edge.
+    expect(r.belowPlateInches).toBeCloseTo(0.4685, 6);
+    expect(r.abovePlateInches).toBeCloseTo(0.4685, 6);
+    // EXACTLY equal, not merely close. These are one physical distance, and the
+    // raw subtraction made them differ in the sixteenth decimal — enough for the
+    // readout to print 0.468 against 0.469 for the same measurement.
+    expect(r.belowPlateInches).toBe(r.abovePlateInches);
   });
 
   it("overlaps the plate face about half an inch all round", () => {
     // CLAUDE.md records the July ring overlapping ~0.55" on the sides and ~0.52"
-    // top and bottom. The model reproduces both without being told them.
-    expect(r.faceCoverage.left).toBeCloseTo(0.55, 6);
-    expect(r.faceCoverage.right).toBeCloseTo(0.55, 6);
-    expect(r.faceCoverage.top).toBeCloseTo(0.522, 6);
-    expect(r.faceCoverage.bottomFullWidth).toBeCloseTo(0.522, 6);
+    // top and bottom. The model reproduces both without being told them — and
+    // to more places than the tildes carry.
+    expect(r.faceCoverage.left).toBeCloseTo(0.5495, 6);
+    expect(r.faceCoverage.right).toBeCloseTo(0.5495, 6);
+    expect(r.faceCoverage.top).toBeCloseTo(0.5225, 6);
+    expect(r.faceCoverage.bottomFullWidth).toBeCloseTo(0.5225, 6);
     // No keystone, so the centre reach is the banner's reach.
     expect(r.faceCoverage.bottomCenter).toBeCloseTo(r.faceCoverage.bottomFullWidth, 6);
   });
 
-  it("is 12.882 in wide and clears the bed and the Pilot", () => {
-    // Width now comes from the side columns alone: the runners stop at the
-    // window's edges. One 0.991 cell reaching 0.55 in over each plate edge puts
-    // 0.441 outboard on each side, so 12 + 2 x 0.441.
-    expect(r.totalWidthInches).toBeCloseTo(12.882, 6);
+  it("is exactly 13 cells wide and clears the bed and the Pilot", () => {
+    // Width comes from the side columns alone: the runners stop at the window's
+    // edges. One 0.991 cell reaching 0.5495 over each plate edge puts 0.4415
+    // outboard per side, so 12 + 2 x 0.4415 = 13 x 0.991. Asserted against the
+    // grid, not a typed 12.883.
+    expect(r.totalWidthInches).toBeCloseTo(13 * JULY_SPEC.pitchInches, 6);
     expect(r.fitsBedRotated).toBe(true);
     expect(r.underPilotCeiling).toBe(true);
   });
 
-  it("leaves 1.2 in clear at the worst plate corner", () => {
-    expect(r.cornerClearInches).toBeCloseTo(1.2, 6);
+  it("leaves 1.2005 in clear at the worst plate corner", () => {
+    // The sticker zone (1.75) less the deepest reach over the face (0.5495).
+    expect(r.cornerClearInches).toBeCloseTo(STICKER_ZONE_INCHES - 0.5495, 6);
   });
 
   it("raises no flags at all", () => {
@@ -140,6 +150,32 @@ describe("computeFit — the candidate (7 in tall, 1.0 in runner)", () => {
     // their thresholds, and the keystone clears the date line. Clean.
     expect(r.flags).toEqual([]);
   });
+});
+
+describe("every preset closes on its own grid", () => {
+  // THE INVARIANT THAT WAS MISSING. A spec states its window in CELLS and its
+  // plate overlap in INCHES, and the two have to describe the same frame: the
+  // face the window does not expose is exactly the face the parts cover. Nothing
+  // checked that, so July's overlaps could be — and were — hand-rounded to 3dp
+  // until the ring no longer closed, and the bench quoted the one verified build
+  // as 12.882 x 6.938 instead of 12.883 x 6.937.
+  //
+  // Per preset, not once: the next preset is the one most likely to be typed in
+  // from a text message.
+  for (const { key, label, spec } of PRESETS) {
+    it(`${key} (${label}): window and overlaps agree`, () => {
+      const windowW = spec.windowCols * spec.pitchInches;
+      const windowH = spec.windowRows * spec.pitchInches;
+
+      // Sides: the window is centred, so each side covers half the difference.
+      expect(spec.sideInwardInches).toBeCloseTo((PLATE.widthInches - windowW) / 2, 9);
+
+      // Vertical: the top rail's reach plus the banner's reach must account for
+      // all the plate face the window does not show.
+      const bannerInward = spec.runnerHeightInches - spec.bottomDropInches;
+      expect(spec.topInwardInches + bannerInward).toBeCloseTo(PLATE.heightInches - windowH, 9);
+    });
+  }
 });
 
 describe("computeFit — rule boundaries", () => {

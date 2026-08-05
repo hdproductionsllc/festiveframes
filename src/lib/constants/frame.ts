@@ -1,5 +1,16 @@
 import type { FrameConfig } from "@/lib/types";
 
+/** eufyMake E1 printable bed, inches. The school frame's output is rotated so its
+ *  LONG axis lies along the bed's 16.5" side (it fits only in that orientation).
+ *
+ *  Lives HERE, in the types-only leaf, because two very different consumers need
+ *  it: the print composer that lays panels onto the sheet, and /lab/fit's bench,
+ *  which must not import the composer (it drags in qrcode and IndexedDB). A
+ *  hardware fact with two homes is a hardware fact that will disagree with
+ *  itself the day a second printer arrives. */
+export const EUFY_BED_LONG_INCHES = 16.5;
+export const EUFY_BED_SHORT_INCHES = 13;
+
 // Gapless unit grid: 1 unit = the tile edge (0.982"). Per Bill's spec the
 // perimeter is a 13 x 7 ring = 36 tiles: top & bottom rows of 13 (incl. the
 // corners) plus 5 tiles down each side between them. Each side is an exact

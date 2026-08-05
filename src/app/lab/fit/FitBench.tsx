@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { computeFit, outlineParts, partBox, unionBoxes } from "@/lib/fit/geometry";
+import { computeFit, outlineParts, partBox, unionBoxes, type FitBox } from "@/lib/fit/geometry";
 import { useUrlSpec } from "./use-url-spec";
 import {
   CHARACTER_MARGIN_INCHES,
@@ -42,6 +42,12 @@ const DIM_FONT = SCALE * 0.3;
  *  30 seconds and takes the page down with it. The URL is the document, but it
  *  does not have to be the document on every animation frame. */
 const URL_WRITE_DEBOUNCE_MS = 200;
+
+/** The presets' encoded queries. PRESETS is a module constant, so these are too;
+ *  the preset strip compares the live query against them to decide which chip is
+ *  lit, and re-encoding three specs on every keystroke to answer that is work the
+ *  module can do once. */
+const PRESET_QUERIES = PRESETS.map((p) => specToQuery(p.spec));
 
 const inches = (n: number) => `${n.toFixed(3)}"`;
 
@@ -145,14 +151,13 @@ function Dial({ label, hint, value, min, max, step, onChange }: DialProps) {
 
 /** The drawn extent, never smaller than the plate itself: a frame that covers
  *  less than the plate must still be seen against the whole plate. */
-function partBounds(parts: FitPart[]) {
-  const b = unionBoxes(parts.map(partBox), {
+function partBounds(parts: FitPart[]): FitBox {
+  return unionBoxes(parts.map(partBox), {
     x: 0,
     y: 0,
     w: PLATE.widthInches,
     h: PLATE.heightInches,
   });
-  return { minX: b.x, minY: b.y, maxX: b.x + b.w, maxY: b.y + b.h };
 }
 
 function FrontView({ parts, widthLabel, heightLabel, dropLabel }: {
@@ -162,10 +167,10 @@ function FrontView({ parts, widthLabel, heightLabel, dropLabel }: {
   dropLabel: string;
 }) {
   const b = partBounds(parts);
-  const viewX = (b.minX - PAD_INCHES) * SCALE;
-  const viewY = (b.minY - PAD_INCHES) * SCALE;
-  const viewW = (b.maxX - b.minX + PAD_INCHES * 2) * SCALE;
-  const viewH = (b.maxY - b.minY + PAD_INCHES * 2) * SCALE;
+  const viewX = (b.x - PAD_INCHES) * SCALE;
+  const viewY = (b.y - PAD_INCHES) * SCALE;
+  const viewW = (b.w + PAD_INCHES * 2) * SCALE;
+  const viewH = (b.h + PAD_INCHES * 2) * SCALE;
 
   const plateW = PLATE.widthInches;
   const plateH = PLATE.heightInches;
@@ -178,9 +183,9 @@ function FrontView({ parts, widthLabel, heightLabel, dropLabel }: {
     { x: plateW - zone, y: plateH - zone },
   ];
 
-  const dimTop = (b.minY - 0.42) * SCALE;
-  const dimLeft = (b.minX - 0.42) * SCALE;
-  const dimBottom = (b.maxY + 0.5) * SCALE;
+  const dimTop = (b.y - 0.42) * SCALE;
+  const dimLeft = (b.x - 0.42) * SCALE;
+  const dimBottom = (b.y + b.h + 0.5) * SCALE;
 
   return (
     <svg
@@ -256,12 +261,12 @@ function FrontView({ parts, widthLabel, heightLabel, dropLabel }: {
       </text>
 
       {/* Dimensions. */}
-      <line className="fb-dim-line" x1={b.minX * SCALE} y1={dimTop} x2={b.maxX * SCALE} y2={dimTop} />
-      <line className="fb-dim-line" x1={b.minX * SCALE} y1={dimTop - 5} x2={b.minX * SCALE} y2={dimTop + 5} />
-      <line className="fb-dim-line" x1={b.maxX * SCALE} y1={dimTop - 5} x2={b.maxX * SCALE} y2={dimTop + 5} />
+      <line className="fb-dim-line" x1={b.x * SCALE} y1={dimTop} x2={(b.x + b.w) * SCALE} y2={dimTop} />
+      <line className="fb-dim-line" x1={b.x * SCALE} y1={dimTop - 5} x2={b.x * SCALE} y2={dimTop + 5} />
+      <line className="fb-dim-line" x1={(b.x + b.w) * SCALE} y1={dimTop - 5} x2={(b.x + b.w) * SCALE} y2={dimTop + 5} />
       <text
         className="fb-svg-dim"
-        x={((b.minX + b.maxX) / 2) * SCALE}
+        x={((b.x + b.w / 2)) * SCALE}
         y={dimTop - 9}
         fontSize={DIM_FONT}
         textAnchor="middle"
@@ -269,16 +274,16 @@ function FrontView({ parts, widthLabel, heightLabel, dropLabel }: {
         {widthLabel}
       </text>
 
-      <line className="fb-dim-line" x1={dimLeft} y1={b.minY * SCALE} x2={dimLeft} y2={b.maxY * SCALE} />
-      <line className="fb-dim-line" x1={dimLeft - 5} y1={b.minY * SCALE} x2={dimLeft + 5} y2={b.minY * SCALE} />
-      <line className="fb-dim-line" x1={dimLeft - 5} y1={b.maxY * SCALE} x2={dimLeft + 5} y2={b.maxY * SCALE} />
+      <line className="fb-dim-line" x1={dimLeft} y1={b.y * SCALE} x2={dimLeft} y2={(b.y + b.h) * SCALE} />
+      <line className="fb-dim-line" x1={dimLeft - 5} y1={b.y * SCALE} x2={dimLeft + 5} y2={b.y * SCALE} />
+      <line className="fb-dim-line" x1={dimLeft - 5} y1={(b.y + b.h) * SCALE} x2={dimLeft + 5} y2={(b.y + b.h) * SCALE} />
       <text
         className="fb-svg-dim"
         x={dimLeft - 9}
-        y={((b.minY + b.maxY) / 2) * SCALE}
+        y={((b.y + b.h / 2)) * SCALE}
         fontSize={DIM_FONT}
         textAnchor="middle"
-        transform={`rotate(-90 ${dimLeft - 9} ${((b.minY + b.maxY) / 2) * SCALE})`}
+        transform={`rotate(-90 ${dimLeft - 9} ${((b.y + b.h / 2)) * SCALE})`}
       >
         {heightLabel}
       </text>
@@ -374,11 +379,11 @@ export function FitBench() {
           <div className="fb-block">
             <h2>Presets</h2>
             <div className="fb-presets">
-              {PRESETS.map((p) => (
+              {PRESETS.map((p, i) => (
                 <button
                   key={p.key}
                   type="button"
-                  className={`fb-preset${specToQuery(p.spec) === currentQuery ? " is-on" : ""}`}
+                  className={`fb-preset${PRESET_QUERIES[i] === currentQuery ? " is-on" : ""}`}
                   onClick={() => setSpec(p.spec)}
                 >
                   {p.label}
@@ -422,7 +427,7 @@ export function FitBench() {
             <h2>Bottom edge</h2>
             <Dial
               label="Below plate drop"
-              hint={`in. July sat at ${JULY_SPEC.bottomDropInches.toFixed(3)}, the most ever shown to fit a car.`}
+              hint={`in. July sat at ${JULY_SPEC.bottomDropInches.toFixed(4)}, the most ever shown to fit a car.`}
               value={spec.bottomDropInches}
               min={0}
               max={2}

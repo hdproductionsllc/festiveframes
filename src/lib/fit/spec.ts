@@ -6,9 +6,9 @@
 // a configuration can be texted as a link.
 //
 // This file is the boundary three parallel workstreams build against:
-//   src/lib/fit/geometry.ts        computeFit / outlineParts (pure, tested)
-//   src/app/lab/fit/page.tsx       the interactive bench UI
-//   src/app/lab/fit/print/page.tsx the 1:1 paper calibration sheet
+//   src/lib/fit/geometry.ts             computeFit / outlineParts (pure, tested)
+//   src/app/lab/fit/FitBench.tsx        the interactive bench UI
+//   src/app/lab/fit/print/PrintSheet.tsx the 1:1 paper calibration sheet
 //
 // Coordinate convention for outlines: INCHES, origin at the PLATE's top-left
 // corner, x rightward, y DOWNWARD (the same handedness as every canvas and CSS
@@ -23,7 +23,12 @@
 //  · Snap-ins register by a stud at the CENTER of a rail cell; oversize pieces
 //    split their overhang inward/outward, and the split is a per-edge choice.
 
-import { DEFAULT_FRAME_CONFIG, SCHOOL_JULY_SLIM_FRAME_CONFIG } from "@/lib/constants/frame";
+import {
+  DEFAULT_FRAME_CONFIG,
+  EUFY_BED_LONG_INCHES,
+  EUFY_BED_SHORT_INCHES,
+  SCHOOL_JULY_SLIM_FRAME_CONFIG,
+} from "@/lib/constants/frame";
 import type { BottomTab } from "@/lib/types";
 import type { Pt } from "@/lib/utils/bottom-tab";
 
@@ -34,12 +39,9 @@ export const PLATE = {
   heightInches: DEFAULT_FRAME_CONFIG.plateHeightInches,
 } as const;
 
-/** eufyMake E1 printable bed. These numbers MIRROR EUFY_BED_LONG_INCHES /
- *  EUFY_BED_SHORT_INCHES in `compose-school-frame.ts`; a follow-up will unify
- *  them in one constants module. They are not imported from there on purpose —
- *  that module drags in qrcode and IndexedDB, which this leaf must stay free of
- *  so the engine and its tests remain pure. */
-export const BED = { longInches: 16.5, shortInches: 13 } as const;
+/** eufyMake E1 printable bed, from the constants leaf both the print composer and
+ *  this bench read. */
+export const BED = { longInches: EUFY_BED_LONG_INCHES, shortInches: EUFY_BED_SHORT_INCHES } as const;
 /** US quarter diameter — the field fit test. */
 export const QUARTER_INCHES = 0.955;
 /** Embossed plate characters typically begin about this far in from the plate's
@@ -61,7 +63,7 @@ export const PILOT_HEIGHT_CEILING_INCHES = 7;
 // a dial hint that says one number while the flag fires at another is exactly
 // the drift this file exists to prevent. Each is a physical fact, not a
 // preference:
-//  - belowPlate: the July ring's 0.469" is the most ever shown to fit a car.
+//  - belowPlate: the July ring's 0.4685" is the most ever shown to fit a car.
 //  - sideInward: embossed characters start ~0.75" in; 0.6" leaves margin.
 //  - bottomFullWidth / topInward: full-width coverage past ~0.55" starts eating
 //    registration stickers at the bottom and the state name at the top.
@@ -81,11 +83,11 @@ export const MAX_TOP_INWARD_INCHES = 0.55;
 export type KeystoneSpec = Required<BottomTab>;
 
 /** The keystone the staged shipping config carries, so the bench's default IS
- *  the geometry on the table rather than a hand-copied echo of it. */
-export const DEFAULT_KEYSTONE: KeystoneSpec = {
-  ...SCHOOL_JULY_SLIM_FRAME_CONFIG.bottomTab!,
-  cornerRadiusInches: SCHOOL_JULY_SLIM_FRAME_CONFIG.bottomTab!.cornerRadiusInches ?? 0.25,
-};
+ *  the geometry on the table rather than a hand-copied echo of it. The config
+ *  states all four fields; asserting that beats restating one of them here,
+ *  where a `?? 0.25` would be a second copy free to drift from its own source. */
+export const DEFAULT_KEYSTONE: KeystoneSpec =
+  SCHOOL_JULY_SLIM_FRAME_CONFIG.bottomTab as KeystoneSpec;
 
 /** One candidate physical geometry. Everything the bench can dial. */
 export interface FitSpec {
@@ -110,6 +112,16 @@ export interface FitSpec {
   topInwardInches: number;
 }
 
+/** An axis-aligned rectangle in plate coordinates: inches, origin at the plate's
+ *  top-left, y downward. One rectangle shape for the whole feature — parts,
+ *  bounding boxes and page windows are all this. */
+export interface FitBox {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
 /** A named, drawable piece of the assembled frame, in plate coordinates. The id
  *  union is exactly what `outlineParts` emits — the fabricator's four parts plus
  *  the optional keystone. A consumer that switches on it is total. */
@@ -117,7 +129,7 @@ export interface FitPart {
   id: "rail-top" | "runner-bottom" | "badges-left" | "badges-right" | "keystone";
   label: string;
   /** Axis-aligned parts use rect; the keystone uses polygon. Exactly one is set. */
-  rect?: { x: number; y: number; w: number; h: number };
+  rect?: FitBox;
   polygon?: Pt[];
 }
 
@@ -125,6 +137,11 @@ export interface FitPart {
 export interface FitReadout {
   totalWidthInches: number;
   totalHeightInches: number;
+  /** The plate opening, in inches. Reported rather than re-derived, because both
+   *  renderers PRINT these numbers next to the drawing: the sheet's geometry
+   *  table states the window Bill is told the template drew. */
+  windowWidthInches: number;
+  windowHeightInches: number;
   belowPlateInches: number;
   abovePlateInches: number;
   /** Plate-face coverage, per edge. bottomCenter includes the keystone. */
@@ -144,17 +161,39 @@ export interface FitReadout {
   flags: string[];
 }
 
-/** The verified July 4 ring, as built (0.991 pitch files). */
+/**
+ * The verified July 4 ring, as built (0.991 pitch files).
+ *
+ * The overlaps are DERIVED from the ring, not quoted from CLAUDE.md's "~0.55"
+ * and "~0.52". Those tildes matter: rounding them to 3dp made this preset fail
+ * to close on itself. An 11 x 5 window at 0.991 leaves 6 - 4.955 = 1.045" of
+ * plate face covered top and bottom, but 0.522 + 0.522 is 1.044, and the engine
+ * duly reported the July ring as 12.882 x 6.938 when 13 x 7 cells at 0.991 is
+ * 12.883 x 6.937. A thou, in both dimensions, in opposite directions.
+ *
+ * A thou is nothing next to Bill's +/- 0.015 on a printed part. It is not
+ * nothing in the one row of this table every other row is judged against: this
+ * is the only geometry that ever completed design to physical part, so it is
+ * the reference, and a reference that disagrees with its own grid is how the
+ * 0.991-vs-1.000 error got a foothold in the first place. The exact values:
+ *
+ *   side overlap    (12 - 11 x 0.991) / 2 = 0.5495
+ *   top/bottom      (6  -  5 x 0.991) / 2 = 0.5225
+ *   below the plate   0.991 - 0.5225      = 0.4685
+ *
+ * `presets close on their own grid` in geometry.test.ts pins this for every
+ * preset, so the next one cannot be hand-rounded into the same crack.
+ */
 export const JULY_SPEC: FitSpec = {
   pitchInches: 0.991,
   windowCols: 11,
   windowRows: 5,
-  bottomDropInches: 0.469,
+  bottomDropInches: 0.4685,
   runnerHeightInches: 0.991,
   keystone: null,
   sideBadgeCells: 1,
-  sideInwardInches: 0.55,
-  topInwardInches: 0.522,
+  sideInwardInches: 0.5495,
+  topInwardInches: 0.5225,
 };
 
 /** Bill's current parts per his 2026-08-02 text: 1" grid, 11x2 bottom runner. */
@@ -202,8 +241,7 @@ export const PRESETS: Array<{ key: string; label: string; spec: FitSpec }> = [
 // purpose; the URL is the interchange format between Henry's phone and Bill's.
 
 /** The FitSpec fields that are plain numbers — everything except `keystone`. */
-type NumberKeyOf<T> = { [K in keyof T]-?: T[K] extends number ? K : never }[keyof T];
-type FitSpecNumberKey = NumberKeyOf<FitSpec>;
+type FitSpecNumberKey = Exclude<keyof FitSpec, "keystone">;
 
 const NUM_KEYS: Array<[FitSpecNumberKey, string]> = [
   ["pitchInches", "p"],

@@ -23,8 +23,8 @@ export function useUrlSpec(): [FitSpec, React.Dispatch<React.SetStateAction<FitS
   const [spec, setSpec] = useState<FitSpec>(CANDIDATE_SPEC);
 
   useEffect(() => {
-    const q = new URLSearchParams(window.location.search);
-    if (Array.from(q.keys()).length > 0) setSpec(specFromQuery(q));
+    if (window.location.search.length <= 1) return;
+    setSpec(specFromQuery(new URLSearchParams(window.location.search)));
   }, []);
 
   return [spec, setSpec];

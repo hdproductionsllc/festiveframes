@@ -89,10 +89,7 @@ import { getFullRes } from "@/lib/utils/image-store";
 /** Default print resolution. 300 DPI is the eufyMake sheet standard. */
 export const SCHOOL_PRINT_DPI = 300;
 
-/** eufyMake E1 printable bed, inches. The output is rotated so its LONG axis lies
- *  along the bed's 16.5" side (the school frame fits only in that orientation). */
-export const EUFY_BED_LONG_INCHES = 16.5;
-export const EUFY_BED_SHORT_INCHES = 13;
+export { EUFY_BED_LONG_INCHES, EUFY_BED_SHORT_INCHES } from "@/lib/constants/frame";
 
 /**
  * Geometry for one panel PNG: the panel's TRUE source rectangle in the full render,

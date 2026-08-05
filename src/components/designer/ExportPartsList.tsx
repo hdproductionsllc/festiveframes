@@ -170,7 +170,14 @@ export function ExportPartsList({
   }
 
   // Print a clean, self-contained document in its own window. This avoids the
-  // app's fixed-overlay DOM (which repeats per page when printed).
+  // app's fixed-overlay DOM (which repeats per page when printed). This is what
+  // the Print button below calls, and it is the only print path anyone drives.
+  //
+  // SEPARATELY: the `print-parts` class on the modal shell is load-bearing from
+  // globals.css, which hides the rest of the document under `@media print` when
+  // that class is on the page — the bare Ctrl+P path, which no button reaches.
+  // Renaming the class silently changes what a Ctrl+P prints. That rule used to
+  // be unscoped and blanked /lab/fit/print, a page whose whole job is printing.
   async function printSheet() {
     const esc = (s: unknown) =>
       String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c] as string));
