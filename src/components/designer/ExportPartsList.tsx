@@ -173,11 +173,10 @@ export function ExportPartsList({
   // app's fixed-overlay DOM (which repeats per page when printed). This is what
   // the Print button below calls, and it is the only print path anyone drives.
   //
-  // SEPARATELY: the `print-parts` class on the modal shell is load-bearing from
-  // globals.css, which hides the rest of the document under `@media print` when
-  // that class is on the page — the bare Ctrl+P path, which no button reaches.
-  // Renaming the class silently changes what a Ctrl+P prints. That rule used to
-  // be unscoped and blanked /lab/fit/print, a page whose whole job is printing.
+  // SEPARATELY: the shell below carries `data-print-root`, opting this modal
+  // into the app's print-root convention (globals.css) so a bare Ctrl+P — the
+  // path no button reaches — prints the parts list instead of the whole app.
+  // That is an opt-in; removing the attribute just makes Ctrl+P print the page.
   async function printSheet() {
     const esc = (s: unknown) =>
       String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c] as string));
@@ -254,7 +253,8 @@ export function ExportPartsList({
       onClick={onClose}
     >
       <div
-        className="print-parts max-h-[88vh] w-full max-w-2xl overflow-auto rounded-lg bg-white p-6 text-gray-900 shadow-xl"
+        data-print-root
+        className="max-h-[88vh] w-full max-w-2xl overflow-auto rounded-lg bg-white p-6 text-gray-900 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">

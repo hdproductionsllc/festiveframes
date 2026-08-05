@@ -3,6 +3,7 @@
 import type { CSSProperties, ReactNode } from "react";
 
 import { computeFit, outlineParts, partBox, unionBoxes, type FitBox } from "@/lib/fit/geometry";
+import { shippabilityRefusals } from "@/lib/fit/config-bridge";
 import { useUrlSpec } from "../use-url-spec";
 import {
   BED,
@@ -173,6 +174,9 @@ export default function PrintSheet() {
   // sheet whose backup path lies is worse than one that does not print.
   const readout = computeFit(spec);
   const parts: FitPart[] = outlineParts(spec);
+  // Printed alongside the car-fit verdict, because a template Bill cuts out is
+  // worth nothing if the geometry cannot be written down as a config afterwards.
+  const refusals = shippabilityRefusals(spec);
 
   /** The box of a part the engine always emits. `FitPart["id"]` is exactly the
    *  five ids `outlineParts` produces, so a missing one is a programming error,
@@ -347,6 +351,17 @@ export default function PrintSheet() {
             {readout.fitsBedRotated ? "yes" : "no"}. Under the Pilot ceiling:{" "}
             {readout.underPilotCeiling ? "yes" : "no"}.
           </p>
+        )}
+
+        {refusals.length > 0 && (
+          <div className="fp-flags">
+            <strong>Not buildable as a frame config</strong>
+            <ul>
+              {refusals.map((r) => (
+                <li key={r}>{r}</li>
+              ))}
+            </ul>
+          </div>
         )}
 
         <p className="fp-query">

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { computeFit, outlineParts, partBox, unionBoxes, type FitBox } from "@/lib/fit/geometry";
+import { shippabilityRefusals } from "@/lib/fit/config-bridge";
 import { useUrlSpec } from "./use-url-spec";
 import {
   CHARACTER_MARGIN_INCHES,
@@ -347,6 +348,7 @@ export function FitBench() {
 
   const readout = computeFit(spec);
   const parts = outlineParts(spec);
+  const refusals = shippabilityRefusals(spec);
 
   const copyLink = async () => {
     const url = `${window.location.origin}${window.location.pathname}?${currentQuery}`;
@@ -619,8 +621,31 @@ export function FitBench() {
                   {readout.underPilotCeiling ? "Yes" : "No"}
                 </td>
               </tr>
+              {/* The OTHER question. "Does it fit the car" is only half the flip
+                  gate; the other half is whether the geometry can be written down
+                  as a FrameConfig at all. The bench's dials are continuous and the
+                  printed product is a lattice, so a geometry can be perfect on
+                  paper and unbuildable — and until this row existed, the two
+                  looked identical in the readout and on the paper templates. */}
+              <tr>
+                <th scope="row">Buildable as a frame config</th>
+                <td className={refusals.length === 0 ? "fb-yes" : "fb-no"}>
+                  {refusals.length === 0 ? "Yes" : "No"}
+                </td>
+              </tr>
             </tbody>
           </table>
+
+          {refusals.length > 0 && (
+            <div className="fb-flags">
+              <strong>Not buildable on the lattice</strong>
+              <ul>
+                {refusals.map((r) => (
+                  <li key={r}>{r}</li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           <div className="fb-flags" aria-live="polite">
             {readout.flags.length === 0 ? (

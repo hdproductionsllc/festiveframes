@@ -182,7 +182,11 @@ export interface FitReadout {
  *   below the plate   0.991 - 0.5225      = 0.4685
  *
  * `presets close on their own grid` in geometry.test.ts pins this for every
- * preset, so the next one cannot be hand-rounded into the same crack.
+ * preset, so the next one cannot be hand-rounded into the same crack — and
+ * `config-bridge.test.ts` pins this preset against DEFAULT_FRAME_CONFIG itself,
+ * the config the July ring was actually printed from. The presets stay literals
+ * rather than being built by `specFromConfig` only because that would make
+ * spec.ts and config-bridge.ts import each other; the test is the guard instead.
  */
 export const JULY_SPEC: FitSpec = {
   pitchInches: 0.991,

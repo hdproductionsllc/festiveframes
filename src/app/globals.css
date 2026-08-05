@@ -541,22 +541,37 @@ body {
   to { opacity: 1; transform: none; }
 }
 
-/* Print only the production parts list (ExportPartsList modal).
+/* THE PRINT-ROOT CONVENTION.
  *
- * Scoped to pages that actually CONTAIN the modal. Unscoped, `body *` reached
- * every route in the app — including /lab/fit/print, a page whose entire
- * purpose is being printed, which came out of the printer as blank sheets. The
- * defect was invisible in the isolated component harness the sheet was verified
- * in, because that harness never loaded this file. */
+ * A page may nominate ONE element as `data-print-root`. When one is present,
+ * printing shows that element and hides everything else; when none is present,
+ * the page prints whole. Today only the production parts list opts in, so a
+ * Ctrl+P with that modal open gives the parts list rather than the app around
+ * it. (Its Print button does not use this path at all — it writes a clean
+ * self-contained document into its own window.)
+ *
+ * WHY AN ATTRIBUTE AND NOT A CLASS NAME. This rule used to hide `body *`
+ * outright, which reached every route in the app — including /lab/fit/print, a
+ * page whose entire purpose is being printed, which came out of the printer as
+ * blank sheets. Scoping it to a class fixed the blast radius but left a
+ * stylesheet reaching into one component's className from another directory,
+ * with nothing on either side saying so: rename the class and Ctrl+P silently
+ * changes, in the one output channel nobody reviews. An opt-in attribute is a
+ * convention that any printable surface can use deliberately, and that no
+ * surface can inherit by accident.
+ *
+ * Visibility, not display: hidden ancestors must keep their layout so the print
+ * root can still be positioned against them. That is what the block below does.
+ */
 @media print {
-  body:has(.print-parts) * {
+  body:has([data-print-root]) * {
     visibility: hidden;
   }
-  .print-parts,
-  .print-parts * {
+  [data-print-root],
+  [data-print-root] * {
     visibility: visible;
   }
-  .print-parts {
+  [data-print-root] {
     position: absolute;
     inset: 0;
     max-height: none;
