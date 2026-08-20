@@ -22,6 +22,7 @@ import { tabSkirt } from "@/lib/utils/bottom-tab";
 import { SCHOOL_FRAME_CONFIG, SCHOOL_SLIM_FRAME_CONFIG } from "@/lib/constants/frame";
 import { getTotalWidthInches, getRenderHeightInches } from "@/lib/constants/frame";
 import type { BottomBarConfig, PlacedTextBar, PlacedTile, SectionState } from "@/lib/types";
+import { channelDelta, SHADE_TOLERANCE } from "@/lib/utils/__testing__/field-sample";
 
 // The compose function itself is browser-bound (Image + IndexedDB), so the node
 // suite exercises (a) the PURE geometry helpers and (b) the environment-agnostic
@@ -552,11 +553,24 @@ describe("the keystone and the bar are ONE piece of material", () => {
 
   it("draws NOTHING across the join under the tab", () => {
     const c = column();
-    const bg = c.rgb(c.underTab, c.barTop + 60); // deep inside the bar, past all chrome
     // From above the base, through it, and past the full depth of the bar's chrome.
-    for (let y = c.barTop - 4; y <= c.barTop + tabSkirt(c.unit) - 2; y++) {
-      expect(c.rgb(c.underTab, y), `a line crosses the join at +${y - c.barTop}px`).toBe(bg);
+    const run: string[] = [];
+    for (let y = c.barTop - 4; y <= c.barTop + tabSkirt(c.unit) - 2; y++) run.push(c.rgb(c.underTab, y));
+
+    // A LINE crossing the join would be a break in this run. Compare every pixel to
+    // the run's own first value: uniformity IS the invariant, and it needs no
+    // reference sample taken from somewhere else in the bar.
+    for (let i = 0; i < run.length; i++) {
+      expect(run[i], `a line crosses the join at +${c.barTop - 4 + i - c.barTop}px`).toBe(run[0]);
     }
+
+    // And the join is the bar's body, not a uniform band of the wrong colour. The
+    // reference used to BE this assertion, sampled 60px deeper — far enough down the
+    // bevel's faint ramp to round a unit low and fail a run that is in fact perfect.
+    // Compared with tolerance now, so the ramp cannot masquerade as a defect.
+    const body = c.rgb(c.underTab, c.barTop + 60); // deep inside the bar, past all chrome
+    expect(channelDelta(run[0], body), `join ${run[0]} vs bar body ${body}`)
+      .toBeLessThanOrEqual(SHADE_TOLERANCE);
   });
 
   it("…while the bar keeps its rim and bevel everywhere ELSE", () => {
