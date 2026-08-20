@@ -15,6 +15,7 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { FirstRunTour } from "./FirstRunTour";
 import { BUYERS, DEFAULT_BUYER, getBuyer, yearsFor, type BuyerId } from "@/data/frame-buyers";
+import { SCHOOL_CHECKOUT_OPEN } from "@/config/offers";
 import { presetsFor, presetTiles, getPreset, SLIM_PRESETS, type SchoolPreset } from "@/data/school-presets";
 import { markPieceId } from "@/data/sets/school-marks";
 import { GraduateExpress } from "./GraduateExpress";
@@ -717,12 +718,15 @@ export function SchoolDesigner({
               <span aria-hidden>⚙</span>
             )}
           </button>
+          {/* Send is the PRIMARY action while checkout is parked, and steps back to
+              secondary the moment Buy exists. Derived from the one switch, so
+              opening checkout is never a second edit someone forgets to make. */}
           <button
             type="button"
             onClick={handleSubmit}
             disabled={submitting || exporting || buying}
             title="Send your finished design to our team without ordering"
-            className="ff-btn ff-btn-primary ff-btn-sm shrink-0 whitespace-nowrap"
+            className={`ff-btn ${SCHOOL_CHECKOUT_OPEN ? "ff-btn-secondary" : "ff-btn-primary"} ff-btn-sm shrink-0 whitespace-nowrap`}
           >
             {submitting ? (
               "Sending..."
@@ -732,11 +736,11 @@ export function SchoolDesigner({
               </>
             )}
           </button>
-          {/* Direct checkout is PARKED until pricing is owner-confirmed — the
-              published path is send-your-design, and we follow up with ordering
-              info. handleBuy and the Stripe rails stay wired for the flip back:
-              restore this button and demote Send to ff-btn-secondary. */}
-          {false && (
+          {/* Direct checkout is PARKED until the owner confirms the placeholder
+              pricing. The switch and the reasoning live together in
+              config/offers.ts (SCHOOL_CHECKOUT_OPEN) rather than as a bare `false`
+              here, so the reason travels with the code that obeys it. */}
+          {SCHOOL_CHECKOUT_OPEN && (
             <button
               type="button"
               onClick={handleBuy}

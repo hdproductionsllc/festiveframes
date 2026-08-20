@@ -66,6 +66,29 @@ export const schoolOffer = {
 };
 
 /**
+ * Is DIRECT CHECKOUT open on the school builder? **No, deliberately.**
+ *
+ * This is not a feature flag in the usual sense — nothing is half-built behind it.
+ * The Stripe session, the paid-before-fulfil trust gate, the production email with
+ * the print files, and the fundraiser ledger are all wired and covered by tests.
+ * It is a LOCK ON THE TWO PLACEHOLDER NUMBERS ABOVE, and it lives here rather than
+ * in the builder so the switch and the reason for it cannot drift apart.
+ *
+ * `schoolPrice` and `schoolDonationCents` were set by engineering to unblock the
+ * flow. Charging a parent the first, or promising a booster club the second, is the
+ * owner's call and has not been made. Until it is, the published path is
+ * "Send my design" and we follow up with ordering information by hand — which is
+ * also the honest thing to show a school we have no written agreement with yet.
+ *
+ * TO OPEN IT: confirm both numbers with the owner, then flip this ONE constant.
+ * `SchoolDesigner` derives the whole header from it — the Buy button appears and
+ * Send steps back to secondary — so there is nothing else to remember. The
+ * tripwire in offers.test.ts will fail on purpose; updating it is how you record
+ * that the decision was actually made.
+ */
+export const SCHOOL_CHECKOUT_OPEN = false;
+
+/**
  * Authoritative bulk price for N total frames, in cents — PAIRS pricing:
  * every two frames is the $69 bundle, any leftover frame is $39.
  *   1 -> 3900   2 -> 6900   3 -> 10800   4 -> 13800 …
