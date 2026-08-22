@@ -1,0 +1,12 @@
+{
+  "id": "bill-current-8in",
+  "name": "Bill's current build, 8 inch",
+  "status": "known-failing",
+  "note": "15.000 x 8.000 inches with 1.500 inch below the plate. Recorded because it FAILED a Honda Pilot in the field, which makes it the most valuable single data point available: any vehicle this fits is not a discriminating test.",
+  "required_region": {
+    "left": -7.5,
+    "right": 7.5,
+    "top": 3.5,
+    "bottom": -4.5
+  }
+}

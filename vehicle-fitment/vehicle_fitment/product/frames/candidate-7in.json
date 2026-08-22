@@ -1,0 +1,13 @@
+{
+  "id": "candidate-7in",
+  "name": "Candidate 7 inch (staged, NOT verified)",
+  "status": "staged",
+  "note": "Encodes SCHOOL_JULY_SLIM_FRAME_CONFIG: 15.000 x 7.000 inches overall on a 1.000 inch grid, sitting 0.500 inch below the plate's bottom edge. NOT a verified geometry. The flip gate is one unstretched panel printed on Bill's sleds; until that passes, treat this as a proposal. See tasks/launch-sequence.md.",
+  "required_region": {
+    "left": -7.5,
+    "right": 7.5,
+    "top": 3.5,
+    "bottom": -3.5
+  },
+  "notes_on_bottom_edge": "The bottom edge is the binding car-fit constraint. The July ring's 0.4685 inch below the plate is the most that has ever been shown to fit a car."
+}

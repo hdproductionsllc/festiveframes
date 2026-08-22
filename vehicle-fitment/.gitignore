@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Evidence is reproducible from source images and is per-machine. The DIRECTORY
+# layout is tracked (see .gitkeep) because storage/records.py writes into it.
+data/originals/*
+data/normalized/*
+data/annotated/*
+data/records/*
+!data/**/.gitkeep
