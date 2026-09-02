@@ -203,15 +203,17 @@ describe("flush frame: the fit bench", () => {
     expect(r.faceCoverage.top).toBe(0.75);
     expect(r.faceCoverage.bottomFullWidth).toBe(0.25);
     expect(r.faceCoverage.left).toBe(0.5);
-    expect(r.underPilotCeiling).toBe(true);
     expect(r.fitsBedRotated).toBe(true);
+    // Bill's tape (2026-09-02): the Pilot's recess is 6.625" tall. 6.75 does not fit.
+    expect(r.underPilotCeiling).toBe(false);
   });
 
-  it("raises exactly the two flags the plan expects, and no others", () => {
+  it("raises exactly three flags: the drop, the top cover, and the taped Pilot ceiling", () => {
     const r = computeFit(FLUSH_SPEC);
-    expect(r.flags).toHaveLength(2);
+    expect(r.flags).toHaveLength(3);
     expect(r.flags.some((f) => f.startsWith("Bottom edge hangs 0.75"))).toBe(true);
     expect(r.flags.some((f) => f.startsWith("Top rail covers 0.75"))).toBe(true);
+    expect(r.flags.some((f) => f.includes("exceeds the 6.625 in Pilot ceiling"))).toBe(true);
   });
 
   it("is the shipping config, projected — and projects back", () => {

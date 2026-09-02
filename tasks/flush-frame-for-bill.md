@@ -47,11 +47,19 @@ landscape, which is how they go on the bed.
 3. **Keystone unchanged** (rise 0.55, base 6, top 5). On this frame the bar top is only
    0.25" up the plate, so the keystone reaches 0.80" — under Missouri's 1.08" date line.
 
-## Two things to settle before material
+## Pilot, taped 2026-09-02: recess 6.625" tall × 21.5" wide
 
-- **Tape the Pilot bottom.** The photo says 3.05" of room; the 8" frame physically
-  failed there. 0.75" below the plate is more than the 0.5" the July ring proved.
-  Plate bottom edge → first thing a flat panel would hit.
+The plate is 6" tall, so the recess leaves **0.625" total** above and below. The
+6.75" frame above does not fit it: 0.125" over even if the plate sits hard against
+the recess top. The 7" candidate does not fit either. The width is a non-issue.
+One more number decides the fix: **plate bottom edge → recess floor**, in inches.
+That is how much may hang below the plate on the Pilot. If it is 0.5" or more, a
+**15 × 6.5** version fits (0.5" top runner, 1" bottom runner at 0.5" over / 0.5"
+below, screw slots in both runners); if it is less, the bottom bar has to move up
+over the plate face and take the bottom slots with it.
+
+## One more thing to settle before material
+
 - **State name.** 0.75" of top cover reaches the state-name band on most plates. Some
   states prohibit covering it. Missouri's rule is unchecked. This is a legal question,
   not a fitment one, and it is the one thing that could sink a flush top.

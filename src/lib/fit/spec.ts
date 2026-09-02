@@ -53,9 +53,17 @@ export const STICKER_ZONE_INCHES = 1.75;
 /** Missouri's bicentennial plate prints its date line about this far up from the
  *  plate's bottom edge — the deepest the keystone may reach on an MO plate. */
 export const MO_DATE_LINE_INCHES = 1.08;
-/** The Honda Pilot ceiling: total frame height at or under this has a chance;
- *  Bill's 8.0" and ~7.5" builds both failed, 7" (July) is believed good. */
-export const PILOT_HEIGHT_CEILING_INCHES = 7;
+/** The Honda Pilot ceiling, TAPED by Bill 2026-09-02: the plate recess is 6.625"
+ *  tall and 21.5" wide. A 12 x 6 plate leaves 0.625" of height to share between
+ *  above and below, so total frame height must stay at or under this. It replaces
+ *  the earlier "7 in is believed good" — which was belief: the 6.937" July ring
+ *  was never put on the Pilot, and the fitment engine's photo (3.05" of room
+ *  below) was the liftgate-bulge error the Sienna had already taught us about.
+ *  Where the plate sits INSIDE the recess is still unmeasured; the tightest
+ *  reading (plate centred) leaves 0.3125" below. */
+export const PILOT_HEIGHT_CEILING_INCHES = 6.625;
+/** The same recess, side to side. 4.75" beyond the plate per side: wings are free. */
+export const PILOT_WIDTH_CEILING_INCHES = 21.5;
 
 // ─── Rule thresholds ────────────────────────────────────────────────────────
 //

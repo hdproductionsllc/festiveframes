@@ -61,7 +61,9 @@ describe("computeFit — the July ring (the only verified build)", () => {
     // grid, not a typed 12.883.
     expect(r.totalWidthInches).toBeCloseTo(13 * JULY_SPEC.pitchInches, 6);
     expect(r.fitsBedRotated).toBe(true);
-    expect(r.underPilotCeiling).toBe(true);
+    // Verified on a car, never on the Pilot. Bill's tape (2026-09-02) put the
+    // Pilot's recess at 6.625"; the ring is 6.937". It was believed good there.
+    expect(r.underPilotCeiling).toBe(false);
   });
 
   it("leaves 1.2005 in clear at the worst plate corner", () => {
@@ -69,10 +71,14 @@ describe("computeFit — the July ring (the only verified build)", () => {
     expect(r.cornerClearInches).toBeCloseTo(STICKER_ZONE_INCHES - 0.5495, 6);
   });
 
-  it("raises no flags at all", () => {
-    // The verified build must be clean, or the rules are wrong rather than the
-    // build. This assertion is the calibration of every threshold in the file.
-    expect(r.flags).toEqual([]);
+  it("raises only the Pilot flag", () => {
+    // The verified build must be clean on every PLATE rule, or the rules are wrong
+    // rather than the build — that is the calibration of every coverage threshold
+    // in the file. The Pilot ceiling is the one rule it was never tested against,
+    // and the tape says it fails it: 6.937" into a 6.625" recess.
+    expect(r.flags).toEqual([
+      "Total height 6.94 in exceeds the 6.625 in Pilot ceiling.",
+    ]);
   });
 });
 
@@ -95,7 +101,7 @@ describe("computeFit — Bill's current parts (2026-08-02 text)", () => {
     expect(r.flags[0]).toBe(
       "Bottom edge hangs 1.50 in below the plate. The July build's 0.47 in is the most ever shown to fit a car.",
     );
-    expect(r.flags[1]).toBe("Total height 8.00 in exceeds the 7 in Pilot ceiling.");
+    expect(r.flags[1]).toBe("Total height 8.00 in exceeds the 6.625 in Pilot ceiling.");
     // The 2" runner buys its extra height DOWNWARD, so the face stays clear: the
     // failure here is car fit, not plate coverage.
     expect(r.faceCoverage.bottomFullWidth).toBeCloseTo(0.5, 6);
@@ -105,11 +111,13 @@ describe("computeFit — Bill's current parts (2026-08-02 text)", () => {
 describe("computeFit — the candidate (7 in tall, 1.0 in runner)", () => {
   const r = computeFit(CANDIDATE_SPEC);
 
-  it("lands exactly on the Pilot ceiling and exactly on the July bottom line", () => {
-    // 0.5 above the plate + 6 plate + 0.5 below = 7.00 exactly. Both numbers sit
-    // ON their thresholds, which is why the flag comparisons carry an epsilon.
+  it("lands exactly on the July bottom line, and OVER the taped Pilot ceiling", () => {
+    // 0.5 above the plate + 6 plate + 0.5 below = 7.00. The bottom sits ON its
+    // threshold, which is why the flag comparisons carry an epsilon. The height
+    // does not: Bill's tape (2026-09-02) put the Pilot's recess at 6.625", so the
+    // 7" candidate — believed good until then — does not fit the Pilot.
     expect(r.totalHeightInches).toBeCloseTo(7, 6);
-    expect(r.underPilotCeiling).toBe(true);
+    expect(r.underPilotCeiling).toBe(false);
     expect(r.belowPlateInches).toBeCloseTo(0.5, 6);
     expect(r.abovePlateInches).toBeCloseTo(0.5, 6);
     expect(r.totalWidthInches).toBeCloseTo(15, 6);
@@ -145,10 +153,13 @@ describe("computeFit — the candidate (7 in tall, 1.0 in runner)", () => {
     expect(r.cornerClearInches).toBeCloseTo(1.25, 6);
   });
 
-  it("raises no flags", () => {
+  it("raises only the Pilot flag", () => {
     // Drop 0.50, side 0.50, top 0.50 and the banner's 0.50 all sit at or under
-    // their thresholds, and the keystone clears the date line. Clean.
-    expect(r.flags).toEqual([]);
+    // their thresholds, and the keystone clears the date line. Clean on the plate;
+    // 7.00" tall into the Pilot's taped 6.625" recess is not.
+    expect(r.flags).toEqual([
+      "Total height 7.00 in exceeds the 6.625 in Pilot ceiling.",
+    ]);
   });
 });
 

@@ -218,9 +218,16 @@ error of 49/255 where the real figure was under 1/255.
   by `canPlace` with reason `"banner"`, skipped by `sideAnchors`, not rendered as a pocket.
 - **Variants are a registry** (`src/data/school-variants.ts`): id → config + presets +
   label. Routes name a variant; nothing sniffs `bottomTab` to guess the preset stack.
-- **The bench flags it twice, on purpose**: 0.75" below plate (July proved 0.5; Pilot
-  not yet taped) and 0.75" top cover (state-name band; Missouri's rule unchecked).
-  Thresholds stay. Note for Bill: `tasks/flush-frame-for-bill.md`.
+- **PILOT TAPED 2026-09-02 (Bill): recess 6.625" tall × 21.5" wide.** That is the
+  Pilot ceiling now (`PILOT_HEIGHT_CEILING_INCHES`), replacing the "7 in is believed
+  good" belief. A 12 × 6 plate leaves 0.625" total to share above and below; where
+  the plate sits inside the recess is still unmeasured (centred = 0.3125" below).
+  Consequences: the 6.75" flush frame does NOT fit (over by 0.125" at best), the 7"
+  candidate does not fit, and the fitment engine's photo reading of 3.05" below the
+  Pilot's plate was the liftgate-bulge error. Width is a non-issue (4.75" per side).
+- **The bench flags the flush fork three times, on purpose**: 0.75" below plate
+  (July proved 0.5), 0.75" top cover (state-name band; Missouri's rule unchecked),
+  and the Pilot ceiling. Thresholds stay. Note for Bill: `tasks/flush-frame-for-bill.md`.
 - Follow-ups: fitment-engine needs a `standard-15` preset; `frameCorners` gives the
   wide outside radius to row 0, which no badge reaches here (cosmetic); top-banner
   text has no keep-out at the screw slots yet (centred text clears them so far).

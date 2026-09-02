@@ -24,10 +24,19 @@ Note for Bill: `tasks/flush-frame-for-bill.md`.
 - Wing cells on the 0.75" row rendered as white empty pockets (two notches in the top
   corners). Now filtered out of the canvas's cell list: frame body, no drop target.
 
+## Pilot TAPED (2026-09-02, Bill): recess 6.625" tall x 21.5" wide
+- 0.625" total to share above/below a 6" plate. The 6.75" flush frame does NOT fit
+  (over by >= 0.125"); the 7" candidate and the 6.937" July ring do not either.
+- Bench: `PILOT_HEIGHT_CEILING_INCHES` 7 -> 6.625 (+ width 21.5); July/candidate/flush
+  tests now assert the Pilot flag. Geometry NOT changed yet: owner's call.
+- Still needed: plate bottom edge -> recess floor, in inches (decides the fix).
+- Owner options: (A) 15 x 6.5 flush: 0.5" top runner, 1" bottom at 0.5 over / 0.5
+  below, slots in both runners (clears the July line AND the state-name rule);
+  (B) keep 6.75 and accept the Pilot does not fit.
+
 ## Open questions carried (not blockers)
 - Missouri rule on covering the state name (0.75" top cover)
-- Pilot tape measure (0.75" below plate vs the 0.5" July proof)
-- Fitment engine needs a `standard-15` preset (sibling repo)
+- Fitment engine needs a `standard-15` preset AND the Pilot tape record (sibling repo)
 
 ## v2 ideas
 - Top-banner text keep-out around the two screw slots (centred text clears them today)
