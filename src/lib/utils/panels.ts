@@ -18,6 +18,7 @@
 // depend on without a cycle.
 
 import type { FrameConfig, SectionId } from "@/lib/types";
+import { gridRowCount, rowHeightInches } from "@/lib/utils/rows";
 
 /** A panel as an inclusive grid rectangle. */
 export interface PanelRect {
@@ -39,8 +40,7 @@ export interface PanelRect {
 function panelGeometry(config: FrameConfig) {
   const wingCols = config.wings && config.wingColumns > 0 ? config.wingColumns : 0;
   const cols = wingCols * 2 + config.topSlots;
-  const extraBottomRows = Math.max(0, (config.bottomRows ?? 1) - 1);
-  const rows = config.leftSlots + 2 + extraBottomRows;
+  const rows = gridRowCount(config);
   return {
     rows,
     cols,
@@ -108,9 +108,11 @@ export function panelOverhangTiles(id: SectionId, config: FrameConfig): PanelOve
 /**
  * Physical PRINT size of a panel, in inches — the denominator of the resolution
  * gate (see utils/print-resolution). A column is a wing column (tileSizeInches) or
- * an inner column (widthInches / topSlots); every row is one tile tall. On the
- * school frame the two column widths coincide (11.892" / 12 = 0.991" = tile), but
- * summing per-column keeps this correct for any geometry.
+ * an inner column (widthInches / topSlots); a row is whatever utils/rows says it is,
+ * which is one tile everywhere except a short top bar. On the school frame the two
+ * column widths coincide (11.892" / 12 = 0.991" = tile), but summing per-column and
+ * per-row keeps this correct for any geometry — on the flush frame it is what makes
+ * the side column 6.75" and the top runner 0.75", which are Bill's parts.
  *
  * Includes any overhang, because the gate is asking how big the PART is, and the
  * bottom panel of a keystone frame is taller than the row it sits on.
@@ -126,7 +128,9 @@ export function panelSizeInches(id: SectionId, config: FrameConfig): { width: nu
     width += isWing ? config.tileSizeInches : innerColWidth;
   }
   width += (over.left + over.right) * config.tileSizeInches;
-  const height = (rect.row1 - rect.row0 + 1 + over.top + over.bottom) * config.tileSizeInches;
+  let height = 0;
+  for (let r = rect.row0; r <= rect.row1; r++) height += rowHeightInches(config, r);
+  height += (over.top + over.bottom) * config.tileSizeInches;
   return { width, height };
 }
 

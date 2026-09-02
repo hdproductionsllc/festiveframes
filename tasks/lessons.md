@@ -94,3 +94,13 @@ computed style found this in minutes; my plausible "collision" theory cost a was
 silently. (3) If a value object is consumed as CSS box position, name it `{left, top}` (or
 have `barRect` return a CSS-ready contract) so the mismatch can't recur.
 </content>
+
+## A comment that describes a guard is not a guard (2026-09-02)
+`clearOutsideTab`'s header said it "returns immediately" for every panel but the bottom
+because "the box carries no top overhang" — but the box had no overhang field and the
+code only checked `barTopY <= bleed`, which is never true with a keystone. Result: on
+every keystone frame the exporter erased the top 0.55" of the TOP RUNNER and both side
+columns outside a centred trapezoid. Nobody saw it because no slim panel was ever
+printed. It surfaced only when a new test cut the panels the way the exporter does and
+sampled their pixels. **When a comment asserts an invariant, find the line that enforces
+it; and test print files by cutting and sampling them, not by trusting the crop math.**

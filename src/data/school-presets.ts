@@ -1,6 +1,6 @@
 import type { BuyerId } from "@/data/frame-buyers";
 import type { FrameConfig, SectionId } from "@/lib/types";
-import { SCHOOL_FRAME_CONFIG, SCHOOL_SLIM_FRAME_CONFIG } from "@/lib/constants/frame";
+import { SCHOOL_FLUSH_FRAME_CONFIG, SCHOOL_FRAME_CONFIG, SCHOOL_SLIM_FRAME_CONFIG } from "@/lib/constants/frame";
 import { buildGrid } from "@/lib/utils/slot-generator";
 import { panelRects } from "@/lib/utils/panels";
 
@@ -130,6 +130,9 @@ function sideAnchors(config: FrameConfig, side: SectionId, rowSpans: number[]): 
   const rect = panelRects(config)[side];
   const out: string[] = [];
   let row = rect.row0;
+  // A banner-only row (the flush frame's 0.75" top bar) holds no badge, so the
+  // stack starts under it. No-op on every frame whose rows are all a tile tall.
+  while (row <= rect.row1 && grid.isBannerOnly(row, rect.col0)) row++;
   for (const rows of rowSpans) {
     const cell = grid.cellAt(row, rect.col0);
     if (!cell) break; // the panel ran out — a shorter stack is better than a wrong one
@@ -290,6 +293,58 @@ export const SLIM_PRESETS: SchoolPreset[] = [
     blurb: "The crest, the mascot, the crest. Nothing to fill in.",
     icon: "\u{1F6E1}\uFE0F",
     layout: slimLayout(MASCOT_ALT, MASCOT, MASCOT_ALT),
+    fallbackActivity: "hs:crest",
+    favouredBy: ["alum", "staff"],
+  },
+];
+
+// ─── The FLUSH fork's presets: 2x2 / 2x2 / 2x2 under the bar ─────────────────
+//
+// The flush frame's side column is 6.75" tall: a 0.75" strip of frame body at the
+// top (the banner-only row, where the top runner's screw slots live) and six
+// one-inch rows under it. Six rows is three squares, so the column is three 2x2
+// badges with nothing odd to absorb — the first of these frames where every badge
+// is the same shape. The hierarchy the slim column got from its tall middle badge
+// comes here from the keystone instead, which carries the tagline on this frame.
+
+const FLUSH_STACK = [2, 2, 2];
+
+/** Mirror a three-badge column of squares onto both sides, starting under the bar. */
+function flushLayout(top: string, middle: string, bottom: string): SchoolPreset["layout"] {
+  return mirrored(SCHOOL_FLUSH_FRAME_CONFIG, [
+    [top, FLUSH_STACK[0]],
+    [middle, FLUSH_STACK[1]],
+    [bottom, FLUSH_STACK[2]],
+  ]);
+}
+
+export const FLUSH_PRESETS: SchoolPreset[] = [
+  {
+    id: "graduate",
+    name: "Graduate",
+    blurb: "Their cap, their diploma, and the school between them.",
+    icon: "\u{1F393}",
+    layout: flushLayout("hs:grad-cap", MASCOT, "hs:diploma-tall"),
+    fallbackActivity: "hs:honor-star",
+    favouredBy: ["parent", "grandparent", "self"],
+  },
+  {
+    id: "athlete",
+    name: "Their sport",
+    blurb: "Their sport top and bottom, the mascot in the middle.",
+    icon: "\u{1F3C5}",
+    layout: flushLayout(ACTIVITY, MASCOT, ACTIVITY),
+    fallbackActivity: "hs:trophy",
+    needsActivity: true,
+    wantsNumber: true,
+    favouredBy: ["parent", "self"],
+  },
+  {
+    id: "school",
+    name: "Just the school",
+    blurb: "The crest, the mascot, the crest. Nothing to fill in.",
+    icon: "\u{1F6E1}️",
+    layout: flushLayout(MASCOT_ALT, MASCOT, MASCOT_ALT),
     fallbackActivity: "hs:crest",
     favouredBy: ["alum", "staff"],
   },

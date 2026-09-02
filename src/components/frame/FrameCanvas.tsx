@@ -3,7 +3,7 @@
 import { forwardRef, useImperativeHandle, useRef, useEffect, useMemo } from "react";
 import { useDraggable, useDndContext } from "@dnd-kit/core";
 import type { FrameConfig, PlacedTile, BottomBarConfig, QRCodeConfig, PlacedTextBar, TextBarPlacement, BannerPreview } from "@/lib/types";
-import { getTotalWidthInches } from "@/lib/constants/frame";
+import { getRenderHeightInches, getTotalWidthInches } from "@/lib/constants/frame";
 import { useFrameLayout } from "@/hooks/useFrameLayout";
 import { useDesignStore } from "@/stores/design-store";
 import { useUIStore } from "@/stores/ui-store";
@@ -19,6 +19,8 @@ import { BottomTextBar } from "./BottomTextBar";
 import { SectionTextElement } from "./SectionTextElement";
 import { BottomTabElement } from "./BottomTabElement";
 import { frameTab } from "@/lib/utils/bottom-tab";
+import { bannerRowBox, baseBottomRow, isBannerOnlyRow, rowTopInches, topBarHeightInches } from "@/lib/utils/rows";
+import { topBarScrewSlots } from "@/lib/utils/screw-slots";
 
 interface FrameCanvasProps {
   frameConfig: FrameConfig;
@@ -173,11 +175,6 @@ export const FrameCanvas = forwardRef<FrameCanvasHandle, FrameCanvasProps>(
     const hasWings = frameConfig.wings && frameConfig.wingColumns > 0;
     const wingPx = hasWings ? frameConfig.wingWidthInches * scale : 0;
     const innerWidthPx = frameConfig.widthInches * scale;
-    // The ORIGINAL frame height (ignores flag-gated extra bottom rows). Bottom bars
-    // and the side-rail grooves anchor to this so they never drag down to the new
-    // rows. Equals containerHeight on /build (no extra rows).
-    const extraBottomRows = Math.max(0, (frameConfig.bottomRows ?? 1) - 1);
-    const baseFrameHeight = frameConfig.heightInches * scale;
 
     // ─── The bleed gutter ──────────────────────────────────────────────────────
     //
@@ -216,12 +213,24 @@ export const FrameCanvas = forwardRef<FrameCanvasHandle, FrameCanvasProps>(
     // Each bar sits over a run of top/bottom slots (gapless: step == tile). The
     // drag-time ghost reuses this EXACT geometry so it lines up perfectly with
     // where the real bar will land.
-    const barRect = (bar: TextBarPlacement) => ({
-      x: wingPx + bar.startIndex * tileSize,
-      y: bar.row === "top" ? 0 : baseFrameHeight - tileSize,
-      width: bar.widthUnits * tileSize,
-      height: tileSize,
-    });
+    // The row's box comes from utils/rows — the SAME call the print composer's
+    // `schoolBannerRect` makes. The two used to be hand-copies of one formula, and
+    // a short top bar is exactly the change that would have split them.
+    const barRect = (bar: TextBarPlacement) => {
+      const box = bannerRowBox(frameConfig, bar.row);
+      return {
+        x: wingPx + bar.startIndex * tileSize,
+        y: box.y * scale,
+        width: bar.widthUnits * tileSize,
+        height: box.h * scale,
+      };
+    };
+    // Row geometry for the grooves: the top bar's own height, and where the side
+    // rows start and stop. One tile everywhere but the flush frame.
+    const topBarPx = topBarHeightInches(frameConfig) * scale;
+    const sideTopPx = rowTopInches(frameConfig, 1) * scale;
+    const sideBottomPx = rowTopInches(frameConfig, baseBottomRow(frameConfig)) * scale;
+    const screwSlots = topBarScrewSlots(frameConfig);
 
     // The cell a dragged TILE will land in (or null). One positioned indicator
     // glides to this rect instead of toggling a glow on each cell, so the cue
@@ -283,7 +292,13 @@ export const FrameCanvas = forwardRef<FrameCanvasHandle, FrameCanvasProps>(
       return coveredBySnappets(visibleAnchorSlots(slots, grid, sections), grid);
     }, [anySpan, slots, sections, frameConfig, containerWidth]);
 
-    const visibleSlots = frameSlots.filter((slot) => !slotSuppressed(slot, sections, frameConfig));
+    // A cell on a banner-only row (the flush frame's 0.75" top bar, wings included)
+    // is frame body: nothing can drop there, so it gets no pocket and no drop
+    // target. Rendered as an empty cell it read as two white notches in the top
+    // corners — exactly the kind of thing only a screenshot shows.
+    const visibleSlots = frameSlots.filter(
+      (slot) => !slotSuppressed(slot, sections, frameConfig) && !isBannerOnlyRow(frameConfig, slot.row),
+    );
     // Anchors are hoisted out of the frame body and into the overflow-visible
     // layer below, so they are rendered from here, not from `cellSlots`.
     const snappetAnchors = anySpan
@@ -374,7 +389,7 @@ export const FrameCanvas = forwardRef<FrameCanvasHandle, FrameCanvasProps>(
           className="relative w-full rounded-md overflow-hidden"
           style={{
             height: containerHeight || "auto",
-            aspectRatio: containerHeight ? undefined : `${totalWidthInches} / ${frameConfig.heightInches + extraBottomRows * frameConfig.tileSizeInches}`,
+            aspectRatio: containerHeight ? undefined : `${totalWidthInches} / ${getRenderHeightInches(frameConfig)}`,
             // The frame BODY. Was a hard-coded #111111, which is why applying a
             // school's branding could recolour the banners and nothing else — this is
             // the largest single area of the product and therefore most of what makes
@@ -402,8 +417,8 @@ export const FrameCanvas = forwardRef<FrameCanvasHandle, FrameCanvasProps>(
               style={{
                 left: wingPx,
                 width: innerWidthPx,
-                top: tileSize * 0.1,
-                height: tileSize * 0.8,
+                top: topBarPx * 0.1,
+                height: topBarPx * 0.8,
                 background: GROOVE_H,
                 borderTop: GROOVE_BORDER_DARK,
                 borderBottom: GROOVE_BORDER_LIGHT,
@@ -418,8 +433,8 @@ export const FrameCanvas = forwardRef<FrameCanvasHandle, FrameCanvasProps>(
               style={{
                 left: wingPx + tileSize * 0.1,
                 width: tileSize * 0.8,
-                top: tileSize,
-                height: baseFrameHeight - 2 * tileSize,
+                top: sideTopPx,
+                height: sideBottomPx - sideTopPx,
                 background: GROOVE_V_LTR,
                 borderLeft: GROOVE_BORDER_DARK,
                 borderRight: GROOVE_BORDER_LIGHT,
@@ -434,8 +449,8 @@ export const FrameCanvas = forwardRef<FrameCanvasHandle, FrameCanvasProps>(
               style={{
                 left: wingPx + innerWidthPx - tileSize + tileSize * 0.1,
                 width: tileSize * 0.8,
-                top: tileSize,
-                height: baseFrameHeight - 2 * tileSize,
+                top: sideTopPx,
+                height: sideBottomPx - sideTopPx,
                 background: GROOVE_V_RTL,
                 borderLeft: GROOVE_BORDER_LIGHT,
                 borderRight: GROOVE_BORDER_DARK,
@@ -459,6 +474,29 @@ export const FrameCanvas = forwardRef<FrameCanvasHandle, FrameCanvasProps>(
             />
           )}
 
+          {/* ═══ SCREW SLOTS ═══
+              Only on a frame whose top bar covers the plate's bolt holes (the flush
+              fork). Drawn as recesses, from the same geometry the print composer
+              punches out of the banner — see utils/screw-slots. Above the banner
+              layer on purpose: the slot goes THROUGH the banner, and the printed
+              banner has a hole there too. */}
+          {containerWidth > 0 && screwSlots.map((s, i) => (
+            <div
+              key={`screw-slot-${i}`}
+              className="absolute z-20 pointer-events-none"
+              aria-hidden
+              style={{
+                left: wingPx + s.x * scale,
+                top: s.y * scale,
+                width: s.width * scale,
+                height: s.height * scale,
+                borderRadius: 9999,
+                background: "#15130f",
+                boxShadow: "inset 0 1px 2px rgba(0,0,0,0.9), 0 0 0 1px rgba(255,255,255,0.12)",
+              }}
+            />
+          ))}
+
           {/* ═══ WING GROOVES ═══ */}
           {containerWidth > 0 && hasWings && Array.from({ length: frameConfig.wingColumns }, (_, col) => (
             <div key={`wing-grooves-${col}`}>
@@ -468,7 +506,7 @@ export const FrameCanvas = forwardRef<FrameCanvasHandle, FrameCanvasProps>(
                 style={{
                   left: wingPx - (col + 1) * tileSize + tileSize * 0.1,
                   width: tileSize * 0.8,
-                  top: tileSize,
+                  top: sideTopPx,
                   bottom: tileSize,
                   background: GROOVE_V_LTR,
                   borderLeft: GROOVE_BORDER_DARK,
@@ -480,9 +518,9 @@ export const FrameCanvas = forwardRef<FrameCanvasHandle, FrameCanvasProps>(
                 className="absolute"
                 style={{
                   left: wingPx - (col + 1) * tileSize + tileSize * 0.1,
-                  top: tileSize * 0.1,
+                  top: topBarPx * 0.1,
                   width: tileSize * 0.8,
-                  height: tileSize * 0.8,
+                  height: topBarPx * 0.8,
                   background: GROOVE_H,
                   borderTop: GROOVE_BORDER_DARK,
                   borderBottom: GROOVE_BORDER_LIGHT,
@@ -508,7 +546,7 @@ export const FrameCanvas = forwardRef<FrameCanvasHandle, FrameCanvasProps>(
                 style={{
                   left: wingPx + innerWidthPx + col * tileSize + tileSize * 0.1,
                   width: tileSize * 0.8,
-                  top: tileSize,
+                  top: sideTopPx,
                   bottom: tileSize,
                   background: GROOVE_V_RTL,
                   borderLeft: GROOVE_BORDER_LIGHT,
@@ -520,9 +558,9 @@ export const FrameCanvas = forwardRef<FrameCanvasHandle, FrameCanvasProps>(
                 className="absolute"
                 style={{
                   left: wingPx + innerWidthPx + col * tileSize + tileSize * 0.1,
-                  top: tileSize * 0.1,
+                  top: topBarPx * 0.1,
                   width: tileSize * 0.8,
-                  height: tileSize * 0.8,
+                  height: topBarPx * 0.8,
                   background: GROOVE_H,
                   borderTop: GROOVE_BORDER_DARK,
                   borderBottom: GROOVE_BORDER_LIGHT,

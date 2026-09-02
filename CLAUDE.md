@@ -201,6 +201,30 @@ error of 49/255 where the real figure was under 1/255.
   keystone), never downward. The July ring's ~0.5" below plate bottom is the
   most that has ever been shown to fit.
 
+## The FLUSH fork — /lab/flush — 15 × 6.75 (owner's call, 2026-09-02)
+
+- **Why**: the fitment engine (31 measured cars) says the TOP edge is the choke point.
+  Cameras and garnish leave 0.26–0.4" above the plate on a third of the fleet; every
+  earlier frame hangs 0.47–0.96" up there. Below the plate, 0.75" is the ceiling.
+- **Geometry** (`SCHOOL_FLUSH_FRAME_CONFIG`, variant `flush`): Bill's 1.000" grid,
+  11 × 5 window, top runner **11 × 0.75 flush** with the plate's top edge (all over the
+  face, two screw slots over the bolt holes), side columns **2 × 6.75**, bottom runner
+  11 × 1 at 0.25 in / 0.75 below, keystone unchanged. Stack 0.75 + 5 + 1 = 6.75.
+- **The one new concept: a row that is not a tile tall.** `FrameConfig.topBarHeightInches`
+  and `plateTopCoverInches` (registration). ALL row geometry now comes from
+  `src/lib/utils/rows.ts` — grid, panel sizes, plate area, both banner renderers, the
+  print crop and the fit bridge read it. Never write `row * tileSizeInches` again.
+  Row 0 is BANNER-ONLY when it is short, wings included: `grid.isBannerOnly`, refused
+  by `canPlace` with reason `"banner"`, skipped by `sideAnchors`, not rendered as a pocket.
+- **Variants are a registry** (`src/data/school-variants.ts`): id → config + presets +
+  label. Routes name a variant; nothing sniffs `bottomTab` to guess the preset stack.
+- **The bench flags it twice, on purpose**: 0.75" below plate (July proved 0.5; Pilot
+  not yet taped) and 0.75" top cover (state-name band; Missouri's rule unchecked).
+  Thresholds stay. Note for Bill: `tasks/flush-frame-for-bill.md`.
+- Follow-ups: fitment-engine needs a `standard-15` preset; `frameCorners` gives the
+  wide outside radius to row 0, which no badge reaches here (cosmetic); top-banner
+  text has no keep-out at the screw slots yet (centred text clears them so far).
+
 ## Geometry facts worth not re-deriving
 
 - eufyMake E1 bed: 16.5" × 13". School frame tile pitch 0.991".

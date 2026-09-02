@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   SCHOOL_PRESETS,
   SLIM_PRESETS,
+  FLUSH_PRESETS,
   ACTIVITY,
   MASCOT,
   MASCOT_ALT,
@@ -12,7 +13,7 @@ import {
 import { getPiece } from "@/data/sets";
 import { buildGrid } from "@/lib/utils/slot-generator";
 import { occupiedCoords, tileSpan } from "@/lib/utils/snappet";
-import { SCHOOL_FRAME_CONFIG, SCHOOL_SLIM_FRAME_CONFIG } from "@/lib/constants/frame";
+import { SCHOOL_FLUSH_FRAME_CONFIG, SCHOOL_FRAME_CONFIG, SCHOOL_SLIM_FRAME_CONFIG } from "@/lib/constants/frame";
 import type { FrameConfig } from "@/lib/types";
 import type { SchoolPreset } from "./school-presets";
 
@@ -264,6 +265,7 @@ describe("every preset covers its side panels exactly", () => {
   const cases = [
     { label: "live frame", presets: SCHOOL_PRESETS, config: SCHOOL_FRAME_CONFIG },
     { label: "slim fork", presets: SLIM_PRESETS, config: SCHOOL_SLIM_FRAME_CONFIG },
+    { label: "flush fork", presets: FLUSH_PRESETS, config: SCHOOL_FLUSH_FRAME_CONFIG },
   ];
 
   it.each(cases)("$label: no badge leaves its panel or reaches the plate", ({ presets, config }) => {
@@ -294,6 +296,8 @@ describe("every preset covers its side panels exactly", () => {
       }
       for (const cell of grid.slots) {
         if (!grid.panelAt(cell.row, cell.col)?.startsWith("wing-")) continue;
+        // The flush frame's 0.75" top row is frame body by design, not a notch.
+        if (grid.isBannerOnly(cell.row, cell.col)) continue;
         expect(
           covered.has(`${cell.row}:${cell.col}`),
           `${preset.id}: (${cell.row},${cell.col}) is bare`,

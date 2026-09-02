@@ -138,8 +138,11 @@ function frameBox(spec: FitSpec): FrameBox {
   const windowBottom = bannerTop;
   const windowTop = windowBottom - windowHeight;
 
+  // The rail's own height, not the pitch: on the flush fork the top runner is a
+  // 0.75" part, and a rail assumed one pitch tall put 0.25" above a plate the frame
+  // is flush with. That was the first thing this engine got wrong about it.
   const topRailBottom = spec.topInwardInches;
-  const topRailTop = topRailBottom - pitch;
+  const topRailTop = topRailBottom - spec.topRailHeightInches;
 
   // Snap-in side columns register on a stud at the centre of a rail cell, but an
   // oversize piece splits its overhang inward/outward and the split is a per-edge
@@ -320,7 +323,7 @@ export function outlineParts(spec: FitSpec): FitPart[] {
     {
       id: "rail-top",
       label: "Top runner",
-      rect: { x: box.windowLeft, y: box.topRailTop, w: box.windowWidth, h: box.pitch },
+      rect: { x: box.windowLeft, y: box.topRailTop, w: box.windowWidth, h: spec.topRailHeightInches },
     },
     {
       id: "runner-bottom",

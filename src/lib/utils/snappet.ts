@@ -153,6 +153,10 @@ export function snappetRect(
   span: TileSpan,
   tileSize: number,
 ): { x: number; y: number; width: number; height: number } {
+  // Pure geometry in TILES: every row a footprint can legally occupy is a tile
+  // tall (only row 0 can be shorter, and `canPlace` refuses anything touching it),
+  // so a placed snappet is always exactly `rows * tileSize`. A cue hovering the
+  // short bar is drawn a tile tall and red; it is a refusal either way.
   return {
     x: anchor.x,
     y: anchor.y,
@@ -161,7 +165,7 @@ export function snappetRect(
   };
 }
 
-export type PlacementRejection = "plate" | "suppressed" | "offgrid" | "bar" | "panel";
+export type PlacementRejection = "plate" | "suppressed" | "offgrid" | "bar" | "panel" | "banner";
 
 export interface PlacementResult {
   ok: boolean;
@@ -232,6 +236,12 @@ export function canPlace(
   for (const coord of coords) {
     if (grid.isPlate(coord.row, coord.col)) {
       return { ok: false, reason: "plate", evicts: [] };
+    }
+    // A row that is not a tile tall (the flush frame's 0.75" top bar) is frame
+    // body, wings included. One check here covers every entry point — drop, fill,
+    // mirror, resize and the hydrate-time badge growth all come through canPlace.
+    if (grid.isBannerOnly(coord.row, coord.col)) {
+      return { ok: false, reason: "banner", evicts: [] };
     }
     const cell = grid.cellAt(coord.row, coord.col);
     // A footprint cell with NO grid cell under it is off the frame, and that is a

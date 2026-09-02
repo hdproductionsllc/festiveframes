@@ -481,6 +481,15 @@ export function FitBench() {
               step={0.05}
               onChange={(v) => set("topInwardInches", v)}
             />
+            <Dial
+              label="Top rail height"
+              hint="in. The top runner part. Equal to top inward = FLUSH, nothing above the plate."
+              value={spec.topRailHeightInches}
+              min={0.25}
+              max={1.5}
+              step={0.05}
+              onChange={(v) => set("topRailHeightInches", v)}
+            />
           </div>
 
           <div className="fb-block">

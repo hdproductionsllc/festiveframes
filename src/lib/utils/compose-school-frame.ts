@@ -62,6 +62,8 @@ import {
 import { panelOverhangTiles, panelRects, type PanelRect } from "@/lib/utils/panels";
 import { bannerBands, trackingPx, widthLimitedFont } from "@/lib/utils/banner-tiers";
 import { frameTab, tabPath, tabSkirt, tabTextBox } from "@/lib/utils/bottom-tab";
+import { bannerRowBox, rowHeightInches, rowTopInches } from "@/lib/utils/rows";
+import { topBarScrewSlots } from "@/lib/utils/screw-slots";
 import { bannerConfigFor, bannerLogoLayout, sectionSupportsLogo } from "@/lib/utils/banner-logo";
 import { getPiece } from "@/data/sets";
 import {
@@ -111,12 +113,25 @@ export function panelBleedBox(
    * every frame without a tab.
    */
   overhang: { top: number; right: number; bottom: number; left: number } = { top: 0, right: 0, bottom: 0, left: 0 },
+  /**
+   * Where each grid row starts and how tall it is, in px. Omit for a frame whose
+   * every row is a tile tall — the default reproduces `row * tilePx` exactly. The
+   * flush frame's 0.75" top bar makes every row below it start a quarter tile
+   * early, and a crop computed from `row0 * tilePx` would have cut every panel
+   * 0.25" too low with nothing to say so; `panelRowsPx` supplies the truth.
+   */
+  rows: { topPx: (row: number) => number; heightPx: (row: number) => number } = {
+    topPx: (row) => row * tilePx,
+    heightPx: () => tilePx,
+  },
 ) {
   const bleed = Math.max(0, Math.round(bleedPx));
   const contentX = (rc.col0 - overhang.left) * tilePx;
-  const contentY = (rc.row0 - overhang.top) * tilePx;
+  const contentY = rows.topPx(rc.row0) - overhang.top * tilePx;
   const contentW = (rc.col1 - rc.col0 + 1 + overhang.left + overhang.right) * tilePx;
-  const contentH = (rc.row1 - rc.row0 + 1 + overhang.top + overhang.bottom) * tilePx;
+  let rowsPx = 0;
+  for (let r = rc.row0; r <= rc.row1; r++) rowsPx += rows.heightPx(r);
+  const contentH = rowsPx + (overhang.top + overhang.bottom) * tilePx;
   const outW = Math.max(1, Math.round(contentW) + 2 * bleed);
   const outH = Math.max(1, Math.round(contentH) + 2 * bleed);
   return { contentX, contentY, contentW, contentH, bleed, outW, outH };
@@ -336,13 +351,27 @@ export function schoolRenderMetrics(config: FrameConfig, canvasWidth: number) {
  */
 export function schoolBannerRect(
   bar: TextBarPlacement,
-  m: { tileSize: number; wingPx: number; baseFrameHeightPx: number },
+  m: { tileSize: number; wingPx: number; scale: number },
+  config: FrameConfig,
 ): { x: number; y: number; width: number; height: number } {
+  // The row's box comes from utils/rows — the same call the on-screen canvas makes,
+  // so the two renderers cannot disagree about where a banner sits or how tall it
+  // is. On every frame but the flush one this is `0` / `baseFrameHeight - tile`
+  // and a tile tall, exactly as before.
+  const box = bannerRowBox(config, bar.row);
   return {
     x: m.wingPx + bar.startIndex * m.tileSize,
-    y: bar.row === "top" ? 0 : m.baseFrameHeightPx - m.tileSize,
+    y: box.y * m.scale,
     width: bar.widthUnits * m.tileSize,
-    height: m.tileSize,
+    height: box.h * m.scale,
+  };
+}
+
+/** The per-row px geometry `panelBleedBox` crops with, from the config it prints. */
+export function panelRowsPx(config: FrameConfig, dpi: number) {
+  return {
+    topPx: (row: number) => rowTopInches(config, row) * dpi,
+    heightPx: (row: number) => rowHeightInches(config, row) * dpi,
   };
 }
 
@@ -925,7 +954,7 @@ export function drawSchoolFrame(
   // 5) Text banners — the compose-frame bug fixed via schoolBannerRect (wing offset
   //    + base bottom row).
   for (const bar of textBars) {
-    const rect = schoolBannerRect(bar, m);
+    const rect = schoolBannerRect(bar, m, config);
     drawTextBar(ctx, bar, rect.x, rect.y, rect.width, rect.height, images.qr, design.rimColor);
   }
 
@@ -953,6 +982,34 @@ export function drawSchoolFrame(
   // numbers, so recomputing here keeps the backing exactly the canvas and avoids a
   // signature change on a function four call sites already use.
   backFillTransparent(ctx, canvasWidth, getRenderHeightInches(config) * m.scale, bodyColour(design));
+
+  // 7) SCREW SLOTS, punched out LAST — after the backing, deliberately. A slot is a
+  //    hole in the physical top runner, and the honest print of a hole is no ink at
+  //    all: the operator sees exactly where Bill's slot goes, and nothing is printed
+  //    on material that will not be there. Only a bar that covers the plate's bolt
+  //    holes gets them (utils/screw-slots), so every frame before the flush fork
+  //    prints exactly as it did.
+  punchScrewSlots(ctx, config, m);
+}
+
+/** Cut the top bar's screw slots out of an otherwise finished render. */
+export function punchScrewSlots(
+  ctx: CanvasRenderingContext2D,
+  config: FrameConfig,
+  m: { scale: number; wingPx: number },
+): void {
+  const slots = topBarScrewSlots(config);
+  if (slots.length === 0) return;
+  ctx.save();
+  ctx.globalCompositeOperation = "destination-out";
+  ctx.fillStyle = "#000";
+  for (const s of slots) {
+    const w = s.width * m.scale;
+    const h = s.height * m.scale;
+    roundRect(ctx, m.wingPx + s.x * m.scale, s.y * m.scale, w, h, Math.min(w, h) / 2);
+    ctx.fill();
+  }
+  ctx.restore();
 }
 
 /** The colour painted behind every transparent pixel on the print path. Black so the
@@ -1230,7 +1287,7 @@ export async function composeSchoolPanels(
 
   const out: SchoolPanelPng[] = [];
   for (const id of SECTION_IDS) {
-    const box = panelBleedBox(rects[id], tilePx, bleedPx, panelOverhangTiles(id, config));
+    const box = panelBleedBox(rects[id], tilePx, bleedPx, panelOverhangTiles(id, config), panelRowsPx(config, dpi));
 
     const c = document.createElement("canvas");
     c.width = box.outW;
@@ -1263,7 +1320,7 @@ export async function composeSchoolPanels(
     // taller rectangle with a tab drawn on it rather than a keystone-shaped part.
     //
     // Erased AFTER the bleed, so the edge-clamped margin in that band goes with it.
-    clearOutsideTab(cx, box, config, tilePx, dpi);
+    clearOutsideTab(cx, box, config, tilePx, dpi, id);
 
     // Skip a panel that carries no ink at all (nothing to print).
     if (isCanvasBlank(cx, outW, outH)) continue;
@@ -1298,7 +1355,15 @@ export function clearOutsideTab(
   config: FrameConfig,
   tilePx: number,
   pxPerInch: number,
+  /** Which panel this crop is. Only the bottom panel carries the keystone. */
+  id: SectionId = "bottom",
 ): void {
+  // The header comment used to claim this returned early for every panel but the
+  // bottom because "the box carries no top overhang". It did not: the box has no
+  // overhang field, so on a keystone frame this erased the top 0.55" of the TOP
+  // RUNNER and both side columns, outside a trapezoid centred on each — caught by
+  // the flush frame's export test, and equally true of the slim fork's files.
+  if (id !== "bottom") return;
   const tab = frameTab(config);
   if (!tab) return;
   const { contentW, bleed: b, outW } = box;

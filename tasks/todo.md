@@ -1,30 +1,35 @@
-# School Print Output (safe half)  (2026-07-21)
+# Flush-top fork: 15 × 6.75" school frame at /lab/flush  (2026-09-02) — DONE
 
-Scope: give the school design a PRINT-READY output — a high-DPI PNG of the whole
-assembled frame + a panel-grouped parts list. NEW renderer; do NOT touch
-compose-frame.ts / fulfill.ts / Stripe. /build stays byte-identical.
+Plan: `~/.claude/plans/imperative-splashing-scroll.md`. Owner decision: ONE new fork,
+15" wide × 6.75" tall, 0.75" flush top bar, on Bill's 1.000" grid. `/s/sluh-jr-bills`
+untouched; the fork wears any kit via `?school=<slug>` like `/lab/slim`.
+Note for Bill: `tasks/flush-frame-for-bill.md`.
 
-## Plan — DONE
-- [x] 1. NEW `src/lib/utils/compose-school-frame.ts`
-  - [x] Pure geometry helpers: `schoolCanvasSize`, `shouldRotateForBed`,
-        `schoolBannerRect` + `schoolRenderMetrics` (wing offset + base bottom row =
-        the compose-frame banner bug fixed HERE)
-  - [x] `drawSchoolFrame(ctx, design, images, W, H)` — env-agnostic (browser canvas
-        AND @napi-rs/canvas): plate, ring+wing tiles, multi-cell snappets (uploaded
-        art full-res), text/image sections, banners
-  - [x] `composeSchoolFrame(design, opts)` — browser entry: preload (Image +
-        getFullRes + QR), draw, rotate to 16.5x13 bed, setPngDpi → data URL
-  - [x] copied small helpers; imported shared text-bar fit fns; compose-frame UNTOUCHED
-- [x] 2. Export button in SchoolDesigner header ("Export print file") — client-only PNG download
-- [x] 3. Additive `buildPanelPartsList` in parts-list.ts (groups by `grid.panelAt`);
-        flat `buildPartsList` byte-identical
-- [x] 4. Tests: geometry + drawSchoolFrame napi smoke + panel grouping + /build regression
-- [x] 5. tsc / vitest (206 pass) / eslint all clean; sample PNG rendered → scratchpad → Read OK
+## Steps
+- [x] 1. `FrameConfig` gains `topBarHeightInches?` + `plateTopCoverInches?`; `SCHOOL_FLUSH_FRAME_CONFIG`
+- [x] 2. `src/lib/utils/rows.ts` row-geometry helper + tests (defaults reproduce today's numbers)
+- [x] 3. Grid: `slot-generator.ts` rows via helper, `FrameGrid.isBannerOnly`; `panels.ts` part sizes; `layout.ts` plate/wing y
+- [x] 4. Placement: `canPlace` refuses banner-only rows (`"banner"`); `snappetRect` stays pure geometry
+- [x] 5. Print: `schoolBannerRect` + `panelBleedBox` on the helper (`panelRowsPx`); crop-vs-sectionBounds test; screw slots punched out
+- [x] 6. Screen: `FrameCanvas.tsx` shares `bannerRowBox`, grooves/aspect via helper; screw slots drawn; banner-only cells not rendered as pockets
+- [x] 7. Presets: `sideAnchors` skips banner rows; `FLUSH_STACK [2,2,2]`; `FLUSH_PRESETS`
+- [x] 8. Variant registry `src/data/school-variants.ts`; `SchoolBuilder`/`SchoolKitPage`/`SchoolDesigner` take `variant`/`presets`; `bottomTab` sniff removed
+- [x] 9. Route `/lab/flush` + fork bar
+- [x] 10. Fit bench: `topRailHeightInches` (+ dial, URL key `th`), `FLUSH_SPEC` preset, `registrationOf`, bridge round-trip
+- [x] 11. Tests: updated pins; new `rows.test.ts`, `flush-frame.test.ts`; 58 files green
+- [x] 12. Verify: tsc 0, lint 0 errors, vitest green; print render 3000×1350 = 15×6.75; browser shots of /lab/flush (aspect 2.217 vs 2.222); /lab/fit readout 15 × 6.75 / above 0 / below 0.75
+- [x] 13. Docs: CLAUDE.md flush section; `tasks/flush-frame-for-bill.md`
+
+## Found in the renders (fixed)
+- Wing cells on the 0.75" row rendered as white empty pockets (two notches in the top
+  corners). Now filtered out of the canvas's cell list: frame body, no drop target.
+
+## Open questions carried (not blockers)
+- Missouri rule on covering the state name (0.75" top cover)
+- Pilot tape measure (0.75" below plate vs the 0.5" July proof)
+- Fitment engine needs a `standard-15` preset (sibling repo)
 
 ## v2 ideas
-- Render the multi-cell uploaded-art snappets in the sample (needs a seeded IndexedDB blob)
-- A "Preview" (open in new tab) alongside the download; a per-panel PNG export
-- Wire composeSchoolFrame + buildPanelPartsList into the (confirm-first) school order flow
-
-## Guardrails
-- Do NOT modify compose-frame.ts, fulfill.ts, or any Stripe/checkout/order code
+- Top-banner text keep-out around the two screw slots (centred text clears them today)
+- `frameCorners`: treat the topmost PLACEABLE row as the corner on frames with a short row 0
+- Keystone rise 0.55 → 0.80 on the flush frame (reaches 1.05, still under MO's 1.08)

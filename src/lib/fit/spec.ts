@@ -110,6 +110,10 @@ export interface FitSpec {
   sideInwardInches: number;
   /** How far the top rail reaches down over the plate face. */
   topInwardInches: number;
+  /** Height of the top rail part. One pitch on every frame until the flush fork,
+   *  whose 0.75" bar is the only way a flush top closes on a 1.000" grid. Equal to
+   *  `topInwardInches` means FLUSH: nothing above the plate. */
+  topRailHeightInches: number;
 }
 
 /** An axis-aligned rectangle in plate coordinates: inches, origin at the plate's
@@ -198,6 +202,7 @@ export const JULY_SPEC: FitSpec = {
   sideBadgeCells: 1,
   sideInwardInches: 0.5495,
   topInwardInches: 0.5225,
+  topRailHeightInches: 0.991,
 };
 
 /** Bill's current parts per his 2026-08-02 text: 1" grid, 11x2 bottom runner. */
@@ -211,6 +216,7 @@ export const BILL_CURRENT_SPEC: FitSpec = {
   sideBadgeCells: 2,
   sideInwardInches: 0.5,
   topInwardInches: 0.5,
+  topRailHeightInches: 1,
 };
 
 /** The recommendation on the table: 7" total, bottom edge AT the July line,
@@ -233,12 +239,37 @@ export const CANDIDATE_SPEC: FitSpec = {
   sideBadgeCells: 2,
   sideInwardInches: 0.5,
   topInwardInches: 0.5,
+  topRailHeightInches: 1,
+};
+
+/** The FLUSH-TOP fork (owner's call, 2026-09-02), from the fleet data: the top edge
+ *  AT the plate's top edge, 0.75" below the plate, Bill's 2" side columns. 15 x
+ *  6.75. The rail is 0.75" tall because that is the only height at which a flush
+ *  top closes on a 1.000" grid: 0.75 + 5 + 1 = 6.75, and the bottom row covers the
+ *  remaining 0.25" of plate face.
+ *
+ *  Two flags fire on it, and should: the 0.75" drop exceeds the 0.5" the July build
+ *  proved (the fleet numbers are photo-derived and the Pilot is not yet taped), and
+ *  0.75" of top cover reaches the state-name band. The bench exists to show that
+ *  next to the candidate, not to hide it. See SCHOOL_FLUSH_FRAME_CONFIG. */
+export const FLUSH_SPEC: FitSpec = {
+  pitchInches: 1,
+  windowCols: 11,
+  windowRows: 5,
+  bottomDropInches: 0.75,
+  runnerHeightInches: 1,
+  keystone: { ...DEFAULT_KEYSTONE },
+  sideBadgeCells: 2,
+  sideInwardInches: 0.5,
+  topInwardInches: 0.75,
+  topRailHeightInches: 0.75,
 };
 
 export const PRESETS: Array<{ key: string; label: string; spec: FitSpec }> = [
   { key: "july", label: "July 4 (verified)", spec: JULY_SPEC },
   { key: "bill", label: "Bill today", spec: BILL_CURRENT_SPEC },
   { key: "candidate", label: "Candidate", spec: CANDIDATE_SPEC },
+  { key: "flush", label: "Flush 15 (fork)", spec: FLUSH_SPEC },
 ];
 
 // URL round-trip, so a dialled-in configuration is a textable link. Short keys on
@@ -256,6 +287,10 @@ const NUM_KEYS: Array<[FitSpecNumberKey, string]> = [
   ["sideBadgeCells", "sb"],
   ["sideInwardInches", "si"],
   ["topInwardInches", "ti"],
+  // Added with the flush fork. A link written before it has no `th`, and the
+  // parser falls back to the base's rail height — one pitch on every base that
+  // predates the key — so old links still mean what they meant.
+  ["topRailHeightInches", "th"],
 ];
 
 /**

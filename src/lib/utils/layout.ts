@@ -1,5 +1,6 @@
 import type { FrameConfig } from "@/lib/types";
 import { getTotalWidthInches } from "@/lib/constants/frame";
+import { plateTopInches, rowTopInches } from "@/lib/utils/rows";
 
 /**
  * Convert inches to pixels at a given container width.
@@ -54,13 +55,12 @@ export function getPlateArea(
   const plateWidth = config.plateWidthInches * scale;
   const plateHeight = config.plateHeightInches * scale;
 
-  // Center the plate in the inner frame on BOTH axes (was using the width gap
-  // for the vertical offset, which floated the plate too high).
-  const topGap = (config.heightInches - config.plateHeightInches) / 2;
-
+  // Horizontally centred in the inner frame. Vertically the plate sits where the
+  // config REGISTERS it (utils/rows): centred in the base ring unless the config
+  // states its top cover — the flush frame's plate top IS the frame's top.
   return {
     x: wingOffset + (innerWidth - plateWidth) / 2,
-    y: topGap * scale,
+    y: plateTopInches(config) * scale,
     width: plateWidth,
     height: plateHeight,
   };
@@ -77,15 +77,17 @@ export function getWingArea(
   if (!config.wings || config.wingColumns <= 0) return null;
 
   const scale = getScale(config, containerWidth);
-  const tileSize = config.tileSizeInches * scale;
   const containerHeight = getContainerHeight(config, containerWidth);
   const wingWidth = config.wingWidthInches * scale;
   const innerWidth = config.widthInches * scale;
+  // From under the top bar (one tile on every frame but the flush one) to the
+  // bottom of the frame, extra rows included.
+  const top = rowTopInches(config, 1) * scale;
 
   return {
     x: side === "left" ? 0 : wingWidth + innerWidth,
-    y: tileSize, // starts below top rail
+    y: top,
     width: wingWidth,
-    height: containerHeight - tileSize,
+    height: containerHeight - top,
   };
 }

@@ -1,6 +1,14 @@
 import type { FrameConfig, FrameSlot, GridCoord, SectionId, SlotZone } from "@/lib/types";
 import { getTotalWidthInches } from "@/lib/constants/frame";
 import { panelOf } from "@/lib/utils/panels";
+import {
+  baseBottomRow as baseBottomRowOf,
+  gridRowCount,
+  isBannerOnlyRow,
+  rowHeightInches,
+  rowTopInches,
+  topBarHeightInches,
+} from "@/lib/utils/rows";
 
 function makeSlotId(zone: SlotZone, index: number): string {
   return `frame:${zone}-${index}`;
@@ -44,19 +52,22 @@ export function wingRowCount(config: FrameConfig): number {
  * GRID INVARIANT — the frame is a gapless integer lattice of `tileSizeInches` cells.
  *
  * Holds only when the rail steps equal the tile pitch exactly:
- *   widthInches  === tileSizeInches * topSlots        (topStep === tileSize)
- *   heightInches === tileSizeInches * (leftSlots + 2) (leftStep === tileSize)
+ *   widthInches  === tileSizeInches * topSlots                  (topStep === tileSize)
+ *   heightInches === topBarHeight + tileSizeInches * (leftSlots + 1)
  *
- * Both DEFAULT_FRAME_CONFIG (12.883 = .991*13, 6.937 = .991*7) and
- * SCHOOL_FRAME_CONFIG (13.874 = .991*14, 7.928 = .991*8) satisfy it. If a future config
- * does not, the rails render with a cumulative gap and every (row,col) below is
- * a lie — `gridInvariantHolds` is exported so tests can assert it.
+ * The second line is `tileSizeInches * (leftSlots + 2)` on every frame whose top bar
+ * is a tile tall (all of them until the flush fork): DEFAULT_FRAME_CONFIG
+ * (12.883 = .991*13, 6.937 = .991*7) and SCHOOL_FRAME_CONFIG (13.874 = .991*14,
+ * 7.928 = .991*8) satisfy it. The flush frame's 6.75 = 0.75 + 1.000 * 6 does too.
+ * If a future config does not, the rails render with a cumulative gap and every
+ * (row,col) below is a lie — `gridInvariantHolds` is exported so tests can assert it.
  */
 export function gridInvariantHolds(config: FrameConfig): boolean {
   const EPS = 1e-6;
+  const stack = topBarHeightInches(config) + config.tileSizeInches * (config.leftSlots + 1);
   return (
     Math.abs(config.widthInches - config.tileSizeInches * config.topSlots) < EPS &&
-    Math.abs(config.heightInches - config.tileSizeInches * (config.leftSlots + 2)) < EPS
+    Math.abs(config.heightInches - stack) < EPS
   );
 }
 
@@ -80,17 +91,27 @@ export function generateSlots(
   // frame grows DOWNWARD by one tile per extra row, base rows stay put).
   const extraBottomRows = Math.max(0, (config.bottomRows ?? 1) - 1);
   const fullWidthTop = config.fullWidthTopBar === true;
-  const baseHeightPx = config.heightInches * scale; // original inner-frame height
   const hasWings = config.wings && config.wingColumns > 0;
   const wingOffset = hasWings ? config.wingWidthInches * scale : 0;
   const innerWidth = config.widthInches * scale;
+
+  // ─── Row geometry, from ONE source ────────────────────────────────────────
+  // Every row's top edge and height come from utils/rows, which is also what the
+  // panel sizes, the plate area and both banner renderers read. Row 0 is the top
+  // bar and may be shorter than a tile (the flush frame's 0.75"); every other row
+  // is exactly one tile. These used to be `(i + 1) * leftStep`, with leftStep
+  // derived from the frame height — equal to the pitch only under the old
+  // invariant, and 0.958" on the flush frame, which would have put every side row
+  // in the wrong place.
+  const rowY = (row: number): number => rowTopInches(config, row) * scale;
+  const rowH = (row: number): number => rowHeightInches(config, row) * scale;
 
   // ─── Grid coordinates (integers, derived from the loop indices) ──────────
   // Deliberately NOT derived by rounding x/tileSize — the indices are already
   // exact, so rounding px would only add a way to be wrong. See the GRID
   // INVARIANT note above for why these line up with the px math.
   const wingCols = hasWings ? config.wingColumns : 0; // grid cols left of the inner frame
-  const baseBottomRow = config.leftSlots + 1; // side rows occupy 1..leftSlots
+  const baseBottomRow = baseBottomRowOf(config); // side rows occupy 1..leftSlots
   const topRows = fullWidthTop ? 1 : 0;
 
   /** Map a wing column's banded row index to its grid row. */
@@ -117,29 +138,24 @@ export function generateSlots(
       x: wingOffset + i * topStep * scale,
       y: 0,
       width: tileSize,
-      height: tileSize,
+      height: rowH(0),
       row: 0,
       col: wingCols + i,
     });
   }
 
-  // ─── Side Rail Vertical Spacing ──────────────────────────
-  const columnSpan = config.heightInches - config.tileSizeInches;
-  // Base bottom row pinned to the ORIGINAL height, so side rails, the base bottom
-  // row and the wing bottom never move when extra rows are added below.
-  const bottomY = baseHeightPx - tileSize;
+  // Base bottom row pinned to the BASE ring, so side rails, the base bottom row and
+  // the wing bottom never move when extra rows are added below.
+  const bottomY = rowY(baseBottomRow);
 
   // ─── Left / Right Rails ────────────────────────────────
-  const leftColumnTotal = config.leftSlots + 2;
-  const leftStep = columnSpan / (leftColumnTotal - 1);
-
   for (let i = 0; i < config.leftSlots; i++) {
     slots.push({
       id: makeSlotId("left", i),
       zone: "left",
       index: i,
       x: wingOffset, // inner frame left edge
-      y: (i + 1) * leftStep * scale,
+      y: rowY(i + 1),
       width: tileSize,
       height: tileSize,
       row: i + 1,
@@ -148,16 +164,13 @@ export function generateSlots(
   }
 
   // ─── Right Rail ────────────────────────────────────────
-  const rightColumnTotal = config.rightSlots + 2;
-  const rightStep = columnSpan / (rightColumnTotal - 1);
-
   for (let i = 0; i < config.rightSlots; i++) {
     slots.push({
       id: makeSlotId("right", i),
       zone: "right",
       index: i,
       x: wingOffset + innerWidth - tileSize, // inner frame right edge
-      y: (i + 1) * rightStep * scale,
+      y: rowY(i + 1),
       width: tileSize,
       height: tileSize,
       row: i + 1,
@@ -216,27 +229,23 @@ export function generateSlots(
     // and every y matches the original literal exactly.
     const wingRows = wingRowCount(config);
 
-    const wingY = (row: number, sideSlots: number, sideStep: number): number => {
-      if (row < topRows) return 0; // top corner (over the wing)
-      const side = row - topRows;
-      if (side < sideSlots) return (side + 1) * sideStep * scale; // side rows (unchanged)
-      const b = side - sideSlots; // 0 = base bottom row, 1.. = extra bottom rows
-      return bottomY + b * tileSize;
-    };
-
-    // Wing-left: fills from x=0 rightward, columns closest to inner frame first
+    // Wing-left: fills from x=0 rightward, columns closest to inner frame first.
+    // A wing cell sits on the same grid row as the rail cell beside it, so its y
+    // and height are that row's — including the top corner, which on a flush frame
+    // is the 0.75" bar's height and banner-only.
     for (let col = 0; col < config.wingColumns; col++) {
       for (let row = 0; row < wingRows; row++) {
         const flatIndex = col * wingRows + row;
+        const gridRow = wingGridRow(row);
         slots.push({
           id: makeSlotId("wing-left", flatIndex),
           zone: "wing-left",
           index: flatIndex,
           x: wingOffset - (col + 1) * tileSize, // col 0 adjacent to inner frame
-          y: wingY(row, config.leftSlots, leftStep),
+          y: rowY(gridRow),
           width: tileSize,
-          height: tileSize,
-          row: wingGridRow(row),
+          height: rowH(gridRow),
+          row: gridRow,
           col: wingCols - 1 - col, // col 0 is adjacent to the frame, so it maps rightmost
         });
       }
@@ -246,15 +255,16 @@ export function generateSlots(
     for (let col = 0; col < config.wingColumns; col++) {
       for (let row = 0; row < wingRows; row++) {
         const flatIndex = col * wingRows + row;
+        const gridRow = wingGridRow(row);
         slots.push({
           id: makeSlotId("wing-right", flatIndex),
           zone: "wing-right",
           index: flatIndex,
           x: wingOffset + innerWidth + col * tileSize,
-          y: wingY(row, config.rightSlots, rightStep),
+          y: rowY(gridRow),
           width: tileSize,
-          height: tileSize,
-          row: wingGridRow(row),
+          height: rowH(gridRow),
+          row: gridRow,
           col: wingCols + config.topSlots + col,
         });
       }
@@ -326,6 +336,9 @@ export interface FrameGrid {
   isPlate(row: number, col: number): boolean;
   /** Outside the lattice entirely. Legal for snappet OVERHANG, not for anchors. */
   isOutside(row: number, col: number): boolean;
+  /** A real cell on a row that is not a tile tall (a short top bar). Frame body:
+   *  no tile may anchor on it or span across it. See `isBannerOnlyRow`. */
+  isBannerOnly(row: number, col: number): boolean;
   /** Which PANEL rectangle owns a cell, or null for the plate / off-grid. The
    *  panel is the printable/sellable unit; unlike a SlotZone it owns its corners.
    *  See `panelOf` in utils/panels. */
@@ -343,7 +356,7 @@ export function buildGrid(config: FrameConfig, containerWidth = 1000): FrameGrid
 
   const wingCols = config.wings && config.wingColumns > 0 ? config.wingColumns : 0;
   const cols = wingCols * 2 + config.topSlots;
-  const rows = config.leftSlots + 2 + Math.max(0, (config.bottomRows ?? 1) - 1);
+  const rows = gridRowCount(config);
 
   const byCoord = new Map<string, FrameSlot>();
   const byId = new Map<string, GridCoord>();
@@ -365,6 +378,12 @@ export function buildGrid(config: FrameConfig, containerWidth = 1000): FrameGrid
     return row >= 1 && row <= config.leftSlots && col >= firstInnerCol && col <= lastInnerCol;
   };
 
+  // A row that is not a tile tall (the flush frame's 0.75" top bar) holds no tile,
+  // anywhere along it. The cells still EXIST — they are frame body, and the side
+  // parts print their full height — they just refuse every footprint.
+  const isBannerOnly = (row: number, col: number): boolean =>
+    !isOutside(row, col) && isBannerOnlyRow(config, row);
+
   return {
     rows,
     cols,
@@ -373,6 +392,7 @@ export function buildGrid(config: FrameConfig, containerWidth = 1000): FrameGrid
     coordOf: (slotId) => byId.get(slotId) ?? null,
     isPlate,
     isOutside,
+    isBannerOnly,
     panelAt: (row, col) => panelOf(row, col, config),
   };
 }

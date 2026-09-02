@@ -127,6 +127,33 @@ export interface FrameConfig {
    * that exists today.
    */
   bottomTab?: BottomTab;
+  /**
+   * Height of grid row 0, the TOP bar, in inches. Absent = `tileSizeInches`, which
+   * is every frame that existed before the flush-top fork.
+   *
+   * The top bar is a text banner, never a tile (see `sectionSupportsTiles`), so its
+   * height was always independent of the tile pitch in the PRODUCT; the code just
+   * never modelled that. A frame whose top edge must sit flush with the plate's top
+   * edge on a 1.000" grid only closes with a 0.75" bar, and that is the case this
+   * field exists for. A row this height is BANNER-ONLY everywhere, wings included:
+   * a 2x2 anchored on it would be 1.75" tall, which is not a badge.
+   *
+   * Read through `utils/rows.ts`, never directly — every renderer has to agree on
+   * where row 0 ends, and the helper is the one place that says.
+   */
+  topBarHeightInches?: number;
+  /**
+   * How far the top bar reaches DOWN over the plate face, from the plate's top edge,
+   * in inches. Absent = the plate is centred in the ring, which is what every config
+   * meant before this field existed.
+   *
+   * A ring of cells cannot say where the plate sits inside it, and that split is
+   * the binding car-fit constraint: the same frame hung a quarter inch lower fails
+   * a Honda Pilot. This is the fit bench's `topInwardInches`, stated on the config
+   * so the bridge between the two is a projection rather than an inference. Equal
+   * to `topBarHeightInches` means FLUSH: nothing above the plate.
+   */
+  plateTopCoverInches?: number;
 }
 
 /** Geometry of the bottom bar's keystone, in inches. See `FrameConfig.bottomTab`. */

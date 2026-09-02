@@ -1,6 +1,7 @@
-import { DEFAULT_FRAME_CONFIG } from "@/lib/constants/frame";
+import { DEFAULT_FRAME_CONFIG, getRenderHeightInches } from "@/lib/constants/frame";
 import { PLATE, type FitSpec, type KeystoneSpec } from "@/lib/fit/spec";
 import type { FrameConfig } from "@/lib/types";
+import { plateTopCoverInches, plateTopInches, topBarHeightInches } from "@/lib/utils/rows";
 
 // ─── FitSpec <-> FrameConfig ────────────────────────────────────────────────
 //
@@ -45,30 +46,35 @@ export interface PlateRegistration {
 const snap = (n: number): number => Math.round(n * 1e6) / 1e6;
 
 /**
- * The registration a config IMPLIES if the plate is centred in its window — the
- * symmetric reading, which is the only one a FrameConfig can express on its own.
- * Useful as the starting point for a preset: state the config, then override
- * only the numbers that are deliberately asymmetric.
+ * The registration a config STATES. Since the flush fork a FrameConfig can say
+ * where the plate sits (`plateTopCoverInches`); one that does not is read as the
+ * plate centred in its base ring, which is what every earlier config meant and
+ * what this function returned when it was called `centredRegistration`. Both
+ * readings come from utils/rows, the same source the renderers draw the plate
+ * from, so the bench and the builder agree about the one number that decides
+ * whether a frame fits a car.
  */
-export function centredRegistration(config: FrameConfig): PlateRegistration {
+export function registrationOf(config: FrameConfig): PlateRegistration {
   const pitch = config.tileSizeInches;
   const windowW = (config.topSlots - 2) * pitch;
-  const windowH = config.leftSlots * pitch;
   const sideInwardInches = (config.plateWidthInches - windowW) / 2;
-  const vertical = (config.plateHeightInches - windowH) / 2;
+  const plateBottom = plateTopInches(config) + config.plateHeightInches;
   return {
-    bottomDropInches: snap((config.bottomRows ?? 1) * pitch - vertical),
-    topInwardInches: snap(vertical),
+    bottomDropInches: snap(getRenderHeightInches(config) - plateBottom),
+    topInwardInches: snap(plateTopCoverInches(config)),
     sideInwardInches: snap(sideInwardInches),
   };
 }
+
+/** The symmetric reading by its old name, for callers that want to say so. */
+export const centredRegistration = registrationOf;
 
 /** A FitSpec projected from a shipping config plus its registration on the plate.
  *  The presets are built through this so their cell counts cannot drift from the
  *  configs they claim to describe. */
 export function specFromConfig(
   config: FrameConfig,
-  registration: PlateRegistration = centredRegistration(config),
+  registration: PlateRegistration = registrationOf(config),
 ): FitSpec {
   const pitch = config.tileSizeInches;
   return {
@@ -76,6 +82,7 @@ export function specFromConfig(
     windowCols: config.topSlots - 2,
     windowRows: config.leftSlots,
     runnerHeightInches: snap((config.bottomRows ?? 1) * pitch),
+    topRailHeightInches: snap(topBarHeightInches(config)),
     sideBadgeCells: config.wingColumns + 1,
     keystone: config.bottomTab
       ? ({
@@ -105,6 +112,10 @@ export function shippabilityRefusals(spec: FitSpec): string[] {
   if (pitch <= 0) {
     refusals.push("Tile pitch must be greater than zero.");
     return refusals;
+  }
+
+  if (spec.topRailHeightInches <= 0) {
+    refusals.push("Top rail height must be greater than zero.");
   }
 
   const rows = spec.runnerHeightInches / pitch;
@@ -166,16 +177,21 @@ export function configFromSpec(
   const wingColumns = spec.sideBadgeCells - 1;
   const bottomRows = Math.round(spec.runnerHeightInches / pitch);
 
+  // The two registration fields are the spec's to state, never the base's to leak.
+  const { topBarHeightInches: _tb, plateTopCoverInches: _pc, ...rest } = base;
+  void _tb;
+  void _pc;
+
   return {
     config: {
-      ...base,
+      ...rest,
       tileSizeInches: pitch,
       widthInches: snap(cols * pitch),
-      // The BASE ring only: one top row, the window, one bottom row. A config's
+      // The BASE ring only: the top bar, the window, one bottom row. A config's
       // `heightInches` is the ring it is cut from, and `bottomRows > 1` grows the
       // assembled part BELOW that — which is why Bill's FULL config reads 7 while
-      // his frame stands 8 inches tall.
-      heightInches: snap((spec.windowRows + 2) * pitch),
+      // his frame stands 8 inches tall. The top bar is its own height, not a pitch.
+      heightInches: snap(spec.topRailHeightInches + (spec.windowRows + 1) * pitch),
       topSlots: cols,
       bottomSlots: cols,
       leftSlots: spec.windowRows,
@@ -185,6 +201,20 @@ export function configFromSpec(
       wingWidthInches: wingColumns * pitch,
       bottomRows,
       bottomTab: spec.keystone ?? undefined,
+      // Stated only when they differ from what the config would infer, so a config
+      // built from a one-pitch, centred spec comes back without the two fields —
+      // and equal to the config it was projected from.
+      ...(near(spec.topRailHeightInches, pitch) ? {} : { topBarHeightInches: spec.topRailHeightInches }),
+      ...(near(spec.topInwardInches, centredTopCover(spec)) ? {} : { plateTopCoverInches: spec.topInwardInches }),
     },
   };
+}
+
+const near = (a: number, b: number) => Math.abs(a - b) < 1e-6;
+
+/** The top cover a spec's ring would imply with the plate centred in it. */
+function centredTopCover(spec: FitSpec): number {
+  const pitch = spec.pitchInches;
+  const ring = spec.topRailHeightInches + (spec.windowRows + 1) * pitch;
+  return spec.topRailHeightInches - (ring - PLATE.heightInches) / 2;
 }

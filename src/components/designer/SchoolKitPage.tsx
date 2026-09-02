@@ -1,5 +1,6 @@
 import { Graduate } from "next/font/google";
 import type { FrameConfig } from "@/lib/types";
+import type { SchoolVariantId } from "@/data/school-variants";
 import { BuilderFontsDeferred } from "@/app/BuilderFontsDeferred";
 import { SchoolBuilder } from "@/components/designer/SchoolDesigner";
 import { CHIP_PRESET_PIECE, type SchoolKit } from "@/data/school-kits";
@@ -35,7 +36,7 @@ export function SchoolKitPage({
 }: {
   kit: SchoolKit;
   frameConfig?: FrameConfig;
-  variant?: string;
+  variant?: SchoolVariantId;
   banner?: React.ReactNode;
 }) {
   const w = kit.welcome;

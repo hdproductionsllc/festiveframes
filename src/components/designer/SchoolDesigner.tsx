@@ -16,7 +16,8 @@ import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "reac
 import { FirstRunTour } from "./FirstRunTour";
 import { BUYERS, DEFAULT_BUYER, getBuyer, yearsFor, type BuyerId } from "@/data/frame-buyers";
 import { SCHOOL_CHECKOUT_OPEN } from "@/config/offers";
-import { presetsFor, presetTiles, getPreset, SLIM_PRESETS, type SchoolPreset } from "@/data/school-presets";
+import { presetsFor, presetTiles, getPreset, SCHOOL_PRESETS, type SchoolPreset } from "@/data/school-presets";
+import { schoolVariant, type SchoolVariantId } from "@/data/school-variants";
 import { markPieceId } from "@/data/sets/school-marks";
 import { GraduateExpress } from "./GraduateExpress";
 import {
@@ -116,7 +117,12 @@ function DownloadIcon() {
 export function SchoolDesigner({
   kit,
   hero,
-}: { kit?: SchoolKit; hero?: React.ReactNode } = {}) {
+  // The start-from-a-design layouts for THIS frame, anchored on its own grid.
+  // Handed in by the variant (see data/school-variants) rather than inferred from
+  // the config: the flush frame has a keystone like the slim one and a different
+  // grid from both, so "has a bottomTab" could not tell them apart.
+  presets = SCHOOL_PRESETS,
+}: { kit?: SchoolKit; hero?: React.ReactNode; presets?: SchoolPreset[] } = {}) {
   // This school's own crest/mascot badges. Memoised on the kit so the palette
   // isn't handed a fresh array on every render of a page that never changes kit.
   const kitMarks = useMemo(() => kitMarkPieces(kit), [kit]);
@@ -530,7 +536,7 @@ export function SchoolDesigner({
   const gradYears = yearsFor("upcoming");
   useEffect(() => {
     if (!expressOpen) return;
-    const preset = getPreset("graduate", frameConfig.bottomTab ? SLIM_PRESETS : undefined);
+    const preset = getPreset("graduate", presets);
     if (!preset) return;
     const api = storeApi.getState();
     api.clearAll();
@@ -1022,7 +1028,7 @@ export function SchoolDesigner({
                     Start from a design <span className="font-normal text-stone-500">— or build your own below</span>
                   </span>
                   <div className="flex flex-wrap gap-1.5">
-                    {presetsFor(buyerId, frameConfig.bottomTab ? SLIM_PRESETS : undefined).map((preset) => (
+                    {presetsFor(buyerId, presets).map((preset) => (
                       <button
                         key={preset.id}
                         type="button"
@@ -1220,17 +1226,22 @@ export function SchoolDesigner({
 export function SchoolBuilder({
   kit,
   hero,
-  frameConfig = SCHOOL_FRAME_CONFIG,
   variant,
+  frameConfig = schoolVariant(variant).config,
 }: {
   kit?: SchoolKit;
   hero?: React.ReactNode;
-  /** The geometry this builder owns. The FORK passes the slim frame; everything
-   *  else gets the classic one, byte for byte. */
+  /**
+   * WHICH FRAME this builder is: the geometry, its preset layouts, and the persist
+   * key's namespace, all from one record (data/school-variants). Absent = the live
+   * frame, byte for byte. A fork route names its variant and nothing else.
+   */
+  variant?: SchoolVariantId;
+  /** Override the variant's geometry. Tests and the odd experiment only; a route
+   *  should name a variant. */
   frameConfig?: typeof SCHOOL_FRAME_CONFIG;
-  /** Scopes the persist key, so the fork's design can never touch the live one. */
-  variant?: string;
 }) {
+  const { presets } = schoolVariant(variant);
   // The school store is configured two ways:
   //  - `frameConfig`: the school frame is ONE printable geometry (it must fit the
   //    eufyMake E1 bed), so the store owns it outright — initial state, and it wins
@@ -1270,7 +1281,7 @@ export function SchoolBuilder({
   );
   return (
     <DesignStoreProvider store={store}>
-      <SchoolDesigner kit={kit} hero={hero} />
+      <SchoolDesigner kit={kit} hero={hero} presets={presets} />
     </DesignStoreProvider>
   );
 }

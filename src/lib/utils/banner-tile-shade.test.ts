@@ -88,7 +88,7 @@ describe("banners and tiles paint the same field", () => {
 
     const napi = ctx as unknown as SKRSContext2D;
     const m = schoolRenderMetrics(SCHOOL_FRAME_CONFIG, W);
-    const br = schoolBannerRect(bar, m);
+    const br = schoolBannerRect(bar, m, SCHOOL_FRAME_CONFIG);
 
     // Both measured as the FIELD of their own rectangle — the mode over an inset
     // grid, so the bevel band at the edges and the placeholder lettering in the

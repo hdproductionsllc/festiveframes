@@ -72,7 +72,7 @@ describe("schoolBannerRect (the compose-frame banner bug, fixed)", () => {
 
   it("offsets the banner by the WING width (compose-frame omits this)", () => {
     expect(m.wingPx).toBeGreaterThan(0);
-    const top = schoolBannerRect({ row: "top", startIndex: 2, widthUnits: 6 }, m);
+    const top = schoolBannerRect({ row: "top", startIndex: 2, widthUnits: 6 }, m, SCHOOL_FRAME_CONFIG);
     expect(top.x).toBeCloseTo(m.wingPx + 2 * m.tileSize, 5);
     expect(top.y).toBe(0);
     expect(top.width).toBeCloseTo(6 * m.tileSize, 5);
@@ -80,7 +80,7 @@ describe("schoolBannerRect (the compose-frame banner bug, fixed)", () => {
   });
 
   it("pins the BOTTOM banner to the BASE bottom row, not the render-height bottom", () => {
-    const bottom = schoolBannerRect({ row: "bottom", startIndex: 0, widthUnits: 8 }, m);
+    const bottom = schoolBannerRect({ row: "bottom", startIndex: 0, widthUnits: 8 }, m, SCHOOL_FRAME_CONFIG);
     // baseFrameHeightPx < canvas height, because the school frame has an extra bottom
     // row. compose-frame's `H - tile` would sit the banner a whole row too low.
     expect(m.baseFrameHeightPx).toBeLessThan(H);
@@ -243,7 +243,7 @@ describe("drawSchoolFrame (node-canvas render of a seeded design)", () => {
 
     // Banner background near its top-left corner (text is centered, so the corner is
     // the fill color #2244aa).
-    const br = schoolBannerRect(bottomBar, m);
+    const br = schoolBannerRect(bottomBar, m, SCHOOL_FRAME_CONFIG);
     const bannerPx = napi.getImageData(Math.round(br.x + 3), Math.round(br.y + 3), 1, 1).data;
     expect([bannerPx[0], bannerPx[1], bannerPx[2]]).toEqual([34, 68, 170]);
 
@@ -327,7 +327,7 @@ describe("print backing — nothing reaches the printer transparent", () => {
 
     const m = schoolRenderMetrics(SCHOOL_FRAME_CONFIG, W);
     // The banner keeps its own colour...
-    const br = schoolBannerRect(bottomBar, m);
+    const br = schoolBannerRect(bottomBar, m, SCHOOL_FRAME_CONFIG);
     const bannerPx = napi.getImageData(Math.round(br.x + 3), Math.round(br.y + 3), 1, 1).data;
     expect([bannerPx[0], bannerPx[1], bannerPx[2]]).toEqual([34, 68, 170]);
     // ...and a placed tile's white field survives untouched.

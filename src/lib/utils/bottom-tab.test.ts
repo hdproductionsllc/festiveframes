@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { tabPath, tabClipPath, tabTextBox, tabSkirt, frameTab } from "./bottom-tab";
-import { SCHOOL_SLIM_FRAME_CONFIG, SCHOOL_FRAME_CONFIG } from "@/lib/constants/frame";
+import { SCHOOL_FLUSH_FRAME_CONFIG, SCHOOL_SLIM_FRAME_CONFIG, SCHOOL_FRAME_CONFIG } from "@/lib/constants/frame";
+import { bannerRowBox, plateTopInches } from "./rows";
 import type { BottomTab } from "@/lib/types";
 
 // ─── The keystone's shape ────────────────────────────────────────────────────
@@ -154,9 +155,19 @@ describe("tabSkirt — how far the fill reaches into the bar", () => {
 });
 
 describe("frameTab", () => {
-  it("finds the slim fork's tab and nothing on the live frame", () => {
+  it("finds the slim and flush forks' tabs and nothing on the live frame", () => {
     expect(frameTab(SCHOOL_SLIM_FRAME_CONFIG)).not.toBeNull();
+    expect(frameTab(SCHOOL_FLUSH_FRAME_CONFIG)).not.toBeNull();
     expect(frameTab(SCHOOL_FRAME_CONFIG)).toBeNull();
+  });
+
+  it("on the flush frame the bar sits 0.25 in up the plate, so the tab reaches 0.80", () => {
+    const c = SCHOOL_FLUSH_FRAME_CONFIG;
+    const tab = frameTab(c)!;
+    const barTop = bannerRowBox(c, "bottom").y;
+    const plateBottom = plateTopInches(c) + c.plateHeightInches;
+    expect(plateBottom - barTop).toBeCloseTo(0.25, 9);
+    expect(plateBottom - (barTop - tab.riseInches)).toBeCloseTo(0.8, 9);
   });
 
   it("the shipped tab has rounded top corners and clears the plate's date line", () => {
