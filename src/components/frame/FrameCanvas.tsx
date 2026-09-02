@@ -20,7 +20,7 @@ import { SectionTextElement } from "./SectionTextElement";
 import { BottomTabElement } from "./BottomTabElement";
 import { frameTab } from "@/lib/utils/bottom-tab";
 import { bannerRowBox, baseBottomRow, isBannerOnlyRow, rowTopInches, topBarHeightInches } from "@/lib/utils/rows";
-import { topBarScrewSlots } from "@/lib/utils/screw-slots";
+import { screwNotches } from "@/lib/utils/screw-slots";
 
 interface FrameCanvasProps {
   frameConfig: FrameConfig;
@@ -230,7 +230,7 @@ export const FrameCanvas = forwardRef<FrameCanvasHandle, FrameCanvasProps>(
     const topBarPx = topBarHeightInches(frameConfig) * scale;
     const sideTopPx = rowTopInches(frameConfig, 1) * scale;
     const sideBottomPx = rowTopInches(frameConfig, baseBottomRow(frameConfig)) * scale;
-    const screwSlots = topBarScrewSlots(frameConfig);
+    const notches = screwNotches(frameConfig);
 
     // The cell a dragged TILE will land in (or null). One positioned indicator
     // glides to this rect instead of toggling a glow on each cell, so the cue
@@ -474,28 +474,33 @@ export const FrameCanvas = forwardRef<FrameCanvasHandle, FrameCanvasProps>(
             />
           )}
 
-          {/* ═══ SCREW SLOTS ═══
-              Only on a frame whose top bar covers the plate's bolt holes (the flush
-              fork). Drawn as recesses, from the same geometry the print composer
-              punches out of the banner — see utils/screw-slots. Above the banner
-              layer on purpose: the slot goes THROUGH the banner, and the printed
-              banner has a hole there too. */}
-          {containerWidth > 0 && screwSlots.map((s, i) => (
-            <div
-              key={`screw-slot-${i}`}
-              className="absolute z-20 pointer-events-none"
-              aria-hidden
-              style={{
-                left: wingPx + s.x * scale,
-                top: s.y * scale,
-                width: s.width * scale,
-                height: s.height * scale,
-                borderRadius: 9999,
-                background: "#15130f",
-                boxShadow: "inset 0 1px 2px rgba(0,0,0,0.9), 0 0 0 1px rgba(255,255,255,0.12)",
-              }}
-            />
-          ))}
+          {/* ═══ SCREW NOTCHES ═══
+              Only on a frame that asks for them (the flush fork). Drawn as recesses
+              open on the runner's plate-side edge, from the same geometry the print
+              composer punches out of the banner — see utils/screw-slots. Above the
+              banner layer on purpose: the notch goes THROUGH the banner, and the
+              printed banner has the cut too. */}
+          {containerWidth > 0 && notches.map((n, i) => {
+            const w = n.width * scale;
+            const h = n.height * scale;
+            const r = `${Math.min(w / 2, h)}px`;
+            return (
+              <div
+                key={`screw-notch-${i}`}
+                className="absolute z-20 pointer-events-none"
+                aria-hidden
+                style={{
+                  left: wingPx + n.x * scale,
+                  top: n.y * scale,
+                  width: w,
+                  height: h,
+                  borderRadius: n.bar === "top" ? `${r} ${r} 0 0` : `0 0 ${r} ${r}`,
+                  background: "#15130f",
+                  boxShadow: "inset 0 1px 2px rgba(0,0,0,0.9), 0 0 0 1px rgba(255,255,255,0.12)",
+                }}
+              />
+            );
+          })}
 
           {/* ═══ WING GROOVES ═══ */}
           {containerWidth > 0 && hasWings && Array.from({ length: frameConfig.wingColumns }, (_, col) => (

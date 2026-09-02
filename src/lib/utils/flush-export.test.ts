@@ -22,7 +22,7 @@ import {
   type SchoolDesign,
   type SchoolImageBundle,
 } from "@/lib/utils/compose-school-frame";
-import { topBarScrewSlots } from "@/lib/utils/screw-slots";
+import { screwNotches } from "@/lib/utils/screw-slots";
 import type { PlacedTile, SectionId } from "@/lib/types";
 
 const C = SCHOOL_FLUSH_FRAME_CONFIG;
@@ -75,8 +75,8 @@ describe("flush frame: the print files", () => {
   const full = createCanvas(W, H) as Canvas;
   drawSchoolFrame(full.getContext("2d") as unknown as CanvasRenderingContext2D, seededDesign(), emptyBundle(), W);
 
-  it("the assembled sheet is 15 x 6.75 in at 300 DPI and fits the E1 bed", () => {
-    expect([W, H]).toEqual([4500, 2025]);
+  it("the assembled sheet is 15 x 6.5 in at 300 DPI and fits the E1 bed", () => {
+    expect([W, H]).toEqual([4500, 1950]);
     expect(W / DPI).toBeLessThanOrEqual(EUFY_BED_LONG_INCHES);
     expect(H / DPI).toBeLessThanOrEqual(EUFY_BED_SHORT_INCHES);
   });
@@ -84,10 +84,10 @@ describe("flush frame: the print files", () => {
   // The sizes Bill confirms, in inches. Side columns are exported rotated to
   // landscape, which is how they go on the bed; the part is still 2 wide x 6.75 tall.
   const PARTS: Array<[SectionId, number, number]> = [
-    ["top", 11, 0.75],
+    ["top", 11, 0.5],
     ["bottom", 11, 1.55],
-    ["wing-left", 6.75, 2],
-    ["wing-right", 6.75, 2],
+    ["wing-left", 6.5, 2],
+    ["wing-right", 6.5, 2],
   ];
 
   it.each(PARTS)("%s exports at %s x %s in", (id, wIn, hIn) => {
@@ -99,20 +99,23 @@ describe("flush frame: the print files", () => {
     expect([part.width, part.height].sort()).toEqual([wIn, hIn].sort());
   });
 
-  it("the top runner carries two screw-slot holes 2.0 and 9.0 in from its left end, and ink everywhere else", () => {
+  it("the top runner carries two screw notches 2.0 and 9.0 in from its left end, open on its lower edge", () => {
     const panel = cutPanel(full, "top");
     const ctx = panel.getContext("2d");
     // The runner starts one rail cell in from the inner frame's left edge, so a
-    // slot at x from the inner edge sits at x - 1 on the part.
-    const slots = topBarScrewSlots(C);
-    const centres = slots.map((s) => s.x + s.width / 2 - C.tileSizeInches);
+    // notch at x from the inner edge sits at x - 1 on the part.
+    const notches = screwNotches(C).filter((n) => n.bar === "top");
+    expect(notches).toHaveLength(2);
+    const centres = notches.map((n) => n.x + n.width / 2 - C.tileSizeInches).sort((a, b) => a - b);
     expect(centres[0]).toBeCloseTo(2.0, 9);
     expect(centres[1]).toBeCloseTo(9.0, 9);
-    for (const s of slots) {
-      const cx = (s.x + s.width / 2 - C.tileSizeInches) * DPI;
-      const cy = (s.y + s.height / 2) * DPI;
-      expect(alphaAt(ctx, cx, cy)).toBe(0); // the hole: no ink
-      expect(alphaAt(ctx, cx + 0.4 * DPI, cy)).toBe(255); // beside it: ink
+    for (const n of notches) {
+      const cx = (n.x + n.width / 2 - C.tileSizeInches) * DPI;
+      const cy = (n.y + n.height / 2) * DPI;
+      expect(alphaAt(ctx, cx, cy)).toBe(0); // inside the notch: no ink
+      expect(alphaAt(ctx, cx, panel.height - 2)).toBe(0); // it is OPEN at the lower edge
+      expect(alphaAt(ctx, cx, 3)).toBe(255); // the web above it: ink
+      expect(alphaAt(ctx, cx + 0.5 * DPI, cy)).toBe(255); // beside it: ink
     }
     // Corners and middle of the runner print solid.
     for (const [x, y] of [[2, 2], [panel.width - 3, 2], [panel.width / 2, panel.height - 3]]) {
@@ -133,6 +136,17 @@ describe("flush frame: the print files", () => {
     expect(alphaAt(ctx, 5, rise + 0.5 * DPI)).toBe(255);
     expect(alphaAt(ctx, panel.width - 5, rise + 0.5 * DPI)).toBe(255);
     expect(alphaAt(ctx, panel.width / 2, panel.height - 3)).toBe(255);
+    // Its two screw notches, open on the bar's upper edge, 2.0 and 9.0 in from the
+    // left end, with a web of ink below each.
+    const notches = screwNotches(C).filter((n) => n.bar === "bottom");
+    expect(notches).toHaveLength(2);
+    for (const n of notches) {
+      const cx = (n.x + n.width / 2 - C.tileSizeInches) * DPI;
+      expect(alphaAt(ctx, cx, rise + 2)).toBe(0); // just inside the bar's upper edge
+      expect(alphaAt(ctx, cx, rise + (n.height / 2) * DPI)).toBe(0);
+      expect(alphaAt(ctx, cx, panel.height - 3)).toBe(255);
+      expect(alphaAt(ctx, cx + 0.5 * DPI, rise + (n.height / 2) * DPI)).toBe(255);
+    }
   });
 
   it("a side column prints solid over its whole 2 x 6.75, the short top row included", () => {

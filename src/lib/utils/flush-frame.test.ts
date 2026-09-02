@@ -19,7 +19,7 @@ import { canPlace, type PlacementContext } from "@/lib/utils/snappet";
 import { sectionBounds } from "@/lib/utils/sections";
 import { panelBleedBox, panelRowsPx, schoolBannerRect, schoolRenderMetrics } from "@/lib/utils/compose-school-frame";
 import { getPlateArea } from "@/lib/utils/layout";
-import { topBarScrewSlots } from "@/lib/utils/screw-slots";
+import { screwNotches } from "@/lib/utils/screw-slots";
 import { FLUSH_SPEC } from "@/lib/fit/spec";
 import { computeFit, outlineParts } from "@/lib/fit/geometry";
 import { configFromSpec, shippabilityRefusals, specFromConfig } from "@/lib/fit/config-bridge";
@@ -29,25 +29,25 @@ import type { SectionId } from "@/lib/types";
 const C = SCHOOL_FLUSH_FRAME_CONFIG;
 
 describe("flush frame: the lattice", () => {
-  it("closes on its own grid at 15 x 6.75", () => {
+  it("closes on its own grid at 15 x 6.5", () => {
     expect(gridInvariantHolds(C)).toBe(true);
     expect(getTotalWidthInches(C)).toBe(15);
-    expect(getRenderHeightInches(C)).toBe(6.75);
+    expect(getRenderHeightInches(C)).toBe(6.5);
     const grid = buildGrid(C);
     expect(grid.cols).toBe(15);
     expect(grid.rows).toBe(7);
   });
 
-  it("row 0 is 0.75 in tall and every other row is one tile, at any scale", () => {
+  it("row 0 is 0.5 in tall and every other row is one tile, at any scale", () => {
     for (const width of [150, 1000, 4500]) {
       const scale = width / 15;
       for (const s of generateSlots(C, width)) {
         if (s.row === 0) {
           expect(s.y).toBe(0);
-          expect(s.height).toBeCloseTo(0.75 * scale, 9);
+          expect(s.height).toBeCloseTo(0.5 * scale, 9);
         } else {
           expect(s.height).toBeCloseTo(1 * scale, 9);
-          expect(s.y).toBeCloseTo((0.75 + (s.row - 1)) * scale, 9);
+          expect(s.y).toBeCloseTo((0.5 + (s.row - 1)) * scale, 9);
         }
       }
     }
@@ -70,16 +70,16 @@ describe("flush frame: the lattice", () => {
     const plate = getPlateArea(C, 1500);
     expect(plate.y).toBe(0);
     expect(plate.height).toBe(600);
-    // 0.75 below: the frame runs to 6.75.
-    expect(getRenderHeightInches(C) * 100 - (plate.y + plate.height)).toBeCloseTo(75, 9);
+    // 0.5 below: the frame runs to 6.5.
+    expect(getRenderHeightInches(C) * 100 - (plate.y + plate.height)).toBeCloseTo(50, 9);
   });
 });
 
 describe("flush frame: Bill's parts", () => {
-  it("prints side 2 x 6.75, top 11 x 0.75, bottom 11 x 1.55 (with keystone)", () => {
-    expect(panelSizeInches("wing-left", C)).toEqual({ width: 2, height: 6.75 });
-    expect(panelSizeInches("wing-right", C)).toEqual({ width: 2, height: 6.75 });
-    expect(panelSizeInches("top", C)).toEqual({ width: 11, height: 0.75 });
+  it("prints side 2 x 6.5, top 11 x 0.5, bottom 11 x 1.55 (with keystone)", () => {
+    expect(panelSizeInches("wing-left", C)).toEqual({ width: 2, height: 6.5 });
+    expect(panelSizeInches("wing-right", C)).toEqual({ width: 2, height: 6.5 });
+    expect(panelSizeInches("top", C)).toEqual({ width: 11, height: 0.5 });
     const bottom = panelSizeInches("bottom", C);
     expect(bottom.width).toBe(11);
     expect(bottom.height).toBeCloseTo(1 + 0.55, 9);
@@ -142,12 +142,12 @@ describe("flush frame: the two renderers agree", () => {
   const slots = generateSlots(C, W);
   const m = schoolRenderMetrics(C, W);
 
-  it("the top banner is 75 px tall and the bottom banner starts at 575 px", () => {
+  it("the top banner is 50 px tall and the bottom banner starts at 550 px", () => {
     const top = schoolBannerRect({ row: "top", startIndex: 0, widthUnits: 13 }, m, C);
     expect(top.y).toBe(0);
-    expect(top.height).toBeCloseTo(75, 9);
+    expect(top.height).toBeCloseTo(50, 9);
     const bottom = schoolBannerRect({ row: "bottom", startIndex: 0, widthUnits: 13 }, m, C);
-    expect(bottom.y).toBeCloseTo(575, 9);
+    expect(bottom.y).toBeCloseTo(550, 9);
     expect(bottom.height).toBeCloseTo(100, 9);
   });
 
@@ -166,54 +166,59 @@ describe("flush frame: the two renderers agree", () => {
     }
   });
 
-  it("the old default crop would have been a quarter inch low — the reason panelRowsPx exists", () => {
+  it("the old default crop would have been half an inch low — the reason panelRowsPx exists", () => {
     const rects = panelRects(C);
     const drawn = sectionBounds("bottom", slots, C)!;
     const naive = panelBleedBox(rects.bottom, m.tileSize, 0);
-    expect(naive.contentY - drawn.y).toBeCloseTo(25, 6);
+    expect(naive.contentY - drawn.y).toBeCloseTo(50, 6);
   });
 });
 
-describe("flush frame: screw slots", () => {
-  it("puts two slots over the plate's top bolt holes, and none on the older frames", () => {
-    const slots = topBarScrewSlots(C);
-    expect(slots).toHaveLength(2);
+describe("flush frame: screw notches", () => {
+  it("notches both runners over the plate's bolt holes, and nothing on the older frames", () => {
+    const notches = screwNotches(C);
+    expect(notches).toHaveLength(4);
     // Holes are 7 in apart, centred on the plate, which starts 0.5 in into the
     // inner frame: centres at 0.5 + 2.5 and 0.5 + 9.5.
-    const centres = slots.map((s) => s.x + s.width / 2);
-    expect(centres[0]).toBeCloseTo(3, 9);
-    expect(centres[1]).toBeCloseTo(10, 9);
-    // Inside the 0.75 in bar, with material above and below.
-    for (const s of slots) {
-      expect(s.y).toBeGreaterThan(0);
-      expect(s.y + s.height).toBeLessThan(0.75);
+    for (const bar of ["top", "bottom"] as const) {
+      const centres = notches.filter((n) => n.bar === bar).map((n) => n.x + n.width / 2).sort((a, b) => a - b);
+      expect(centres[0]).toBeCloseTo(3, 9);
+      expect(centres[1]).toBeCloseTo(10, 9);
     }
-    expect(topBarScrewSlots(SCHOOL_FRAME_CONFIG)).toEqual([]);
-    expect(topBarScrewSlots(SCHOOL_SLIM_FRAME_CONFIG)).toEqual([]);
+    // 0.5 in of cover meets a 0.6 in screw head by 0.175; with 0.1 of air the notch is
+    // 0.275 deep, leaves a web on the runner's outer side, and is OPEN on the plate side.
+    for (const n of notches.filter((n) => n.bar === "top")) {
+      expect(n.y + n.height).toBeCloseTo(0.5, 9); // open at the top bar's lower edge
+      expect(n.height).toBeCloseTo(0.275, 9);
+      expect(n.y).toBeGreaterThan(0.15);
+    }
+    for (const n of notches.filter((n) => n.bar === "bottom")) {
+      expect(n.y).toBeCloseTo(5.5, 9); // open at the bottom bar's upper edge
+      expect(n.height).toBeCloseTo(0.275, 9);
+    }
+    expect(screwNotches(SCHOOL_FRAME_CONFIG)).toEqual([]);
+    expect(screwNotches(SCHOOL_SLIM_FRAME_CONFIG)).toEqual([]);
   });
 });
 
 describe("flush frame: the fit bench", () => {
-  it("reads 15 x 6.75 with nothing above the plate and 0.75 below", () => {
+  it("reads 15 x 6.5 with nothing above the plate and 0.5 below", () => {
     const r = computeFit(FLUSH_SPEC);
     expect(r.totalWidthInches).toBe(15);
-    expect(r.totalHeightInches).toBe(6.75);
+    expect(r.totalHeightInches).toBe(6.5);
     expect(r.abovePlateInches).toBe(0);
-    expect(r.belowPlateInches).toBe(0.75);
-    expect(r.faceCoverage.top).toBe(0.75);
-    expect(r.faceCoverage.bottomFullWidth).toBe(0.25);
+    expect(r.belowPlateInches).toBe(0.5);
+    expect(r.faceCoverage.top).toBe(0.5);
+    expect(r.faceCoverage.bottomFullWidth).toBe(0.5);
+    expect(r.faceCoverage.bottomCenter).toBeCloseTo(1.05, 9);
     expect(r.faceCoverage.left).toBe(0.5);
     expect(r.fitsBedRotated).toBe(true);
-    // Bill's tape (2026-09-02): the Pilot's recess is 6.625" tall. 6.75 does not fit.
-    expect(r.underPilotCeiling).toBe(false);
+    // Bill's tape (2026-09-02): the Pilot's recess is 6.625" tall. 6.5 fits.
+    expect(r.underPilotCeiling).toBe(true);
   });
 
-  it("raises exactly three flags: the drop, the top cover, and the taped Pilot ceiling", () => {
-    const r = computeFit(FLUSH_SPEC);
-    expect(r.flags).toHaveLength(3);
-    expect(r.flags.some((f) => f.startsWith("Bottom edge hangs 0.75"))).toBe(true);
-    expect(r.flags.some((f) => f.startsWith("Top rail covers 0.75"))).toBe(true);
-    expect(r.flags.some((f) => f.includes("exceeds the 6.625 in Pilot ceiling"))).toBe(true);
+  it("raises no flags: the July drop, the state-name cover, the Pilot and the date line all clear", () => {
+    expect(computeFit(FLUSH_SPEC).flags).toEqual([]);
   });
 
   it("is the shipping config, projected — and projects back", () => {
@@ -222,9 +227,9 @@ describe("flush frame: the fit bench", () => {
     const back = configFromSpec(FLUSH_SPEC, C);
     expect("config" in back).toBe(true);
     if ("config" in back) {
-      expect(back.config.heightInches).toBe(6.75);
-      expect(back.config.topBarHeightInches).toBe(0.75);
-      expect(back.config.plateTopCoverInches).toBe(0.75);
+      expect(back.config.heightInches).toBe(6.5);
+      expect(back.config.topBarHeightInches).toBe(0.5);
+      expect(back.config.plateTopCoverInches).toBe(0.5);
       expect(back.config.widthInches).toBe(13);
       expect(back.config.wingColumns).toBe(1);
       expect(gridInvariantHolds(back.config)).toBe(true);

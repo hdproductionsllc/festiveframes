@@ -10,7 +10,7 @@ import { SchoolBuilder } from "@/components/designer/SchoolDesigner";
 import { SchoolKitPage } from "@/components/designer/SchoolKitPage";
 import { allSchoolKits, getSchoolKit } from "@/data/school-kits";
 
-// ─── THE FORK: /lab/flush — 15 x 6.75, flush on top ──────────────────────────
+// ─── THE FORK: /lab/flush — 15 x 6.5, flush on top ───────────────────────────
 //
 // The fitment engine's answer, beside the live builder rather than replacing it.
 // Nothing here is shared mutable state: the route names a VARIANT, and the variant
@@ -18,12 +18,13 @@ import { allSchoolKits, getSchoolKit } from "@/data/school-kits";
 // own persist-key namespace, so a design made here can never reach /s/<school>.
 //
 // WHAT CHANGED, in one line each (see SCHOOL_FLUSH_FRAME_CONFIG for the rest):
-//   TOP     flush with the plate's top edge. 0.75" tall, all of it over the plate
-//           face, with two screw slots over the bolt holes like every dealer frame.
-//           Cameras and garnish strips leave 0.26-0.4" above the plate on a third
-//           of the fleet; every earlier frame hung 0.47-0.96" up there.
-//   BOTTOM  0.75" below the plate, 0.25" over its face, keystone for the tagline.
-//   SIDES   Bill's 2" columns, 6.75" tall instead of 8, 1.5" outboard.
+//   TOP     flush with the plate's top edge. 0.5" tall, all of it over the plate
+//           face, notched over the bolt holes like every dealer frame. Cameras and
+//           garnish strips leave 0.26-0.4" above the plate on a third of the
+//           fleet; every earlier frame hung 0.47-0.96" up there.
+//   BOTTOM  0.5" below the plate (the July line, and what the Pilot's taped 6.625"
+//           recess allows), 0.5" over its face, notched, keystone for the tagline.
+//   SIDES   Bill's 2" columns, 6.5" tall instead of 8, 1.5" outboard.
 //
 // ?school=<slug> opens it wearing a real kit. The kit route and this one share ONE
 // page body (SchoolKitPage) so they cannot drift.
@@ -42,8 +43,8 @@ function ForkBanner({ slug }: { slug?: string }) {
     <div className="msf-fork-bar">
       <span className="msf-fork-tag">Fork</span>
       <span className="msf-fork-note">
-        Flush top. 15&Prime; &times; 6.75&Prime; on Bill&rsquo;s 1&Prime; grid: nothing above the
-        plate, 0.75&Prime; below it, a 0.75&Prime; top runner with screw slots.
+        Flush top. 15&Prime; &times; 6.5&Prime; on Bill&rsquo;s 1&Prime; grid: nothing above the
+        plate, 0.5&Prime; below it, a 0.5&Prime; top runner, screw notches in both runners.
       </span>
       <nav className="msf-fork-links" aria-label="Other versions of this frame">
         <a href="/lab/flush" aria-current={slug ? undefined : "page"}>Generic</a>

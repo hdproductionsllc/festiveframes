@@ -34,7 +34,7 @@ export interface SchoolVariant {
 export const SCHOOL_VARIANTS: Record<SchoolVariantId, SchoolVariant> = {
   live: { id: "live", label: "Live frame", config: SCHOOL_FRAME_CONFIG, presets: SCHOOL_PRESETS },
   slim: { id: "slim", label: "Slim (half cantilever)", config: SCHOOL_SLIM_FRAME_CONFIG, presets: SLIM_PRESETS },
-  flush: { id: "flush", label: "Flush 15 x 6.75", config: SCHOOL_FLUSH_FRAME_CONFIG, presets: FLUSH_PRESETS },
+  flush: { id: "flush", label: "Flush 15 x 6.5", config: SCHOOL_FLUSH_FRAME_CONFIG, presets: FLUSH_PRESETS },
 };
 
 /** The variant for an id, defaulting to the live frame — which is what every

@@ -201,15 +201,19 @@ error of 49/255 where the real figure was under 1/255.
   keystone), never downward. The July ring's ~0.5" below plate bottom is the
   most that has ever been shown to fit.
 
-## The FLUSH fork — /lab/flush — 15 × 6.75 (owner's call, 2026-09-02)
+## The FLUSH fork — /lab/flush — 15 × 6.5 (owner's call, 2026-09-02)
 
 - **Why**: the fitment engine (31 measured cars) says the TOP edge is the choke point.
   Cameras and garnish leave 0.26–0.4" above the plate on a third of the fleet; every
-  earlier frame hangs 0.47–0.96" up there. Below the plate, 0.75" is the ceiling.
+  earlier frame hangs 0.47–0.96" up there. Below the plate, Bill's Pilot tape (below)
+  caps the drop at the July line, 0.5". The first cut was 6.75" / 0.75" below; the
+  tape retired it the same day.
 - **Geometry** (`SCHOOL_FLUSH_FRAME_CONFIG`, variant `flush`): Bill's 1.000" grid,
-  11 × 5 window, top runner **11 × 0.75 flush** with the plate's top edge (all over the
-  face, two screw slots over the bolt holes), side columns **2 × 6.75**, bottom runner
-  11 × 1 at 0.25 in / 0.75 below, keystone unchanged. Stack 0.75 + 5 + 1 = 6.75.
+  11 × 5 window, top runner **11 × 0.5 flush** with the plate's top edge (all over the
+  face), side columns **2 × 6.5**, bottom runner 11 × 1 at 0.5 in / 0.5 below, keystone
+  unchanged (reaches 1.05, under MO's 1.08). Stack 0.5 + 5 + 1 = 6.5. Both runners
+  carry **screw notches** over the bolt holes (`screwNotches: true`, utils/screw-slots):
+  0.5" of cover meets a 0.6" screw head. Opt-in per config; nothing else has them.
 - **The one new concept: a row that is not a tile tall.** `FrameConfig.topBarHeightInches`
   and `plateTopCoverInches` (registration). ALL row geometry now comes from
   `src/lib/utils/rows.ts` — grid, panel sizes, plate area, both banner renderers, the
@@ -222,12 +226,15 @@ error of 49/255 where the real figure was under 1/255.
   Pilot ceiling now (`PILOT_HEIGHT_CEILING_INCHES`), replacing the "7 in is believed
   good" belief. A 12 × 6 plate leaves 0.625" total to share above and below; where
   the plate sits inside the recess is still unmeasured (centred = 0.3125" below).
-  Consequences: the 6.75" flush frame does NOT fit (over by 0.125" at best), the 7"
-  candidate does not fit, and the fitment engine's photo reading of 3.05" below the
-  Pilot's plate was the liftgate-bulge error. Width is a non-issue (4.75" per side).
-- **The bench flags the flush fork three times, on purpose**: 0.75" below plate
-  (July proved 0.5), 0.75" top cover (state-name band; Missouri's rule unchecked),
-  and the Pilot ceiling. Thresholds stay. Note for Bill: `tasks/flush-frame-for-bill.md`.
+  Consequences: a 6.75" frame does NOT fit (over by 0.125" at best), the 7" candidate
+  and the 6.937" July ring do not fit, and the fitment engine's photo reading of
+  3.05" below the Pilot's plate was the liftgate-bulge error. Width is a non-issue
+  (4.75" per side). Still unmeasured: plate bottom edge → recess floor; the 6.5"
+  frame needs it to be ≥ 0.5".
+- **The bench reads the 6.5" flush fork CLEAN** on every rule (July drop, state-name
+  cover at 0.5 < 0.55, Pilot ceiling, MO date line). The state-name rule is still a
+  legal question to settle before a parent buys one. Note for Bill:
+  `tasks/flush-frame-for-bill.md`.
 - Follow-ups: fitment-engine needs a `standard-15` preset; `frameCorners` gives the
   wide outside radius to row 0, which no badge reaches here (cosmetic); top-banner
   text has no keep-out at the screw slots yet (centred text clears them so far).

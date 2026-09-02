@@ -154,6 +154,14 @@ export interface FrameConfig {
    * to `topBarHeightInches` means FLUSH: nothing above the plate.
    */
   plateTopCoverInches?: number;
+  /**
+   * Cut a notch over each of the plate's bolt holes in any runner that reaches far
+   * enough over the plate face to meet a screw head (see utils/screw-slots).
+   * Absent = no notches, which is every frame before the flush fork: the July ring
+   * mounts as built, and how Bill's runners meet the screws is his detail, not a
+   * fact this code should invent for him.
+   */
+  screwNotches?: boolean;
 }
 
 /** Geometry of the bottom bar's keystone, in inches. See `FrameConfig.bottomTab`. */

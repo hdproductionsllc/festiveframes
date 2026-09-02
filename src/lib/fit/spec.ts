@@ -250,27 +250,28 @@ export const CANDIDATE_SPEC: FitSpec = {
   topRailHeightInches: 1,
 };
 
-/** The FLUSH-TOP fork (owner's call, 2026-09-02), from the fleet data: the top edge
- *  AT the plate's top edge, 0.75" below the plate, Bill's 2" side columns. 15 x
- *  6.75. The rail is 0.75" tall because that is the only height at which a flush
- *  top closes on a 1.000" grid: 0.75 + 5 + 1 = 6.75, and the bottom row covers the
- *  remaining 0.25" of plate face.
+/** The FLUSH-TOP fork (owner's call, 2026-09-02): the top edge AT the plate's top
+ *  edge, 0.5" below the plate, Bill's 2" side columns. 15 x 6.5. The rail is 0.5"
+ *  tall because that is the only height at which a flush top closes on a 1.000"
+ *  grid at this drop: 0.5 + 5 + 1 = 6.5, and the bottom row covers the remaining
+ *  0.5" of plate face.
  *
- *  Two flags fire on it, and should: the 0.75" drop exceeds the 0.5" the July build
- *  proved (the fleet numbers are photo-derived and the Pilot is not yet taped), and
- *  0.75" of top cover reaches the state-name band. The bench exists to show that
- *  next to the candidate, not to hide it. See SCHOOL_FLUSH_FRAME_CONFIG. */
+ *  It is the candidate with its 0.5" of air moved from above the plate to below
+ *  it, which is what Bill's Pilot tape (6.625" recess) and the fleet's camera
+ *  chokepoint both ask for. It reads CLEAN on every rule here: the July drop, the
+ *  state-name cover, the Pilot ceiling and the date line. The first cut, at 0.75"
+ *  below and 6.75" tall, lasted one day. See SCHOOL_FLUSH_FRAME_CONFIG. */
 export const FLUSH_SPEC: FitSpec = {
   pitchInches: 1,
   windowCols: 11,
   windowRows: 5,
-  bottomDropInches: 0.75,
+  bottomDropInches: 0.5,
   runnerHeightInches: 1,
   keystone: { ...DEFAULT_KEYSTONE },
   sideBadgeCells: 2,
   sideInwardInches: 0.5,
-  topInwardInches: 0.75,
-  topRailHeightInches: 0.75,
+  topInwardInches: 0.5,
+  topRailHeightInches: 0.5,
 };
 
 export const PRESETS: Array<{ key: string; label: string; spec: FitSpec }> = [

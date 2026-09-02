@@ -63,7 +63,7 @@ import { panelOverhangTiles, panelRects, type PanelRect } from "@/lib/utils/pane
 import { bannerBands, trackingPx, widthLimitedFont } from "@/lib/utils/banner-tiers";
 import { frameTab, tabPath, tabSkirt, tabTextBox } from "@/lib/utils/bottom-tab";
 import { bannerRowBox, rowHeightInches, rowTopInches } from "@/lib/utils/rows";
-import { topBarScrewSlots } from "@/lib/utils/screw-slots";
+import { screwNotches } from "@/lib/utils/screw-slots";
 import { bannerConfigFor, bannerLogoLayout, sectionSupportsLogo } from "@/lib/utils/banner-logo";
 import { getPiece } from "@/data/sets";
 import {
@@ -983,30 +983,35 @@ export function drawSchoolFrame(
   // signature change on a function four call sites already use.
   backFillTransparent(ctx, canvasWidth, getRenderHeightInches(config) * m.scale, bodyColour(design));
 
-  // 7) SCREW SLOTS, punched out LAST — after the backing, deliberately. A slot is a
-  //    hole in the physical top runner, and the honest print of a hole is no ink at
-  //    all: the operator sees exactly where Bill's slot goes, and nothing is printed
-  //    on material that will not be there. Only a bar that covers the plate's bolt
-  //    holes gets them (utils/screw-slots), so every frame before the flush fork
-  //    prints exactly as it did.
-  punchScrewSlots(ctx, config, m);
+  // 7) SCREW NOTCHES, punched out LAST — after the backing, deliberately. A notch is
+  //    a cut in the physical runner, and the honest print of a cut is no ink at all:
+  //    the operator sees exactly where Bill's notch goes, and nothing is printed on
+  //    material that will not be there. Only a config that asks for them gets them
+  //    (utils/screw-slots), so every frame before the flush fork prints as it did.
+  punchScrewNotches(ctx, config, m);
 }
 
-/** Cut the top bar's screw slots out of an otherwise finished render. */
-export function punchScrewSlots(
+/** Cut the runners' screw notches out of an otherwise finished render. Each notch
+ *  is open on the runner's plate-side edge and rounded at its inner end. */
+export function punchScrewNotches(
   ctx: CanvasRenderingContext2D,
   config: FrameConfig,
   m: { scale: number; wingPx: number },
 ): void {
-  const slots = topBarScrewSlots(config);
-  if (slots.length === 0) return;
+  const notches = screwNotches(config);
+  if (notches.length === 0) return;
   ctx.save();
   ctx.globalCompositeOperation = "destination-out";
   ctx.fillStyle = "#000";
-  for (const s of slots) {
-    const w = s.width * m.scale;
-    const h = s.height * m.scale;
-    roundRect(ctx, m.wingPx + s.x * m.scale, s.y * m.scale, w, h, Math.min(w, h) / 2);
+  for (const n of notches) {
+    const w = n.width * m.scale;
+    const h = n.height * m.scale;
+    const r = Math.min(w / 2, h);
+    // Round the end INSIDE the runner; the open end is square to the edge.
+    const radii = n.bar === "top"
+      ? { tl: r, tr: r, br: 0, bl: 0 }
+      : { tl: 0, tr: 0, br: r, bl: r };
+    roundRect(ctx, m.wingPx + n.x * m.scale, n.y * m.scale, w, h, radii);
     ctx.fill();
   }
   ctx.restore();
