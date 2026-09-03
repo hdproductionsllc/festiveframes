@@ -15,7 +15,7 @@ import {
 } from "@/lib/constants/frame";
 import { buildGrid, gridInvariantHolds, generateSlots } from "@/lib/utils/slot-generator";
 import { panelRects, panelSizeInches, panelOverhangTiles } from "@/lib/utils/panels";
-import { canPlace, type PlacementContext } from "@/lib/utils/snappet";
+import { canPlace, snappetRect, type PlacementContext } from "@/lib/utils/snappet";
 import { sectionBounds } from "@/lib/utils/sections";
 import { panelBleedBox, panelRowsPx, schoolBannerRect, schoolRenderMetrics } from "@/lib/utils/compose-school-frame";
 import { getPlateArea } from "@/lib/utils/layout";
@@ -76,10 +76,10 @@ describe("flush frame: the lattice", () => {
 });
 
 describe("flush frame: Bill's parts", () => {
-  it("prints side 2 x 6, top 15 x 0.75 (full width), bottom 11 x 1.55 (with keystone)", () => {
-    expect(panelSizeInches("wing-left", C)).toEqual({ width: 2, height: 6 });
-    expect(panelSizeInches("wing-right", C)).toEqual({ width: 2, height: 6 });
-    expect(panelSizeInches("top", C)).toEqual({ width: 15, height: 0.75 });
+  it("prints side 2 x 6.75 (full height), top 11 x 0.75, bottom 11 x 1.55 (with keystone)", () => {
+    expect(panelSizeInches("wing-left", C)).toEqual({ width: 2, height: 6.75 });
+    expect(panelSizeInches("wing-right", C)).toEqual({ width: 2, height: 6.75 });
+    expect(panelSizeInches("top", C)).toEqual({ width: 11, height: 0.75 });
     const bottom = panelSizeInches("bottom", C);
     expect(bottom.width).toBe(11);
     expect(bottom.height).toBeCloseTo(1 + 0.55, 9);
@@ -110,29 +110,36 @@ describe("flush frame: placement", () => {
   const ctx: PlacementContext = { grid, slots: {}, sections: {}, barCovered: new Set() };
   const leftWing = panelRects(C)["wing-left"];
 
-  it("refuses a 2x2 anchored on the top row of a wing, with the banner reason", () => {
-    const r = canPlace(ctx, { row: 0, col: leftWing.col0 }, { cols: 2, rows: 2 });
-    expect(r.ok).toBe(false);
-    expect(r.reason).toBe("banner");
-  });
-
-  it("refuses even a 1x1 on the top row", () => {
+  it("refuses a tile that is ONLY the short top row, with the banner reason", () => {
     const r = canPlace(ctx, { row: 0, col: leftWing.col0 }, { cols: 1, rows: 1 });
     expect(r.ok).toBe(false);
     expect(r.reason).toBe("banner");
+    expect(canPlace(ctx, { row: 0, col: leftWing.col0 }, { cols: 2, rows: 1 }).ok).toBe(false);
   });
 
-  it("accepts three 2x2 badges down rows 1..6, and nothing below", () => {
-    for (const row of [1, 3, 5]) {
+  it("accepts a taller badge anchored on the short row — the 2 x 2.75 corner badge", () => {
+    expect(canPlace(ctx, { row: 0, col: leftWing.col0 }, { cols: 2, rows: 3 }).ok).toBe(true);
+    // Anchor and tileSize from the SAME grid, at 100 px per inch.
+    const g100 = buildGrid(C, 1500);
+    const px = snappetRect(g100.cellAt(0, leftWing.col0)!, { cols: 2, rows: 3 }, 100);
+    expect(px.height).toBeCloseTo(275, 6); // 0.75 + 2 tiles
+  });
+
+  it("accepts the column [3, 2, 2] down rows 0..6, and nothing below", () => {
+    expect(canPlace(ctx, { row: 0, col: leftWing.col0 }, { cols: 2, rows: 3 }).ok).toBe(true);
+    for (const row of [3, 5]) {
       expect(canPlace(ctx, { row, col: leftWing.col0 }, { cols: 2, rows: 2 }).ok).toBe(true);
     }
     expect(canPlace(ctx, { row: 6, col: leftWing.col0 }, { cols: 2, rows: 2 }).ok).toBe(false);
   });
 
-  it("the presets anchor on rows 1, 3 and 5 of both sides", () => {
+  it("the presets anchor on rows 0, 3 and 5 of both sides, the corner badge three rows tall", () => {
     for (const preset of FLUSH_PRESETS) {
       const rows = preset.layout.map(([slot]) => grid.coordOf(slot)!.row).sort();
-      expect(rows).toEqual([1, 1, 3, 3, 5, 5]);
+      expect(rows).toEqual([0, 0, 3, 3, 5, 5]);
+      for (const [slot, , span] of preset.layout) {
+        expect(span?.rows).toBe(grid.coordOf(slot)!.row === 0 ? 3 : 2);
+      }
     }
   });
 });
@@ -151,14 +158,15 @@ describe("flush frame: the two renderers agree", () => {
     expect(bottom.height).toBeCloseTo(100, 9);
   });
 
-  it("the top section spans the full width, corners included, and the sides start under it", () => {
+  it("the side panels run the full height and own the corners; the top runner sits between them", () => {
     const top = sectionBounds("top", slots, C)!;
-    expect(top.x).toBe(0);
-    expect(top.width).toBeCloseTo(1500, 9);
+    expect(top.x).toBeCloseTo(200, 9); // wing + rail column
+    expect(top.width).toBeCloseTo(1100, 9);
     expect(top.height).toBeCloseTo(75, 9);
     const left = sectionBounds("wing-left", slots, C)!;
-    expect(left.y).toBeCloseTo(75, 9);
-    expect(left.height).toBeCloseTo(600, 9);
+    expect(left.y).toBe(0);
+    expect(left.height).toBeCloseTo(675, 9);
+    expect(left.width).toBeCloseTo(200, 9);
   });
 
   it("the per-panel print crop lands exactly on the panel's drawn bounds", () => {
@@ -232,14 +240,14 @@ describe("flush frame: the fit bench", () => {
     expect(r.flags.some((f) => f.includes("exceeds the 6.625 in Pilot ceiling"))).toBe(true);
   });
 
-  it("draws the top runner edge to edge with the side columns under it", () => {
+  it("draws the side columns the full 6.75 with the top runner between them", () => {
     const parts = outlineParts(FLUSH_SPEC);
     const rail = parts.find((p) => p.id === "rail-top")!.rect!;
     const left = parts.find((p) => p.id === "badges-left")!.rect!;
-    expect(rail.x).toBeCloseTo(-1.5, 9);
-    expect(rail.w).toBeCloseTo(15, 9);
-    expect(left.y).toBeCloseTo(rail.y + rail.h, 9);
-    expect(left.h).toBeCloseTo(6, 9);
+    expect(rail.x).toBeCloseTo(0.5, 9);
+    expect(rail.w).toBeCloseTo(11, 9);
+    expect(left.y).toBeCloseTo(rail.y, 9);
+    expect(left.h).toBeCloseTo(6.75, 9);
   });
 
   it("is the shipping config, projected — and projects back", () => {

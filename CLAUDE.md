@@ -207,19 +207,23 @@ error of 49/255 where the real figure was under 1/255.
   Cameras and garnish leave 0.26–0.4" above the plate on a third of the fleet; every
   earlier frame hangs 0.47–0.96" up there.
 - **Geometry** (`SCHOOL_FLUSH_FRAME_CONFIG`, variant `flush`): Bill's 1.000" grid,
-  11 × 5 window, top runner **15 × 0.75 flush** with the plate's top edge, running the
-  FULL width with the side columns under it; side columns **2 × 6**; bottom runner
-  11 × 1 at 0.25 in / 0.75 below; keystone unchanged (reaches 0.80). Stack
-  0.75 + 5 + 1 = 6.75. The top runner carries **screw notches** over the bolt holes
-  (`screwNotches: true`, utils/screw-slots); the bottom runner, at 0.25" of cover,
-  needs none. Opt-in per config; nothing else has them.
+  11 × 5 window, top runner **11 × 0.75 flush** with the plate's top edge, sitting
+  between side columns that run the **full 2 × 6.75**; bottom runner 11 × 1 at
+  0.25 in / 0.75 below; keystone unchanged (reaches 0.80). Stack 0.75 + 5 + 1 = 6.75.
+  The top runner carries **screw notches** over the bolt holes (`screwNotches: true`,
+  utils/screw-slots); the bottom runner, at 0.25" of cover, needs none. Opt-in per
+  config; nothing else has them.
 - **History, same two days**: first cut 6.75 (0.75 below) → Bill's Pilot tape said
   6.625 → rebuilt at 6.5 (0.5" bar, 0.5 below, fits the Pilot, bench clean) → owner
-  saw the 0.5" bar as a sliver and chose the bar over the Pilot → back to 6.75. Do not
-  re-propose 6.5 without new information; do not present 6.75 as fitting the Pilot.
-- **A banner-only top row belongs to the top runner edge to edge** (`topSpansFullWidth`
-  in utils/panels): the side panels start on row 1, so no bare strip sits above the
-  top badge. Every tile-tall top row keeps the sides' corners as before.
+  saw the 0.5" bar as a sliver and chose the bar over the Pilot → back to 6.75. Then a
+  full-width top runner over 2 × 6 sides was tried and rejected: **the SIDES span the
+  full height** (Bill's part split). Do not re-propose 6.5 or a full-width runner
+  without new information; do not present 6.75 as fitting the Pilot.
+- **The short top row is absorbed by the corner badge**: a footprint may not be ONLY
+  that row (`canPlace` refuses `rows === 1` there) but may start on it, so the flush
+  column is [3, 2, 2] — a 2 × 2.75 corner badge, then two squares — the same move
+  the live frame's 2 × 3 makes with its odd row. Badge px height is
+  `anchor.height + (rows − 1) × tile` in BOTH renderers (`snappetRect`, compose).
 - **The one new concept: a row that is not a tile tall.** `FrameConfig.topBarHeightInches`
   and `plateTopCoverInches` (registration). ALL row geometry now comes from
   `src/lib/utils/rows.ts` — grid, panel sizes, plate area, both banner renderers, the

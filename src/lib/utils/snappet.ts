@@ -149,19 +149,22 @@ export function visibleAnchorSlots(
  * accumulated step error. A 1x1 returns the anchor slot's own rect.
  */
 export function snappetRect(
-  anchor: Pick<FrameSlot, "x" | "y">,
+  anchor: Pick<FrameSlot, "x" | "y"> & Partial<Pick<FrameSlot, "height">>,
   span: TileSpan,
   tileSize: number,
 ): { x: number; y: number; width: number; height: number } {
-  // Pure geometry in TILES: every row a footprint can legally occupy is a tile
-  // tall (only row 0 can be shorter, and `canPlace` refuses anything touching it),
-  // so a placed snappet is always exactly `rows * tileSize`. A cue hovering the
-  // short bar is drawn a tile tall and red; it is a refusal either way.
+  // The anchor's own row plus one tile per row below it. Every row below any
+  // anchor is a tile tall; only row 0 can be shorter (the flush frame's 0.75" top
+  // bar), and a badge anchored there is that much shorter than `rows` tiles —
+  // the 2 x 2.75 corner badge. `anchor.height` must be in the same px scale as
+  // `tileSize`; every caller passes a slot from the grid the tileSize came from.
+  // Absent, the row is assumed a tile tall, which is every other frame.
+  const first = anchor.height ?? tileSize;
   return {
     x: anchor.x,
     y: anchor.y,
     width: span.cols * tileSize,
-    height: span.rows * tileSize,
+    height: first + (span.rows - 1) * tileSize,
   };
 }
 
@@ -237,10 +240,14 @@ export function canPlace(
     if (grid.isPlate(coord.row, coord.col)) {
       return { ok: false, reason: "plate", evicts: [] };
     }
-    // A row that is not a tile tall (the flush frame's 0.75" top bar) is frame
-    // body, wings included. One check here covers every entry point — drop, fill,
-    // mirror, resize and the hydrate-time badge growth all come through canPlace.
-    if (grid.isBannerOnly(coord.row, coord.col)) {
+    // A row that is not a tile tall (the flush frame's 0.75" top bar) holds no
+    // tile OF ITS OWN: a footprint that is only that row would be a 1 x 0.75
+    // sliver. It may be the top row of a taller badge, which is how the side
+    // columns run the full height with no bare strip above the corner badge —
+    // a 2 x 2.75, the way the live frame's 2 x 3 absorbs its odd row. One check
+    // here covers every entry point: drop, fill, mirror, resize and the
+    // hydrate-time badge growth all come through canPlace.
+    if (span.rows === 1 && grid.isBannerOnly(coord.row, coord.col)) {
       return { ok: false, reason: "banner", evicts: [] };
     }
     const cell = grid.cellAt(coord.row, coord.col);

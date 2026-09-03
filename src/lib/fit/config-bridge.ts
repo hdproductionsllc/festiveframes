@@ -2,7 +2,6 @@ import { DEFAULT_FRAME_CONFIG, getRenderHeightInches } from "@/lib/constants/fra
 import { PLATE, type FitSpec, type KeystoneSpec } from "@/lib/fit/spec";
 import type { FrameConfig } from "@/lib/types";
 import { plateTopCoverInches, plateTopInches, topBarHeightInches } from "@/lib/utils/rows";
-import { topSpansFullWidth } from "@/lib/utils/panels";
 
 // ─── FitSpec <-> FrameConfig ────────────────────────────────────────────────
 //
@@ -84,7 +83,6 @@ export function specFromConfig(
     windowRows: config.leftSlots,
     runnerHeightInches: snap((config.bottomRows ?? 1) * pitch),
     topRailHeightInches: snap(topBarHeightInches(config)),
-    topRailSpansWidth: topSpansFullWidth(config),
     sideBadgeCells: config.wingColumns + 1,
     keystone: config.bottomTab
       ? ({

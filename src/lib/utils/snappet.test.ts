@@ -456,15 +456,23 @@ describe("snappetRect — rendering geometry", () => {
     expect(rect.x).toBeCloseTo(a.x, 6);
   });
 
-  it("is pure geometry — it does not consult the grid, so it scales with tileSize", () => {
-    // FrameCanvas passes the LIVE tileSize (containerWidth / totalWidthInches), so
-    // the same span must resolve at any responsive width.
-    const a = schoolGrid.cellAt(6, 0)!;
-    for (const tileSize of [10, 33.7, 120]) {
-      const rect = snappetRect(a, { cols: 2, rows: 4 }, tileSize);
+  it("scales with the live tileSize: the same span resolves at any responsive width", () => {
+    // FrameCanvas passes the LIVE tileSize (containerWidth / totalWidthInches) and
+    // an anchor slot from the grid built at that same width, so the two agree.
+    for (const width of [150, 505.5, 1800]) {
+      const grid = buildGrid(SCHOOL_FRAME_CONFIG, width);
+      const tileSize = grid.cellAt(6, 0)!.width;
+      const rect = snappetRect(grid.cellAt(6, 0)!, { cols: 2, rows: 4 }, tileSize);
       expect(rect.width).toBeCloseTo(tileSize * 2, 9);
       expect(rect.height).toBeCloseTo(tileSize * 4, 9);
     }
+  });
+
+  it("an anchor on a short row is that much shorter than its rows in tiles", () => {
+    // The flush frame's 0.75 in top bar: a 2x3 anchored on row 0 is 0.75 + 2 tiles.
+    const rect = snappetRect({ x: 0, y: 0, height: 75 }, { cols: 2, rows: 3 }, 100);
+    expect(rect.height).toBe(275);
+    expect(rect.width).toBe(200);
   });
 });
 

@@ -292,12 +292,16 @@ export const FrameCanvas = forwardRef<FrameCanvasHandle, FrameCanvasProps>(
       return coveredBySnappets(visibleAnchorSlots(slots, grid, sections), grid);
     }, [anySpan, slots, sections, frameConfig, containerWidth]);
 
-    // A cell on a banner-only row (the flush frame's 0.75" top bar, wings included)
-    // is frame body: nothing can drop there, so it gets no pocket and no drop
-    // target. Rendered as an empty cell it read as two white notches in the top
-    // corners — exactly the kind of thing only a screenshot shows.
+    // An EMPTY cell on a banner-only row (the flush frame's 0.75" top bar, wings
+    // included) is frame body: no tile of its own can drop there, so it gets no
+    // pocket and no drop target. Rendered as an empty cell it read as two white
+    // notches in the top corners — exactly the kind of thing only a screenshot
+    // shows. A cell there that ANCHORS a taller badge (the 2 x 2.75 corner badge)
+    // stays, because that badge is drawn from its anchor.
     const visibleSlots = frameSlots.filter(
-      (slot) => !slotSuppressed(slot, sections, frameConfig) && !isBannerOnlyRow(frameConfig, slot.row),
+      (slot) =>
+        !slotSuppressed(slot, sections, frameConfig) &&
+        !(isBannerOnlyRow(frameConfig, slot.row) && !slots[slot.id]),
     );
     // Anchors are hoisted out of the frame body and into the overflow-visible
     // layer below, so they are rendered from here, not from `cellSlots`.

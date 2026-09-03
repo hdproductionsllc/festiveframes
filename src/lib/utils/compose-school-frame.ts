@@ -826,7 +826,10 @@ export function drawSchoolFrame(
 
     const span = tileSpan(tile);
     const w = span.cols * m.tileSize;
-    const h = span.rows * m.tileSize;
+    // The anchor's own row plus one tile per row below it — the same rule as the
+    // canvas's `snappetRect`, so a corner badge on the flush frame's 0.75" top row
+    // prints 2.75" tall, not 3.
+    const h = slot.height + (span.rows - 1) * m.tileSize;
 
     ctx.save();
     const piece0 = !tile.image ? getPiece(tile.pieceId) : undefined;

@@ -296,8 +296,6 @@ describe("every preset covers its side panels exactly", () => {
       }
       for (const cell of grid.slots) {
         if (!grid.panelAt(cell.row, cell.col)?.startsWith("wing-")) continue;
-        // The flush frame's 0.75" top row is frame body by design, not a notch.
-        if (grid.isBannerOnly(cell.row, cell.col)) continue;
         expect(
           covered.has(`${cell.row}:${cell.col}`),
           `${preset.id}: (${cell.row},${cell.col}) is bare`,

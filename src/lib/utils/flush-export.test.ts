@@ -84,10 +84,10 @@ describe("flush frame: the print files", () => {
   // The sizes Bill confirms, in inches. Side columns are exported rotated to
   // landscape, which is how they go on the bed; the part is still 2 wide x 6.75 tall.
   const PARTS: Array<[SectionId, number, number]> = [
-    ["top", 15, 0.75],
+    ["top", 11, 0.75],
     ["bottom", 11, 1.55],
-    ["wing-left", 6, 2],
-    ["wing-right", 6, 2],
+    ["wing-left", 6.75, 2],
+    ["wing-right", 6.75, 2],
   ];
 
   it.each(PARTS)("%s exports at %s x %s in", (id, wIn, hIn) => {
@@ -99,19 +99,19 @@ describe("flush frame: the print files", () => {
     expect([part.width, part.height].sort()).toEqual([wIn, hIn].sort());
   });
 
-  it("the top runner carries two screw notches 4.0 and 11.0 in from its left end, open on its lower edge", () => {
+  it("the top runner carries two screw notches 2.0 and 9.0 in from its left end, open on its lower edge", () => {
     const panel = cutPanel(full, "top");
     const ctx = panel.getContext("2d");
-    // The runner spans the full width, so it starts one wing column LEFT of the
-    // inner frame's edge: a notch at x from the inner edge sits at x + 1 on the part.
-    const wing = C.wingWidthInches;
+    // The runner sits between the side columns, one rail cell in from the inner
+    // frame's left edge: a notch at x from the inner edge sits at x - 1 on the part.
+    const rail = C.tileSizeInches;
     const notches = screwNotches(C).filter((n) => n.bar === "top");
     expect(notches).toHaveLength(2);
-    const centres = notches.map((n) => n.x + n.width / 2 + wing).sort((a, b) => a - b);
-    expect(centres[0]).toBeCloseTo(4.0, 9);
-    expect(centres[1]).toBeCloseTo(11.0, 9);
+    const centres = notches.map((n) => n.x + n.width / 2 - rail).sort((a, b) => a - b);
+    expect(centres[0]).toBeCloseTo(2.0, 9);
+    expect(centres[1]).toBeCloseTo(9.0, 9);
     for (const n of notches) {
-      const cx = (n.x + n.width / 2 + wing) * DPI;
+      const cx = (n.x + n.width / 2 - rail) * DPI;
       const cy = (n.y + n.height / 2) * DPI;
       expect(alphaAt(ctx, cx, cy)).toBe(0); // inside the notch: no ink
       expect(alphaAt(ctx, cx, panel.height - 2)).toBe(0); // it is OPEN at the lower edge

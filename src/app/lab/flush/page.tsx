@@ -19,14 +19,15 @@ import { allSchoolKits, getSchoolKit } from "@/data/school-kits";
 //
 // WHAT CHANGED, in one line each (see SCHOOL_FLUSH_FRAME_CONFIG for the rest):
 //   TOP     flush with the plate's top edge. 0.75" tall, all of it over the plate
-//           face, running the FULL 15" width with the side columns under it, and
-//           notched over the bolt holes like every dealer frame. Cameras and
-//           garnish strips leave 0.26-0.4" above the plate on a third of the
-//           fleet; every earlier frame hung 0.47-0.96" up there.
+//           face, between the side columns, notched over the bolt holes like every
+//           dealer frame. Cameras and garnish strips leave 0.26-0.4" above the
+//           plate on a third of the fleet; every earlier frame hung 0.47-0.96" up
+//           there.
 //   BOTTOM  0.75" below the plate, 0.25" over its face, keystone for the tagline.
 //           Past the 0.5" July line and the Pilot's taped 6.625" recess: the owner
 //           chose the 0.75" top bar over the Pilot (a 6.5" cut read as a sliver).
-//   SIDES   Bill's 2" columns, 6" tall under the runner, 1.5" outboard.
+//   SIDES   Bill's 2" columns, the FULL 6.75" (his part split), 1.5" outboard. The
+//           corner badge absorbs the short top row: 2 x 2.75, then two squares.
 //
 // ?school=<slug> opens it wearing a real kit. The kit route and this one share ONE
 // page body (SchoolKitPage) so they cannot drift.
@@ -46,7 +47,7 @@ function ForkBanner({ slug }: { slug?: string }) {
       <span className="msf-fork-tag">Fork</span>
       <span className="msf-fork-note">
         Flush top. 15&Prime; &times; 6.75&Prime; on Bill&rsquo;s 1&Prime; grid: nothing above the
-        plate, 0.75&Prime; below it, a full-width 0.75&Prime; top runner with screw notches.
+        plate, 0.75&Prime; below it, full-height side columns, a 0.75&Prime; top runner with screw notches.
       </span>
       <nav className="msf-fork-links" aria-label="Other versions of this frame">
         <a href="/lab/flush" aria-current={slug ? undefined : "page"}>Generic</a>

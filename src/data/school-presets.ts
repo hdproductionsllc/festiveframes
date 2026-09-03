@@ -130,9 +130,6 @@ function sideAnchors(config: FrameConfig, side: SectionId, rowSpans: number[]): 
   const rect = panelRects(config)[side];
   const out: string[] = [];
   let row = rect.row0;
-  // A banner-only row (the flush frame's 0.75" top bar) holds no badge, so the
-  // stack starts under it. No-op on every frame whose rows are all a tile tall.
-  while (row <= rect.row1 && grid.isBannerOnly(row, rect.col0)) row++;
   for (const rows of rowSpans) {
     const cell = grid.cellAt(row, rect.col0);
     if (!cell) break; // the panel ran out — a shorter stack is better than a wrong one
@@ -298,18 +295,20 @@ export const SLIM_PRESETS: SchoolPreset[] = [
   },
 ];
 
-// ─── The FLUSH fork's presets: 2x2 / 2x2 / 2x2 under the bar ─────────────────
+// ─── The FLUSH fork's presets: 2x2.75 / 2x2 / 2x2, the full column ───────────
 //
-// The flush frame's side column is 6.75" tall: a 0.75" strip of frame body at the
-// top (the banner-only row, where the top runner's screw slots live) and six
-// one-inch rows under it. Six rows is three squares, so the column is three 2x2
-// badges with nothing odd to absorb — the first of these frames where every badge
-// is the same shape. The hierarchy the slim column got from its tall middle badge
-// comes here from the keystone instead, which carries the tagline on this frame.
+// The flush frame's side column is 6.75" tall: the 0.75" top row (banner-only on
+// its own) and six one-inch rows. The owner wants the columns to run the full
+// height with no bare strip, so the TOP badge absorbs the short row: anchored on
+// row 0 and three grid rows tall, it prints 2 x 2.75 — the same move the live
+// frame's 2x3 corner badge makes with its odd row. Square art draws into it
+// contained, with a strip of field above and below that belongs to the badge
+// rather than being a hole in the frame. Two 2x2 squares finish the column.
 
-const FLUSH_STACK = [2, 2, 2];
+const FLUSH_STACK = [3, 2, 2];
 
-/** Mirror a three-badge column of squares onto both sides, starting under the bar. */
+/** Mirror a three-badge column onto both sides: the tall corner badge on row 0,
+ *  then two squares. */
 function flushLayout(top: string, middle: string, bottom: string): SchoolPreset["layout"] {
   return mirrored(SCHOOL_FLUSH_FRAME_CONFIG, [
     [top, FLUSH_STACK[0]],
