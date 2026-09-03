@@ -267,7 +267,9 @@ export const FLUSH_SPEC: FitSpec = {
   windowRows: 5,
   bottomDropInches: 0.75,
   runnerHeightInches: 1,
-  keystone: { ...DEFAULT_KEYSTONE },
+  // A deeper keystone than the candidate's: the bar covers only 0.25" here, so 0.8
+  // of rise reaches 1.05, still under the date line, and gives the tagline air.
+  keystone: { ...DEFAULT_KEYSTONE, riseInches: 0.8 },
   sideBadgeCells: 2,
   sideInwardInches: 0.5,
   topInwardInches: 0.75,

@@ -85,7 +85,7 @@ describe("flush frame: the print files", () => {
   // landscape, which is how they go on the bed; the part is still 2 wide x 6.75 tall.
   const PARTS: Array<[SectionId, number, number]> = [
     ["top", 11, 0.75],
-    ["bottom", 11, 1.55],
+    ["bottom", 11, 1.8],
     ["wing-left", 6.75, 2],
     ["wing-right", 6.75, 2],
   ];
@@ -127,7 +127,7 @@ describe("flush frame: the print files", () => {
   it("the bottom runner is a keystone-shaped part: shoulders clear, bar and tab solid", () => {
     const panel = cutPanel(full, "bottom");
     const ctx = panel.getContext("2d");
-    const rise = 0.55 * DPI;
+    const rise = 0.8 * DPI;
     // Above the bar, outside the tab: plate opening, no ink.
     expect(alphaAt(ctx, 10, 10)).toBe(0);
     expect(alphaAt(ctx, panel.width - 10, 10)).toBe(0);

@@ -34,8 +34,9 @@ Assembled: 15 × 6.75. Window 11 × 5. Stack: 0.75 + 5 + 1 = 6.75.
    has no ink where the notches are. Notch shape and depth are yours to design; these
    numbers are a placeholder for the drawing. The bottom runner covers only 0.25" and
    needs no notch.
-3. **Keystone unchanged** (rise 0.55, base 6, top 5). The bar top is 0.25" up the
-   plate, so the keystone reaches 0.80", well under Missouri's 1.08" date line.
+3. **Keystone deeper: rise 0.8** (base 6, top 5; was 0.55). The bar top is only 0.25"
+   up the plate, so the keystone reaches 1.05", still under Missouri's 1.08" date line,
+   and the class-year line gets air above it. Bottom part is 11 × 1.80 all in.
 
 ## The print files, as exported (300 DPI, no bleed)
 
@@ -47,7 +48,7 @@ landscape, which is how they go on the bed.
 | Assembled sheet | 4500 × 2025 | 15 × 6.75 (fits the 16.5 × 13 bed unrotated) |
 | Side column (each) | 2025 × 600 | 6.75 × 2 (rotated; the part stands 2 wide × 6.75 tall) |
 | Top runner | 3300 × 225 | 11 × 0.75, two notches open on its lower edge |
-| Bottom runner | 3300 × 465 | 11 × 1.55 = 1.00 bar + 0.55 keystone, shoulders transparent |
+| Bottom runner | 3300 × 540 | 11 × 1.80 = 1.00 bar + 0.80 keystone, shoulders transparent |
 
 ## Known and accepted
 

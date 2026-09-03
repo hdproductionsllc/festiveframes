@@ -209,7 +209,7 @@ error of 49/255 where the real figure was under 1/255.
 - **Geometry** (`SCHOOL_FLUSH_FRAME_CONFIG`, variant `flush`): Bill's 1.000" grid,
   11 × 5 window, top runner **11 × 0.75 flush** with the plate's top edge, sitting
   between side columns that run the **full 2 × 6.75**; bottom runner 11 × 1 at
-  0.25 in / 0.75 below; keystone unchanged (reaches 0.80). Stack 0.75 + 5 + 1 = 6.75.
+  0.25 in / 0.75 below; keystone rise 0.8 (reaches 1.05, under MO's 1.08). Stack 0.75 + 5 + 1 = 6.75.
   The top runner carries **screw notches** over the bolt holes (`screwNotches: true`,
   utils/screw-slots); the bottom runner, at 0.25" of cover, needs none. Opt-in per
   config; nothing else has them.

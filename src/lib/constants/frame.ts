@@ -363,10 +363,12 @@ export const SCHOOL_FLUSH_FRAME_CONFIG: FrameConfig = getWingFrameConfig(
     bottomRows: 1,
     overhangTiles: 1,
     bottomTab: {
-      // The bar sits only 0.25" up the plate face here, so the same 0.55" rise
-      // reaches 0.80" — well under Missouri's ~1.08" date line. Kept at 0.55 so the
-      // bottom part is the one Bill has already seen on the candidate.
-      riseInches: 0.55,
+      // The bar sits only 0.25" up the plate face here, so the rise can be 0.8"
+      // and still reach only 1.05" — under Missouri's ~1.08" date line. It was
+      // 0.55 (the candidate's), and the tagline sat 0.06" from the tab's top edge;
+      // the owner read that as too close. Do not raise it further without
+      // re-checking the date line.
+      riseInches: 0.8,
       baseInches: 6,
       topInches: 5,
       cornerRadiusInches: 0.25,

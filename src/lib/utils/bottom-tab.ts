@@ -216,8 +216,10 @@ export function tabSkirt(unit: number): number {
   return rim.inset + rim.width + bevel.thickness + 1;
 }
 
-/** The share of the rise the tagline may occupy. */
-const TEXT_HEIGHT_RATIO = 0.78;
+/** The share of the rise the tagline may occupy. Was 0.78, which on a 0.55" tab
+ *  left 0.06" between the type and the tab's top edge — the owner read it as
+ *  "too close to the edge". 0.7 leaves 0.15 of the rise above and below. */
+const TEXT_HEIGHT_RATIO = 0.7;
 
 /**
  * The box the TAGLINE gets inside the tab.

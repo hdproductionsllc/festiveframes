@@ -76,13 +76,13 @@ describe("flush frame: the lattice", () => {
 });
 
 describe("flush frame: Bill's parts", () => {
-  it("prints side 2 x 6.75 (full height), top 11 x 0.75, bottom 11 x 1.55 (with keystone)", () => {
+  it("prints side 2 x 6.75 (full height), top 11 x 0.75, bottom 11 x 1.8 (with keystone)", () => {
     expect(panelSizeInches("wing-left", C)).toEqual({ width: 2, height: 6.75 });
     expect(panelSizeInches("wing-right", C)).toEqual({ width: 2, height: 6.75 });
     expect(panelSizeInches("top", C)).toEqual({ width: 11, height: 0.75 });
     const bottom = panelSizeInches("bottom", C);
     expect(bottom.width).toBe(11);
-    expect(bottom.height).toBeCloseTo(1 + 0.55, 9);
+    expect(bottom.height).toBeCloseTo(1 + 0.8, 9);
   });
 
   it("sizes each panel the same as the bench's part", () => {
@@ -99,7 +99,7 @@ describe("flush frame: Bill's parts", () => {
       expect(rect).toBeDefined();
       expect(rect?.w).toBeCloseTo(panel.width, 6);
       // The bottom panel's print includes the keystone; the bench part is the bar.
-      const h = panelId === "bottom" ? panel.height - 0.55 : panel.height;
+      const h = panelId === "bottom" ? panel.height - 0.8 : panel.height;
       expect(rect?.h).toBeCloseTo(h, 6);
     }
   });
@@ -224,7 +224,7 @@ describe("flush frame: the fit bench", () => {
     expect(r.belowPlateInches).toBe(0.75);
     expect(r.faceCoverage.top).toBe(0.75);
     expect(r.faceCoverage.bottomFullWidth).toBe(0.25);
-    expect(r.faceCoverage.bottomCenter).toBeCloseTo(0.8, 9);
+    expect(r.faceCoverage.bottomCenter).toBeCloseTo(1.05, 9);
     expect(r.faceCoverage.left).toBe(0.5);
     expect(r.fitsBedRotated).toBe(true);
     // Bill's tape (2026-09-02): the Pilot's recess is 6.625" tall. 6.75 does not fit,
