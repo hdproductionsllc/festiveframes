@@ -54,30 +54,30 @@ describe("rows: every frame that predates the field is unchanged", () => {
 describe("rows: the flush-top frame", () => {
   const c = SCHOOL_FLUSH_FRAME_CONFIG;
 
-  it("has a 0.5 in top bar and one-inch rows below it", () => {
-    expect(topBarHeightInches(c)).toBe(0.5);
-    expect(rowHeightInches(c, 0)).toBe(0.5);
+  it("has a 0.75 in top bar and one-inch rows below it", () => {
+    expect(topBarHeightInches(c)).toBe(0.75);
+    expect(rowHeightInches(c, 0)).toBe(0.75);
     expect(rowHeightInches(c, 1)).toBe(1);
     expect(isBannerOnlyRow(c, 0)).toBe(true);
     expect(isBannerOnlyRow(c, 1)).toBe(false);
   });
 
-  it("stacks 0.5 + 5 + 1 to exactly 6.5 in, 7 rows", () => {
+  it("stacks 0.75 + 5 + 1 to exactly 6.75 in, 7 rows", () => {
     expect(gridRowCount(c)).toBe(7);
     expect(baseBottomRow(c)).toBe(6);
-    expect(rowTopInches(c, 1)).toBe(0.5);
-    expect(rowTopInches(c, 6)).toBe(5.5);
+    expect(rowTopInches(c, 1)).toBe(0.75);
+    expect(rowTopInches(c, 6)).toBe(5.75);
     const bottom = rowTopInches(c, 6) + rowHeightInches(c, 6);
-    expect(bottom).toBe(6.5);
-    expect(getRenderHeightInches(c)).toBe(6.5);
+    expect(bottom).toBe(6.75);
+    expect(getRenderHeightInches(c)).toBe(6.75);
   });
 
   it("is FLUSH: the plate's top edge is the frame's top edge", () => {
-    expect(plateTopCoverInches(c)).toBe(0.5);
+    expect(plateTopCoverInches(c)).toBe(0.75);
     expect(plateTopInches(c)).toBe(0);
-    // Plate bottom at 6.0; frame bottom at 6.5; so 0.5 hangs below the plate and
-    // the bottom row covers 0.5 of the face.
-    expect(bannerRowBox(c, "bottom")).toEqual({ y: 5.5, h: 1 });
-    expect(6 - bannerRowBox(c, "bottom").y).toBeCloseTo(0.5, 12);
+    // Plate bottom at 6.0; frame bottom at 6.75; so 0.75 hangs below the plate and
+    // the bottom row covers 0.25 of the face.
+    expect(bannerRowBox(c, "bottom")).toEqual({ y: 5.75, h: 1 });
+    expect(6 - bannerRowBox(c, "bottom").y).toBeCloseTo(0.25, 12);
   });
 });

@@ -161,13 +161,13 @@ describe("frameTab", () => {
     expect(frameTab(SCHOOL_FRAME_CONFIG)).toBeNull();
   });
 
-  it("on the flush frame the bar sits 0.5 in up the plate, so the tab reaches 1.05, under MO's 1.08", () => {
+  it("on the flush frame the bar sits 0.25 in up the plate, so the tab reaches 0.80, under MO's 1.08", () => {
     const c = SCHOOL_FLUSH_FRAME_CONFIG;
     const tab = frameTab(c)!;
     const barTop = bannerRowBox(c, "bottom").y;
     const plateBottom = plateTopInches(c) + c.plateHeightInches;
-    expect(plateBottom - barTop).toBeCloseTo(0.5, 9);
-    expect(plateBottom - (barTop - tab.riseInches)).toBeCloseTo(1.05, 9);
+    expect(plateBottom - barTop).toBeCloseTo(0.25, 9);
+    expect(plateBottom - (barTop - tab.riseInches)).toBeCloseTo(0.8, 9);
     expect(plateBottom - (barTop - tab.riseInches)).toBeLessThan(1.08);
   });
 

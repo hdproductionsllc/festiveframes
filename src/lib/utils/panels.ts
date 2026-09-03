@@ -18,7 +18,17 @@
 // depend on without a cycle.
 
 import type { FrameConfig, SectionId } from "@/lib/types";
-import { gridRowCount, rowHeightInches } from "@/lib/utils/rows";
+import { gridRowCount, isBannerOnlyRow, rowHeightInches } from "@/lib/utils/rows";
+
+/**
+ * Whether the top runner owns the whole top row, corners included. True exactly
+ * when that row is not a tile tall (`isBannerOnlyRow`): no badge can sit there, so
+ * leaving the corners to the side panels prints a bare strip above their top
+ * badge. Every frame with a tile-tall top row keeps the side panels' corners.
+ */
+export function topSpansFullWidth(config: FrameConfig): boolean {
+  return isBannerOnlyRow(config, 0);
+}
 
 /** A panel as an inclusive grid rectangle. */
 export interface PanelRect {
@@ -61,6 +71,12 @@ function panelGeometry(config: FrameConfig) {
 export function panelOf(row: number, col: number, config: FrameConfig): SectionId | null {
   const g = panelGeometry(config);
   if (row < 0 || col < 0 || row >= g.rows || col >= g.cols) return null;
+  // THE ONE EXCEPTION to the sides winning the corners: a top row that is not a
+  // tile tall can hold no badge, so a side panel that owned its corner would print
+  // a bare strip above its top badge — the "sloppy" the owner saw. That row is the
+  // top runner's, edge to edge: the banner runs the full width, the side columns
+  // start under it, and the parts are top 15 x 0.75, sides 2 x 6 (flush fork).
+  if (topSpansFullWidth(config) && row === 0) return "top";
   if (col <= g.leftRailCol) return "wing-left";
   if (col >= g.rightRailCol) return "wing-right";
   // Inner column: a banner row, or the plate hole between them.
@@ -142,10 +158,13 @@ export function panelRects(config: FrameConfig): Record<SectionId, PanelRect> {
   const g = panelGeometry(config);
   const firstInner = g.leftRailCol + 1;
   const lastInner = g.rightRailCol - 1;
+  // See panelOf: a banner-only top row belongs to the top runner edge to edge.
+  const full = topSpansFullWidth(config);
+  const sideTop = full ? 1 : 0;
   return {
-    "wing-left": { col0: 0, col1: g.leftRailCol, row0: 0, row1: g.rows - 1 },
-    "wing-right": { col0: g.rightRailCol, col1: g.cols - 1, row0: 0, row1: g.rows - 1 },
-    top: { col0: firstInner, col1: lastInner, row0: 0, row1: 0 },
+    "wing-left": { col0: 0, col1: g.leftRailCol, row0: sideTop, row1: g.rows - 1 },
+    "wing-right": { col0: g.rightRailCol, col1: g.cols - 1, row0: sideTop, row1: g.rows - 1 },
+    top: { col0: full ? 0 : firstInner, col1: full ? g.cols - 1 : lastInner, row0: 0, row1: 0 },
     bottom: { col0: firstInner, col1: lastInner, row0: g.baseBottomRow, row1: g.rows - 1 },
   };
 }

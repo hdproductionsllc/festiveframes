@@ -302,71 +302,70 @@ export const SCHOOL_JULY_FULL_FRAME_CONFIG: FrameConfig = getWingFrameConfig(
   1,
 );
 
-// ─── THE FLUSH-TOP FORK — /lab/flush — 15 x 6.5 on Bill's 1.000" grid ────────
+// ─── THE FLUSH-TOP FORK — /lab/flush — 15 x 6.75 on Bill's 1.000" grid ──────
 //
 // WHAT THE FLEET SAID (fitment engine, 31 measured vehicles, 2026-08-24): the TOP
 // edge is the choke point. Backup cameras and garnish strips leave 0.26-0.4" above
 // the plate on a third of the fleet (Camry 0.26, Explorer 0.28, Equinox 0.34,
-// Pilot 0.40 — the very car that failed our physical test). Every frame above
-// hangs 0.47-0.96" ABOVE the plate, so every one of those cars is blocked. Sides
-// are free to 2" on every non-truck.
+// Pilot 0.40). Every frame above hangs 0.47-0.96" ABOVE the plate, so every one of
+// those cars is blocked. Below the plate, clearances cluster at 1.0-1.6" (Camry
+// XV70: 1.01), so 0.75" clears them with the engine's 0.10" margin. Sides are free.
 //
 // WHAT BILL'S TAPE SAID (2026-09-02): the Pilot's plate recess is 6.625" tall and
-// 21.5" wide. A 6" plate leaves 0.625" of height to share above and below, and a
-// flush top spends none of it above — so the frame may hang at most 0.625" below,
-// and the 0.5" the July ring proved is the number that fits with margin. The first
-// cut of this fork was 6.75" tall (0.75" below); the tape retired it the same day.
-//
-// OWNER'S CALL (2026-09-02): 15" wide, 6.5" tall, flush on top. 15 rather than the
-// 16 in the memo to Bill keeps his 2"-wide side columns and the 11 x 5 window he
-// already prints (0.5" over the plate face per side, 1.5" outboard). The three
+// 21.5" wide, so a 6" plate leaves 0.625" of height in total. A 6.5" version of
+// this frame (0.5" top runner, 0.5" below) was built and fits it — and its top bar
+// read as a sliver in the builder. OWNER'S CALL (2026-09-03): the 0.75" top bar is
+// worth more than the Pilot. This frame is 6.75" tall and the Pilot is out of its
+// fleet; the bench flags that, and should. Bill's 2" side columns and 11 x 5 window
+// are unchanged (0.5" over the plate face per side, 1.5" outboard). The three
 // parts, in flat inches:
 //
-//   top runner    11 x 0.50   flush with the plate's top edge, ALL over the face
-//   side columns   2 x 6.50   (were 8; the 0.5" of plate cover per side unchanged)
-//   bottom runner 11 x 1.00   0.5" over the plate face, 0.5" below it, + keystone
+//   top runner    11 x 0.75   flush with the plate's top edge, ALL over the face
+//   side columns   2 x 6.75   (were 8; the 0.5" of plate cover per side unchanged)
+//   bottom runner 11 x 1.00   0.25" over the plate face, 0.75" below it, + keystone
 //
-//   stack   0.50 + 5 x 1.000 + 1.000 = 6.50      width   2 + 11 + 2 = 15
+//   stack   0.75 + 5 x 1.000 + 1.000 = 6.75      width   2 + 11 + 2 = 15
 //
-// THE NEW CONCEPT is the 0.5" top bar. A flush top on a 1.000" grid closes only if
-// the top row is NOT a tile — see FrameConfig.topBarHeightInches. That row is
+// THE NEW CONCEPT is the 0.75" top bar. A flush top on a 1.000" grid closes only
+// if the top row is NOT a tile — see FrameConfig.topBarHeightInches. That row is
 // banner-only everywhere, wings included, so the side columns carry three 2x2
 // badges on rows 1..6 and a strip of frame body above them.
 //
-// SCREW NOTCHES. Both runners reach 0.5" over the plate face, and the plate's bolt
-// holes are 0.625" in from its top and bottom edges: a screw head there is about
-// 0.6" across, so it overlaps each bar by ~0.175". Each runner therefore carries a
-// notch in its plate-side edge over each hole, 2.5" in from the plate's sides —
-// where every dealer frame puts them. Both renderers draw them from one geometry
-// (utils/screw-slots); the print file has no ink where a notch is cut.
+// SCREW NOTCHES. The top runner reaches 0.75" over the plate face and the plate's
+// bolt holes are 0.625" in from its edge: a screw head (~0.6" across) sits under the
+// bar, so the runner carries a notch in its lower edge over each hole, 2.5" in from
+// the plate's sides — where every dealer frame puts them. The bottom runner covers
+// only 0.25", short of the screw heads, and needs none. Both renderers draw them
+// from one geometry (utils/screw-slots); the print file has no ink where a notch is.
 //
-// THE BENCH READS THIS FRAME CLEAN: 0.5" below (the July line), 0.5" of top cover
-// (under the 0.55" state-name rule), 6.5" under the taped 6.625" Pilot ceiling, and
-// the keystone at 1.05" under Missouri's 1.08" date line. The state-name rule is
-// still worth a look before a parent buys one: 0.5" reaches the band on some plates.
+// THREE THINGS THE FIT BENCH FLAGS, and should: 0.75" below the plate exceeds the
+// 0.5" the July build proved; 0.75" of top cover reaches the state-name band on
+// most plates (some states prohibit covering it; Missouri's rule is unchecked);
+// and 6.75" exceeds the Pilot's taped 6.625" recess. The keystone reaches 0.80",
+// well under Missouri's 1.08" date line.
 //
 export const SCHOOL_FLUSH_FRAME_CONFIG: FrameConfig = getWingFrameConfig(
   {
     ...DEFAULT_FRAME_CONFIG, // the July SHAPE: 13 slots, 5 side rows...
     tileSizeInches: 1, // ...on Bill's 1.000" grid
     widthInches: 13,
-    // 0.5 top bar + 5 window rows + 1 bottom row. NOT (leftSlots + 2) tiles: the
+    // 0.75 top bar + 5 window rows + 1 bottom row. NOT (leftSlots + 2) tiles: the
     // grid invariant in slot-generator reads the top bar's own height.
-    topBarHeightInches: 0.5,
-    heightInches: 6.5,
+    topBarHeightInches: 0.75,
+    heightInches: 6.75,
     // FLUSH: the whole bar is over the plate face, so nothing is above the plate.
-    // The bottom row then covers 6 - 5 - 0.5 = 0.5" and hangs 0.5" below.
-    plateTopCoverInches: 0.5,
-    // Both runners meet the screw heads at 0.5" of cover: notch them.
+    // The bottom row then covers 6 - 5 - 0.75 = 0.25" and hangs 0.75" below.
+    plateTopCoverInches: 0.75,
+    // The top runner meets the screw heads at 0.75" of cover: notch it.
     screwNotches: true,
     minTileSpan: { cols: 2, rows: 2 },
     fullWidthTopBar: true,
     bottomRows: 1,
     overhangTiles: 1,
     bottomTab: {
-      // The bar sits 0.5" up the plate face, so 0.55" of rise reaches 1.05" —
-      // just under Missouri's date line at ~1.08". Do not raise it without
-      // re-checking that number. Same keystone as the candidate Bill has seen.
+      // The bar sits only 0.25" up the plate face here, so the same 0.55" rise
+      // reaches 0.80" — well under Missouri's ~1.08" date line. Kept at 0.55 so the
+      // bottom part is the one Bill has already seen on the candidate.
       riseInches: 0.55,
       baseInches: 6,
       topInches: 5,

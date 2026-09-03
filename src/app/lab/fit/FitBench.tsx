@@ -490,6 +490,18 @@ export function FitBench() {
               step={0.05}
               onChange={(v) => set("topRailHeightInches", v)}
             />
+            <label className="fb-toggle">
+              <input
+                type="checkbox"
+                checked={spec.topRailSpansWidth}
+                onChange={(e) => set("topRailSpansWidth", e.target.checked)}
+              />
+              <span>
+                {spec.topRailSpansWidth
+                  ? "Top rail spans the full width; side columns start under it"
+                  : "Side columns run full height; top rail sits between them"}
+              </span>
+            </label>
           </div>
 
           <div className="fb-block">

@@ -122,6 +122,11 @@ export interface FitSpec {
    *  whose 0.75" bar is the only way a flush top closes on a 1.000" grid. Equal to
    *  `topInwardInches` means FLUSH: nothing above the plate. */
   topRailHeightInches: number;
+  /** The top rail runs the frame's full width and the side columns start UNDER
+   *  it (flush fork: top 15 x 0.75, sides 2 x 6). False = the side columns run the
+   *  full height and own the corners, and the rail sits between them (Bill's
+   *  parts: sides 8 x 2, top 11 x 1). */
+  topRailSpansWidth: boolean;
 }
 
 /** An axis-aligned rectangle in plate coordinates: inches, origin at the plate's
@@ -211,6 +216,7 @@ export const JULY_SPEC: FitSpec = {
   sideInwardInches: 0.5495,
   topInwardInches: 0.5225,
   topRailHeightInches: 0.991,
+  topRailSpansWidth: false,
 };
 
 /** Bill's current parts per his 2026-08-02 text: 1" grid, 11x2 bottom runner. */
@@ -225,6 +231,7 @@ export const BILL_CURRENT_SPEC: FitSpec = {
   sideInwardInches: 0.5,
   topInwardInches: 0.5,
   topRailHeightInches: 1,
+  topRailSpansWidth: false,
 };
 
 /** The recommendation on the table: 7" total, bottom edge AT the July line,
@@ -248,30 +255,33 @@ export const CANDIDATE_SPEC: FitSpec = {
   sideInwardInches: 0.5,
   topInwardInches: 0.5,
   topRailHeightInches: 1,
+  topRailSpansWidth: false,
 };
 
-/** The FLUSH-TOP fork (owner's call, 2026-09-02): the top edge AT the plate's top
- *  edge, 0.5" below the plate, Bill's 2" side columns. 15 x 6.5. The rail is 0.5"
+/** The FLUSH-TOP fork (owner's call, 2026-09-03): the top edge AT the plate's top
+ *  edge, a 0.75" top rail running the FULL width with the side columns under it,
+ *  0.75" below the plate, Bill's 2" side columns. 15 x 6.75. The rail is 0.75"
  *  tall because that is the only height at which a flush top closes on a 1.000"
- *  grid at this drop: 0.5 + 5 + 1 = 6.5, and the bottom row covers the remaining
- *  0.5" of plate face.
+ *  grid at this drop: 0.75 + 5 + 1 = 6.75, and the bottom row covers the
+ *  remaining 0.25" of plate face.
  *
- *  It is the candidate with its 0.5" of air moved from above the plate to below
- *  it, which is what Bill's Pilot tape (6.625" recess) and the fleet's camera
- *  chokepoint both ask for. It reads CLEAN on every rule here: the July drop, the
- *  state-name cover, the Pilot ceiling and the date line. The first cut, at 0.75"
- *  below and 6.75" tall, lasted one day. See SCHOOL_FLUSH_FRAME_CONFIG. */
+ *  A 6.5" version (0.5" rail, 0.5" below) was built first and fits the Pilot's
+ *  taped 6.625" recess; its rail read as a sliver, and the owner chose the bar
+ *  over the Pilot. So THREE flags fire here, and should: the 0.75" drop exceeds
+ *  the 0.5" the July build proved, 0.75" of top cover reaches the state-name band,
+ *  and 6.75" exceeds the Pilot ceiling. See SCHOOL_FLUSH_FRAME_CONFIG. */
 export const FLUSH_SPEC: FitSpec = {
   pitchInches: 1,
   windowCols: 11,
   windowRows: 5,
-  bottomDropInches: 0.5,
+  bottomDropInches: 0.75,
   runnerHeightInches: 1,
   keystone: { ...DEFAULT_KEYSTONE },
   sideBadgeCells: 2,
   sideInwardInches: 0.5,
-  topInwardInches: 0.5,
-  topRailHeightInches: 0.5,
+  topInwardInches: 0.75,
+  topRailHeightInches: 0.75,
+  topRailSpansWidth: true,
 };
 
 export const PRESETS: Array<{ key: string; label: string; spec: FitSpec }> = [
@@ -285,7 +295,7 @@ export const PRESETS: Array<{ key: string; label: string; spec: FitSpec }> = [
 // purpose; the URL is the interchange format between Henry's phone and Bill's.
 
 /** The FitSpec fields that are plain numbers — everything except `keystone`. */
-type FitSpecNumberKey = Exclude<keyof FitSpec, "keystone">;
+type FitSpecNumberKey = Exclude<keyof FitSpec, "keystone" | "topRailSpansWidth">;
 
 const NUM_KEYS: Array<[FitSpecNumberKey, string]> = [
   ["pitchInches", "p"],
@@ -315,6 +325,7 @@ const NUM_KEYS: Array<[FitSpecNumberKey, string]> = [
 export function specToQuery(spec: FitSpec): string {
   const q = new URLSearchParams();
   for (const [field, key] of NUM_KEYS) q.set(key, String(spec[field]));
+  q.set("tw", spec.topRailSpansWidth ? "1" : "0");
   q.set("kr", String(spec.keystone ? spec.keystone.riseInches : 0));
   if (spec.keystone) {
     q.set("kb", String(spec.keystone.baseInches));
@@ -335,6 +346,9 @@ export function specFromQuery(q: URLSearchParams, base: FitSpec = CANDIDATE_SPEC
   for (const [field, key] of NUM_KEYS) {
     spec[field] = num(key, spec[field]);
   }
+  // Absent on links that predate the flush fork: keep the base's answer.
+  const tw = q.get("tw");
+  if (tw !== null && tw !== "") spec.topRailSpansWidth = tw === "1";
 
   // Absent kr means an old link that predates the always-written key: keep the
   // base's keystone, which is what those links have always meant. Present and at

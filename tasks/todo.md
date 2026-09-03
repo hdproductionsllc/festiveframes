@@ -1,8 +1,11 @@
-# Flush-top fork: 15 × 6.5" school frame at /lab/flush  (2026-09-02) — DONE
+# Flush-top fork: 15 × 6.75" school frame at /lab/flush  (2026-09-02/03) — DONE
 
 Plan: `~/.claude/plans/imperative-splashing-scroll.md`. Owner decisions: ONE new fork,
-15" wide, flush top, on Bill's 1.000" grid; first cut 6.75" tall (0.75" below), revised
-the same day to **6.5" (0.5" below)** after Bill taped the Pilot (recess 6.625" × 21.5").
+15" wide, flush top, on Bill's 1.000" grid. History: 6.75 (0.75 below) → Bill taped the
+Pilot (6.625" × 21.5") → 6.5 (0.5" bar, fits the Pilot, bench clean) → owner saw the
+0.5" bar as a sliver and chose **6.75 with a 0.75" bar over the Pilot** (2026-09-03),
+plus **the top runner spans the full width** so the side columns start under it (no bare
+strip above the top badge). Parts: top 15 × 0.75 (notched), sides 2 × 6, bottom 11 × 1.
 `/s/sluh-jr-bills` untouched; the fork wears any kit via `?school=<slug>` like `/lab/slim`.
 Note for Bill: `tasks/flush-frame-for-bill.md`.
 

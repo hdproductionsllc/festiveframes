@@ -117,6 +117,7 @@ interface FrameBox {
   bannerTop: number;
   topRailTop: number;
   topRailBottom: number;
+  badgeTop: number;
   badgeWidth: number;
   badgeLeftX: number;
   badgeRightX: number;
@@ -152,6 +153,10 @@ function frameBox(spec: FitSpec): FrameBox {
   const badgeLeftX = spec.sideInwardInches - badgeWidth;
   const badgeRightX = PLATE.widthInches - spec.sideInwardInches;
 
+  // Where the side columns START: the frame's top edge, or under a top rail that
+  // runs the full width (the flush fork's 15 x 0.75 runner over 2 x 6 sides).
+  const badgeTop = spec.topRailSpansWidth ? topRailBottom : topRailTop;
+
   return {
     pitch,
     windowWidth,
@@ -168,6 +173,7 @@ function frameBox(spec: FitSpec): FrameBox {
     bannerTop,
     topRailTop,
     topRailBottom,
+    badgeTop,
     badgeWidth,
     badgeLeftX,
     badgeRightX,
@@ -323,7 +329,16 @@ export function outlineParts(spec: FitSpec): FitPart[] {
     {
       id: "rail-top",
       label: "Top runner",
-      rect: { x: box.windowLeft, y: box.topRailTop, w: box.windowWidth, h: spec.topRailHeightInches },
+      // Between the side columns, or — when it spans the width — edge to edge over
+      // them, with the columns starting underneath (badgeTop).
+      rect: spec.topRailSpansWidth
+        ? {
+            x: box.badgeLeftX,
+            y: box.topRailTop,
+            w: box.badgeRightX + box.badgeWidth - box.badgeLeftX,
+            h: spec.topRailHeightInches,
+          }
+        : { x: box.windowLeft, y: box.topRailTop, w: box.windowWidth, h: spec.topRailHeightInches },
     },
     {
       id: "runner-bottom",
@@ -338,12 +353,12 @@ export function outlineParts(spec: FitSpec): FitPart[] {
     {
       id: "badges-left",
       label: "Left badge column",
-      rect: { x: box.badgeLeftX, y: box.topRailTop, w: box.badgeWidth, h: box.frameHeight },
+      rect: { x: box.badgeLeftX, y: box.badgeTop, w: box.badgeWidth, h: box.frameBottom - box.badgeTop },
     },
     {
       id: "badges-right",
       label: "Right badge column",
-      rect: { x: box.badgeRightX, y: box.topRailTop, w: box.badgeWidth, h: box.frameHeight },
+      rect: { x: box.badgeRightX, y: box.badgeTop, w: box.badgeWidth, h: box.frameBottom - box.badgeTop },
     },
   ];
 

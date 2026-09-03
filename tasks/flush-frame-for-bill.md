@@ -1,46 +1,41 @@
-# Flush-top frame — parts note for Bill (2026-09-02, revised same day for the Pilot tape)
+# Flush-top frame — parts note for Bill (2026-09-03)
 
 The fitment data (31 measured cars, memo of 2026-08-24) says the TOP edge is the
 choke point: backup cameras and garnish strips leave 0.26–0.4" above the plate on a
 third of the fleet (Camry 0.26, Explorer 0.28, Equinox 0.34, Pilot 0.40). Every frame
 we have drawn so far hangs 0.47–0.96" above the plate.
 
-Your Pilot tape (recess 6.625" tall × 21.5" wide) then set the bottom: a 6" plate
-leaves 0.625" of height in total, so a frame that spends nothing above the plate may
-hang at most ~0.6" below it. We are using the 0.5" the July ring already proved.
-
-Henry's call: **15" wide × 6.5" tall, flush on top**, on the 1.000" grid.
-Builder to look at: `/lab/flush?school=sluh-jr-bills`. Bench preset: `/lab/fit` →
-"Flush 15 (fork)". The bench reads it clean on every rule.
+Henry's call: **15" wide × 6.75" tall, flush on top**, on the 1.000" grid, with a
+full-width top runner. A 6.5" version (0.5" top runner) was tried and fits your taped
+Pilot recess (6.625"), but the 0.5" bar read as a sliver; Henry chose the 0.75" bar
+and accepts that the Pilot is out. Builder: `/lab/flush?school=sluh-jr-bills`.
+Bench preset: `/lab/fit` → "Flush 15 (fork)".
 
 ## The three parts (flat inches, 1.000" grid)
 
 | Part | Size | Where it sits on the 12 × 6 plate |
 |---|---|---|
-| Top runner | **11 × 0.50** | Flush: top edge AT the plate's top edge. All 0.5" is over the plate face. |
-| Side columns (×2) | **2 × 6.50** | 0.5" over the plate face (unchanged), 1.5" outboard. Were 8" tall. |
-| Bottom runner | **11 × 1.00** (+ keystone) | 0.5" over the plate face, 0.5" below the plate edge. |
+| Top runner | **15 × 0.75** | Full frame width. Flush: top edge AT the plate's top edge, all 0.75" over the plate face. The side columns sit UNDER it. |
+| Side columns (×2) | **2 × 6.00** | From the runner's lower edge to the frame bottom. 0.5" over the plate face, 1.5" outboard. |
+| Bottom runner | **11 × 1.00** (+ keystone) | Between the side columns. 0.25" over the plate face, 0.75" below the plate edge. |
 
-Assembled: 15 × 6.5. Window 11 × 5. Stack: 0.5 + 5 + 1 = 6.5.
-This is the 7" candidate with its half inch of air moved from above the plate to below it.
+Assembled: 15 × 6.75. Window 11 × 5. Stack: 0.75 + 5 + 1 = 6.75.
 
 ## What is new
 
-1. **The top runner is 0.5" tall, not a tile.** That is the only height at which a
-   flush top closes on a 1" grid with a 0.5" drop. It is a text banner only (it always
-   was), so the builder treats that row as frame body everywhere, wings included: the
-   side columns carry three 2 × 2 badges on the six rows under it and a 0.5" strip of
-   body above.
-2. **Screw notches in BOTH runners.** The plate's bolt holes are 0.625" in from its top
-   and bottom edges, 7" apart. A screw head is about 0.6" across, so a runner reaching
-   0.5" over the face overlaps each head by ~0.175". The builder cuts a notch 0.7" wide
-   and ~0.28" deep in each runner's plate-side edge over each hole: **2.0" and 9.0" from
-   the runner's left end** (2.5" in from each plate side; the 11" runner starts 0.5" in
-   from the plate's edge). The print file has no ink where the notches are. Notch shape,
-   depth and any counterbore are yours to design; the builder's numbers are a placeholder
-   for the drawing.
-3. **Keystone unchanged** (rise 0.55, base 6, top 5). The bar top is 0.5" up the plate,
-   so the keystone reaches 1.05", under Missouri's 1.08" date line.
+1. **The top runner is 0.75" tall, not a tile, and spans the full 15".** It is a text
+   banner only. The side columns start under it: three 2 × 2 badges each, on a clean
+   six-inch column, no strip above the top badge.
+2. **Screw notches in the top runner.** The plate's top bolt holes are 0.625" down from
+   its top edge, 7" apart; a screw head is about 0.6" across, so the 0.75" runner sits
+   over the heads. The builder cuts a notch 0.7" wide and ~0.525" deep into the runner's
+   lower edge over each hole: **4.0" and 11.0" from the runner's left end** (the runner
+   starts at the frame's left edge; the plate's left edge is 1.5" in). The print file
+   has no ink where the notches are. Notch shape and depth are yours to design; these
+   numbers are a placeholder for the drawing. The bottom runner covers only 0.25" and
+   needs no notch.
+3. **Keystone unchanged** (rise 0.55, base 6, top 5). The bar top is 0.25" up the
+   plate, so the keystone reaches 0.80", well under Missouri's 1.08" date line.
 
 ## The print files, as exported (300 DPI, no bleed)
 
@@ -49,19 +44,21 @@ landscape, which is how they go on the bed.
 
 | File | Pixels | Inches |
 |---|---|---|
-| Assembled sheet | 4500 × 1950 | 15 × 6.5 (fits the 16.5 × 13 bed unrotated) |
-| Top runner | 3300 × 150 | 11 × 0.5, two notches open on its lower edge |
-| Bottom runner | 3300 × 465 | 11 × 1.55 = 1.00 bar + 0.55 keystone, shoulders transparent, two notches open on the bar's upper edge |
-| Side column (each) | 1950 × 600 | 6.5 × 2 (rotated; the part stands 2 wide × 6.5 tall) |
+| Assembled sheet | 4500 × 2025 | 15 × 6.75 (fits the 16.5 × 13 bed unrotated) |
+| Top runner | 4500 × 225 | 15 × 0.75, two notches open on its lower edge |
+| Bottom runner | 3300 × 465 | 11 × 1.55 = 1.00 bar + 0.55 keystone, shoulders transparent |
+| Side column (each) | 1800 × 600 | 6 × 2 (rotated; the part stands 2 wide × 6 tall) |
 
-## Two things to settle before material
+## Known and accepted
 
-- **Plate bottom edge → recess floor on the Pilot**, in inches. The 6.5" frame needs
-  0.5" there. If the plate sits centred in the recess there is only ~0.31", and the
-  bottom bar would have to move up over the plate face instead.
-- **State name.** 0.5" of top cover reaches the state-name band on some plates. Some
-  states prohibit covering it. Missouri's rule is unchecked. This is a legal question,
-  not a fitment one.
+- **Does not fit the Pilot** (6.75 into a 6.625" recess). Henry's call.
+- **0.75" below the plate** is past the 0.5" the July ring proved. The fleet data
+  (Camry XV70 at 1.01" below) supports it for non-trucks.
+
+## Still to settle
+
+- **State name.** 0.75" of top cover reaches the state-name band on most plates. Some
+  states prohibit covering it. Missouri's rule is unchecked. Legal question, not fitment.
 
 Standing rule unchanged: nothing gets stretched in eufyMake. A file that does not fit
 is wrong and comes back to the code.
