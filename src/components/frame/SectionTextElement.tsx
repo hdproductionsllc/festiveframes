@@ -78,6 +78,7 @@ export function SectionTextElement({
   height,
   config,
   unit,
+  bare = false,
 }: {
   width: number;
   height: number;
@@ -85,6 +86,13 @@ export function SectionTextElement({
   /** ONE grid cell in px, so the one-row top bar and the two-row bottom panel wear
    *  the SAME edge instead of the taller one getting a band twice as thick. */
   unit?: number;
+  /**
+   * Text only: no field, no rim, no bevel. For the keystone-shaped bottom bar,
+   * whose chrome is one shape with the tab and is drawn by `KeystoneBarChrome`
+   * underneath this element. The text column keeps the same clearance from the
+   * edge it always had, so the name sits exactly where the print puts it.
+   */
+  bare?: boolean;
 }) {
   // The rim override reaches TWO things on a banner: the moulded edge round the bar,
   // and the merrow thread round the letters. They were both brass, so a school colour
@@ -187,10 +195,11 @@ export function SectionTextElement({
         width: "100%",
         height: "100%",
         // Not flat colour: the gloss run is what makes the bar read as enamel rather
-        // than printed paper, and it is the same run the print path fills.
-        background: gloss,
+        // than printed paper, and it is the same run the print path fills. BARE
+        // draws none of it: the keystone chrome underneath is the whole part.
+        background: bare ? "transparent" : gloss,
         borderRadius: edge.radius,
-        boxShadow: edge.outerShadow,
+        boxShadow: bare ? undefined : edge.outerShadow,
         padding: edge.rimInset,
         overflow: "hidden",
         position: "relative",
@@ -202,7 +211,7 @@ export function SectionTextElement({
           height: "100%",
           border: `${edge.rimWidth}px solid transparent`,
           borderRadius: edge.rimRadius,
-          background: ringCss(gloss, edge.brassGradient),
+          background: bare ? "transparent" : ringCss(gloss, edge.brassGradient),
         }}
       >
         <div
@@ -211,7 +220,7 @@ export function SectionTextElement({
             height: "100%",
             border: `${edge.bevelWidth}px solid transparent`,
             borderRadius: edge.bevelRadius,
-            background: ringCss(gloss, edge.bevelGradient),
+            background: bare ? "transparent" : ringCss(gloss, edge.bevelGradient),
           }}
         >
           <div

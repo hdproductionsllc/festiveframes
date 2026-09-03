@@ -62,7 +62,15 @@ import {
 } from "@/lib/utils/sections";
 import { isSidePanel, panelOverhangTiles, panelRects, type PanelRect } from "@/lib/utils/panels";
 import { bannerBands, trackingPx, widthLimitedFont } from "@/lib/utils/banner-tiers";
-import { frameTab, tabPath, tabSkirt, tabTextBox } from "@/lib/utils/bottom-tab";
+import {
+  frameTab,
+  keystoneBox,
+  keystoneChrome,
+  keystoneOutline,
+  tabPath,
+  tabTextBox,
+  type Pt,
+} from "@/lib/utils/bottom-tab";
 import { bannerRowBox, rowHeightInchesIn, rowTopInchesIn } from "@/lib/utils/rows";
 import { screwNotches } from "@/lib/utils/screw-slots";
 import { bannerConfigFor, bannerLogoLayout, sectionSupportsLogo } from "@/lib/utils/banner-logo";
@@ -247,6 +255,70 @@ function drawBevel(
   for (const [at, colour] of bevelGradient(background, bw, bh)) bg.addColorStop(at, colour);
   ctx.fillStyle = bg;
   ctx.fillRect(bx, by, bw, bh);
+  ctx.restore();
+}
+
+/**
+ * The badges' chrome — surround, rim, bevel — painted along ANY closed outline.
+ *
+ * `drawBevel` builds each ring as the area between two rounded rectangles, which
+ * is exact for a badge and impossible for the keystone-shaped bar. This paints
+ * the same three bands another way: clip to the outline, then stroke the outline
+ * at twice each band's reach, widest first. A stroke straddles its path, so only
+ * the inner half survives the clip, and each narrower stroke overpaints the one
+ * before — leaving surround, then rim, then bevel, at exactly the reaches
+ * `keystoneChrome` states. Round joins so the two concave shoulders where the tab
+ * meets the bar's top edge are moulded, not mitred to a point.
+ */
+function drawKeystoneChrome(
+  ctx: CanvasRenderingContext2D,
+  outline: Pt[],
+  box: { x: number; y: number; w: number; h: number },
+  background: string,
+  unit: number,
+  rimColor?: string | null,
+): void {
+  const c = keystoneChrome(unit, background);
+  const trace = () => {
+    ctx.beginPath();
+    ctx.moveTo(outline[0].x, outline[0].y);
+    for (const p of outline.slice(1)) ctx.lineTo(p.x, p.y);
+    ctx.closePath();
+  };
+  const band = (reach: number, style: string | CanvasGradient) => {
+    if (reach <= 0) return;
+    trace();
+    ctx.lineJoin = "round";
+    ctx.lineWidth = reach * 2;
+    ctx.strokeStyle = style;
+    ctx.stroke();
+  };
+
+  ctx.save();
+  trace();
+  ctx.clip();
+  // The field, flat, like a badge's.
+  ctx.fillStyle = background;
+  ctx.fillRect(box.x, box.y, box.w, box.h);
+  // Bevel band, on the same upper-left light axis as every badge.
+  const ax = bevelAxis(box.x, box.y, box.w, box.h);
+  const bg = ctx.createLinearGradient(ax.x0, ax.y0, ax.x1, ax.y1);
+  for (const [at, colour] of bevelGradient(background, box.w, box.h)) bg.addColorStop(at, colour);
+  band(c.bevelTo, bg);
+  // Rim, bright to dark along the same axis, so it reads as metal.
+  const ramp = rimRamp(rimColor);
+  const rg = ctx.createLinearGradient(box.x, box.y, box.x + box.w, box.y + box.h);
+  rg.addColorStop(0, ramp.light);
+  rg.addColorStop(0.5, ramp.mid);
+  rg.addColorStop(1, ramp.dark);
+  band(c.rimTo, rg);
+  // Surround: the frame body a shade darker, so the rim has something to sit against.
+  band(c.surroundTo, shift(background, luminance(background) > 0.5 ? -0.1 : -0.22));
+  // Hairline, so the part never bleeds into a neighbour.
+  trace();
+  ctx.lineWidth = 2; // half survives the clip: one px inside the edge
+  ctx.strokeStyle = "rgba(0,0,0,0.30)";
+  ctx.stroke();
   ctx.restore();
 }
 
@@ -565,6 +637,16 @@ function drawTextBlock(
   // run the full height on both sides. Ordinary radii all round.
   const radii = cornerRadii(unit, NO_CORNERS);
   ctx.save();
+  if (tab) {
+    // THE KEYSTONE-SHAPED PART. Bar and tab are one outline, and the chrome runs
+    // along it — no overlay, no skirt, no second rim. See `keystoneOutline`.
+    const outline = keystoneOutline(tab.tab, { x, y, w, h }, tab.pxPerInch, radii);
+    drawKeystoneChrome(ctx, outline, keystoneBox(tab.tab, { x, y, w, h }, tab.pxPerInch), cfg.backgroundColor, unit, rimColor);
+    // From here on, clip to the BAR so the name's chrome-clearing pad and the crest
+    // stay where they always were; the tab's own text is drawn after.
+    roundRect(ctx, x, y, w, h, radii);
+    ctx.clip();
+  } else {
   // Rounded like the badges, not square. A square-cornered bar carrying a rounded
   // brass rim was the loudest mismatch between the bars and the badges.
   roundRect(ctx, x, y, w, h, radii);
@@ -587,6 +669,7 @@ function drawTextBlock(
   ctx.fillStyle = cfg.backgroundColor;
   ctx.fillRect(x, y, w, h);
   drawBevel(ctx, x, y, w, h, bevel, cfg.backgroundColor, unit, radii, rimColor);
+  }
 
   // Clear the chrome before the text starts. Derived from the chrome itself rather
   // than guessed alongside it, so the bevel can never cut into a descender again.
@@ -706,48 +789,11 @@ function drawTextBlock(
   }
   ctx.restore();
 
-  // THE KEYSTONE, drawn LAST so it sits over the bar's own rim.
-  //
-  // The tab and the bar are ONE piece of material — Bill would 3D print them as a
-  // single part — so there must be no line where they meet. The bar strokes a rim
-  // around its whole rounded rectangle, including the top edge the tab stands on,
-  // so the tab carries a SKIRT: its fill continues down past that edge far enough
-  // to bury the rim, and its own rim runs the two slopes and the top only. The
-  // result is one continuous body with one continuous edge.
+  // THE TAGLINE lives in the tab, above the name instead of below it. The tab's
+  // chrome was painted with the bar's, as one part, at the top of this function;
+  // this is text only, seated low in the tab (see `tabTextBox`).
   if (tab) {
-    // Deep enough to bury the bar's surround, rim AND the bevel inside it. It used
-    // to stop at rim + inset, which left the bevel's last eleven pixels running
-    // straight across the tab's base — a fainter version of the very seam the skirt
-    // exists to remove, and invisible unless you sample the pixels. Shared with the
-    // browser twin so the two cannot drift.
-    const skirt = tabSkirt(unit);
-    const rim = rimMetrics(w, h, unit);
-    const p = tabPath(tab.tab, x + w / 2, y, tab.pxPerInch, skirt);
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(p.points[0].x, p.points[0].y);
-    for (const pt of p.points.slice(1)) ctx.lineTo(pt.x, pt.y);
-    ctx.closePath();
-    ctx.fillStyle = cfg.backgroundColor;
-    ctx.fill();
-    // Rim on the SLOPES AND TOP only. The skirt's two vertical edges are inside the
-    // bar, and stroking them would draw the very seam this exists to remove.
-    //
-    // `p.rim` names that run rather than slicing it out of `p.points`, which is
-    // what this did before. The slice was `[1]` then `slice(2, 5)` — correct for a
-    // six-point trapezoid and quietly wrong the moment the corners were rounded and
-    // the outline grew twenty-two points.
-    ctx.beginPath();
-    ctx.moveTo(p.rim[0].x, p.rim[0].y);
-    for (const pt of p.rim.slice(1)) ctx.lineTo(pt.x, pt.y);
-    ctx.strokeStyle = rimRamp(rimColor).mid;
-    ctx.lineWidth = rim.width;
-    ctx.lineJoin = "round";
-    ctx.lineCap = "butt";
-    ctx.stroke();
-    ctx.restore();
-
-    // The tagline lives in the tab now, above the name instead of below it.
+    const rise = tab.tab.riseInches * tab.pxPerInch;
     const line = cfg.tagline?.trim();
     if (line) {
       const box = tabTextBox(tab.tab, tab.pxPerInch);
@@ -761,7 +807,7 @@ function drawTextBlock(
       ctx.textBaseline = "middle";
       const ch = textChenille(fontPx, cfg.textColor, rimColor);
       const cx = x + w / 2;
-      const cy = y - p.rise / 2;
+      const cy = y - rise + box.centerFromTop;
       ctx.lineJoin = "round";
       ctx.strokeStyle = ch.merrow.thread;
       ctx.lineWidth = ch.merrow.width;

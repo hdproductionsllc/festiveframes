@@ -218,8 +218,122 @@ export function tabSkirt(unit: number): number {
 
 /** The share of the rise the tagline may occupy. Was 0.78, which on a 0.55" tab
  *  left 0.06" between the type and the tab's top edge — the owner read it as
- *  "too close to the edge". 0.7 leaves 0.15 of the rise above and below. */
-const TEXT_HEIGHT_RATIO = 0.7;
+ *  "too close to the edge", and still did at 0.7 centred. 0.6, seated low. */
+const TEXT_HEIGHT_RATIO = 0.6;
+/** Where the tagline's CENTRE sits, as a share of the rise measured from the tab's
+ *  top. Above 0.5 seats it low in the tab, toward the name it belongs with, and
+ *  leaves the air at the top where the edge is. */
+const TEXT_CENTER_RATIO = 0.6;
+
+// ─── The keystone-shaped PART: bar and tab as one outline ────────────────────
+//
+// The bar and the tab are one piece of material, and for a long time the two
+// renderers drew them as two: a rounded bar wearing its own surround, rim and
+// bevel, and a trapezoid laid over it with a skirt to bury the bar's chrome and a
+// rim of its own on the slopes. Magnified, the join gave it away — the tab's rim
+// ran on its outline while the bar's sat inset, so the two never met at a shared
+// corner, and the bar's bevel band died against the tab's foot. The owner's words:
+// "it needs to be printed as an intentional piece."
+//
+// So there is now ONE outline — the union of the rounded bar and the tab — and
+// the chrome (surround, rim, bevel) is painted along that outline at one set of
+// insets, by both renderers, from the numbers below. No skirt, no overlay, no
+// second rim width. The tagline is text placed in the tab; it draws nothing.
+
+/** A rectangle in the same units as `pxPerInch`, y downward. */
+export interface Box {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+/** Per-corner radii of the bar's own corners, in px. */
+export interface BarRadii {
+  tl: number;
+  tr: number;
+  br: number;
+  bl: number;
+}
+
+/** A quarter-circle from `from` to `to` around `centre`, as a short polyline. */
+function quarter(centre: Pt, radius: number, startAngle: number, endAngle: number, steps = 6): Pt[] {
+  const out: Pt[] = [];
+  for (let i = 1; i <= steps; i++) {
+    const a = startAngle + ((endAngle - startAngle) * i) / steps;
+    out.push({ x: centre.x + radius * Math.cos(a), y: centre.y + radius * Math.sin(a) });
+  }
+  return out;
+}
+
+/**
+ * The closed outline of the whole part — bar plus tab — as a polyline, clockwise
+ * from the bar's top-left corner. Rounded bar corners come out as short arcs so a
+ * canvas path and an SVG path built from the same points are the same shape.
+ *
+ * The bar's top edge runs from the top-left corner to the tab's left foot, the
+ * tab's two slopes and top follow (`tabEdge`, with its rounded top corners), then
+ * the top edge resumes to the top-right corner. The tab's BASE is not a segment:
+ * it is inside the part.
+ */
+export function keystoneOutline(tab: BottomTab, bar: Box, pxPerInch: number, radii: BarRadii): Pt[] {
+  const rise = tab.riseInches * pxPerInch;
+  const base = Math.min(bar.w, tab.baseInches * pxPerInch);
+  const top = Math.min(base, tab.topInches * pxPerInch);
+  const radius = (tab.cornerRadiusInches ?? 0) * pxPerInch;
+  const left = bar.x + bar.w / 2 - base / 2;
+  const topY = bar.y - rise;
+  const edge = tabEdge(rise, base, top, radius).map((p) => ({ x: left + p.x, y: topY + p.y }));
+
+  const { x, y, w, h } = bar;
+  const cap = Math.min(w / 2, h / 2);
+  const tl = Math.max(0, Math.min(radii.tl, cap, Math.max(0, left - x)));
+  const tr = Math.max(0, Math.min(radii.tr, cap, Math.max(0, x + w - (left + base))));
+  const br = Math.max(0, Math.min(radii.br, cap));
+  const bl = Math.max(0, Math.min(radii.bl, cap));
+
+  const pts: Pt[] = [];
+  pts.push({ x: x + tl, y });
+  pts.push(...edge); // left foot, up, over, down, right foot
+  pts.push({ x: x + w - tr, y });
+  if (tr > 0) pts.push(...quarter({ x: x + w - tr, y: y + tr }, tr, -Math.PI / 2, 0));
+  pts.push({ x: x + w, y: y + h - br });
+  if (br > 0) pts.push(...quarter({ x: x + w - br, y: y + h - br }, br, 0, Math.PI / 2));
+  pts.push({ x: x + bl, y: y + h });
+  if (bl > 0) pts.push(...quarter({ x: x + bl, y: y + h - bl }, bl, Math.PI / 2, Math.PI));
+  pts.push({ x, y: y + tl });
+  if (tl > 0) pts.push(...quarter({ x: x + tl, y: y + tl }, tl, Math.PI, (3 * Math.PI) / 2));
+  return pts;
+}
+
+/** The bounding box of the whole part, bar plus tab. */
+export function keystoneBox(tab: BottomTab, bar: Box, pxPerInch: number): Box {
+  const rise = tab.riseInches * pxPerInch;
+  return { x: bar.x, y: bar.y - rise, w: bar.w, h: bar.h + rise };
+}
+
+/**
+ * The chrome, as distances IN from the outline: the surround (frame body, a shade
+ * darker) reaches `surroundTo`, the rim spans `surroundTo..rimTo`, and the bevel
+ * band spans `rimTo..bevelTo`. The very numbers `drawBevel` and `tileEdgeCss` use
+ * for a badge, so the part wears the badges' edge. Painted by stroking the outline
+ * from the inside — clip to the outline, then stroke it at twice each distance —
+ * which follows any shape, concave shoulders included.
+ */
+export function keystoneChrome(unit: number, background: string) {
+  const rim = rimMetrics(unit, unit, unit);
+  const bevel = bevelMetrics(unit, unit, background, unit);
+  const surroundTo = Math.max(0, rim.inset - rim.width / 2);
+  const rimTo = rim.inset + rim.width / 2;
+  return { surroundTo, rimTo, bevelTo: rimTo + bevel.thickness, rimWidth: rim.width };
+}
+
+/** An SVG path `d` for a closed polyline. */
+export function pathD(points: Pt[]): string {
+  if (points.length === 0) return "";
+  const f = (n: number) => Number(n.toFixed(2));
+  return `M${f(points[0].x)} ${f(points[0].y)}` + points.slice(1).map((p) => `L${f(p.x)} ${f(p.y)}`).join("") + "Z";
+}
 
 /**
  * The box the TAGLINE gets inside the tab.
@@ -234,14 +348,22 @@ const TEXT_HEIGHT_RATIO = 0.7;
  *
  * Returned in the same units as `pxPerInch`.
  */
-export function tabTextBox(tab: BottomTab, pxPerInch: number): { width: number; height: number } {
+export function tabTextBox(
+  tab: BottomTab,
+  pxPerInch: number,
+): { width: number; height: number; centerFromTop: number } {
   const rise = tab.riseInches * pxPerInch;
   const base = tab.baseInches * pxPerInch;
   const top = Math.min(base, tab.topInches * pxPerInch);
-  const widthAtTextTop = top + (base - top) * ((1 - TEXT_HEIGHT_RATIO) / 2);
+  const height = Math.max(1, rise * TEXT_HEIGHT_RATIO);
+  const centerFromTop = rise * TEXT_CENTER_RATIO;
+  // The tab's width where the TEXT's top edge is, on the slopes.
+  const yTop = Math.max(0, centerFromTop - height / 2);
+  const widthAtTextTop = top + (base - top) * (yTop / rise);
   return {
     width: Math.max(1, widthAtTextTop * 0.92),
-    height: Math.max(1, rise * TEXT_HEIGHT_RATIO),
+    height,
+    centerFromTop,
   };
 }
 

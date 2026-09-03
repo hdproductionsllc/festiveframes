@@ -356,8 +356,9 @@ export const SCHOOL_FLUSH_FRAME_CONFIG: FrameConfig = getWingFrameConfig(
     // FLUSH: the whole bar is over the plate face, so nothing is above the plate.
     // The bottom row then covers 6 - 5 - 0.75 = 0.25" and hangs 0.75" below.
     plateTopCoverInches: 0.75,
-    // The top runner meets the screw heads at 0.75" of cover: notch it.
-    screwNotches: true,
+    // No screw notches (owner, 2026-09-03: "just a rectangle on the top bar"). How
+    // the 0.75" runner meets the screw heads is Bill's to solve on the part; the
+    // print file is a plain bar. `screwNotches: true` brings them back.
     // THE SIDE LATTICE. Each 2" side column is three EQUAL badges, 2 x 2.25 (owner's
     // call, 2026-09-03: "three rectangles, divide evenly, don't change dimensions").
     // 2.25 is not on the 1" pitch, so the side panels count their own rows — see

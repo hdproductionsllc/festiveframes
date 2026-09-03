@@ -99,26 +99,16 @@ describe("flush frame: the print files", () => {
     expect([part.width, part.height].sort()).toEqual([wIn, hIn].sort());
   });
 
-  it("the top runner carries two screw notches 2.0 and 9.0 in from its left end, open on its lower edge", () => {
+  it("the top runner is a plain rectangle: solid ink edge to edge, no screw cut-outs", () => {
     const panel = cutPanel(full, "top");
     const ctx = panel.getContext("2d");
-    // The runner sits between the side columns, one rail cell in from the inner
-    // frame's left edge: a notch at x from the inner edge sits at x - 1 on the part.
-    const rail = C.tileSizeInches;
-    const notches = screwNotches(C).filter((n) => n.bar === "top");
-    expect(notches).toHaveLength(2);
-    const centres = notches.map((n) => n.x + n.width / 2 - rail).sort((a, b) => a - b);
-    expect(centres[0]).toBeCloseTo(2.0, 9);
-    expect(centres[1]).toBeCloseTo(9.0, 9);
-    for (const n of notches) {
-      const cx = (n.x + n.width / 2 - rail) * DPI;
-      const cy = (n.y + n.height / 2) * DPI;
-      expect(alphaAt(ctx, cx, cy)).toBe(0); // inside the notch: no ink
-      expect(alphaAt(ctx, cx, panel.height - 2)).toBe(0); // it is OPEN at the lower edge
-      expect(alphaAt(ctx, cx, 3)).toBe(255); // the web above it: ink
-      expect(alphaAt(ctx, cx + 0.5 * DPI, cy)).toBe(255); // beside it: ink
+    expect(screwNotches(C)).toEqual([]);
+    // Where the notches would have been (2.0 and 9.0 in from the left end, on the
+    // lower edge), and the corners and middle: all ink.
+    for (const xIn of [2.0, 9.0]) {
+      expect(alphaAt(ctx, xIn * DPI, panel.height - 2)).toBe(255);
+      expect(alphaAt(ctx, xIn * DPI, panel.height / 2)).toBe(255);
     }
-    // Corners and middle of the runner print solid.
     for (const [x, y] of [[2, 2], [panel.width - 3, 2], [panel.width / 2, panel.height - 3]]) {
       expect(alphaAt(ctx, x, y)).toBe(255);
     }

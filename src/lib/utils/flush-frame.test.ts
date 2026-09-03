@@ -212,25 +212,18 @@ describe("flush frame: the two renderers agree", () => {
 });
 
 describe("flush frame: screw notches", () => {
-  it("notches the top runner over the plate's bolt holes, not the bottom, and nothing on the older frames", () => {
-    const notches = screwNotches(C);
-    expect(notches).toHaveLength(2);
-    expect(notches.every((n) => n.bar === "top")).toBe(true);
-    // Holes are 7 in apart, centred on the plate, which starts 0.5 in into the
-    // inner frame: centres at 0.5 + 2.5 and 0.5 + 9.5.
-    const centres = notches.map((n) => n.x + n.width / 2).sort((a, b) => a - b);
-    expect(centres[0]).toBeCloseTo(3, 9);
-    expect(centres[1]).toBeCloseTo(10, 9);
-    // 0.75 in of cover meets a 0.6 in screw head by 0.425; with 0.1 of air the notch
-    // is 0.525 deep, leaves a web on the runner's outer side, and is OPEN below.
-    for (const n of notches) {
-      expect(n.y + n.height).toBeCloseTo(0.75, 9); // open at the top bar's lower edge
-      expect(n.height).toBeCloseTo(0.525, 9);
-      expect(n.y).toBeGreaterThan(0.15);
-    }
-    // The bottom runner covers 0.25 in, short of the screw heads: no notch.
+  it("cuts no notches: the top runner is a plain rectangle (owner's call), and the option still works", () => {
+    expect(screwNotches(C)).toEqual([]);
     expect(screwNotches(SCHOOL_FRAME_CONFIG)).toEqual([]);
     expect(screwNotches(SCHOOL_SLIM_FRAME_CONFIG)).toEqual([]);
+    // Opting in would notch the top runner only: 0.75 in of cover meets a 0.6 in
+    // screw head; the bottom runner, at 0.25 in, stops short of it.
+    const notched = screwNotches({ ...C, screwNotches: true });
+    expect(notched).toHaveLength(2);
+    expect(notched.every((n) => n.bar === "top")).toBe(true);
+    const centres = notched.map((n) => n.x + n.width / 2).sort((a, b) => a - b);
+    expect(centres[0]).toBeCloseTo(3, 9);
+    expect(centres[1]).toBeCloseTo(10, 9);
   });
 });
 

@@ -27,15 +27,15 @@ Assembled: 15 × 6.75. Window 11 × 5. Stack: 0.75 + 5 + 1 = 6.75.
    column is **three equal badges, 2 × 2.25 each**, edge to edge with no bare strip.
    The sides are on their own row spacing; the runners and the plate window stay on
    the 1" grid.
-2. **Screw notches in the top runner.** The plate's top bolt holes are 0.625" down from
-   its top edge, 7" apart; a screw head is about 0.6" across, so the 0.75" runner sits
-   over the heads. The builder cuts a notch 0.7" wide and ~0.525" deep into the runner's
-   lower edge over each hole: **2.0" and 9.0" from the runner's left end** (2.5" in from
-   each plate side; the 11" runner starts 0.5" in from the plate's edge). The print file
-   has no ink where the notches are. Notch shape and depth are yours to design; these
-   numbers are a placeholder for the drawing. The bottom runner covers only 0.25" and
-   needs no notch.
-3. **Keystone deeper: rise 0.8** (base 6, top 5; was 0.55). The bar top is only 0.25"
+2. **The top runner is a plain rectangle.** Henry's call: no screw cut-outs in the
+   print file. The plate's top bolt holes are 0.625" down from its top edge, 7" apart
+   (2.5" in from each plate side), and a screw head is about 0.6" across, so the 0.75"
+   runner sits over them; how the part clears the screws is yours to solve on the part.
+   The bottom runner covers only 0.25" and is clear of the bottom holes.
+3. **The bottom runner and keystone are one part with one edge.** The print draws the
+   bar and the tab as a single outline with the same rim and bevel the badges wear,
+   continuous around the shoulders. No line where the tab meets the bar.
+4. **Keystone deeper: rise 0.8** (base 6, top 5; was 0.55). The bar top is only 0.25"
    up the plate, so the keystone reaches 1.05", still under Missouri's 1.08" date line,
    and the class-year line gets air above it. Bottom part is 11 × 1.80 all in.
 
@@ -48,7 +48,7 @@ landscape, which is how they go on the bed.
 |---|---|---|
 | Assembled sheet | 4500 × 2025 | 15 × 6.75 (fits the 16.5 × 13 bed unrotated) |
 | Side column (each) | 2025 × 600 | 6.75 × 2 (rotated; the part stands 2 wide × 6.75 tall) |
-| Top runner | 3300 × 225 | 11 × 0.75, two notches open on its lower edge |
+| Top runner | 3300 × 225 | 11 × 0.75, plain rectangle |
 | Bottom runner | 3300 × 540 | 11 × 1.80 = 1.00 bar + 0.80 keystone, shoulders transparent |
 
 ## Known and accepted

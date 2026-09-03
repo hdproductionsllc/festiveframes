@@ -1,3 +1,4 @@
+import { rimMetrics } from "@/lib/utils/tile-theme";
 import { describe, it, expect } from "vitest";
 import { createCanvas, loadImage, type SKRSContext2D } from "@napi-rs/canvas";
 import { writeFileSync, existsSync } from "node:fs";
@@ -594,7 +595,11 @@ describe("the keystone and the bar are ONE piece of material", () => {
     const c = column();
     const tabTop = c.barTop - Math.round(cfg.bottomTab!.riseInches * DPI);
     const bg = c.rgb(c.underTab, c.barTop + 60);
-    const onEdge = c.rgb(c.underTab, tabTop + 2);
+    // The rim sits INSET from the edge, exactly as it does on every badge and along
+    // the bar's own sides: bar and tab are one outline wearing one chrome. Sample
+    // on the rim's centreline, not on the outline itself (that is the surround).
+    const inset = rimMetrics(c.unit, c.unit, c.unit).inset;
+    const onEdge = c.rgb(c.underTab, tabTop + inset);
     expect(onEdge, "the tab's top edge lost its rim").not.toBe(bg);
     const [r, g, b] = onEdge.split(",").map(Number);
     expect(r, "the tab's top edge is not metal").toBeGreaterThan(150);

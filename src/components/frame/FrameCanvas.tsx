@@ -18,6 +18,7 @@ import { LicensePlateArea } from "./LicensePlateArea";
 import { BottomTextBar } from "./BottomTextBar";
 import { SectionTextElement } from "./SectionTextElement";
 import { BottomTabElement } from "./BottomTabElement";
+import { KeystoneBarChrome } from "./KeystoneBarChrome";
 import { frameTab } from "@/lib/utils/bottom-tab";
 import { bannerRowBox, baseBottomRow, rowTopInches, topBarHeightInches } from "@/lib/utils/rows";
 import { isBannerOnlyCell } from "@/lib/utils/panels";
@@ -647,7 +648,9 @@ export const FrameCanvas = forwardRef<FrameCanvasHandle, FrameCanvasProps>(
                     width: box.width,
                     height: box.height,
                     zIndex: selected ? 3 : 2,
-                    boxShadow: selected
+                    // A keystone bar's ring follows the PART's outline, drawn by
+                    // KeystoneBarChrome; a box around the bar alone reads as two pieces.
+                    boxShadow: selected && !(id === "bottom" && bottomTab)
                       ? "0 0 0 3px #f8c53b, 0 0 14px 2px rgba(248,197,59,0.55)"
                       : undefined,
                   }}
@@ -665,6 +668,9 @@ export const FrameCanvas = forwardRef<FrameCanvasHandle, FrameCanvasProps>(
                           : bannerConfigFor(id, sec.text)
                       }
                       unit={tileSize}
+                      // A keystone bar's chrome is one shape with the tab, drawn
+                      // by KeystoneBarChrome below this overlay; the bar is text.
+                      bare={id === "bottom" && !!bottomTab}
                     />
                   ) : (
                     <div className="flex h-full w-full items-center justify-center bg-[#1e1b17]/70 px-1 text-center text-[10px] font-bold uppercase tracking-wide text-[#faf0d6]/70">
@@ -679,16 +685,31 @@ export const FrameCanvas = forwardRef<FrameCanvasHandle, FrameCanvasProps>(
                 at the base. Frame geometry, so the frame draws it. */}
             {(() => {
               const bottomBox = bottomTab ? sectionBounds("bottom", frameSlots, frameConfig) : null;
-              return bottomTab && bottomBox && sections.bottom?.text?.text ? (
-              <BottomTabElement
-                tab={bottomTab}
-                config={bannerConfigFor("bottom", sections.bottom.text)}
-                pxPerInch={tileSize / frameConfig.tileSizeInches}
-                centerX={bottomBox.x + bottomBox.width / 2}
-                barTopY={bottomBox.y}
-                unit={tileSize}
-                />
-              ) : null;
+              if (!bottomTab || !bottomBox || !sections.bottom?.text?.text) return null;
+              const cfg = bannerConfigFor("bottom", sections.bottom.text);
+              const pxPerInch = tileSize / frameConfig.tileSizeInches;
+              return (
+                <>
+                  {/* ONE part: bar and tab as a single outline wearing the badges'
+                      chrome. Under the bar's text overlay (which is bare) and the
+                      tagline; over the plate and the grooves. */}
+                  <KeystoneBarChrome
+                    tab={bottomTab}
+                    bar={{ x: bottomBox.x, y: bottomBox.y, w: bottomBox.width, h: bottomBox.height }}
+                    pxPerInch={pxPerInch}
+                    unit={tileSize}
+                    background={cfg.backgroundColor}
+                    selected={selectedSectionId === "bottom"}
+                  />
+                  <BottomTabElement
+                    tab={bottomTab}
+                    config={cfg}
+                    pxPerInch={pxPerInch}
+                    centerX={bottomBox.x + bottomBox.width / 2}
+                    barTopY={bottomBox.y}
+                  />
+                </>
+              );
             })()}
 
           {/* Tile drop indicator — ONE element that glides to the target cell.

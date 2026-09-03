@@ -210,9 +210,15 @@ error of 49/255 where the real figure was under 1/255.
   11 × 5 window, top runner **11 × 0.75 flush** with the plate's top edge, sitting
   between side columns that run the **full 2 × 6.75**; bottom runner 11 × 1 at
   0.25 in / 0.75 below; keystone rise 0.8 (reaches 1.05, under MO's 1.08). Stack 0.75 + 5 + 1 = 6.75.
-  The top runner carries **screw notches** over the bolt holes (`screwNotches: true`,
-  utils/screw-slots); the bottom runner, at 0.25" of cover, needs none. Opt-in per
-  config; nothing else has them.
+  The top runner is a **plain rectangle** (owner, 2026-09-03: "just a rectangle").
+  utils/screw-slots can notch a runner over the bolt holes (`screwNotches: true`), but
+  no config asks for it; how the runner meets the screws is Bill's on the part.
+- **The keystone bar is ONE part.** `keystoneOutline` (utils/bottom-tab) is the union of
+  the rounded bar and the tab; both renderers paint the badges' surround/rim/bevel
+  along that one outline (`drawKeystoneChrome` in compose, `KeystoneBarChrome.tsx` as
+  SVG on screen) by clipping to it and stroking from the inside. No skirt, no overlay,
+  no second rim width. The tagline is text only, seated at 60% of the rise
+  (`tabTextBox.centerFromTop`). Magnify the join before trusting any change here.
 - **History, same two days**: first cut 6.75 (0.75 below) → Bill's Pilot tape said
   6.625 → rebuilt at 6.5 (0.5" bar, 0.5 below, fits the Pilot, bench clean) → owner
   saw the 0.5" bar as a sliver and chose the bar over the Pilot → back to 6.75. Then a
