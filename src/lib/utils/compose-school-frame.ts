@@ -42,6 +42,7 @@ import { buildGrid } from "@/lib/utils/slot-generator";
 import {
   coveredBySnappets,
   frameCorners,
+  snappetRect,
   tileSpan,
   visibleAnchorSlots,
 } from "@/lib/utils/snappet";
@@ -59,10 +60,10 @@ import {
   sectionSupportsText,
   slotSuppressed,
 } from "@/lib/utils/sections";
-import { panelOverhangTiles, panelRects, type PanelRect } from "@/lib/utils/panels";
+import { isSidePanel, panelOverhangTiles, panelRects, type PanelRect } from "@/lib/utils/panels";
 import { bannerBands, trackingPx, widthLimitedFont } from "@/lib/utils/banner-tiers";
 import { frameTab, tabPath, tabSkirt, tabTextBox } from "@/lib/utils/bottom-tab";
-import { bannerRowBox, rowHeightInches, rowTopInches } from "@/lib/utils/rows";
+import { bannerRowBox, rowHeightInchesIn, rowTopInchesIn } from "@/lib/utils/rows";
 import { screwNotches } from "@/lib/utils/screw-slots";
 import { bannerConfigFor, bannerLogoLayout, sectionSupportsLogo } from "@/lib/utils/banner-logo";
 import { getPiece } from "@/data/sets";
@@ -367,11 +368,13 @@ export function schoolBannerRect(
   };
 }
 
-/** The per-row px geometry `panelBleedBox` crops with, from the config it prints. */
-export function panelRowsPx(config: FrameConfig, dpi: number) {
+/** The per-row px geometry `panelBleedBox` crops with, from the config it prints.
+ *  Per PANEL: a side panel may sit on its own row lattice (FrameConfig.wingRows). */
+export function panelRowsPx(config: FrameConfig, dpi: number, id: SectionId) {
+  const side = isSidePanel(id);
   return {
-    topPx: (row: number) => rowTopInches(config, row) * dpi,
-    heightPx: (row: number) => rowHeightInches(config, row) * dpi,
+    topPx: (row: number) => rowTopInchesIn(config, side, row) * dpi,
+    heightPx: (row: number) => rowHeightInchesIn(config, side, row) * dpi,
   };
 }
 
@@ -829,7 +832,7 @@ export function drawSchoolFrame(
     // The anchor's own row plus one tile per row below it — the same rule as the
     // canvas's `snappetRect`, so a corner badge on the flush frame's 0.75" top row
     // prints 2.75" tall, not 3.
-    const h = slot.height + (span.rows - 1) * m.tileSize;
+    const h = snappetRect(slot, span, m.tileSize, grid).height;
 
     ctx.save();
     const piece0 = !tile.image ? getPiece(tile.pieceId) : undefined;
@@ -1295,7 +1298,7 @@ export async function composeSchoolPanels(
 
   const out: SchoolPanelPng[] = [];
   for (const id of SECTION_IDS) {
-    const box = panelBleedBox(rects[id], tilePx, bleedPx, panelOverhangTiles(id, config), panelRowsPx(config, dpi));
+    const box = panelBleedBox(rects[id], tilePx, bleedPx, panelOverhangTiles(id, config), panelRowsPx(config, dpi, id));
 
     const c = document.createElement("canvas");
     c.width = box.outW;

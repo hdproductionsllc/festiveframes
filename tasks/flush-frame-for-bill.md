@@ -23,9 +23,10 @@ Assembled: 15 × 6.75. Window 11 × 5. Stack: 0.75 + 5 + 1 = 6.75.
 
 ## What is new
 
-1. **The top runner is 0.75" tall, not a tile.** It is a text banner only. On each side
-   column the corner badge grows into that 0.75" row: **2 × 2.75**, then two 2 × 2
-   squares, so the column prints edge to edge with no bare strip.
+1. **The top runner is 0.75" tall, not a tile.** It is a text banner only. Each side
+   column is **three equal badges, 2 × 2.25 each**, edge to edge with no bare strip.
+   The sides are on their own row spacing; the runners and the plate window stay on
+   the 1" grid.
 2. **Screw notches in the top runner.** The plate's top bolt holes are 0.625" down from
    its top edge, 7" apart; a screw head is about 0.6" across, so the 0.75" runner sits
    over the heads. The builder cuts a notch 0.7" wide and ~0.525" deep into the runner's

@@ -1,12 +1,15 @@
 import type { FrameConfig, FrameSlot, GridCoord, SectionId, SlotZone } from "@/lib/types";
 import { getTotalWidthInches } from "@/lib/constants/frame";
-import { panelOf } from "@/lib/utils/panels";
+import { isBannerOnlyCell, panelOf } from "@/lib/utils/panels";
 import {
   baseBottomRow as baseBottomRowOf,
   gridRowCount,
-  isBannerOnlyRow,
+  hasSideLattice,
   rowHeightInches,
+  rowHeightInchesIn,
   rowTopInches,
+  rowTopInchesIn,
+  sideRowCount,
   topBarHeightInches,
 } from "@/lib/utils/rows";
 
@@ -43,9 +46,23 @@ export function wingSlotIndex(slotId: string): number | null {
  * rows (see design-store mirrorTopSlots / setWingColumns). One definition now.
  */
 export function wingRowCount(config: FrameConfig): number {
+  // A frame with a SIDE LATTICE counts its own side rows (FrameConfig.wingRows).
+  if (hasSideLattice(config)) return sideRowCount(config);
   const extraBottomRows = Math.max(0, (config.bottomRows ?? 1) - 1);
   const topRows = config.fullWidthTopBar ? 1 : 0;
   return topRows + config.leftSlots + 1 + extraBottomRows;
+}
+
+/**
+ * Columns in ONE side panel's lattice. On a frame with a side lattice the rail
+ * column beside the wings joins them — the side panel is one part, and a badge
+ * spans wing + rail — so it is `wingColumns + 1`. Otherwise just the wings: the
+ * rail column's cells are the top/bottom corners and the left/right rail zones,
+ * on the inner rows.
+ */
+export function wingColumnCount(config: FrameConfig): number {
+  if (!config.wings || config.wingColumns <= 0) return 0;
+  return hasSideLattice(config) ? config.wingColumns + 1 : config.wingColumns;
 }
 
 /**
@@ -130,7 +147,14 @@ export function generateSlots(
     ? (config.widthInches - config.tileSizeInches) / (config.topSlots - 1)
     : 0;
 
+  // On a frame with a SIDE LATTICE the rail column's cells belong to the side
+  // panels' own rows, so the top and bottom rails stop short of the corners and
+  // the left/right rail zones generate nothing (see the wing section below).
+  const side = hasSideLattice(config) && hasWings;
+  const isCorner = (i: number) => side && (i === 0 || i === config.topSlots - 1);
+
   for (let i = 0; i < config.topSlots; i++) {
+    if (isCorner(i)) continue;
     slots.push({
       id: makeSlotId("top", i),
       zone: "top",
@@ -150,6 +174,7 @@ export function generateSlots(
 
   // ─── Left / Right Rails ────────────────────────────────
   for (let i = 0; i < config.leftSlots; i++) {
+    if (side) break; // the rail column is on the side lattice
     slots.push({
       id: makeSlotId("left", i),
       zone: "left",
@@ -165,6 +190,7 @@ export function generateSlots(
 
   // ─── Right Rail ────────────────────────────────────────
   for (let i = 0; i < config.rightSlots; i++) {
+    if (side) break; // the rail column is on the side lattice
     slots.push({
       id: makeSlotId("right", i),
       zone: "right",
@@ -185,6 +211,7 @@ export function generateSlots(
     : 0;
 
   for (let i = 0; i < config.bottomSlots; i++) {
+    if (isCorner(i)) continue;
     slots.push({
       id: makeSlotId("bottom", i),
       zone: "bottom",
@@ -205,6 +232,7 @@ export function generateSlots(
   for (let r = 1; r <= extraBottomRows; r++) {
     const y = bottomY + r * tileSize;
     for (let i = 0; i < config.bottomSlots; i++) {
+      if (isCorner(i)) continue;
       const index = r * config.bottomSlots + i;
       slots.push({
         id: makeSlotId("bottom", index),
@@ -224,48 +252,57 @@ export function generateSlots(
   // Each wing has wingColumns tile columns × (leftSlots + 1) rows.
   // Rows match the left/right rail Y positions plus one at the bottom row.
   if (hasWings) {
-    // Banded wing rows: an optional TOP corner (fullWidthTop), the side rows, then
-    // the bottom row(s). With both flags off → topRows=0, so wingRows = leftSlots + 1
-    // and every y matches the original literal exactly.
     const wingRows = wingRowCount(config);
+    // On a side lattice the rail column joins the wings (`wingColumnCount`), so
+    // wing col 0 is the RAIL column itself and the wings proper start at col 1.
+    const wingColsInPanel = wingColumnCount(config);
+    const railShift = side ? 1 : 0;
 
-    // Wing-left: fills from x=0 rightward, columns closest to inner frame first.
-    // A wing cell sits on the same grid row as the rail cell beside it, so its y
-    // and height are that row's — including the top corner, which on a flush frame
-    // is the 0.75" bar's height and banner-only.
-    for (let col = 0; col < config.wingColumns; col++) {
+    // Row geometry per lattice. Without a side lattice a wing cell sits on the
+    // same grid row as the rail cell beside it — banded: an optional top corner,
+    // the side rows, the bottom row(s) — including the top corner, which on a
+    // flush frame is the 0.75" bar's height and banner-only. With one, the side
+    // panel's rows are its own: `wingRows` equal rows down the full height.
+    const wingY = (gridRow: number) =>
+      (side ? rowTopInchesIn(config, true, gridRow) : rowTopInches(config, gridRow)) * scale;
+    const wingH = (gridRow: number) =>
+      (side ? rowHeightInchesIn(config, true, gridRow) : rowHeightInches(config, gridRow)) * scale;
+    const gridRowOf = (row: number) => (side ? row : wingGridRow(row));
+
+    // Wing-left: fills from the inner frame outward, columns closest to it first.
+    for (let col = 0; col < wingColsInPanel; col++) {
       for (let row = 0; row < wingRows; row++) {
         const flatIndex = col * wingRows + row;
-        const gridRow = wingGridRow(row);
+        const gridRow = gridRowOf(row);
         slots.push({
           id: makeSlotId("wing-left", flatIndex),
           zone: "wing-left",
           index: flatIndex,
-          x: wingOffset - (col + 1) * tileSize, // col 0 adjacent to inner frame
-          y: rowY(gridRow),
+          x: wingOffset - (col + 1 - railShift) * tileSize,
+          y: wingY(gridRow),
           width: tileSize,
-          height: rowH(gridRow),
+          height: wingH(gridRow),
           row: gridRow,
-          col: wingCols - 1 - col, // col 0 is adjacent to the frame, so it maps rightmost
+          col: wingCols - 1 - col + railShift, // col 0 is nearest the frame, so it maps rightmost
         });
       }
     }
 
-    // Wing-right: fills from inner frame right edge outward
-    for (let col = 0; col < config.wingColumns; col++) {
+    // Wing-right: fills from the inner frame's right edge outward
+    for (let col = 0; col < wingColsInPanel; col++) {
       for (let row = 0; row < wingRows; row++) {
         const flatIndex = col * wingRows + row;
-        const gridRow = wingGridRow(row);
+        const gridRow = gridRowOf(row);
         slots.push({
           id: makeSlotId("wing-right", flatIndex),
           zone: "wing-right",
           index: flatIndex,
-          x: wingOffset + innerWidth + col * tileSize,
-          y: rowY(gridRow),
+          x: wingOffset + innerWidth + (col - railShift) * tileSize,
+          y: wingY(gridRow),
           width: tileSize,
-          height: rowH(gridRow),
+          height: wingH(gridRow),
           row: gridRow,
-          col: wingCols + config.topSlots + col,
+          col: wingCols + config.topSlots + col - railShift,
         });
       }
     }
@@ -286,18 +323,26 @@ function getZoneSlotCount(config: FrameConfig, zone: SlotZone): number {
     case "wing-left":
     case "wing-right": {
       if (config.wingColumns <= 0) return 0;
-      return config.wingColumns * wingRowCount(config);
+      return wingColumnCount(config) * wingRowCount(config);
     }
   }
 }
 
 /**
  * Get slot IDs for a specific zone.
+ *
+ * Read off the generated slots, not counted: on a frame with a side lattice the
+ * top and bottom rails skip their corner indices and the left/right zones are
+ * empty, so `0..count-1` would name cells that do not exist. Every frame without
+ * one lists exactly what it always did.
  */
 export function getSlotIdsByZone(
   config: FrameConfig,
   zone: SlotZone
 ): string[] {
+  if (hasSideLattice(config) && config.wings && config.wingColumns > 0) {
+    return generateSlots(config, 1000).filter((s) => s.zone === zone).map((s) => s.id);
+  }
   const count = getZoneSlotCount(config, zone);
   return Array.from({ length: count }, (_, i) => makeSlotId(zone, i));
 }
@@ -378,11 +423,10 @@ export function buildGrid(config: FrameConfig, containerWidth = 1000): FrameGrid
     return row >= 1 && row <= config.leftSlots && col >= firstInnerCol && col <= lastInnerCol;
   };
 
-  // A row that is not a tile tall (the flush frame's 0.75" top bar) holds no tile,
-  // anywhere along it. The cells still EXIST — they are frame body, and the side
-  // parts print their full height — they just refuse every footprint.
+  // A row that is not a tile tall (the flush frame's 0.75" top bar) holds no tile
+  // of its own. Column-aware: a side panel on its own lattice has no such row.
   const isBannerOnly = (row: number, col: number): boolean =>
-    !isOutside(row, col) && isBannerOnlyRow(config, row);
+    !isOutside(row, col) && isBannerOnlyCell(config, row, col);
 
   return {
     rows,

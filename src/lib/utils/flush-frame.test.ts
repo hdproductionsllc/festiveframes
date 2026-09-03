@@ -38,11 +38,19 @@ describe("flush frame: the lattice", () => {
     expect(grid.rows).toBe(7);
   });
 
-  it("row 0 is 0.75 in tall and every other row is one tile, at any scale", () => {
+  it("inner rows: row 0 is 0.75 in and every other row one tile; side rows: three of 2.25 in", () => {
     for (const width of [150, 1000, 4500]) {
       const scale = width / 15;
-      for (const s of generateSlots(C, width)) {
-        if (s.row === 0) {
+      const grid = buildGrid(C, width);
+      for (const s of grid.slots) {
+        const panel = grid.panelAt(s.row, s.col);
+        if (panel === "wing-left" || panel === "wing-right") {
+          // The SIDE lattice: the wing column and the rail column beside it, on
+          // three equal rows down the full 6.75.
+          expect(s.row).toBeLessThan(3);
+          expect(s.height).toBeCloseTo(2.25 * scale, 9);
+          expect(s.y).toBeCloseTo(s.row * 2.25 * scale, 9);
+        } else if (s.row === 0) {
           expect(s.y).toBe(0);
           expect(s.height).toBeCloseTo(0.75 * scale, 9);
         } else {
@@ -53,12 +61,25 @@ describe("flush frame: the lattice", () => {
     }
   });
 
-  it("row 0 is banner-only across the full width, wings included", () => {
+  it("the side panels are two columns by three rows each, and the rails stop short of the corners", () => {
     const grid = buildGrid(C);
-    for (let col = 0; col < grid.cols; col++) {
+    const left = grid.slots.filter((s) => grid.panelAt(s.row, s.col) === "wing-left");
+    expect(left).toHaveLength(6);
+    expect(new Set(left.map((s) => s.col))).toEqual(new Set([0, 1]));
+    expect(new Set(left.map((s) => s.row))).toEqual(new Set([0, 1, 2]));
+    // No inner-lattice cell lives in the side columns any more.
+    expect(grid.slots.some((s) => s.zone === "left" || s.zone === "right")).toBe(false);
+    expect(grid.cellAt(0, 1)?.zone).toBe("wing-left"); // the old top-left corner
+    expect(grid.cellAt(0, 2)?.zone).toBe("top"); // the runner's first cell
+  });
+
+  it("row 0 is banner-only on the inner lattice only — a side cell never is", () => {
+    const grid = buildGrid(C);
+    for (let col = 2; col <= 12; col++) {
       expect(grid.isBannerOnly(0, col)).toBe(true);
       expect(grid.isBannerOnly(1, col)).toBe(false);
     }
+    for (const col of [0, 1, 13, 14]) expect(grid.isBannerOnly(0, col)).toBe(false);
     // And no other frame has such a row.
     for (const legacy of [SCHOOL_FRAME_CONFIG, SCHOOL_SLIM_FRAME_CONFIG]) {
       const g = buildGrid(legacy);
@@ -110,36 +131,34 @@ describe("flush frame: placement", () => {
   const ctx: PlacementContext = { grid, slots: {}, sections: {}, barCovered: new Set() };
   const leftWing = panelRects(C)["wing-left"];
 
-  it("refuses a tile that is ONLY the short top row, with the banner reason", () => {
-    const r = canPlace(ctx, { row: 0, col: leftWing.col0 }, { cols: 1, rows: 1 });
+  it("refuses a tile that is ONLY the inner short top row, with the banner reason", () => {
+    const firstInner = panelRects(C).top.col0;
+    const r = canPlace(ctx, { row: 0, col: firstInner }, { cols: 1, rows: 1 });
     expect(r.ok).toBe(false);
     expect(r.reason).toBe("banner");
-    expect(canPlace(ctx, { row: 0, col: leftWing.col0 }, { cols: 2, rows: 1 }).ok).toBe(false);
   });
 
-  it("accepts a taller badge anchored on the short row — the 2 x 2.75 corner badge", () => {
-    expect(canPlace(ctx, { row: 0, col: leftWing.col0 }, { cols: 2, rows: 3 }).ok).toBe(true);
-    // Anchor and tileSize from the SAME grid, at 100 px per inch.
-    const g100 = buildGrid(C, 1500);
-    const px = snappetRect(g100.cellAt(0, leftWing.col0)!, { cols: 2, rows: 3 }, 100);
-    expect(px.height).toBeCloseTo(275, 6); // 0.75 + 2 tiles
-  });
-
-  it("accepts the column [3, 2, 2] down rows 0..6, and nothing below", () => {
-    expect(canPlace(ctx, { row: 0, col: leftWing.col0 }, { cols: 2, rows: 3 }).ok).toBe(true);
-    for (const row of [3, 5]) {
-      expect(canPlace(ctx, { row, col: leftWing.col0 }, { cols: 2, rows: 2 }).ok).toBe(true);
+  it("accepts three 2-wide, one-row badges down a side column — each 2 x 2.25 — and nothing below", () => {
+    for (const row of [0, 1, 2]) {
+      expect(canPlace(ctx, { row, col: leftWing.col0 }, { cols: 2, rows: 1 }).ok).toBe(true);
     }
-    expect(canPlace(ctx, { row: 6, col: leftWing.col0 }, { cols: 2, rows: 2 }).ok).toBe(false);
+    expect(canPlace(ctx, { row: 3, col: leftWing.col0 }, { cols: 2, rows: 1 }).ok).toBe(false);
+    // A badge that would cross from the side panel into the runner is refused too.
+    expect(canPlace(ctx, { row: 0, col: leftWing.col0 + 1 }, { cols: 2, rows: 1 }).ok).toBe(false);
+    // Px: anchor and tileSize from the SAME grid, at 100 px per inch.
+    const g100 = buildGrid(C, 1500);
+    const one = snappetRect(g100.cellAt(0, leftWing.col0)!, { cols: 2, rows: 1 }, 100, g100);
+    expect(one.width).toBeCloseTo(200, 6);
+    expect(one.height).toBeCloseTo(225, 6);
+    const two = snappetRect(g100.cellAt(0, leftWing.col0)!, { cols: 2, rows: 2 }, 100, g100);
+    expect(two.height).toBeCloseTo(450, 6); // two side rows, not 2.25 + a tile
   });
 
-  it("the presets anchor on rows 0, 3 and 5 of both sides, the corner badge three rows tall", () => {
+  it("the presets fill both side columns with one badge per side row", () => {
     for (const preset of FLUSH_PRESETS) {
       const rows = preset.layout.map(([slot]) => grid.coordOf(slot)!.row).sort();
-      expect(rows).toEqual([0, 0, 3, 3, 5, 5]);
-      for (const [slot, , span] of preset.layout) {
-        expect(span?.rows).toBe(grid.coordOf(slot)!.row === 0 ? 3 : 2);
-      }
+      expect(rows).toEqual([0, 0, 1, 1, 2, 2]);
+      for (const [, , span] of preset.layout) expect(span).toEqual({ cols: 2, rows: 1 });
     }
   });
 });
@@ -176,7 +195,7 @@ describe("flush frame: the two renderers agree", () => {
     for (const id of ["wing-left", "wing-right", "top", "bottom"] as SectionId[]) {
       const drawn = sectionBounds(id, slots, C)!;
       const over = panelOverhangTiles(id, C);
-      const box = panelBleedBox(rects[id], m.tileSize, 0, over, panelRowsPx(C, 100));
+      const box = panelBleedBox(rects[id], m.tileSize, 0, over, panelRowsPx(C, 100, id));
       expect(box.contentX).toBeCloseTo(drawn.x - over.left * m.tileSize, 6);
       expect(box.contentY).toBeCloseTo(drawn.y - over.top * m.tileSize, 6);
       expect(box.contentW).toBeCloseTo(drawn.width + (over.left + over.right) * m.tileSize, 6);

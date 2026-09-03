@@ -162,6 +162,19 @@ export interface FrameConfig {
    * fact this code should invent for him.
    */
   screwNotches?: boolean;
+  /**
+   * The SIDE panels on their own row lattice: this many equal rows down the full
+   * frame height, wing columns AND the rail column beside them. Absent = the side
+   * panels share the inner rows (every frame before the flush fork's "three
+   * rectangles").
+   *
+   * The flush frame is 6.75" tall on a 1" pitch with a 0.75" top row, and the owner
+   * wants each 2"-wide side column cut into three EQUAL badges. 2.25" is not on
+   * the inner lattice, and no inner lattice makes it so: the side column has to
+   * count its own rows. Only the side panels change; the plate window, the runners
+   * and every inner cell stay on the pitch.
+   */
+  wingRows?: number;
 }
 
 /** Geometry of the bottom bar's keystone, in inches. See `FrameConfig.bottomTab`. */

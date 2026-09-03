@@ -5,8 +5,8 @@ Plan: `~/.claude/plans/imperative-splashing-scroll.md`. Owner decisions: ONE new
 Pilot (6.625" × 21.5") → 6.5 (0.5" bar, fits the Pilot, bench clean) → owner saw the
 0.5" bar as a sliver and chose **6.75 with a 0.75" bar over the Pilot** (2026-09-03),
 plus **the side columns span the full height** (Bill's split; a full-width top runner was
-tried and rejected). The corner badge absorbs the short top row: column [3, 2, 2], a
-2 × 2.75 badge then two squares, no bare strip. Parts: sides 2 × 6.75, top 11 × 0.75
+tried and rejected). Each side column is three EQUAL 2 × 2.25 badges on its own row lattice
+(`wingRows: 3`), no bare strip. Keystone rise 0.8 so the class year has air. Parts: sides 2 × 6.75, top 11 × 0.75
 (notched), bottom 11 × 1.
 `/s/sluh-jr-bills` untouched; the fork wears any kit via `?school=<slug>` like `/lab/slim`.
 Note for Bill: `tasks/flush-frame-for-bill.md`.

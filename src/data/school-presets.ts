@@ -295,20 +295,17 @@ export const SLIM_PRESETS: SchoolPreset[] = [
   },
 ];
 
-// ─── The FLUSH fork's presets: 2x2.75 / 2x2 / 2x2, the full column ───────────
+// ─── The FLUSH fork's presets: three EQUAL badges, 2 x 2.25 each ─────────────
 //
-// The flush frame's side column is 6.75" tall: the 0.75" top row (banner-only on
-// its own) and six one-inch rows. The owner wants the columns to run the full
-// height with no bare strip, so the TOP badge absorbs the short row: anchored on
-// row 0 and three grid rows tall, it prints 2 x 2.75 — the same move the live
-// frame's 2x3 corner badge makes with its odd row. Square art draws into it
-// contained, with a strip of field above and below that belongs to the badge
-// rather than being a hole in the frame. Two 2x2 squares finish the column.
+// The flush frame's side column is 2" wide and 6.75" tall and, on the owner's
+// call, cut into three equal rectangles. Those are not on the 1" pitch, so the
+// side panels sit on their own lattice of three rows (FrameConfig.wingRows) and a
+// badge there is two cells wide and ONE side-row tall. Square art draws into the
+// 2 x 2.25 contained, with a hair of field above and below.
 
-const FLUSH_STACK = [3, 2, 2];
+const FLUSH_STACK = [1, 1, 1];
 
-/** Mirror a three-badge column onto both sides: the tall corner badge on row 0,
- *  then two squares. */
+/** Mirror a three-badge column onto both sides, one side-row each. */
 function flushLayout(top: string, middle: string, bottom: string): SchoolPreset["layout"] {
   return mirrored(SCHOOL_FLUSH_FRAME_CONFIG, [
     [top, FLUSH_STACK[0]],

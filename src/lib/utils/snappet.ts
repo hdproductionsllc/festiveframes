@@ -149,22 +149,33 @@ export function visibleAnchorSlots(
  * accumulated step error. A 1x1 returns the anchor slot's own rect.
  */
 export function snappetRect(
-  anchor: Pick<FrameSlot, "x" | "y"> & Partial<Pick<FrameSlot, "height">>,
+  anchor: Pick<FrameSlot, "x" | "y"> & Partial<Pick<FrameSlot, "height" | "row" | "col">>,
   span: TileSpan,
   tileSize: number,
+  /** The grid the anchor came from, when the caller has it: rows below the anchor
+   *  are then measured from their own cells, which is what makes a side panel on
+   *  its own lattice (2.25" rows) size a 2-row badge as 4.5", not 3.25. */
+  grid?: Pick<FrameGrid, "cellAt">,
 ): { x: number; y: number; width: number; height: number } {
-  // The anchor's own row plus one tile per row below it. Every row below any
-  // anchor is a tile tall; only row 0 can be shorter (the flush frame's 0.75" top
-  // bar), and a badge anchored there is that much shorter than `rows` tiles —
-  // the 2 x 2.75 corner badge. `anchor.height` must be in the same px scale as
-  // `tileSize`; every caller passes a slot from the grid the tileSize came from.
-  // Absent, the row is assumed a tile tall, which is every other frame.
+  // Height is the SUM of the rows the footprint covers, in the anchor's px scale.
+  // The anchor's own cell is known; each row below it is read from the grid when
+  // there is one, and assumed a tile tall when there is not — which is exactly
+  // right on every frame whose rows are all one pitch, and on the flush frame's
+  // inner lattice below row 0. Overhang rows (no cell) count as a tile.
   const first = anchor.height ?? tileSize;
+  let height = first;
+  for (let r = 1; r < span.rows; r++) {
+    const cell =
+      grid && anchor.row !== undefined && anchor.col !== undefined
+        ? grid.cellAt(anchor.row + r, anchor.col)
+        : null;
+    height += cell ? cell.height : tileSize;
+  }
   return {
     x: anchor.x,
     y: anchor.y,
     width: span.cols * tileSize,
-    height: first + (span.rows - 1) * tileSize,
+    height,
   };
 }
 
@@ -982,14 +993,19 @@ export function frameCorners(
   span: TileSpan,
 ): CornerFlags {
   if (grid.slots.length === 0) return NO_CORNERS;
+  const coords = occupiedCoords(anchor, tileSpan({ span }));
+  // The frame's outer rows are measured in the footprint's OWN columns: a side
+  // panel on its own lattice has fewer rows than the inner grid, and its bottom
+  // badge is still the frame's bottom corner.
+  const cols = new Set(coords.map((c) => c.col));
   let minRow = Infinity, maxRow = -Infinity, minCol = Infinity, maxCol = -Infinity;
   for (const s of grid.slots) {
-    if (s.row < minRow) minRow = s.row;
-    if (s.row > maxRow) maxRow = s.row;
     if (s.col < minCol) minCol = s.col;
     if (s.col > maxCol) maxCol = s.col;
+    if (!cols.has(s.col)) continue;
+    if (s.row < minRow) minRow = s.row;
+    if (s.row > maxRow) maxRow = s.row;
   }
-  const coords = occupiedCoords(anchor, tileSpan({ span }));
   const holds = (row: number, col: number) =>
     coords.some((c) => c.row === row && c.col === col);
   return {

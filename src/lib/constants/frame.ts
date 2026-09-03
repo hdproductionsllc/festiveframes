@@ -358,7 +358,12 @@ export const SCHOOL_FLUSH_FRAME_CONFIG: FrameConfig = getWingFrameConfig(
     plateTopCoverInches: 0.75,
     // The top runner meets the screw heads at 0.75" of cover: notch it.
     screwNotches: true,
-    minTileSpan: { cols: 2, rows: 2 },
+    // THE SIDE LATTICE. Each 2" side column is three EQUAL badges, 2 x 2.25 (owner's
+    // call, 2026-09-03: "three rectangles, divide evenly, don't change dimensions").
+    // 2.25 is not on the 1" pitch, so the side panels count their own rows — see
+    // FrameConfig.wingRows. A badge there is 2 cells wide and 1 side-row tall.
+    wingRows: 3,
+    minTileSpan: { cols: 2, rows: 1 },
     fullWidthTopBar: true,
     bottomRows: 1,
     overhangTiles: 1,

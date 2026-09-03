@@ -18,7 +18,25 @@
 // depend on without a cycle.
 
 import type { FrameConfig, SectionId } from "@/lib/types";
-import { gridRowCount, rowHeightInches } from "@/lib/utils/rows";
+import { gridRowCount, isBannerOnlyRow, rowHeightInchesIn, sideRowCount } from "@/lib/utils/rows";
+
+/** Whether a panel is a SIDE panel, which may sit on its own row lattice. */
+export function isSidePanel(id: SectionId): boolean {
+  return id === "wing-left" || id === "wing-right";
+}
+
+/**
+ * A real cell that no tile may occupy on its own: a cell on the inner lattice's
+ * short top row (the flush frame's 0.75" bar). A side cell never is — on a frame
+ * with a side lattice its rows are all equal, and on one without, a side cell on
+ * the short row is banner-only exactly like its inner neighbours.
+ */
+export function isBannerOnlyCell(config: FrameConfig, row: number, col: number): boolean {
+  const panel = panelOf(row, col, config);
+  if (panel === null) return false;
+  if (isSidePanel(panel) && (config.wingRows ?? 0) > 0) return false;
+  return isBannerOnlyRow(config, row);
+}
 
 /** A panel as an inclusive grid rectangle. */
 export interface PanelRect {
@@ -40,7 +58,9 @@ export interface PanelRect {
 function panelGeometry(config: FrameConfig) {
   const wingCols = config.wings && config.wingColumns > 0 ? config.wingColumns : 0;
   const cols = wingCols * 2 + config.topSlots;
-  const rows = gridRowCount(config);
+  // The grid's row bound covers BOTH lattices: a side panel counting its own rows
+  // may have more or fewer than the inner grid.
+  const rows = Math.max(gridRowCount(config), sideRowCount(config));
   return {
     rows,
     cols,
@@ -63,7 +83,9 @@ export function panelOf(row: number, col: number, config: FrameConfig): SectionI
   if (row < 0 || col < 0 || row >= g.rows || col >= g.cols) return null;
   if (col <= g.leftRailCol) return "wing-left";
   if (col >= g.rightRailCol) return "wing-right";
-  // Inner column: a banner row, or the plate hole between them.
+  // Inner column: a banner row, or the plate hole between them. Bounded by the
+  // INNER row count — `g.rows` also covers a taller side lattice.
+  if (row >= gridRowCount(config)) return null;
   if (row === 0) return "top";
   if (row >= g.baseBottomRow) return "bottom";
   return null;
@@ -129,7 +151,7 @@ export function panelSizeInches(id: SectionId, config: FrameConfig): { width: nu
   }
   width += (over.left + over.right) * config.tileSizeInches;
   let height = 0;
-  for (let r = rect.row0; r <= rect.row1; r++) height += rowHeightInches(config, r);
+  for (let r = rect.row0; r <= rect.row1; r++) height += rowHeightInchesIn(config, isSidePanel(id), r);
   height += (over.top + over.bottom) * config.tileSizeInches;
   return { width, height };
 }
@@ -142,10 +164,13 @@ export function panelRects(config: FrameConfig): Record<SectionId, PanelRect> {
   const g = panelGeometry(config);
   const firstInner = g.leftRailCol + 1;
   const lastInner = g.rightRailCol - 1;
+  // Side panels count their own rows when the frame has a side lattice.
+  const sideLast = sideRowCount(config) - 1;
+  const innerLast = gridRowCount(config) - 1;
   return {
-    "wing-left": { col0: 0, col1: g.leftRailCol, row0: 0, row1: g.rows - 1 },
-    "wing-right": { col0: g.rightRailCol, col1: g.cols - 1, row0: 0, row1: g.rows - 1 },
+    "wing-left": { col0: 0, col1: g.leftRailCol, row0: 0, row1: sideLast },
+    "wing-right": { col0: g.rightRailCol, col1: g.cols - 1, row0: 0, row1: sideLast },
     top: { col0: firstInner, col1: lastInner, row0: 0, row1: 0 },
-    bottom: { col0: firstInner, col1: lastInner, row0: g.baseBottomRow, row1: g.rows - 1 },
+    bottom: { col0: firstInner, col1: lastInner, row0: g.baseBottomRow, row1: innerLast },
   };
 }

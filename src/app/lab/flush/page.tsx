@@ -26,8 +26,8 @@ import { allSchoolKits, getSchoolKit } from "@/data/school-kits";
 //   BOTTOM  0.75" below the plate, 0.25" over its face, keystone for the tagline.
 //           Past the 0.5" July line and the Pilot's taped 6.625" recess: the owner
 //           chose the 0.75" top bar over the Pilot (a 6.5" cut read as a sliver).
-//   SIDES   Bill's 2" columns, the FULL 6.75" (his part split), 1.5" outboard. The
-//           corner badge absorbs the short top row: 2 x 2.75, then two squares.
+//   SIDES   Bill's 2" columns, the FULL 6.75" (his part split), 1.5" outboard, cut
+//           into three EQUAL 2 x 2.25 badges on their own row lattice.
 //
 // ?school=<slug> opens it wearing a real kit. The kit route and this one share ONE
 // page body (SchoolKitPage) so they cannot drift.

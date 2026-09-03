@@ -52,7 +52,7 @@ const emptyBundle = (): SchoolImageBundle => ({
 /** The exporter's recipe, in node. Returns the finished (rotated) panel canvas. */
 function cutPanel(full: Canvas, id: SectionId): Canvas {
   const tilePx = C.tileSizeInches * DPI;
-  const box = panelBleedBox(panelRects(C)[id], tilePx, 0, panelOverhangTiles(id, C), panelRowsPx(C, DPI));
+  const box = panelBleedBox(panelRects(C)[id], tilePx, 0, panelOverhangTiles(id, C), panelRowsPx(C, DPI, id));
   const c = createCanvas(box.outW, box.outH) as Canvas;
   const cx = c.getContext("2d");
   const { contentX: X, contentY: Y, contentW: W2, contentH: H2, bleed: b } = box;

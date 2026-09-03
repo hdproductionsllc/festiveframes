@@ -71,6 +71,41 @@ export function plateTopInches(config: FrameConfig): number {
   return topBarHeightInches(config) - plateTopCoverInches(config);
 }
 
+// ─── The SIDE lattice ────────────────────────────────────────────────────────
+//
+// A frame may put its side panels (wing columns plus the rail column beside them)
+// on their own rows: `wingRows` equal rows down the whole frame height. Absent, a
+// side cell sits on the inner row it is beside, and these functions answer with
+// the inner numbers — so a caller can always ask "side or inner?" and get the
+// right row geometry without knowing which kind of frame it holds.
+
+/** Whether the side panels count their own rows (see FrameConfig.wingRows). */
+export function hasSideLattice(config: FrameConfig): boolean {
+  return (config.wingRows ?? 0) > 0;
+}
+
+/** Rows down a side panel: its own count, or the inner grid's. */
+export function sideRowCount(config: FrameConfig): number {
+  return hasSideLattice(config) ? config.wingRows! : gridRowCount(config);
+}
+
+/** The full rendered height, extra bottom rows included. */
+function renderHeightInches(config: FrameConfig): number {
+  return config.heightInches + extraBottomRows(config) * config.tileSizeInches;
+}
+
+/** Height of a row, in inches, on the side lattice (`side`) or the inner one. */
+export function rowHeightInchesIn(config: FrameConfig, side: boolean, row: number): number {
+  if (side && hasSideLattice(config)) return renderHeightInches(config) / config.wingRows!;
+  return rowHeightInches(config, row);
+}
+
+/** Top edge of a row, in inches, on the side lattice (`side`) or the inner one. */
+export function rowTopInchesIn(config: FrameConfig, side: boolean, row: number): number {
+  if (side && hasSideLattice(config)) return row * (renderHeightInches(config) / config.wingRows!);
+  return rowTopInches(config, row);
+}
+
 /**
  * The rectangle a text banner row occupies, in inches from the frame's top edge.
  * BOTH renderers read this — the print composer's `schoolBannerRect` and the

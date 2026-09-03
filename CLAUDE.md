@@ -219,11 +219,16 @@ error of 49/255 where the real figure was under 1/255.
   full-width top runner over 2 × 6 sides was tried and rejected: **the SIDES span the
   full height** (Bill's part split). Do not re-propose 6.5 or a full-width runner
   without new information; do not present 6.75 as fitting the Pilot.
-- **The short top row is absorbed by the corner badge**: a footprint may not be ONLY
-  that row (`canPlace` refuses `rows === 1` there) but may start on it, so the flush
-  column is [3, 2, 2] — a 2 × 2.75 corner badge, then two squares — the same move
-  the live frame's 2 × 3 makes with its odd row. Badge px height is
-  `anchor.height + (rows − 1) × tile` in BOTH renderers (`snappetRect`, compose).
+- **The side panels sit on their OWN row lattice** (`FrameConfig.wingRows: 3`): each
+  2 × 6.75 column is three EQUAL 2 × 2.25 badges (owner: "three rectangles, divide
+  evenly, don't change dimensions"). 2.25 is not on the 1" pitch, so the wing column
+  AND the rail column beside it count their own rows (`rowTopInchesIn` /
+  `rowHeightInchesIn` in utils/rows, `wingColumnCount` in slot-generator); the
+  top/bottom rails stop short of the corners and the left/right rail zones are empty
+  on such a frame. A side badge is 2 cells × 1 side-row (`minTileSpan {2,1}`). Badge px
+  height is the SUM of its rows' cells in BOTH renderers (`snappetRect(…, grid)`).
+  The inner short top row is still banner-only (`isBannerOnlyCell` is column-aware).
+  A four-square column was asked for and withdrawn: it needs 1.6875" squares.
 - **The one new concept: a row that is not a tile tall.** `FrameConfig.topBarHeightInches`
   and `plateTopCoverInches` (registration). ALL row geometry now comes from
   `src/lib/utils/rows.ts` — grid, panel sizes, plate area, both banner renderers, the

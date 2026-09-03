@@ -19,7 +19,8 @@ import { BottomTextBar } from "./BottomTextBar";
 import { SectionTextElement } from "./SectionTextElement";
 import { BottomTabElement } from "./BottomTabElement";
 import { frameTab } from "@/lib/utils/bottom-tab";
-import { bannerRowBox, baseBottomRow, isBannerOnlyRow, rowTopInches, topBarHeightInches } from "@/lib/utils/rows";
+import { bannerRowBox, baseBottomRow, rowTopInches, topBarHeightInches } from "@/lib/utils/rows";
+import { isBannerOnlyCell } from "@/lib/utils/panels";
 import { screwNotches } from "@/lib/utils/screw-slots";
 
 interface FrameCanvasProps {
@@ -149,6 +150,12 @@ export const FrameCanvas = forwardRef<FrameCanvasHandle, FrameCanvasProps>(
       getElement: () => frameRef.current,
     }));
 
+    // The grid at the LIVE width: every slot rect, the drop cue and each badge's
+    // rect read from it, so a side panel on its own row lattice (2.25" rows on
+    // the flush frame) sizes its badges from its own cells rather than from an
+    // assumed tile pitch.
+    const grid = useMemo(() => buildGrid(frameConfig, containerWidth), [frameConfig, containerWidth]);
+
     // Keep dnd-kit's droppable-rect cache in sync with the frame's responsive
     // layout. The slots are absolutely positioned from `containerWidth`, so every
     // width change repositions/resizes every cell. dnd-kit measures droppables on
@@ -251,6 +258,7 @@ export const FrameCanvas = forwardRef<FrameCanvasHandle, FrameCanvasProps>(
           overSlot,
           snappetPreview ? { cols: snappetPreview.cols, rows: snappetPreview.rows } : tileSpan(null),
           tileSize,
+          grid,
         )
       : null;
     // The drop was REFUSED (plate, a text bar, a suppressed section). The cue turns
@@ -288,9 +296,8 @@ export const FrameCanvas = forwardRef<FrameCanvasHandle, FrameCanvasProps>(
     const anySpan = hasAnySpan(slots);
     const covered = useMemo(() => {
       if (!anySpan) return null;
-      const grid = buildGrid(frameConfig, containerWidth);
       return coveredBySnappets(visibleAnchorSlots(slots, grid, sections), grid);
-    }, [anySpan, slots, sections, frameConfig, containerWidth]);
+    }, [anySpan, slots, sections, grid]);
 
     // An EMPTY cell on a banner-only row (the flush frame's 0.75" top bar, wings
     // included) is frame body: no tile of its own can drop there, so it gets no
@@ -301,7 +308,7 @@ export const FrameCanvas = forwardRef<FrameCanvasHandle, FrameCanvasProps>(
     const visibleSlots = frameSlots.filter(
       (slot) =>
         !slotSuppressed(slot, sections, frameConfig) &&
-        !(isBannerOnlyRow(frameConfig, slot.row) && !slots[slot.id]),
+        !(isBannerOnlyCell(frameConfig, slot.row, slot.col) && !slots[slot.id]),
     );
     // Anchors are hoisted out of the frame body and into the overflow-visible
     // layer below, so they are rendered from here, not from `cellSlots`.
@@ -311,7 +318,7 @@ export const FrameCanvas = forwardRef<FrameCanvasHandle, FrameCanvasProps>(
           if (!tile) return [];
           const span = tileSpan(tile);
           if (!isMultiCell(span)) return [];
-          return [{ slot, rect: snappetRect(slot, span, tileSize) }];
+          return [{ slot, rect: snappetRect(slot, span, tileSize, grid) }];
         })
       : [];
     const anchorIds = new Set(snappetAnchors.map((a) => a.slot.id));
@@ -370,7 +377,7 @@ export const FrameCanvas = forwardRef<FrameCanvasHandle, FrameCanvasProps>(
       ? snappetPreview.evicts.flatMap((id) => {
           const slot = frameSlots.find((s) => s.id === id);
           if (!slot) return [];
-          return [{ id, rect: snappetRect(slot, tileSpan(slots[id]), tileSize) }];
+          return [{ id, rect: snappetRect(slot, tileSpan(slots[id]), tileSize, grid) }];
         })
       : [];
 
