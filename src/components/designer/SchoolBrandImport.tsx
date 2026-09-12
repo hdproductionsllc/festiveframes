@@ -162,7 +162,26 @@ function shortUrl(url: string): string {
   }
 }
 
-export function SchoolBrandImport() {
+export function SchoolBrandImport({
+  /**
+   * The school this scan is FOR, when there is one.
+   *
+   * Kitless (/lab/school) there is no school yet and this is absent: the scan
+   * reskins the frame in front of you and that is the end of it. On a thin kit's
+   * page the slug travels with the request and the route REMEMBERS what the scan
+   * found for that school, so the next parent from the same school opens in their
+   * colours instead of running the same scan again. Authored slugs are refused at
+   * the route, not here — a researched kit is never overwritten by a drive-by scan.
+   */
+  slug,
+  /** Heading and blurb, when the page wants to say why it is asking. */
+  heading,
+  blurb,
+}: {
+  slug?: string;
+  heading?: string;
+  blurb?: React.ReactNode;
+} = {}) {
   const frameConfig = useDesignStore((s) => s.frameConfig);
   const slots = useDesignStore((s) => s.slots);
   const sections = useDesignStore((s) => s.sections);
@@ -198,7 +217,8 @@ export function SchoolBrandImport() {
       const res = await fetch("/api/school/brand-scan", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: url.trim() }),
+        // `slug` is what turns a one-off scan into a result the next parent gets.
+        body: JSON.stringify({ url: url.trim(), ...(slug ? { slug } : null) }),
       });
       // The route answers 200 for every verdict it successfully established about
       // somebody else's server (a 404 over there is a fact, not a failure over here)
@@ -371,10 +391,14 @@ export function SchoolBrandImport() {
       {/* The 🏫 is gone rather than swapped for a line icon: it was decoration in a
           heading, and a heading that needs a picture to be understood has the wrong
           words. Sentence case at 600 — the whole page tops out at 600. */}
-      <h3 className="ff-h2 mb-1">Get your school&apos;s branding</h3>
+      <h3 className="ff-h2 mb-1">{heading ?? "Get your school's branding"}</h3>
       <p className="ff-help mb-2.5">
-        Paste your school&apos;s website and we&apos;ll look for the crest, the name and
-        the motto. Nothing is added until you pick it.
+        {blurb ?? (
+          <>
+            Paste your school&apos;s website and we&apos;ll look for the crest, the name
+            and the motto. Nothing is added until you pick it.
+          </>
+        )}
       </p>
 
       <form

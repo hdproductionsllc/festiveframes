@@ -639,6 +639,41 @@ export async function sendSchoolOrderEmail(o: SchoolOrderInput): Promise<SchoolO
   }
 }
 
+/**
+ * Plain-text alert that somebody asked for a school we do not have.
+ *
+ * INTERNAL ONLY, and opt-in: `to` is whatever the caller read out of
+ * SCHOOL_REQUEST_EMAIL, and with it unset the route never calls this at all. The
+ * REQUESTER is never mailed — see the rule at the top of lib/school-requests.ts.
+ *
+ * Here rather than in the route because this is the one module that constructs a
+ * Resend client, and a second one somewhere else is a second place to get the
+ * from-address, the key handling and the failure behaviour wrong. Same shape as
+ * `sendFulfillmentFailureAlert` below it: never throws, logs and moves on, because
+ * failing to notify ourselves must not fail the parent's request.
+ */
+export async function sendSchoolRequestAlert(
+  to: string[],
+  req: { id: string; schoolName: string; city: string; state: string; email: string | null; note: string | null },
+): Promise<void> {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey || !to.length) return;
+  const from = process.env.EMAIL_FROM || "Festive Frames <onboarding@resend.dev>";
+  // Strip control chars from the subject so a crafted school name cannot inject a
+  // header line — the same guard the school-order subject carries.
+  const subjectName = req.schoolName.replace(/[\r\n\t]+/g, " ").slice(0, 120);
+  try {
+    await new Resend(apiKey).emails.send({
+      from,
+      to,
+      subject: `SCHOOL REQUESTED — ${subjectName}`,
+      text: `Somebody searched for a school we do not have and asked for it.\n\nSchool: ${req.schoolName}\nCity: ${req.city}, ${req.state}\nFrom: ${req.email ?? "(not given)"}\nNote: ${req.note ?? "(none)"}\nRequest id: ${req.id}\n\nDO NOT REPLY TO THE REQUESTER without deciding to — nothing has been sent to them.`,
+    });
+  } catch (err) {
+    console.error("[email-production] school request alert failed:", err);
+  }
+}
+
 /** Plain-text alert when fulfillment fails — guarantees a human is notified. */
 export async function sendFulfillmentFailureAlert(orderId: string, sessionId: string, customerEmail: string | null, reason: string): Promise<void> {
   const apiKey = process.env.RESEND_API_KEY;

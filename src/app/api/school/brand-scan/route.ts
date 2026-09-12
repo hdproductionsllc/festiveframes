@@ -59,6 +59,7 @@ import {
   type SchoolProfile,
 } from "@/lib/school-brand";
 import { pickCrawlTargets, pickStylesheets } from "@/lib/school-brand/crawl-targets";
+import { persistScannedBrand } from "@/lib/school-brand/cache";
 import { mergeProfiles } from "@/lib/school-brand/merge-profiles";
 import { lookupKnownSchool } from "@/lib/school-brand/known-school.server";
 import {
@@ -265,9 +266,9 @@ const fail = (outcome: PageOutcome): NextResponse =>
   );
 
 export async function POST(request: Request): Promise<NextResponse> {
-  let body: { url?: unknown };
+  let body: { url?: unknown; slug?: unknown };
   try {
-    body = (await request.json()) as { url?: unknown };
+    body = (await request.json()) as { url?: unknown; slug?: unknown };
   } catch {
     return NextResponse.json<BrandScanResponse>(
       { ok: false, error: "bad-request", copy: INVALID_URL_COPY },
@@ -276,6 +277,11 @@ export async function POST(request: Request): Promise<NextResponse> {
   }
 
   const raw = typeof body.url === "string" ? body.url.trim() : "";
+  // OPTIONAL, and only ever a cache key. A slug never changes what is scanned or
+  // what comes back — it decides whether the answer is REMEMBERED for the school,
+  // which is `persistScannedBrand`'s job below. Length-capped like the URL; an
+  // unknown slug is simply a scan nobody keeps.
+  const slug = typeof body.slug === "string" ? body.slug.trim().slice(0, 200) : "";
   // 2048 is the practical URL ceiling every browser and proxy already enforces;
   // anything longer is not a school website address.
   if (!raw || raw.length > 2048) {
@@ -614,6 +620,12 @@ export async function POST(request: Request): Promise<NextResponse> {
   const { logos: _logos, droppedLogos: _droppedLogos, ...publicProfile } = profile;
   void _logos;
   void _droppedLogos;
+
+  // Remember what this scan found FOR THIS SCHOOL, so the next parent from it
+  // opens in the school's colours instead of running the same scan. Roster slugs
+  // only, and it never throws — the parent already has their answer, and failing
+  // to cache it must not turn a working result into an error.
+  await persistScannedBrand(slug, profile.colors, target.url.toString());
 
   return NextResponse.json<BrandScanResponse>(
     {

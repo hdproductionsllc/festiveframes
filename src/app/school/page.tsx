@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { FindMySchool } from "@/components/school/FindMySchool";
 import { allSchoolKits } from "@/data/school-kits";
 import { SITE_URL } from "@/config/season";
@@ -271,12 +270,17 @@ export default function MySchoolFramePage() {
         {/* The first thing a parent arriving from a group chat can act on. They
             know one fact — the name of their school — and everything the page
             offered before this was a builder with no school in it. */}
-        <FindMySchool schools={FIND_SCHOOLS} tone="dark" />
+        {/* The anchor every CTA on this page points at. Once the roster is
+            national the finder IS the front door — a button that jumps past it
+            into a blank builder skips the one step that makes the frame theirs. */}
+        <div id="find-my-school">
+          <FindMySchool schools={FIND_SCHOOLS} tone="dark" />
+        </div>
 
         <div className="msf-ctas">
-          <Link href="/lab/school" className="msf-btn msf-btn-primary">
-            See Your Name On It
-          </Link>
+          <a href="#find-my-school" className="msf-btn msf-btn-primary">
+            Find your school
+          </a>
           <a href="#fundraise" className="msf-btn msf-btn-ghost">
             Fundraise for your school →
           </a>
@@ -339,9 +343,9 @@ export default function MySchoolFramePage() {
           </li>
         </ul>
         <div className="msf-ctas">
-          <Link href="/lab/school" className="msf-btn msf-btn-brass">
-            Get the graduate plate
-          </Link>
+          <a href="#find-my-school" className="msf-btn msf-btn-brass">
+            Find your school, get the graduate plate
+          </a>
         </div>
       </section>
 
@@ -476,9 +480,9 @@ export default function MySchoolFramePage() {
           doesn&apos;t.
         </p>
         <div className="msf-ctas">
-          <Link href="/lab/school" className="msf-btn msf-btn-primary">
-            Build Your Frame
-          </Link>
+          <a href="#find-my-school" className="msf-btn msf-btn-primary">
+            Find your school and build it
+          </a>
         </div>
         <p className="msf-trust">
           Free to design. Nothing prints until you approve it.

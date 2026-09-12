@@ -42,6 +42,10 @@ const RULES: Record<string, Rule> = {
   // themselves are a URL and a slug, so the byte ceiling is small.
   "/api/school/brand-scan": { windowMs: 10 * 60_000, max: 8, maxBytes: 16 * 1024 },
   "/api/school/brand-asset": { windowMs: 10 * 60_000, max: 12, maxBytes: 16 * 1024 },
+  // The finder's miss capture: writes a Postgres row and can send an internal
+  // alert, so it is the same abuse shape as /api/contact and takes the same gate.
+  // Nobody legitimately reports six missing schools in ten minutes.
+  "/api/school/request": { windowMs: 10 * 60_000, max: 6, maxBytes: 16 * 1024 },
   "/api/save-design": { windowMs: 5 * 60_000, max: 15, maxBytes: 6 * MB },
   // 20MB, not 12: a school-frame draft carries the assembled overview PLUS four
   // 300-DPI panel PNGs (same payload class as /api/school/submit below).
@@ -105,6 +109,7 @@ export const config = {
     "/api/school/submit",
     "/api/school/brand-scan",
     "/api/school/brand-asset",
+    "/api/school/request",
     "/api/save-design",
     "/api/order/draft",
     "/api/contact",

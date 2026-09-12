@@ -43,7 +43,7 @@ export interface SeedTile {
  * which is most schools. Every one is still a SCHOOL shape; a stock trophy is not
  * on this list, because nobody earned it (school-presets.ts, rule 2).
  */
-const GENERIC_MARKS = ["hs:crest", "hs:honor-star", "hs:grad-cap"];
+export const GENERIC_MARKS = ["hs:crest", "hs:honor-star", "hs:grad-cap"];
 
 /**
  * The two marks a kit leads with.
@@ -58,8 +58,14 @@ function kitMarks(kit: SchoolKit): [string, string] {
   const own = (kit.marks?.badges ?? []).map((b) => markPieceId(kit.slug, b.key));
   const signature = new Set(kit.signature ?? []);
   const generic = GENERIC_MARKS.filter((id) => !signature.has(id));
-  const first = own[0] ?? generic[0];
-  const second = own[1] ?? generic.find((id) => id !== first)!;
+  // A signature that used up the whole generic list would leave nothing to pick
+  // and seed `undefined` into two cells — an empty pocket on the frame, with
+  // nothing failing anywhere, which is the exact failure mode this file exists
+  // to have stopped. No kit in the catalogue does it (a thin kit spends at most
+  // one), but the fallback is one line and the alternative is a silent hole.
+  const pool = generic.length >= 2 ? generic : GENERIC_MARKS;
+  const first = own[0] ?? pool[0];
+  const second = own[1] ?? pool.find((id) => id !== first)!;
   return [first, second];
 }
 

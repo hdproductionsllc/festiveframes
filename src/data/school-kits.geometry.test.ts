@@ -99,6 +99,10 @@ describe("a kit cannot carry a dimension", () => {
     "slug", "schoolName", "shortName", "mascot", "city",
     "colors", "banners", "fontFamily", "welcome", "signature", "marks",
     "plate", "status", "colorSource",
+    // IDENTITY, not appearance: which row of the national roster this school is
+    // (an NCES/PSS id). It buys the finder and /s/<slug> one answer to "is this
+    // school already authored?" and sizes, positions and re-grids nothing.
+    "rosterId",
   ]);
 
   for (const kit of allSchoolKits()) {

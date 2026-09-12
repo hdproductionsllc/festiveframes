@@ -35,6 +35,17 @@ import { SCHOOL_HEADLINE_FONT, SCHOOL_TAGLINE_FONT } from "@/lib/constants/defau
 export interface SchoolKit {
   /** URL identity: /s/<slug>. Also scopes the persist key and tags submissions. */
   slug: string;
+  /**
+   * The school's row in the national roster (`data/roster`), by NCES/PSS id.
+   *
+   * IDENTITY, not appearance: it says WHICH school this kit is, in the one
+   * vocabulary the other 29,466 schools share. It exists so the national finder
+   * can hide the roster row for a school that already has an authored kit, and so
+   * `/s/<roster-slug>` redirects to the authored slug instead of serving a second,
+   * thinner page for the same school. Absent on a kit whose roster row could not
+   * be matched by hand; the kit still works, it is just reachable under two URLs.
+   */
+  rosterId?: string;
   schoolName: string;
   /** What banners and copy call it — "Kirkwood", not the full legal name. */
   shortName: string;
@@ -129,6 +140,7 @@ export interface SchoolKit {
 const KITS: SchoolKit[] = [
   {
     slug: "kirkwood-pioneers",
+    rosterId: "291677000926",
     schoolName: "Kirkwood High School",
     shortName: "Kirkwood",
     mascot: "Pioneers",
@@ -151,6 +163,7 @@ const KITS: SchoolKit[] = [
   },
   {
     slug: "sluh-jr-bills",
+    rosterId: "00751104",
     schoolName: "St. Louis University High School",
     shortName: "SLUH",
     mascot: "Jr. Bills",
@@ -242,6 +255,7 @@ const KITS: SchoolKit[] = [
   },
   {
     slug: "micds-rams",
+    rosterId: "A9300536",
     schoolName: "MICDS",
     shortName: "MICDS",
     mascot: "Rams",
@@ -282,6 +296,7 @@ const KITS: SchoolKit[] = [
   },
   {
     slug: "de-smet-spartans",
+    rosterId: "00751771",
     schoolName: "De Smet Jesuit High School",
     shortName: "De Smet",
     mascot: "Spartans",
@@ -304,6 +319,7 @@ const KITS: SchoolKit[] = [
   },
   {
     slug: "chaminade-red-devils",
+    rosterId: "00751716",
     schoolName: "Chaminade College Preparatory School",
     shortName: "Chaminade",
     mascot: "Red Devils",
@@ -326,6 +342,7 @@ const KITS: SchoolKit[] = [
   },
   {
     slug: "vianney-griffins",
+    rosterId: "00752287",
     schoolName: "St. John Vianney High School",
     shortName: "Vianney",
     mascot: "Griffins",
@@ -348,6 +365,7 @@ const KITS: SchoolKit[] = [
   },
   {
     slug: "st-josephs-academy-angels",
+    rosterId: "00751115",
     schoolName: "St. Joseph's Academy",
     shortName: "SJA",
     mascot: "Angels",
@@ -392,6 +410,7 @@ const KITS: SchoolKit[] = [
   },
   {
     slug: "cor-jesu-academy-chargers",
+    rosterId: "00751738",
     schoolName: "Cor Jesu Academy",
     shortName: "Cor Jesu",
     mascot: "Chargers",
@@ -414,6 +433,7 @@ const KITS: SchoolKit[] = [
   },
   {
     slug: "incarnate-word-academy-red-knights",
+    rosterId: "00751807",
     schoolName: "Incarnate Word Academy",
     shortName: "Incarnate Word",
     mascot: "Red Knights",
@@ -436,6 +456,7 @@ const KITS: SchoolKit[] = [
   },
   {
     slug: "webster-groves-statesmen",
+    rosterId: "293153002197",
     schoolName: "Webster Groves High School",
     shortName: "Webster",
     mascot: "Statesmen",
@@ -458,6 +479,7 @@ const KITS: SchoolKit[] = [
   },
   {
     slug: "ladue-rams",
+    rosterId: "291782000946",
     schoolName: "Ladue Horton Watkins High School",
     shortName: "Ladue",
     mascot: "Rams",
@@ -480,6 +502,7 @@ const KITS: SchoolKit[] = [
   },
   {
     slug: "clayton-greyhounds",
+    rosterId: "290972000275",
     schoolName: "Clayton High School",
     shortName: "Clayton",
     mascot: "Greyhounds",
@@ -502,6 +525,7 @@ const KITS: SchoolKit[] = [
   },
   {
     slug: "lindbergh-flyers",
+    rosterId: "291869001026",
     schoolName: "Lindbergh High School",
     shortName: "Lindbergh",
     mascot: "Flyers",
@@ -524,6 +548,7 @@ const KITS: SchoolKit[] = [
   },
   {
     slug: "parkway-west-longhorns",
+    rosterId: "292358001404",
     schoolName: "Parkway West High School",
     shortName: "Parkway West",
     mascot: "Longhorns",
@@ -546,6 +571,7 @@ const KITS: SchoolKit[] = [
   },
   {
     slug: "parkway-central-colts",
+    rosterId: "292358001379",
     schoolName: "Parkway Central High School",
     shortName: "Parkway Central",
     mascot: "Colts",
@@ -568,6 +594,7 @@ const KITS: SchoolKit[] = [
   },
   {
     slug: "lafayette-lancers",
+    rosterId: "292685001624",
     schoolName: "Lafayette High School",
     shortName: "Lafayette",
     mascot: "Lancers",
@@ -590,6 +617,7 @@ const KITS: SchoolKit[] = [
   },
   {
     slug: "marquette-mustangs",
+    rosterId: "292685000657",
     schoolName: "Marquette High School",
     shortName: "Marquette",
     mascot: "Mustangs",
@@ -634,6 +662,7 @@ const KITS: SchoolKit[] = [
   },
   {
     slug: "saint-louis-priory-ravens",
+    rosterId: "00751975",
     schoolName: "Saint Louis Priory School",
     shortName: "Priory",
     mascot: "Ravens",
@@ -656,6 +685,7 @@ const KITS: SchoolKit[] = [
   },
   {
     slug: "whitfield-warriors",
+    rosterId: "00755867",
     schoolName: "Whitfield School",
     shortName: "Whitfield",
     mascot: "Warriors",
@@ -678,6 +708,7 @@ const KITS: SchoolKit[] = [
   },
   {
     slug: "fort-zumwalt-west-jaguars",
+    rosterId: "290837002624",
     schoolName: "Fort Zumwalt West High School",
     shortName: "FZ West",
     mascot: "Jaguars",
@@ -700,6 +731,7 @@ const KITS: SchoolKit[] = [
   },
   {
     slug: "mehlville-panthers",
+    rosterId: "292067001115",
     schoolName: "Mehlville High School",
     shortName: "Mehlville",
     mascot: "Panthers",
@@ -722,6 +754,7 @@ const KITS: SchoolKit[] = [
   },
   {
     slug: "oakville-tigers",
+    rosterId: "292067001118",
     schoolName: "Oakville High School",
     shortName: "Oakville",
     mascot: "Tigers",
@@ -744,6 +777,7 @@ const KITS: SchoolKit[] = [
   },
   {
     slug: "pattonville-pirates",
+    rosterId: "292370001421",
     schoolName: "Pattonville High School",
     shortName: "Pattonville",
     mascot: "Pirates",
@@ -766,6 +800,7 @@ const KITS: SchoolKit[] = [
   },
   {
     slug: "francis-howell-vikings",
+    rosterId: "292895001860",
     schoolName: "Francis Howell High School",
     shortName: "Francis Howell",
     mascot: "Vikings",

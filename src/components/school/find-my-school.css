@@ -128,3 +128,97 @@
 .msf-find[data-tone="dark"] .msf-find-cta:focus-visible {
   background: #ffd35c;
 }
+
+/* ── "We don't have your school" ────────────────────────────────────────────
+   Lives here rather than in school-landing.css for the same reason everything
+   above does: the finder renders on pages that never load that sheet, and this
+   panel is the one a parent sees at the worst possible moment to meet unstyled
+   markup. Colours literal, `data-tone` for the navy ground. */
+.msf-request {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 4px;
+}
+.msf-request-lede {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: #22273a;
+}
+.msf-request[data-tone="dark"] .msf-request-lede {
+  color: #eef1f7;
+}
+.msf-request-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1 1 0;
+  min-width: 0;
+}
+.msf-request-field > span {
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: #5d6374;
+}
+.msf-request[data-tone="dark"] .msf-request-field > span {
+  color: #c9d0e2;
+}
+.msf-request-field > span em {
+  font-style: normal;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+  opacity: 0.75;
+}
+.msf-request-field input {
+  width: 100%;
+  box-sizing: border-box;
+  /* 16px MINIMUM, same rule as the search field: anything smaller makes iOS
+     Safari zoom the page on focus. */
+  font-size: 16px;
+  padding: 11px 12px;
+  border-radius: 10px;
+  border: 2px solid rgba(27, 42, 74, 0.18);
+  background: #fff;
+  color: #22273a;
+  font-family: inherit;
+}
+.msf-request-field input:focus {
+  outline: none;
+  border-color: #b98a2f;
+  box-shadow: 0 0 0 4px rgba(185, 138, 47, 0.16);
+}
+.msf-request-row {
+  display: flex;
+  gap: 10px;
+}
+/* Two letters and no more, so it never takes half the row from the city. */
+.msf-request-state {
+  flex: 0 0 84px;
+}
+.msf-request-fine {
+  margin: 0;
+  font-size: 12.5px;
+  color: #5d6374;
+}
+.msf-request[data-tone="dark"] .msf-request-fine {
+  color: #c9d0e2;
+}
+.msf-request .msf-find-cta {
+  align-self: flex-start;
+}
+.msf-request .msf-find-cta:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.msf-request-done {
+  margin: 0;
+  font-size: 15px;
+  color: #22273a;
+}
+.msf-request[data-tone="dark"] .msf-request-done {
+  color: #eef1f7;
+}

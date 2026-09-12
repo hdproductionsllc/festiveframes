@@ -325,6 +325,59 @@ error of 49/255 where the real figure was under 1/255.
   THREE brand colours — passing only `frameColor` renders every school's badges on
   stock navy and reads as a product defect that is really the harness lying.
 
+## National roster — how a school page resolves (2026-09-12)
+
+- **Source**: the NCES **CCD** (public) and **PSS** (private) school directories,
+  public-domain federal data, extract rebuilt 2026-06. Filtered to **29,467 rows**
+  from 33,923: enrolment under 50 dropped (4,251; rows with NO population are
+  kept), facility names dropped (205 — detention/juvenile/hospital/treatment/...).
+  Committed at `src/data/roster/us-high-schools.json` (2.4 MB, compact
+  array-of-arrays with a header row). Rebuild:
+  `node scripts/build-roster.mjs <path-to-us_high_schools.json>` — deterministic,
+  offline, byte-identical on the same input. Filters and counts: the README beside
+  the file.
+- **THE RESOLVE ORDER IS `data/school-resolve.ts`, and it is the product**:
+  authored kit → roster row (a generated **thin kit**) → `notFound()`. A roster
+  slug whose school already has an authored kit **redirects** to the authored slug
+  — the join is `rosterId` on the kit (NCES/PSS id), not a name match at runtime.
+  **24 of the 27 are joined**; CBC, Nerinx Hall and John Burroughs are not in the
+  federal private extract at all, so they are simply not reachable by a second URL
+  (`school-resolve.test.ts` names all three, so a rebuild that adds them fails
+  loudly rather than half-joining).
+- **The roster is SERVER ONLY and slugs are derived, not stored.** `data/roster.ts`
+  reads the file once per process and builds an inverted index (warm query 0.01–0.6 ms
+  over 29,467 rows; index build ~230 ms). `rosterSlug` is the ONLY implementation of
+  the slug rule — the build script deliberately does not compute slugs, so the two
+  cannot drift. Uniqueness over the whole file is a test, not a hope.
+- **Thin kits are `noindex` and colour-NEUTRAL until scanned.** `data/thin-kit.ts`
+  gives a roster school navy `#1B2A4A` with a white rim, `mascot: ""`, four
+  non-claiming badges and a welcome band that names only the school and the city.
+  It claims nothing because we know nothing: a thin kit can never be `verified`.
+  Banner text is fitted — drop "HIGH SCHOOL", then SAINT → ST., then a word
+  boundary, then no dangling preposition (26 chars headline / 34 tagline, set by
+  rendering and looking, not by measuring the bar).
+- **`/s/[slug]` is now fully DYNAMIC (ƒ)** — `generateStaticParams` is gone. 29,467
+  pages cannot be prerendered, and prerendering only the 27 would have left the
+  path everyone actually takes as the one nobody looked at. The OG card route keeps
+  its 27 and resolves the rest on demand.
+- **Where the two caches live**: `lib/school-brand/cache.ts` (colours a parent's
+  scan found, table `school_brand_cache`) and `lib/school-requests.ts` ("we don't
+  have my school", table `school_requests`). Both are Postgres-when-`DATABASE_URL`,
+  memory otherwise, copied from `order/school-ledger.ts` including the `__mem…ForTest`
+  seam. `persistScannedBrand` is the gate: **a scan may fill in a roster school's
+  colours and may NEVER touch an authored kit's** (nor an authored kit reached by
+  its roster slug). The thin-kit page layers the cached colours on at render time
+  through `assignSurfaces` — the same rule the scanner's own button uses — so the
+  kit itself stays neutral and a change to that rule reaches every cached school.
+- **`/api/school/request` mails nobody but us**, and only when
+  `SCHOOL_REQUEST_EMAIL` is set. The requester's address is stored so a human can
+  choose to reply and is never a recipient; the route test asserts it. It is in
+  `proxy.ts` (6 per IP / 10 min, 16 KB) like every other public POST.
+- The **finder is the front door**: `/api/school/find` answers nationally (roster
+  rows whose school is authored are dropped there), `FindMySchool` keeps the 27
+  client-side and merges them on top deduped by slug, and every CTA on `/school`
+  points at `#find-my-school` instead of the retired `/lab/school`.
+
 ## One change updates all 27 (the rollout's contract)
 
 - **`SCHOOL_SHIPPING_VARIANT`** (data/school-variants.ts) is the switch. Change that

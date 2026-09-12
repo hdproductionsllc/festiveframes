@@ -75,7 +75,13 @@ describe("every MySchoolFrame surface carries its own brand", () => {
     const og = path.join(APP, "s/[slug]/opengraph-image.tsx");
     expect(existsSync(og), "a school's own link still unfurls as Festive Frames").toBe(true);
     const src = readFileSync(og, "utf8");
-    expect(src, "the card is not derived from the school's kit").toMatch(/getSchoolKit/);
+    // `resolveSchoolKit` rather than `getSchoolKit`: the card is national now, so
+    // it has to come from the RESOLVER (authored kit, else the roster's thin kit)
+    // or the 29,440 roster schools unfurl as "YOUR SCHOOL" on stock navy — the
+    // generic card this test exists to prevent, reached by a different route.
+    expect(src, "the card is not derived from the school's kit").toMatch(
+      /resolveSchoolKit|getSchoolKit/,
+    );
     expect(src, "the card ignores the school's colour").toMatch(/colors\.frame/);
   });
 

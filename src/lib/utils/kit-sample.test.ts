@@ -3,7 +3,8 @@ import { writeFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { createCanvas, loadImage, type Image } from "@napi-rs/canvas";
-import { allSchoolKits, getSchoolKit, kitSections, type SchoolKit } from "@/data/school-kits";
+import { allSchoolKits, kitSections, type SchoolKit } from "@/data/school-kits";
+import { resolveSchoolKit } from "@/data/school-resolve";
 import { kitSeedTiles } from "@/data/kit-seed";
 import { SCHOOL_SHIPPING_VARIANT, schoolVariant, type SchoolVariantId } from "@/data/school-variants";
 import { getPiece } from "@/data/sets";
@@ -27,6 +28,12 @@ import { registerNodeFonts, registeredFamilies } from "@/lib/utils/node-fonts";
 //
 //   KIT_SAMPLE_OUT=/tmp/sluh.png KIT_SAMPLE_SLUG=sluh-jr-bills \
 //   KIT_SAMPLE_VARIANT=flush npx vitest run src/lib/utils/kit-sample.test.ts
+//
+// KIT_SAMPLE_SLUG takes ANY slug /s/<slug> takes, because it resolves through the
+// same `resolveSchoolKit` the route does: one of the 27 authored kits, or any of
+// the 29,467 roster schools, which come through as generated thin kits. Looking at
+// a thin kit is the only way to see whether a name nobody chose for a banner fits
+// on one — and there are 29,440 of those against 27 hand-checked ones.
 //
 // Unset, it still runs as a test: every kit must produce a frame whose seeded
 // badges all resolve to artwork that exists on disk. A kit naming a piece whose
@@ -161,8 +168,8 @@ describe("sample artifact", () => {
   it("writes the requested kit to KIT_SAMPLE_OUT", async () => {
     const out = process.env.KIT_SAMPLE_OUT;
     if (!out) return;
-    const kit = getSchoolKit(process.env.KIT_SAMPLE_SLUG ?? "sluh-jr-bills");
-    expect(kit, "KIT_SAMPLE_SLUG names no kit").toBeDefined();
+    const kit = resolveSchoolKit(process.env.KIT_SAMPLE_SLUG ?? "sluh-jr-bills");
+    expect(kit, "KIT_SAMPLE_SLUG names no school, authored or on the roster").toBeDefined();
     const variant = (process.env.KIT_SAMPLE_VARIANT ?? "flush") as SchoolVariantId;
     const design = designFor(kit!, variant);
     const images = await bundleFor(design);

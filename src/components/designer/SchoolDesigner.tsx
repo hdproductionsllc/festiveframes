@@ -123,7 +123,14 @@ export function SchoolDesigner({
   // the config: the flush frame has a keystone like the slim one and a different
   // grid from both, so "has a bottomTab" could not tell them apart.
   presets = SCHOOL_PRESETS,
-}: { kit?: SchoolKit; hero?: React.ReactNode; presets?: SchoolPreset[] } = {}) {
+  brandScan,
+}: {
+  kit?: SchoolKit;
+  hero?: React.ReactNode;
+  presets?: SchoolPreset[];
+  /** Show the website scanner FOR THIS SCHOOL — see the mount below. */
+  brandScan?: { slug: string; heading?: string; blurb?: React.ReactNode };
+} = {}) {
   // This school's own crest/mascot badges. Memoised on the kit so the palette
   // isn't handed a fresh array on every render of a page that never changes kit.
   const kitMarks = useMemo(() => kitMarkPieces(kit), [kit]);
@@ -923,10 +930,22 @@ export function SchoolDesigner({
                 candidate's full-res PNG and hands it to the same `useSnappetUpload.begin`
                 that UploadPhotoButton calls, so the aspect-locked crop, the live DPI
                 gate and the 2x2 minTileSpan floor all still apply. */}
-            {/* Brand scan is the GENERIC builder's school picker. A kit page
-                already IS the school — showing "paste your school's website"
-                there undercuts the whole personalized pitch. */}
-            {!kit && <SchoolBrandImport />}
+            {/* Brand scan is the GENERIC builder's school picker. An AUTHORED kit
+                page already IS the school — showing "paste your school's website"
+                there undercuts the whole personalized pitch.
+                A THIN kit is the third case and the reason `brandScan` exists: the
+                page knows which school it is and does NOT know its colours, so the
+                ask is neither generic nor redundant, and what it finds is kept for
+                every parent from that school after this one. */}
+            {brandScan ? (
+              <SchoolBrandImport
+                slug={brandScan.slug}
+                heading={brandScan.heading}
+                blurb={brandScan.blurb}
+              />
+            ) : (
+              !kit && <SchoolBrandImport />
+            )}
             {/* Their own photo sits ABOVE the badge library: for a parent the
                 picture of their kid is the most personal thing they can put on
                 this frame, and it was buried under a long scrolling palette. */}
@@ -1236,10 +1255,14 @@ export function SchoolBuilder({
   kit,
   hero,
   variant,
+  brandScan,
   frameConfig = schoolVariant(variant).config,
 }: {
   kit?: SchoolKit;
   hero?: React.ReactNode;
+  /** Show the website scanner FOR THIS SCHOOL. Set by /s/<slug> on a thin kit —
+   *  the one case where we know which school it is and not what colour it is. */
+  brandScan?: { slug: string; heading?: string; blurb?: React.ReactNode };
   /**
    * WHICH FRAME this builder is: the geometry, its preset layouts, and the persist
    * key's namespace, all from one record (data/school-variants). Absent = the live
@@ -1293,7 +1316,7 @@ export function SchoolBuilder({
   );
   return (
     <DesignStoreProvider store={store}>
-      <SchoolDesigner kit={kit} hero={hero} presets={presets} />
+      <SchoolDesigner kit={kit} hero={hero} presets={presets} brandScan={brandScan} />
     </DesignStoreProvider>
   );
 }

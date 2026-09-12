@@ -34,11 +34,15 @@ export function SchoolKitPage({
   variant,
   /** Rendered above the hero. The fork uses it to say what it is. */
   banner,
+  /** Offer the website scanner for THIS school. Only /s/<slug> on a roster-backed
+   *  (thin) kit passes it — see SchoolBuilder's `brandScan`. */
+  brandScan,
 }: {
   kit: SchoolKit;
   frameConfig?: FrameConfig;
   variant?: SchoolVariantId;
   banner?: React.ReactNode;
+  brandScan?: { slug: string; heading?: string; blurb?: React.ReactNode };
 }) {
   const w = kit.welcome;
   return (
@@ -61,6 +65,7 @@ export function SchoolKitPage({
         kit={kit}
         frameConfig={frameConfig}
         variant={variant}
+        brandScan={brandScan}
         hero={w ? (
           <section className="msf-kit-hero">
             {/* The school's own lockup, above its own words. This is the first

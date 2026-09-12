@@ -1,7 +1,8 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { ImageResponse } from "next/og";
-import { getSchoolKit, allSchoolKits } from "@/data/school-kits";
+import { allSchoolKits } from "@/data/school-kits";
+import { resolveSchoolKit } from "@/data/school-resolve";
 import { shift, luminance } from "@/lib/utils/tile-theme";
 
 // ─── The share card for ONE school's builder ─────────────────────────────────
@@ -27,6 +28,8 @@ const BRASS = "#f8c53b";
 const PAPER = "#f6f3ec";
 const NAVY = "#1b2a4a";
 
+/** The 27 authored cards are worth baking; the roster's render on demand.
+ *  (`dynamicParams` defaults to true, which is what serves them.) */
 export function generateStaticParams() {
   return allSchoolKits().map((k) => ({ slug: k.slug }));
 }
@@ -58,7 +61,12 @@ export default async function OpengraphImage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const kit = getSchoolKit(slug);
+  // The RESOLVER, not the authored catalogue: /s/<slug> is national now, and a
+  // card is the whole point of the school link a booster forwards into a group
+  // chat. Without this every one of the 29,440 roster schools unfurled as "YOUR
+  // SCHOOL" on a stock navy field — the generic card this file was written to
+  // stop, just with a different cause.
+  const kit = resolveSchoolKit(slug);
   // An unknown slug 404s on the page itself; the card still has to render.
   const field = kit?.colors.frame ?? NAVY;
   const ink = kit?.banners.text ?? PAPER;

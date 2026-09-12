@@ -1,6 +1,6 @@
 import type { BottomBarConfig } from "@/lib/types";
 import { luminance, shift } from "@/lib/utils/tile-theme";
-import type { SchoolProfile, TextCandidate } from "./types";
+import type { ColorCandidate, SchoolProfile, TextCandidate } from "./types";
 
 /**
  * The parts of a profile this module reads.
@@ -127,6 +127,26 @@ export function bannerTextOn(bg: string): string {
  * happened, because "we found both of these" and "we invented the second" are
  * different claims and the UI should not make them identically.
  */
+/**
+ * The scanned colours worth keeping, best first, de-duplicated.
+ *
+ * The SAME `hits` floor `buildBrandKit` applies below: `hits` is what separates
+ * "declared once by a carousel" from "declared everywhere the brand shows up",
+ * and a colour that would not have been applied to the frame is not one worth
+ * remembering for the next parent either. Used by the brand cache, which stores
+ * these and lets `assignSurfaces` decide their jobs at render time.
+ */
+export function brandColorHexes(colors: ColorCandidate[], limit = 4): string[] {
+  const out: string[] = [];
+  for (const c of colors) {
+    if (c.hits < MIN_COLOR_HITS) continue;
+    const hex = c.hex.toUpperCase();
+    if (!out.includes(hex)) out.push(hex);
+    if (out.length >= limit) break;
+  }
+  return out;
+}
+
 export function assignSurfaces(hexes: string[]): {
   frameColor: string;
   tileFieldColor: string;
