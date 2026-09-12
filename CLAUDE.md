@@ -276,7 +276,7 @@ error of 49/255 where the real figure was under 1/255.
   for every school. The old hand-written `seedSlots` were tied to one lattice and
   the fork silently DROPPED the ids it did not have, which is a half-empty frame
   and no failure anywhere.
-- **The catalogue is 26 St. Louis-area schools**, all `status: "demo"`. Every
+- **The catalogue is 27 St. Louis-area schools**, all `status: "demo"`. Every
   colour but SLUH's and MICDS's is an APPROXIMATION — no school publishes a hex we
   could reach, and each kit's `colorSource` says so. That alone blocks `verified`.
 - **Two kits are only partly researched** (Kirkwood, MICDS): their last two
