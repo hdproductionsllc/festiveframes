@@ -50,3 +50,6 @@ next-env.d.ts
 
 # Generation working files (variants live locally; only conformed winners ship)
 scripts/out/
+
+# Agent worktrees (full checkouts; eslint ignores them too)
+.claude/worktrees/
