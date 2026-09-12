@@ -113,8 +113,6 @@ export default async function PatrioticGiftForCarGuyPage() {
               Home
             </Link>
             <span aria-hidden> › </span>
-            <span className="text-[#6a6354]">Gifts</span>
-            <span aria-hidden> › </span>
             <span className="text-[#1e1b17]">Patriotic Gift for the Car Guy</span>
           </nav>
 

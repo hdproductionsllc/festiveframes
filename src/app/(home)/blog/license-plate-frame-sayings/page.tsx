@@ -219,8 +219,6 @@ export default async function LicensePlateFrameSayingsPage() {
               Home
             </Link>
             <span aria-hidden> › </span>
-            <span className="text-[#6a6354]">Blog</span>
-            <span aria-hidden> › </span>
             <span className="text-[#1e1b17]">License Plate Frame Sayings</span>
           </nav>
 

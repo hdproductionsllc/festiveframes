@@ -150,8 +150,6 @@ export default async function CarGuyGiftsUnder50Page() {
               Home
             </Link>
             <span aria-hidden> › </span>
-            <span className="text-[#6a6354]">Gifts</span>
-            <span aria-hidden> › </span>
             <span className="text-[#1e1b17]">Car Guy Gifts Under $50</span>
           </nav>
 

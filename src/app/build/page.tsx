@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { SITE_URL } from "@/config/season";
+import { OG_IMAGE_ALT, SITE_URL } from "@/config/season";
 import { copy } from "@/content/copy";
 import { Designer } from "@/components/designer/Designer";
 import { BuildChrome } from "@/components/build/BuildChrome";
@@ -38,11 +38,16 @@ export const metadata: Metadata = {
     siteName: copy.site.brandEntity,
     title: copy.build.metaTitle,
     description: copy.build.metaDescription,
+    // Declaring `openGraph` at all suppresses the file-convention OG image, so
+    // it has to be named here — this page shipped with no og:image while the
+    // legal pages, which declare nothing, got the full set.
+    images: [{ url: `${SITE_URL}/opengraph-image`, width: 1200, height: 630, alt: OG_IMAGE_ALT }],
   },
   twitter: {
     card: "summary_large_image",
     title: copy.build.metaTitle,
     description: copy.build.metaDescription,
+    images: [{ url: `${SITE_URL}/opengraph-image`, width: 1200, height: 630, alt: OG_IMAGE_ALT }],
   },
 };
 

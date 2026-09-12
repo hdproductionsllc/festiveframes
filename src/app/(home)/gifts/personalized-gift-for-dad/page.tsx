@@ -107,8 +107,6 @@ export default async function PersonalizedGiftForDadPage() {
               Home
             </Link>
             <span aria-hidden> › </span>
-            <span className="text-[#6a6354]">Gifts</span>
-            <span aria-hidden> › </span>
             <span className="text-[#1e1b17]">Personalized Gift for Dad</span>
           </nav>
 
