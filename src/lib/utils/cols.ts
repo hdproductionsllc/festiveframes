@@ -110,11 +110,6 @@ export function colLeftInches(config: FrameConfig, col: number): number {
   return x;
 }
 
-/** Total rendered width, wings included — the frame's outside dimension. */
-export function totalWidthInches(config: FrameConfig): number {
-  return config.widthInches + (hasWings(config) ? config.wingWidthInches * 2 : 0);
-}
-
 /**
  * The frame's PITCH in px, recovered from any one cell's rendered width.
  *

@@ -42,7 +42,6 @@ const H = "hs";
  * white, exactly as the mock shows. Contrast was the wrong objective — the right one
  * is 'does the art still read', and beyond that it is a look, not a measurement.
  */
-const WHITE = TILE_BG.white;
 const NAVY = TILE_BG.navy;
 
 /**

@@ -21,7 +21,6 @@ const S = "school"; // setId shorthand
 // empty url would show a blank color block — these give the intended, visible emoji
 // placeholder. They're generic (not the bespoke varsity art in the brief) and are
 // CDN-hosted (no missing LOCAL files). Real collegiate art replaces each url later.
-const T = "https://cdn.jsdelivr.net/gh/jdecked/twemoji@v15.1.0/assets/svg";
 
 // Collegiate placeholder palette — deep navy, varsity gold, court/turf accents.
 const NAVY = "#1B2A4A";
@@ -29,8 +28,6 @@ const GOLD = "#F5B700";
 const CRIMSON = "#9E1B32";
 const ROYAL = "#1B4DFF";
 const FOREST = "#2D8B46";
-const TURF = "#3B7A3B";
-const COURT = "#C46A2B";
 const INK = "#1a1a1a";
 
 /** School-appropriate spirit icons. Emoji-only fallback (artworkUrl empty). */

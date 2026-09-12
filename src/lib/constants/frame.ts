@@ -1,4 +1,5 @@
 import type { FrameConfig } from "@/lib/types";
+import { extraBottomRows } from "@/lib/utils/rows";
 
 /** eufyMake E1 printable bed, inches. The school frame's output is rotated so its
  *  LONG axis lies along the bed's 16.5" side (it fits only in that orientation).
@@ -412,14 +413,9 @@ export function getTotalWidthInches(config: FrameConfig): number {
   return config.widthInches + (config.wings ? config.wingWidthInches * 2 : 0);
 }
 
-/** Extra bottom rows beyond the base row (0 when `bottomRows` is unset/1). */
-export function getExtraBottomRows(config: FrameConfig): number {
-  return Math.max(0, (config.bottomRows ?? 1) - 1);
-}
-
 /** Rendered height in inches, INCLUDING any extra bottom rows (grows downward). */
 export function getRenderHeightInches(config: FrameConfig): number {
-  return config.heightInches + getExtraBottomRows(config) * config.tileSizeInches;
+  return config.heightInches + extraBottomRows(config) * config.tileSizeInches;
 }
 
 // Bottom bar fonts — system fonts first (instant), then web fonts. Each font is

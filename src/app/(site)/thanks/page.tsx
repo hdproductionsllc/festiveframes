@@ -10,7 +10,7 @@ import { EmailCaptureForm } from "@/components/site/home/EmailCaptureForm";
 import { OrderFulfiller } from "@/components/site/thanks/OrderFulfiller";
 import { SharePrompt } from "@/components/site/thanks/SharePrompt";
 import { PurchaseTracker } from "@/components/site/thanks/PurchaseTracker";
-import { SITE_URL, season } from "@/config/season";
+import { SITE_URL } from "@/config/season";
 
 // Post-purchase confirmation at "/thanks". Server Component. Inherits
 // SiteHeader + SiteFooter + the sticker-theme from the (site) layout, so we
