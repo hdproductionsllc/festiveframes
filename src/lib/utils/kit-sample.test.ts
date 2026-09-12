@@ -101,7 +101,11 @@ describe("every kit renders on the frame it ships on", () => {
         width,
       );
       expect(canvas.toBuffer("image/png").length).toBeGreaterThan(1000);
-    });
+      // A full 4650 x 2025 canvas per kit runs ~0.7s idle and HAS exceeded the
+      // default 5s under CPU contention (three of these failed once while lint
+      // ran beside them, then passed four runs straight). A render test that
+      // flakes on load teaches people to re-run rather than to look.
+    }, 30_000);
   }
 });
 
