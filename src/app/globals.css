@@ -14,10 +14,12 @@
   --color-brand-navy-deep: #0F1B33;
   --color-brand-navy-soft: #243859;
 
-  /* Marketing font families. next/font (layout.tsx) sets the raw
-     --font-display-marketing / --font-body-marketing variables on <body>.
-     These Tailwind theme tokens reference those with safe fallbacks, exposing
-     the utilities font-mkt-display and font-mkt-body. */
+  /* Marketing font families. next/font sets the raw
+     --font-display-marketing / --font-body-marketing variables on the (home) and
+     (site) route-group wrappers — the groups that actually paint these faces —
+     and, un-preloaded, on <body> in the root layout, which is where /school and
+     /s/<slug>/raised pick them up. These Tailwind theme tokens reference those
+     with safe fallbacks, exposing font-mkt-display and font-mkt-body. */
   --font-mkt-display: var(--font-display-marketing), "Oswald", "Bebas Neue", sans-serif;
   --font-mkt-body: var(--font-body-marketing), "Libre Franklin", system-ui, sans-serif;
 

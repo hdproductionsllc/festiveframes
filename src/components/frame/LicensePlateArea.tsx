@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import { getPlateDesign } from "@/data/plates";
 import { getPlateImageUrl, getPlateImageDisplay } from "@/data/plate-images";
 
@@ -64,6 +65,31 @@ export function LicensePlateArea({ x, y, width, height, plateState, plateImageOv
 
   const stateFont = stateFontMap[plate.stateFontStyle || "normal"];
   const showImage = plateImageUrl && !imageFailed;
+  // Ours or somebody else's. Every plate a KIT supplies is a file we ship under
+  // public/plates (the gen-plate.mjs pipeline writes them there), and so are CA
+  // and MO; every other state is still a raw.githubusercontent.com URL from
+  // plate-images.ts. next/image can optimize the first kind with nothing added to
+  // next.config; the second kind would need each remote host whitelisted, so it
+  // stays a plain <img> and behaves exactly as it did.
+  const isLocalPlateImage = !!plateImageUrl && plateImageUrl.startsWith("/");
+
+  // The plate sits in the frame's window: ~232 CSS px on a 390 phone, ~656 on a
+  // 1440 desktop (measured). The ladder resolves both to w=750 — oversampled
+  // against the phone's 696 device px at dpr 3, and under the 924 px source, so
+  // nothing is upscaled. The win is the FORMAT: the shipped photos are a 103 KB
+  // JPEG and a 340 KB PNG, and webp at the size actually drawn is a fraction of
+  // either.
+  const PLATE_SIZES = "(max-width: 767px) 60vw, 660px";
+  // The plate image is stacked over the CSS fallback, edge to edge in the window.
+  // Both renderings get this, so the box geometry cannot drift between them: same
+  // fill, same object-fit, same per-plate scale from plate-images.ts.
+  const plateImageStyle: React.CSSProperties = {
+    opacity: imageLoaded ? 1 : 0,
+    transition: "opacity 0.4s ease-out",
+    objectFit: plateImageDisplay.objectFit,
+    objectPosition: plateImageDisplay.objectPosition,
+    transform: plateImageDisplay.scale !== 1 ? `scale(${plateImageDisplay.scale})` : undefined,
+  };
 
   return (
     <div
@@ -95,7 +121,29 @@ export function LicensePlateArea({ x, y, width, height, plateState, plateImageOv
         }}
       >
         {/* Real plate image (loads over CSS fallback) */}
-        {showImage && (
+        {showImage && isLocalPlateImage && (
+          <Image
+            src={plateImageUrl}
+            alt={`${plate.state} license plate`}
+            // `fill` is the same box the raw <img> drew: absolutely positioned,
+            // inset 0, 100% x 100% of this (relative, overflow-hidden) parent.
+            fill
+            sizes={PLATE_SIZES}
+            // The CSS plate shows underneath until this resolves, so any delay
+            // here is time spent looking at the fallback rather than the product.
+            // `priority` is what the raw <img>'s loading="eager" + fetchPriority
+            // ="high" already said; `decoding="sync"` is gone with it — it blocked
+            // the main thread to decode a photo that fades in over 400ms anyway.
+            priority
+            onLoad={() => setImageLoaded(true)}
+            onError={() => setImageFailed(true)}
+            draggable={false}
+            style={plateImageStyle}
+          />
+        )}
+        {showImage && !isLocalPlateImage && (
+          // A remote state plate from plate-images.ts — unchanged.
+          // eslint-disable-next-line @next/next/no-img-element
           <img
             src={plateImageUrl}
             alt={`${plate.state} license plate`}
@@ -103,18 +151,9 @@ export function LicensePlateArea({ x, y, width, height, plateState, plateImageOv
             onError={() => setImageFailed(true)}
             draggable={false}
             loading="eager"
-            // The CSS plate shows underneath until this resolves, so any delay
-            // here is time spent looking at the fallback rather than the product.
             fetchPriority="high"
-            decoding="sync"
             className="absolute inset-0 w-full h-full"
-            style={{
-              opacity: imageLoaded ? 1 : 0,
-              transition: "opacity 0.4s ease-out",
-              objectFit: plateImageDisplay.objectFit,
-              objectPosition: plateImageDisplay.objectPosition,
-              transform: plateImageDisplay.scale !== 1 ? `scale(${plateImageDisplay.scale})` : undefined,
-            }}
+            style={plateImageStyle}
           />
         )}
 

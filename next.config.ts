@@ -25,6 +25,19 @@ const nextConfig: NextConfig = {
     // optimizer requests (notably the hero) TIMED OUT — images failed to appear.
     // WebP encodes fast enough that the cold first-load burst clears cleanly.
     formats: ["image/webp"],
+    // 192 is OURS; the rest is Next's default ladder (16/32/48/64/96/128/256/384).
+    //
+    // A badge renders at 56 CSS px. On the phone a parent actually arrives with —
+    // a QR code in the bleachers, dpr 3 — that is 168 device px, and the default
+    // ladder's next step up from 128 is 256. So every badge on the page was fetched
+    // at w=256 (30 KB) to be drawn into 168 px. With 192 on the ladder the same
+    // badge comes back at 15.5 KB, still oversampled against 168, and the frame is
+    // full of badges: this is the cheapest measured byte on the route.
+    //
+    // NOT added: `qualities`. The default (75) is what every image on the site was
+    // tuned by eye against, and re-tuning quality is a LOOKING change, not a config
+    // change — it belongs with a render in front of it, not in a perf pass.
+    imageSizes: [16, 32, 48, 64, 96, 128, 192, 256, 384],
     // Once optimized, keep the result cached a long time so re-optimization is rare.
     minimumCacheTTL: 31536000,
   },

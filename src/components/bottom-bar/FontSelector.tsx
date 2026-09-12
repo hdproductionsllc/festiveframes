@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { BOTTOM_BAR_FONTS } from "@/lib/constants/frame";
+import { loadPickerFonts } from "@/app/BuilderFontsDeferred";
 
 interface FontSelectorProps {
   value: string;
@@ -30,8 +31,17 @@ export function FontSelector({ value, onChange }: FontSelectorProps) {
   return (
     <div className="space-y-1" ref={ref}>
       <span className="text-xs text-surface-400">Font</span>
+      {/* /build's font menu. Each row is drawn IN its own face, so this list is
+          the one place in the app that genuinely needs all eight picker
+          stylesheets — which is why they are fetched from here rather than from
+          builder-fonts.css, where they were eight chained render-blocking
+          @imports in front of every first paint of the builder.
+          `pointerdown` rather than the click: it lands a frame earlier, and the
+          faces are then already in flight while the list animates open. */}
       <button
         type="button"
+        onPointerDown={loadPickerFonts}
+        onFocus={loadPickerFonts}
         onClick={() => setOpen(!open)}
         className="w-full px-3 py-2 rounded-md bg-surface-900 border border-surface-700
           text-surface-100 text-sm cursor-pointer text-left

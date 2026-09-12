@@ -1,4 +1,4 @@
-import { Fredoka, Nunito } from "next/font/google";
+import { Fredoka, Nunito, Oswald, Libre_Franklin } from "next/font/google";
 import "../(home)/sticker.css";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { SiteFooter } from "@/components/site/SiteFooter";
@@ -25,6 +25,25 @@ const nunito = Nunito({
   variable: "--font-nunito",
 });
 
+// The Americana marketing pair, PRELOADED HERE rather than in the root layout —
+// /buy, /classic and the legal pages render the same `font-mkt-display` /
+// `font-mkt-body` components the homepage does. Declaring them in the root layout
+// preloaded them on all 27 school builders too, which paint neither face. See the
+// root layout for the full note.
+const displayFont = Oswald({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
+  variable: "--font-display-marketing",
+});
+
+const bodyFont = Libre_Franklin({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
+  variable: "--font-body-marketing",
+});
+
 export default function SiteLayout({
   children,
 }: Readonly<{
@@ -32,7 +51,7 @@ export default function SiteLayout({
 }>) {
   return (
     <div
-      className={`${fredoka.variable} ${nunito.variable} sticker-theme flex min-h-screen flex-col`}
+      className={`${fredoka.variable} ${nunito.variable} ${displayFont.variable} ${bodyFont.variable} sticker-theme flex min-h-screen flex-col`}
     >
       <a
         href="#main"

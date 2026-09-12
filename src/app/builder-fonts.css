@@ -1,24 +1,19 @@
-/* Builder-only web fonts. These are used exclusively by the interactive frame
-   builder at /build (display/condensed faces plus the USA license-plate face).
-   They are imported from build/page.tsx so they load ONLY on that route and do
-   not block rendering on the marketing pages, which use next/font (Oswald +
-   Libre Franklin) instead. */
-@import url('https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:wght@500;600;700;800&family=Bebas+Neue&family=Inter:wght@400;500;600;700&family=Oswald:wght@400;500;600;700&family=Raleway:wght@600;700;800&family=Righteous&family=Russo+One&family=Teko:wght@500;600;700&display=swap');
-/* Script / cursive faces plus extra display faces for the bottom-bar text. */
-@import url('https://fonts.googleapis.com/css2?family=Allura&family=Dancing+Script:wght@400..700&family=Great+Vibes&family=Kaushan+Script&family=Pacifico&family=Sacramento&family=Satisfy&family=Tangerine:wght@400;700&family=Yellowtail&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Black+Ops+One&family=Bungee&family=Fredoka:wght@400;500;600;700&family=Permanent+Marker&family=Special+Elite&display=swap');
-/* Cartoon / sticker faces — the bold, fun brand style. */
-@import url('https://fonts.googleapis.com/css2?family=Bangers&family=Bubblegum+Sans&family=Cherry+Bomb+One&family=Chewy&family=Lilita+One&family=Luckiest+Guy&family=Paytone+One&family=Shrikhand&family=Sniglet:wght@400;800&family=Titan+One&family=Baloo+2:wght@500;700;800&display=swap');
-/* Popular display / design staples for the bottom-bar text. */
-@import url('https://fonts.googleapis.com/css2?family=Abril+Fatface&family=Archivo+Black&family=Bowlby+One&family=Concert+One&family=Lobster&family=Montserrat:wght@700;800;900&family=Passion+One:wght@700;900&family=Playfair+Display:wght@700;800;900&family=Poppins:wght@600;700;800&family=Staatliches&family=Ultra&display=swap');
-/* Additional script / festive faces. */
-@import url('https://fonts.googleapis.com/css2?family=Cookie&family=Courgette&family=Damion&family=Lobster+Two:ital,wght@0,700;1,700&family=Marck+Script&display=swap');
-/* Collegiate / varsity faces — leads the SCHOOL builder's font picker. Graduate is
-   the classic collegiate slab; the rest are athletic/condensed team faces. */
-@import url('https://fonts.googleapis.com/css2?family=Fjalla+One&family=Big+Shoulders+Display:wght@600;700;800;900&family=Saira+Condensed:wght@600;700;800&family=Squada+One&display=swap');
-@import url('https://fonts.cdnfonts.com/css/license-plate-usa');
+/* ── The BUILDER's fonts (/build) ────────────────────────────────────────────
+   Only the faces we host. This file used to open with EIGHT remote `@import`
+   rules — the font picker's sixty-odd optional Google families — and an @import
+   is render-blocking AND serialized: the browser fetched this stylesheet, parsed
+   it, discovered eight more, fetched those, and only then painted. Measured under
+   identical throttling that was 13s to first contentful paint on /build against
+   0.5s on a school page, which had already dropped the same chain (see
+   school-fonts.css).
 
-/* The faces we serve ourselves. LAST, so that where a family appears in both
-   (Oswald) our copy is the one that wins whether or not Google's arrives. A
-   local @import is inlined by the bundler — no extra request. */
+   They now load from `loadPickerFonts()` (app/BuilderFontsDeferred.tsx) on the
+   first open of a font menu — bottom-bar/FontSelector is the one on this page,
+   and it is the only surface that draws every face, one per row. Nothing the
+   product itself is set in is in that chain: the bottom bar's default face is
+   Stars and Stripes, and Graduate, Oswald, Nunito and Fredoka are below, all from
+   our own origin, so the frame is right on first paint.
+
+   A local @import is inlined by the bundler — no request, one copy of the rules
+   rather than two that drift. */
 @import url('./self-hosted-fonts.css');
