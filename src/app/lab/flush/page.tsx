@@ -10,7 +10,7 @@ import { SchoolBuilder } from "@/components/designer/SchoolDesigner";
 import { SchoolKitPage } from "@/components/designer/SchoolKitPage";
 import { allSchoolKits, getSchoolKit } from "@/data/school-kits";
 
-// ─── THE FORK: /lab/flush — 15 x 6.75, flush on top ──────────────────────────
+// ─── THE FORK: /lab/flush — 15.5 x 6.75, flush on top ────────────────────────
 //
 // The fitment engine's answer, beside the live builder rather than replacing it.
 // Nothing here is shared mutable state: the route names a VARIANT, and the variant
@@ -46,8 +46,8 @@ function ForkBanner({ slug }: { slug?: string }) {
     <div className="msf-fork-bar">
       <span className="msf-fork-tag">Fork</span>
       <span className="msf-fork-note">
-        Flush top. 15&Prime; &times; 6.75&Prime; on Bill&rsquo;s 1&Prime; grid: nothing above the
-        plate, 0.75&Prime; below it, full-height side columns of three equal badges, a plain 0.75&Prime; top runner.
+        Flush top. 15.5&Prime; &times; 6.75&Prime; on Bill&rsquo;s 1&Prime; grid: nothing above the
+        plate, 0.75&Prime; below it, full-height side columns of three SQUARE 2.25&Prime; badges, a plain 0.75&Prime; top runner.
       </span>
       <nav className="msf-fork-links" aria-label="Other versions of this frame">
         <a href="/lab/flush" aria-current={slug ? undefined : "page"}>Generic</a>

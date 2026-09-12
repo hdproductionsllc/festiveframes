@@ -1,6 +1,7 @@
 import type { FrameConfig, FrameSlot, GridCoord, SectionId, SlotZone } from "@/lib/types";
 import { getTotalWidthInches } from "@/lib/constants/frame";
 import { isBannerOnlyCell, panelOf } from "@/lib/utils/panels";
+import { sideColWidthInches } from "@/lib/utils/cols";
 import {
   baseBottomRow as baseBottomRowOf,
   gridRowCount,
@@ -274,13 +275,19 @@ export function generateSlots(
       for (let row = 0; row < wingRows; row++) {
         const flatIndex = col * wingRows + row;
         const gridRow = gridRowOf(row);
+        // Column WIDTH is per-column now: on a side lattice index 0 is the rail
+        // (tile pitch) and the wing columns beyond it carry the wing's own width.
+        // Stepping outward by `tileSize` regardless is what would leave a 0.25"
+        // bare strip down the outside edge of a 15.5" frame.
+        const cw = sideColWidthInches(config, col, railShift) * scale;
+        const isRail = railShift > 0 && col === 0;
         slots.push({
           id: makeSlotId("wing-left", flatIndex),
           zone: "wing-left",
           index: flatIndex,
-          x: wingOffset - (col + 1 - railShift) * tileSize,
+          x: isRail ? wingOffset : wingOffset - (col - railShift + 1) * cw,
           y: wingY(gridRow),
-          width: tileSize,
+          width: cw,
           height: wingH(gridRow),
           row: gridRow,
           col: wingCols - 1 - col + railShift, // col 0 is nearest the frame, so it maps rightmost
@@ -293,13 +300,17 @@ export function generateSlots(
       for (let row = 0; row < wingRows; row++) {
         const flatIndex = col * wingRows + row;
         const gridRow = gridRowOf(row);
+        const cwR = sideColWidthInches(config, col, railShift) * scale;
+        const isRailR = railShift > 0 && col === 0;
         slots.push({
           id: makeSlotId("wing-right", flatIndex),
           zone: "wing-right",
           index: flatIndex,
-          x: wingOffset + innerWidth + (col - railShift) * tileSize,
+          x: isRailR
+            ? wingOffset + innerWidth - tileSize
+            : wingOffset + innerWidth + (col - railShift) * cwR,
           y: wingY(gridRow),
-          width: tileSize,
+          width: cwR,
           height: wingH(gridRow),
           row: gridRow,
           col: wingCols + config.topSlots + col - railShift,

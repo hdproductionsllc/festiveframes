@@ -201,7 +201,39 @@ error of 49/255 where the real figure was under 1/255.
   keystone), never downward. The July ring's ~0.5" below plate bottom is the
   most that has ever been shown to fit.
 
-## The FLUSH fork — /lab/flush — 15 × 6.75 (owner's call, 2026-09-03)
+## THE SHIPPING FRAME — 15.5 × 6.75, three SQUARE side badges (owner, 2026-09-12)
+
+- **15.5 wide, not 15.** The side column went 2 → **2.25** so its three badges are
+  SQUARE: 6.75 / 3 = 2.25 exactly. Width = 2.25 + 11 (window) + 2.25 = 15.5. The
+  column is a 1.000" rail plus a **1.25" wing** — the wing is the ONLY off-pitch
+  column; the rail and the whole inner frame stay on the 1" grid the printed part
+  was made on. Bill's side part is now **2.25 × 6.75**; runners unchanged.
+- **Square badges lock width to height: W = 11 + 2H/N** for N badges per side. That
+  is why four squares was rejected — at 6.75 tall they are 1.6875" and the frame
+  gets NARROWER (14.375") with 16% less art. Three is the only division of 6.75
+  that lands on a square worth printing. To get four squares at 15" you need an 8"
+  frame, which is the July height that failed the Pilot.
+- **`src/lib/utils/cols.ts` is the twin of rows.ts** — the one answer for how wide a
+  column is. `getWingFrameConfig` snaps the wing to the tile grid unless you pass
+  an explicit column count; that silent snap is why "make it 15.5" came back as
+  15.000 with nothing failing.
+- **Three real defects the width change exposed**, all the same shape — an axis
+  derived on one side and written longhand on the other:
+  1. `panelSizeInches` charged a wing column the TILE pitch, so Bill's part list
+     said 2 × 6.75 for a part that draws 2.25 wide. A part list disagreeing with
+     the print is the eufyMake stretch in miniature.
+  2. `snappetRect` summed row heights off the grid but computed width as
+     `cols * tileSize` — a square badge whose own span rect called it a rectangle.
+  3. The print composer took `h` from `snappetRect` and still did
+     `w = span.cols * m.tileSize`, so badges DREW 1.96 × 2.28 while every model of
+     them said 2.25 square. The comment on the height line even said "the same
+     rule as the canvas's snappetRect" — the width never got it.
+  Plus `panelBleedBox` needed `panelColsPx` alongside `panelRowsPx`, or the export
+  crop cuts each panel a quarter inch off.
+- Verified: 1703 tests, both renderers, side badges measured at exactly 2.25 × 2.25
+  at 300 DPI, left column flush at x=0 and right at x=13.25 (13.25 + 2.25 = 15.5).
+
+## The FLUSH fork — /lab/flush — 15 × 6.75 (owner's call, 2026-09-03) — SUPERSEDED ABOVE
 
 - **Why**: the fitment engine (31 measured cars) says the TOP edge is the choke point.
   Cameras and garnish leave 0.26–0.4" above the plate on a third of the fleet; every

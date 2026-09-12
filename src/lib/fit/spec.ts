@@ -112,7 +112,9 @@ export interface FitSpec {
    *  (bottomDropInches + one rail row's share) intrudes over the plate face. */
   runnerHeightInches: number;
   keystone: KeystoneSpec | null;
-  /** Side snap-in span in cells (2 = a 2x2 badge column). */
+  /** Side snap-in WIDTH, in pitch units (2 = two cells; 2.25 = the 15.5" frame's
+   *  1.000" rail plus its 1.25" wing). Fractional is legal: only the first unit —
+   *  the rail cell the piece registers on — has to land on the pitch. */
   sideBadgeCells: number;
   /** How far side pieces reach in over the plate face, from the plate's side edge. */
   sideInwardInches: number;
@@ -251,7 +253,7 @@ export const CANDIDATE_SPEC: FitSpec = {
 };
 
 /** The FLUSH-TOP fork (owner's call, 2026-09-03): the top edge AT the plate's top
- *  edge, a 0.75" top rail between full-height side columns, 0.75" below the plate, Bill's 2" side columns. 15 x 6.75. The rail is 0.75"
+ *  edge, a 0.75" top rail between full-height side columns, 0.75" below the plate, 2.25" side columns carrying three SQUARE badges. 15.5 x 6.75. The rail is 0.75"
  *  tall because that is the only height at which a flush top closes on a 1.000"
  *  grid at this drop: 0.75 + 5 + 1 = 6.75, and the bottom row covers the
  *  remaining 0.25" of plate face.
@@ -270,7 +272,9 @@ export const FLUSH_SPEC: FitSpec = {
   // A deeper keystone than the candidate's: the bar covers only 0.25" here, so 0.8
   // of rise reaches 1.05, still under the date line, and gives the tagline air.
   keystone: { ...DEFAULT_KEYSTONE, riseInches: 0.8 },
-  sideBadgeCells: 2,
+  // 2.25 units at a 1.000" pitch: the rail cell plus a 1.25" wing, so the side
+  // badge is SQUARE against its 2.25" row (owner, 2026-09-12).
+  sideBadgeCells: 2.25,
   sideInwardInches: 0.5,
   topInwardInches: 0.75,
   topRailHeightInches: 0.75,
@@ -280,7 +284,7 @@ export const PRESETS: Array<{ key: string; label: string; spec: FitSpec }> = [
   { key: "july", label: "July 4 (verified)", spec: JULY_SPEC },
   { key: "bill", label: "Bill today", spec: BILL_CURRENT_SPEC },
   { key: "candidate", label: "Candidate", spec: CANDIDATE_SPEC },
-  { key: "flush", label: "Flush 15 (fork)", spec: FLUSH_SPEC },
+  { key: "flush", label: "Flush 15.5 (shipping)", spec: FLUSH_SPEC },
 ];
 
 // URL round-trip, so a dialled-in configuration is a textable link. Short keys on

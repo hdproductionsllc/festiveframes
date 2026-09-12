@@ -149,7 +149,7 @@ export function visibleAnchorSlots(
  * accumulated step error. A 1x1 returns the anchor slot's own rect.
  */
 export function snappetRect(
-  anchor: Pick<FrameSlot, "x" | "y"> & Partial<Pick<FrameSlot, "height" | "row" | "col">>,
+  anchor: Pick<FrameSlot, "x" | "y"> & Partial<Pick<FrameSlot, "width" | "height" | "row" | "col">>,
   span: TileSpan,
   tileSize: number,
   /** The grid the anchor came from, when the caller has it: rows below the anchor
@@ -171,10 +171,24 @@ export function snappetRect(
         : null;
     height += cell ? cell.height : tileSize;
   }
+  // Width is the SUM of the COLUMNS the footprint covers, for exactly the reason
+  // height is the sum of its rows. `span.cols * tileSize` was right while every
+  // column was one tile wide; the 15.5" frame's wing columns are 1.25 on a 1.000
+  // pitch, so a side badge spanning wing + rail measured 2.000 while it drew
+  // 2.250 — a square badge reported as a rectangle, in both renderers.
+  const firstW = anchor.width ?? tileSize;
+  let width = firstW;
+  for (let c = 1; c < span.cols; c++) {
+    const cell =
+      grid && anchor.row !== undefined && anchor.col !== undefined
+        ? grid.cellAt(anchor.row, anchor.col + c)
+        : null;
+    width += cell ? cell.width : tileSize;
+  }
   return {
     x: anchor.x,
     y: anchor.y,
-    width: span.cols * tileSize,
+    width,
     height,
   };
 }

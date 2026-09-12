@@ -17,6 +17,7 @@ import {
   clearOutsideTab,
   drawSchoolFrame,
   panelBleedBox,
+  panelColsPx,
   panelRowsPx,
   schoolCanvasSize,
   type SchoolDesign,
@@ -52,7 +53,16 @@ const emptyBundle = (): SchoolImageBundle => ({
 /** The exporter's recipe, in node. Returns the finished (rotated) panel canvas. */
 function cutPanel(full: Canvas, id: SectionId): Canvas {
   const tilePx = C.tileSizeInches * DPI;
-  const box = panelBleedBox(panelRects(C)[id], tilePx, 0, panelOverhangTiles(id, C), panelRowsPx(C, DPI, id));
+  const box = panelBleedBox(
+    panelRects(C)[id],
+    tilePx,
+    0,
+    panelOverhangTiles(id, C),
+    panelRowsPx(C, DPI, id),
+    // The exporter passes this too. Leaving it out here is how this file would
+    // cut a 2.000" side column and still call itself the exporter's recipe.
+    panelColsPx(C, DPI),
+  );
   const c = createCanvas(box.outW, box.outH) as Canvas;
   const cx = c.getContext("2d");
   const { contentX: X, contentY: Y, contentW: W2, contentH: H2, bleed: b } = box;
@@ -75,19 +85,22 @@ describe("flush frame: the print files", () => {
   const full = createCanvas(W, H) as Canvas;
   drawSchoolFrame(full.getContext("2d") as unknown as CanvasRenderingContext2D, seededDesign(), emptyBundle(), W);
 
-  it("the assembled sheet is 15 x 6.75 in at 300 DPI and fits the E1 bed", () => {
-    expect([W, H]).toEqual([4500, 2025]);
+  it("the assembled sheet is 15.5 x 6.75 in at 300 DPI and fits the E1 bed", () => {
+    expect([W, H]).toEqual([4650, 2025]);
     expect(W / DPI).toBeLessThanOrEqual(EUFY_BED_LONG_INCHES);
     expect(H / DPI).toBeLessThanOrEqual(EUFY_BED_SHORT_INCHES);
   });
 
   // The sizes Bill confirms, in inches. Side columns are exported rotated to
-  // landscape, which is how they go on the bed; the part is still 2 wide x 6.75 tall.
+  // landscape, which is how they go on the bed; the part is still 2.25 wide x 6.75 tall.
   const PARTS: Array<[SectionId, number, number]> = [
     ["top", 11, 0.75],
     ["bottom", 11, 1.8],
-    ["wing-left", 6.75, 2],
-    ["wing-right", 6.75, 2],
+    // 2.25, not 2: the side column is a 1.000" rail plus a 1.25" wing so its three
+    // badges are SQUARE (2.25 x 2.25). Landscape here because side columns export
+    // rotated — that is how they go on the bed.
+    ["wing-left", 6.75, 2.25],
+    ["wing-right", 6.75, 2.25],
   ];
 
   it.each(PARTS)("%s exports at %s x %s in", (id, wIn, hIn) => {
@@ -134,8 +147,8 @@ describe("flush frame: the print files", () => {
     expect(alphaAt(ctx, 9.0 * DPI, rise + 2)).toBe(255);
   });
 
-  it("a side column prints solid over its whole 2 x 6.75, the short top row included", () => {
-    const panel = cutPanel(full, "wing-left"); // rotated: 6.75 wide x 2 tall
+  it("a side column prints solid over its whole 2.25 x 6.75, the short top row included", () => {
+    const panel = cutPanel(full, "wing-left"); // rotated: 6.75 wide x 2.25 tall
     const ctx = panel.getContext("2d");
     // Sample a grid of points across the part; every one carries ink (the body
     // backfill closes the seams between badges and the strip above them).

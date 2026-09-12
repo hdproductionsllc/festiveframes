@@ -19,6 +19,7 @@
 
 import type { FrameConfig, SectionId } from "@/lib/types";
 import { gridRowCount, isBannerOnlyRow, rowHeightInchesIn, sideRowCount } from "@/lib/utils/rows";
+import { wingColWidthInches } from "@/lib/utils/cols";
 
 /** Whether a panel is a SIDE panel, which may sit on its own row lattice. */
 export function isSidePanel(id: SectionId): boolean {
@@ -144,10 +145,16 @@ export function panelSizeInches(id: SectionId, config: FrameConfig): { width: nu
   const rect = panelRects(config)[id];
   const over = panelOverhangTiles(id, config);
   const innerColWidth = config.topSlots > 0 ? config.widthInches / config.topSlots : config.tileSizeInches;
+  // A pure wing column is the WING's width, which is only the tile pitch when the
+  // wing happens to be a whole tile wide. On the 15.5" frame it is 1.25", and
+  // charging it 1.000 here made this function report Bill a 2 x 6.75 side panel
+  // for a part that draws 2.25 wide — the part list disagreeing with the print,
+  // which is the shape of the eufyMake stretch all over again.
+  const wingColWidth = wingColWidthInches(config);
   let width = 0;
   for (let c = rect.col0; c <= rect.col1; c++) {
     const isWing = c <= g.leftRailCol - 1 || c >= g.rightRailCol + 1; // pure wing columns
-    width += isWing ? config.tileSizeInches : innerColWidth;
+    width += isWing ? wingColWidth : innerColWidth;
   }
   width += (over.left + over.right) * config.tileSizeInches;
   let height = 0;

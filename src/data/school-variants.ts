@@ -65,7 +65,7 @@ export const SCHOOL_VARIANTS: Record<SchoolVariantId, SchoolVariant> = {
   },
   flush: {
     id: "flush",
-    label: "Flush 15 x 6.75",
+    label: "Flush 15.5 x 6.75",
     config: SCHOOL_FLUSH_FRAME_CONFIG,
     presets: FLUSH_PRESETS,
     badgeStack: FLUSH_STACK,

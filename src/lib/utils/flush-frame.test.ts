@@ -2,8 +2,9 @@
 //
 // One geometry, five models of it: the grid, the panel part sizes, the placement
 // engine, the print crop, and the fit bench. This file pins them to each other
-// and to the numbers the owner and Bill are working from (15 x 6.75, 0.75" top bar
-// flush with the plate, 0.75" below it, 2" side columns).
+// and to the numbers the owner and Bill are working from (15.5 x 6.75, 0.75" top
+// bar flush with the plate, 0.75" below it, 2.25" side columns carrying three
+// SQUARE 2.25 x 2.25 badges).
 
 import { describe, expect, it } from "vitest";
 import {
@@ -17,7 +18,7 @@ import { buildGrid, gridInvariantHolds, generateSlots } from "@/lib/utils/slot-g
 import { panelRects, panelSizeInches, panelOverhangTiles } from "@/lib/utils/panels";
 import { canPlace, snappetRect, type PlacementContext } from "@/lib/utils/snappet";
 import { sectionBounds } from "@/lib/utils/sections";
-import { panelBleedBox, panelRowsPx, schoolBannerRect, schoolRenderMetrics } from "@/lib/utils/compose-school-frame";
+import { panelBleedBox, panelColsPx, panelRowsPx, schoolBannerRect, schoolRenderMetrics } from "@/lib/utils/compose-school-frame";
 import { getPlateArea } from "@/lib/utils/layout";
 import { screwNotches } from "@/lib/utils/screw-slots";
 import { FLUSH_SPEC } from "@/lib/fit/spec";
@@ -29,9 +30,9 @@ import type { SectionId } from "@/lib/types";
 const C = SCHOOL_FLUSH_FRAME_CONFIG;
 
 describe("flush frame: the lattice", () => {
-  it("closes on its own grid at 15 x 6.75", () => {
+  it("closes on its own grid at 15.5 x 6.75", () => {
     expect(gridInvariantHolds(C)).toBe(true);
-    expect(getTotalWidthInches(C)).toBe(15);
+    expect(getTotalWidthInches(C)).toBe(15.5);
     expect(getRenderHeightInches(C)).toBe(6.75);
     const grid = buildGrid(C);
     expect(grid.cols).toBe(15);
@@ -39,8 +40,8 @@ describe("flush frame: the lattice", () => {
   });
 
   it("inner rows: row 0 is 0.75 in and every other row one tile; side rows: three of 2.25 in", () => {
-    for (const width of [150, 1000, 4500]) {
-      const scale = width / 15;
+    for (const width of [155, 1000, 4650]) {
+      const scale = width / 15.5;
       const grid = buildGrid(C, width);
       for (const s of grid.slots) {
         const panel = grid.panelAt(s.row, s.col);
@@ -88,7 +89,7 @@ describe("flush frame: the lattice", () => {
   });
 
   it("the plate's top edge IS the frame's top edge", () => {
-    const plate = getPlateArea(C, 1500);
+    const plate = getPlateArea(C, 1550); // 100 px per inch at 15.5" wide
     expect(plate.y).toBe(0);
     expect(plate.height).toBe(600);
     // 0.75 below: the frame runs to 6.75.
@@ -97,9 +98,13 @@ describe("flush frame: the lattice", () => {
 });
 
 describe("flush frame: Bill's parts", () => {
-  it("prints side 2 x 6.75 (full height), top 11 x 0.75, bottom 11 x 1.8 (with keystone)", () => {
-    expect(panelSizeInches("wing-left", C)).toEqual({ width: 2, height: 6.75 });
-    expect(panelSizeInches("wing-right", C)).toEqual({ width: 2, height: 6.75 });
+  it("prints side 2.25 x 6.75 (full height), top 11 x 0.75, bottom 11 x 1.8 (with keystone)", () => {
+    // 2.25 because the badge on it is SQUARE: 6.75 / 3 rows = 2.25, so the column
+    // is 2.25 too — wing 1.25 + rail 1.000. This is the number Bill cuts, and it
+    // read 2.000 until `panelSizeInches` stopped charging a wing column the tile
+    // pitch: a part list that disagrees with the print is the eufyMake stretch.
+    expect(panelSizeInches("wing-left", C)).toEqual({ width: 2.25, height: 6.75 });
+    expect(panelSizeInches("wing-right", C)).toEqual({ width: 2.25, height: 6.75 });
     expect(panelSizeInches("top", C)).toEqual({ width: 11, height: 0.75 });
     const bottom = panelSizeInches("bottom", C);
     expect(bottom.width).toBe(11);
@@ -138,7 +143,7 @@ describe("flush frame: placement", () => {
     expect(r.reason).toBe("banner");
   });
 
-  it("accepts three 2-wide, one-row badges down a side column — each 2 x 2.25 — and nothing below", () => {
+  it("accepts three 2-wide, one-row badges down a side column — each SQUARE 2.25 x 2.25 — and nothing below", () => {
     for (const row of [0, 1, 2]) {
       expect(canPlace(ctx, { row, col: leftWing.col0 }, { cols: 2, rows: 1 }).ok).toBe(true);
     }
@@ -146,10 +151,13 @@ describe("flush frame: placement", () => {
     // A badge that would cross from the side panel into the runner is refused too.
     expect(canPlace(ctx, { row: 0, col: leftWing.col0 + 1 }, { cols: 2, rows: 1 }).ok).toBe(false);
     // Px: anchor and tileSize from the SAME grid, at 100 px per inch.
-    const g100 = buildGrid(C, 1500);
+    const g100 = buildGrid(C, 1550); // 100 px per inch
     const one = snappetRect(g100.cellAt(0, leftWing.col0)!, { cols: 2, rows: 1 }, 100, g100);
-    expect(one.width).toBeCloseTo(200, 6);
+    // THE SQUARE: 225 x 225 px = 2.25 x 2.25 in. The width is the wing column
+    // (1.25) plus the rail beside it (1.000), not two tiles.
+    expect(one.width).toBeCloseTo(225, 6);
     expect(one.height).toBeCloseTo(225, 6);
+    expect(one.width).toBeCloseTo(one.height, 6);
     const two = snappetRect(g100.cellAt(0, leftWing.col0)!, { cols: 2, rows: 2 }, 100, g100);
     expect(two.height).toBeCloseTo(450, 6); // two side rows, not 2.25 + a tile
   });
@@ -164,7 +172,7 @@ describe("flush frame: placement", () => {
 });
 
 describe("flush frame: the two renderers agree", () => {
-  const W = 1500; // 100 px per inch
+  const W = 1550; // 100 px per inch at 15.5" wide
   const slots = generateSlots(C, W);
   const m = schoolRenderMetrics(C, W);
 
@@ -179,13 +187,13 @@ describe("flush frame: the two renderers agree", () => {
 
   it("the side panels run the full height and own the corners; the top runner sits between them", () => {
     const top = sectionBounds("top", slots, C)!;
-    expect(top.x).toBeCloseTo(200, 9); // wing + rail column
+    expect(top.x).toBeCloseTo(225, 9); // wing (1.25) + rail (1.000) column
     expect(top.width).toBeCloseTo(1100, 9);
     expect(top.height).toBeCloseTo(75, 9);
     const left = sectionBounds("wing-left", slots, C)!;
     expect(left.y).toBe(0);
     expect(left.height).toBeCloseTo(675, 9);
-    expect(left.width).toBeCloseTo(200, 9);
+    expect(left.width).toBeCloseTo(225, 9);
   });
 
   it("the per-panel print crop lands exactly on the panel's drawn bounds", () => {
@@ -195,7 +203,7 @@ describe("flush frame: the two renderers agree", () => {
     for (const id of ["wing-left", "wing-right", "top", "bottom"] as SectionId[]) {
       const drawn = sectionBounds(id, slots, C)!;
       const over = panelOverhangTiles(id, C);
-      const box = panelBleedBox(rects[id], m.tileSize, 0, over, panelRowsPx(C, 100, id));
+      const box = panelBleedBox(rects[id], m.tileSize, 0, over, panelRowsPx(C, 100, id), panelColsPx(C, 100));
       expect(box.contentX).toBeCloseTo(drawn.x - over.left * m.tileSize, 6);
       expect(box.contentY).toBeCloseTo(drawn.y - over.top * m.tileSize, 6);
       expect(box.contentW).toBeCloseTo(drawn.width + (over.left + over.right) * m.tileSize, 6);
@@ -228,9 +236,9 @@ describe("flush frame: screw notches", () => {
 });
 
 describe("flush frame: the fit bench", () => {
-  it("reads 15 x 6.75 with nothing above the plate and 0.75 below", () => {
+  it("reads 15.5 x 6.75 with nothing above the plate and 0.75 below", () => {
     const r = computeFit(FLUSH_SPEC);
-    expect(r.totalWidthInches).toBe(15);
+    expect(r.totalWidthInches).toBe(15.5);
     expect(r.totalHeightInches).toBe(6.75);
     expect(r.abovePlateInches).toBe(0);
     expect(r.belowPlateInches).toBe(0.75);

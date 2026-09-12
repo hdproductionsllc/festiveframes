@@ -2,6 +2,7 @@ import { DEFAULT_FRAME_CONFIG, getRenderHeightInches } from "@/lib/constants/fra
 import { PLATE, type FitSpec, type KeystoneSpec } from "@/lib/fit/spec";
 import type { FrameConfig } from "@/lib/types";
 import { plateTopCoverInches, plateTopInches, topBarHeightInches } from "@/lib/utils/rows";
+import { sidePanelWidthInches } from "@/lib/utils/cols";
 
 // ─── FitSpec <-> FrameConfig ────────────────────────────────────────────────
 //
@@ -83,7 +84,11 @@ export function specFromConfig(
     windowRows: config.leftSlots,
     runnerHeightInches: snap((config.bottomRows ?? 1) * pitch),
     topRailHeightInches: snap(topBarHeightInches(config)),
-    sideBadgeCells: config.wingColumns + 1,
+    // The side piece's width in PITCH UNITS, which is only `wingColumns + 1` while
+    // the wing is a whole tile wide. On the 15.5" frame the wing is 1.25 on a
+    // 1.000 pitch, so the piece is 2.25 units — and reporting 2 here is how the
+    // bench came to tell Bill a 2 x 6.75 part for a 2.25 x 6.75 one.
+    sideBadgeCells: snap(sidePanelWidthInches(config, true) / pitch),
     keystone: config.bottomTab
       ? ({
           ...config.bottomTab,
@@ -152,8 +157,11 @@ export function shippabilityRefusals(spec: FitSpec): string[] {
     );
   }
 
-  if (spec.sideBadgeCells < 1 || !near(spec.sideBadgeCells, Math.round(spec.sideBadgeCells))) {
-    refusals.push("Side badge span must be a whole number of cells, at least 1.");
+  // The piece must still REGISTER on a whole rail cell, which is the first unit;
+  // what hangs outboard of it may be off-pitch (the 15.5" frame's 1.25" wing), so
+  // this no longer demands a whole number — it demands a rail to sit on.
+  if (spec.sideBadgeCells < 1) {
+    refusals.push("Side badge span must cover at least its rail cell (1).");
   }
   if (!near(spec.windowCols, Math.round(spec.windowCols)) || !near(spec.windowRows, Math.round(spec.windowRows))) {
     refusals.push("Window must be a whole number of cells.");
@@ -174,7 +182,11 @@ export function configFromSpec(
 
   const pitch = spec.pitchInches;
   const cols = spec.windowCols + 2;
-  const wingColumns = spec.sideBadgeCells - 1;
+  // The wing is whatever the side piece is beyond its rail cell — a whole number
+  // of columns when it lands on the pitch, and ONE off-pitch column when it does
+  // not (the 15.5" frame's 1.25" wing).
+  const wingWidthInches = snap((spec.sideBadgeCells - 1) * pitch);
+  const wingColumns = Math.max(0, Math.round(wingWidthInches / pitch)) || (wingWidthInches > 0 ? 1 : 0);
   const bottomRows = Math.round(spec.runnerHeightInches / pitch);
 
   // The two registration fields are the spec's to state, never the base's to leak.
@@ -198,7 +210,7 @@ export function configFromSpec(
       rightSlots: spec.windowRows,
       wings: wingColumns > 0,
       wingColumns,
-      wingWidthInches: wingColumns * pitch,
+      wingWidthInches,
       bottomRows,
       bottomTab: spec.keystone ?? undefined,
       // Stated only when they differ from what the config would infer, so a config

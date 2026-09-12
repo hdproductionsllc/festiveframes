@@ -2,6 +2,7 @@
 
 import { useRef, useState, type RefObject } from "react";
 import type { FrameSlot, TileSpan } from "@/lib/types";
+import type { FrameGrid } from "@/lib/utils/slot-generator";
 import { snappetRect, type SnappetPreview } from "@/lib/utils/snappet";
 
 /**
@@ -33,6 +34,10 @@ export interface SnappetResizeHandlesProps {
   span: TileSpan;
   /** Live tile size in px (containerWidth / totalWidthInches * tileSizeInches). */
   tileSize: number;
+  /** The grid the anchor came from. Without it a footprint is measured as
+   *  `cols * tileSize`, which is a quarter inch short on the 15.5" frame's side
+   *  columns — the handles would frame 2.000" of a 2.250" badge. */
+  grid?: Pick<FrameGrid, "cellAt">;
   /** The overflow layer whose top-left equals the frame's origin — the reference
    *  for mapping a pointer position back to a grid column/row. */
   layerRef: RefObject<HTMLDivElement | null>;
@@ -55,6 +60,7 @@ export function SnappetResizeHandles({
   anchorSlot,
   span,
   tileSize,
+  grid,
   layerRef,
   maxCols,
   maxRows,
@@ -71,7 +77,7 @@ export function SnappetResizeHandles({
   const shownSpan: TileSpan = preview
     ? { cols: preview.cols, rows: preview.rows }
     : span;
-  const rect = snappetRect(anchorSlot, shownSpan, tileSize);
+  const rect = snappetRect(anchorSlot, shownSpan, tileSize, grid);
 
   const clamp = (v: number, max: number) => Math.min(Math.max(1, v), max);
 

@@ -50,10 +50,22 @@ export const DEFAULT_WING_WIDTH_INCHES = 2.5; // fits 2 tile columns per side
  */
 export function getWingFrameConfig(
   base: FrameConfig,
-  wingWidthInches: number = DEFAULT_WING_WIDTH_INCHES
+  wingWidthInches: number = DEFAULT_WING_WIDTH_INCHES,
+  /**
+   * Wing columns, when the wing is NOT a whole number of tiles wide.
+   *
+   * Snapping to the tile grid is the right default and was the only behaviour:
+   * ask for 1.25 on a 1" pitch and you got 1.000, silently, which is how "make
+   * the frame 15.5 inches" came back as 15.000 with nothing failing. A frame
+   * that wants an off-pitch wing must SAY how many columns that width is, so the
+   * snap can be skipped deliberately rather than by accident — the same shape as
+   * `wingRows` for the side row lattice.
+   */
+  columns?: number,
 ): FrameConfig {
-  const wingCols = Math.floor(wingWidthInches / base.tileSizeInches);
-  const actualWingWidth = wingCols * base.tileSizeInches; // snap to tile grid
+  const wingCols = columns ?? Math.floor(wingWidthInches / base.tileSizeInches);
+  // Snap to the tile grid ONLY when the caller let us choose the column count.
+  const actualWingWidth = columns === undefined ? wingCols * base.tileSizeInches : wingWidthInches;
   return {
     ...base,
     wings: true,
@@ -363,6 +375,11 @@ export const SCHOOL_FLUSH_FRAME_CONFIG: FrameConfig = getWingFrameConfig(
     // call, 2026-09-03: "three rectangles, divide evenly, don't change dimensions").
     // 2.25 is not on the 1" pitch, so the side panels count their own rows — see
     // FrameConfig.wingRows. A badge there is 2 cells wide and 1 side-row tall.
+    // THREE SQUARES. 6.75 / 3 = 2.25, so a side badge is 2.25 x 2.25 exactly —
+    // the owner's call (2026-09-12) after the four-square option was priced: four
+    // squares in the same column are 1.6875" and force the frame NARROWER (14.375),
+    // because square badges lock width to height as W = 11 + 2H/N. Three is the
+    // only division of 6.75 that lands on a square worth printing.
     wingRows: 3,
     minTileSpan: { cols: 2, rows: 1 },
     fullWidthTopBar: true,
@@ -380,6 +397,11 @@ export const SCHOOL_FLUSH_FRAME_CONFIG: FrameConfig = getWingFrameConfig(
       cornerRadiusInches: 0.25,
     },
   },
+  // WING 1.25", ONE COLUMN — so the side panel is wing 1.25 + rail 1.000 = 2.250,
+  // square against its 2.25" badge, and the frame is 13 + 2 x 1.25 = 15.500 wide.
+  // The explicit column count is what skips the tile-grid snap; without it this
+  // asks for 1.25 and silently gets 1.000 (see getWingFrameConfig).
+  1.25,
   1,
 );
 

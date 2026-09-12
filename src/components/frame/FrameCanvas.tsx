@@ -855,6 +855,7 @@ export const FrameCanvas = forwardRef<FrameCanvasHandle, FrameCanvasProps>(
                   anchorSlot={selectedAnchor.slot}
                   span={tileSpan(slots[selectedAnchor.slot.id])}
                   tileSize={tileSize}
+                  grid={grid}
                   layerRef={snappetLayerRef}
                   maxCols={resizeGrid.cols}
                   maxRows={resizeGrid.rows}

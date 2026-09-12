@@ -72,6 +72,7 @@ import {
   type Pt,
 } from "@/lib/utils/bottom-tab";
 import { bannerRowBox, rowHeightInchesIn, rowTopInchesIn } from "@/lib/utils/rows";
+import { colLeftInches, colWidthInches } from "@/lib/utils/cols";
 import { screwNotches } from "@/lib/utils/screw-slots";
 import { bannerConfigFor, bannerLogoLayout, sectionSupportsLogo } from "@/lib/utils/banner-logo";
 import { getPiece } from "@/data/sets";
@@ -133,11 +134,27 @@ export function panelBleedBox(
     topPx: (row) => row * tilePx,
     heightPx: () => tilePx,
   },
+  /**
+   * Where each grid COLUMN starts and how wide it is, in px. The exact twin of
+   * `rows`, and it exists for the same reason one axis over: the 15.5" frame's
+   * wing columns are 1.25" on a 1.000" pitch, so a crop computed from
+   * `col0 * tilePx` cuts every panel a quarter inch off — which is what the
+   * crop-vs-drawn-bounds test caught the moment the width changed. Omit for a
+   * frame whose every column is a tile wide and this reproduces the old
+   * arithmetic exactly.
+   */
+  cols: { leftPx: (col: number) => number; widthPx: (col: number) => number } = {
+    leftPx: (col) => col * tilePx,
+    widthPx: () => tilePx,
+  },
 ) {
   const bleed = Math.max(0, Math.round(bleedPx));
-  const contentX = (rc.col0 - overhang.left) * tilePx;
+  // The overhang is stated in TILES, so it is still tile-pitch wide either way.
+  const contentX = cols.leftPx(rc.col0) - overhang.left * tilePx;
   const contentY = rows.topPx(rc.row0) - overhang.top * tilePx;
-  const contentW = (rc.col1 - rc.col0 + 1 + overhang.left + overhang.right) * tilePx;
+  let colsPx = 0;
+  for (let c = rc.col0; c <= rc.col1; c++) colsPx += cols.widthPx(c);
+  const contentW = colsPx + (overhang.left + overhang.right) * tilePx;
   let rowsPx = 0;
   for (let r = rc.row0; r <= rc.row1; r++) rowsPx += rows.heightPx(r);
   const contentH = rowsPx + (overhang.top + overhang.bottom) * tilePx;
@@ -447,6 +464,16 @@ export function panelRowsPx(config: FrameConfig, dpi: number, id: SectionId) {
   return {
     topPx: (row: number) => rowTopInchesIn(config, side, row) * dpi,
     heightPx: (row: number) => rowHeightInchesIn(config, side, row) * dpi,
+  };
+}
+
+/** The column geometry `panelBleedBox` needs, in px, for THIS config — the twin of
+ *  `panelRowsPx`. Reproduces `col * tilePx` on every frame whose wing is a whole
+ *  tile wide, which is every frame before the 15.5" call. */
+export function panelColsPx(config: FrameConfig, dpi: number) {
+  return {
+    leftPx: (col: number) => colLeftInches(config, col) * dpi,
+    widthPx: (col: number) => colWidthInches(config, col) * dpi,
   };
 }
 
@@ -874,11 +901,14 @@ export function drawSchoolFrame(
     if (!tile) continue;
 
     const span = tileSpan(tile);
-    const w = span.cols * m.tileSize;
-    // The anchor's own row plus one tile per row below it — the same rule as the
-    // canvas's `snappetRect`, so a corner badge on the flush frame's 0.75" top row
-    // prints 2.75" tall, not 3.
-    const h = snappetRect(slot, span, m.tileSize, grid).height;
+    // BOTH axes come from `snappetRect`, for the same reason: the anchor's own
+    // cell plus each cell the footprint covers, read off the grid. The height was
+    // already derived (the flush frame's 0.75" top row makes a corner badge 2.75"
+    // tall, not 3); the width was still `span.cols * tileSize`, which was right
+    // only while every column was one tile wide. On the 15.5" frame a side badge
+    // spans a 1.25" wing plus a 1.000" rail, so it DREW 1.96 x 2.28 while its
+    // own span rect said 2.25 square — a square badge printing as a rectangle.
+    const { width: w, height: h } = snappetRect(slot, span, m.tileSize, grid);
 
     ctx.save();
     const piece0 = !tile.image ? getPiece(tile.pieceId) : undefined;
@@ -1344,7 +1374,14 @@ export async function composeSchoolPanels(
 
   const out: SchoolPanelPng[] = [];
   for (const id of SECTION_IDS) {
-    const box = panelBleedBox(rects[id], tilePx, bleedPx, panelOverhangTiles(id, config), panelRowsPx(config, dpi, id));
+    const box = panelBleedBox(
+      rects[id],
+      tilePx,
+      bleedPx,
+      panelOverhangTiles(id, config),
+      panelRowsPx(config, dpi, id),
+      panelColsPx(config, dpi),
+    );
 
     const c = document.createElement("canvas");
     c.width = box.outW;
