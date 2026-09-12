@@ -27,6 +27,13 @@ import { useEffect } from "react";
 
 const PRECONNECT = ["https://fonts.googleapis.com", "https://fonts.gstatic.com"];
 
+// Inter is NOT a picker face: globals.css sets the whole UI in it
+// (`--font-sans`), and it only ever arrived inside the first picker sheet. When
+// the sheets moved behind the picker, every school page's chrome silently fell
+// to system-ui unless a parent happened to open the font menu. One small sheet
+// keeps the product's own face on mount; it still goes up after first paint.
+const UI_SHEET = "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap";
+
 const SHEETS = [
   // Display / condensed faces, plus Inter for the UI.
   "https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:wght@500;600;700;800&family=Bebas+Neue&family=Inter:wght@400;500;600;700&family=Oswald:wght@400;500;600;700&family=Raleway:wght@600;700;800&family=Righteous&family=Russo+One&family=Teko:wght@500;600;700&display=swap",
@@ -86,11 +93,13 @@ export function loadPickerFonts() {
 
 /**
  * Mounted by every school page. Opens the connections to the font hosts after
- * first paint; the stylesheets themselves wait for `loadPickerFonts()`.
+ * first paint and fetches the UI face; the picker sheets wait for
+ * `loadPickerFonts()`.
  */
 export function BuilderFontsDeferred() {
   useEffect(() => {
     preconnectPickerFonts();
+    addLink("stylesheet", UI_SHEET);
   }, []);
   return null;
 }

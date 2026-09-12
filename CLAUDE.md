@@ -392,6 +392,43 @@ error of 49/255 where the real figure was under 1/255.
 - It recommends a rim that clears `merrowThread`'s own 0.25 luminance gap, so the
   suggested value is one the renderer will not have to override.
 
+## The audit fix batch (2026-09-12) — what was wrong and where the guard now lives
+
+- **An axis derived on one side and written longhand on the other is the recurring
+  defect in this codebase.** The parts list was the fourth instance: `tallyTiles`
+  wrote `cols x tileSize` while both renderers drew 2.25 square. Any code that
+  turns a span into inches goes through `snappetInches` / `footprintCellsInches`
+  (utils/snappet) — crop target, recrop modal, resize handles, drag grab offset
+  and `physicalSizeOf` in the parts list all do now. `parts-list.test.ts` pins the
+  side badge at "2.25 x 2.25 in".
+- **`migrateSchoolDesign` is for ONE blob** — a design saved on the old multi-column
+  wings. It used to stamp the retired live config on every blob and trim wings
+  against it, which dropped every seeded flush badge on the next persist version
+  bump. Do not add geometry to `migrate`; `merge` reconciles slots cell-by-cell
+  against the config the store owns (`dropRelocatedSlots`). The design-store test
+  "survives a persist version bump" hydrates a v6 flush blob and is the guard.
+- **The ledger insists on `payment_status === "paid"`** in both recording paths
+  (webhook and the /thanks relay). A 100%-off promo completes as
+  `no_payment_required`: the frame ships, the club is told nothing. Both route
+  tests cover it; `schoolCheckout` returns 409 while `SCHOOL_CHECKOUT_OPEN` is off.
+- **Uploaded photos wear badge chrome on screen** (PlacedTileView image branch:
+  two masked rings over the `cover`ed photo). Compared against the print path at
+  6x; a photo tile that previews as a sticker and prints as a badge is a defect.
+- **`/api/school/brand-scan` and `brand-asset` are behind `src/proxy.ts`**: they
+  fetch arbitrary URLs server-side. Any new route that does is added there.
+- **`DndContext` has a fixed id** (`ff-dnd`); dnd-kit's counter ids hydrate
+  differently on server and client.
+- **Picker fonts load on first open of a font menu** (`loadPickerFonts()` in
+  app/BuilderFontsDeferred.tsx), not on mount. Inter is the UI face
+  (`--font-sans` in globals.css) and is NOT a picker face — it keeps its own
+  small sheet on mount, or the whole school chrome falls to system-ui. The
+  marketing pair (Oswald / Libre Franklin) preloads only in the (home)/(site)
+  groups; the root keeps them `preload: false` for /school and /s/[slug]/raised.
+- **eslint ignores `.claude/worktrees/**`.** Agent worktrees are full checkouts;
+  linting them once reported 1,200 errors that did not exist in the tree.
+- `scripts/`, `tasks/`, dead marketing/checkout islands and 44 MB of unreferenced
+  assets were removed by the hygiene pass (commit dde0167 lists every file).
+
 ## Geometry facts worth not re-deriving
 
 - eufyMake E1 bed: 16.5" × 13". School frame tile pitch 0.991".

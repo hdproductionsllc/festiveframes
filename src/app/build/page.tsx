@@ -3,6 +3,7 @@ import { SITE_URL } from "@/config/season";
 import { copy } from "@/content/copy";
 import { Designer } from "@/components/designer/Designer";
 import { BuildChrome } from "@/components/build/BuildChrome";
+import { BuilderFontsDeferred } from "../BuilderFontsDeferred";
 // Builder-only web fonts. Imported here so they load ONLY on /build and never
 // block rendering on the marketing pages (which use next/font instead).
 import "../builder-fonts.css";
@@ -50,6 +51,9 @@ export default function BuildPage() {
     <div className="build-skin">
       <Designer />
       <BuildChrome />
+      {/* The picker's faces load on first open of the font menu; this mounts the
+          preconnects and the UI face after first paint, as the school pages do. */}
+      <BuilderFontsDeferred />
     </div>
   );
 }
