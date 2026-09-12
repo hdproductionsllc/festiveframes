@@ -7,6 +7,7 @@ import "../../school-fonts.css";
 import "../../build/build-skin.css";
 import "../../lab/school/school-skin.css";
 import { SchoolKitPage } from "@/components/designer/SchoolKitPage";
+import { SCHOOL_SHIPPING_VARIANT } from "@/data/school-variants";
 import { allSchoolKits, getSchoolKit } from "@/data/school-kits";
 
 // ─── Per-school builder: /s/<slug> ───────────────────────────────────────────
@@ -64,5 +65,5 @@ export default async function SchoolKitBuilderPage(
   // Saved designs are SAFE: the persist key is namespaced by variant, so a
   // returning visitor's live-frame design is not reinterpreted on a grid it was
   // never drawn against — they start fresh on the frame we can actually ship.
-  return <SchoolKitPage kit={kit} variant="flush" />;
+  return <SchoolKitPage kit={kit} variant={SCHOOL_SHIPPING_VARIANT} />;
 }

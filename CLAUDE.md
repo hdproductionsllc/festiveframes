@@ -293,6 +293,47 @@ error of 49/255 where the real figure was under 1/255.
   THREE brand colours — passing only `frameColor` renders every school's badges on
   stock navy and reads as a product defect that is really the harness lying.
 
+## One change updates all 27 (the rollout's contract)
+
+- **`SCHOOL_SHIPPING_VARIANT`** (data/school-variants.ts) is the switch. Change that
+  one line and every `/s/<slug>` builder moves geometry, print output, part sizes and
+  grid together, because none of that is per-school data. The lab routes name their
+  own variant on purpose, so a fork stays a fork.
+- **A kit carries appearance and identity ONLY** — colours, words, artwork, plate
+  photo. `school-kits.geometry.test.ts` enforces both halves: every kit must render
+  on byte-identical geometry (canvas px, slot ids, panel rects, part inches AND
+  part pixels), and kits must differ from each other in colour, nickname and
+  signature — a shared-geometry test passes trivially on 27 identical kits. The
+  guard names the offending field: add `widthInches` to a kit and it fails with
+  "cbc-cadets has non-appearance field(s): widthInches" (verified by doing it).
+- So the answer to "update one builder" is: change the variant, not 27 kits. There
+  is no per-school geometry to forget.
+
+## Fonts in the node render — register them or the render lies
+
+- `public/fonts/` holds the faces; **nothing registered them with @napi-rs/canvas**,
+  so every node render drew the fallback sans while the product draws **Graduate**
+  (nickname) over **Oswald** (school name). It does not crash, it does not warn, and
+  the render looks perfectly plausible — the worst kind of wrong. `lib/utils/node-fonts.ts`
+  registers them; `kit-sample.test.ts` calls it and asserts both families are present.
+- The browser export path needs none of this — it runs in a document that has them.
+
+## The merrow thread has TWO neighbours
+
+- `merrowThread` guarded the thread against the TYPE and ignored the banner under it.
+  That is half a rule. It only bites when a school's two colours are **both dark**,
+  which no kit had until the metro rollout: Priory's red rim sits 0.07 luminance from
+  its own navy banner, so the "border" was invisible and contributed nothing but
+  weight on the glyph — **the same defect as SLUH's white-on-white, in the opposite
+  costume**. It now takes an optional `fieldColour` and requires the 0.25 gap against
+  both; both renderers pass `cfg.backgroundColor` / `config.backgroundColor`, because
+  passing it in one and not the other is exactly the drift this file exists to stop.
+- Fixed at the threshold: Priory (0.07) and Parkway Central (0.16) now fall back to
+  brass. **Marquette sits at 0.26 and keeps its green thread** — legible but the
+  weakest in the catalogue; a kit-level rim change is the fix if the owner wants it.
+  Do not move `MERROW_MIN_CONTRAST` to catch it: 0.25 is what every currently-good
+  school clears, and raising it restyles schools that look right.
+
 ## Geometry facts worth not re-deriving
 
 - eufyMake E1 bed: 16.5" × 13". School frame tile pitch 0.991".

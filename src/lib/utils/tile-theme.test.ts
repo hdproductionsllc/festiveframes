@@ -602,3 +602,43 @@ describe("textEmboss stays proportional at small font sizes", () => {
     expect(tiny.merrow.width).toBeGreaterThan(0);
   });
 });
+
+// ─── The thread has two neighbours ───────────────────────────────────────────
+//
+// merrowThread guarded the type and ignored the banner underneath it. That is
+// half a rule, and the missing half only bites when a school's two colours are
+// both dark — Priory's red rim differs from its navy banner by 0.07 luminance, so
+// the "border" was invisible and all it added was weight on the glyph. Same
+// defect as SLUH's white-on-white, opposite costume.
+describe("merrowThread reads against the FIELD as well as the type", () => {
+  const WHITE = "#FFFFFF";
+
+  it("drops a rim that vanishes into the banner it sits on", () => {
+    const navy = "#002D62";
+    const red = "#C8102E"; // Priory: 0.07 from its own navy
+    expect(merrowThread(WHITE, red)).toBe(red); // field unknown -> old behaviour
+    expect(merrowThread(WHITE, red, navy)).not.toBe(red);
+  });
+
+  it("falls back to brass, which reads on both", () => {
+    expect(merrowThread(WHITE, "#C8102E", "#002D62")).toBe(BRASS.mid);
+  });
+
+  it("leaves a rim that already reads exactly as it was", () => {
+    // Every school that looked right before must be byte-identical after, or this
+    // is not a fix, it is a restyle. Webster: near-black thread on orange.
+    for (const [rim, field] of [
+      ["#111111", "#E87722"], // Webster
+      ["#FFC72C", "#101010"], // Lafayette, Vianney, Oakville
+      ["#C9A227", "#00205B"], // Burroughs
+      ["#BCBBB6", "#04463D"], // MICDS
+    ] as const) {
+      expect(merrowThread(WHITE, rim, field)).toBe(merrowThread(WHITE, rim));
+    }
+  });
+
+  it("still guards the type, with or without a field", () => {
+    // SLUH: white rim, white type — the original defect, unchanged.
+    expect(merrowThread(WHITE, "#FFFFFF", "#183B67")).toBe(BRASS.mid);
+  });
+});

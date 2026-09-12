@@ -77,3 +77,19 @@ export const SCHOOL_VARIANTS: Record<SchoolVariantId, SchoolVariant> = {
 export function schoolVariant(id?: SchoolVariantId): SchoolVariant {
   return SCHOOL_VARIANTS[id ?? "live"];
 }
+
+/**
+ * THE FRAME EVERY SCHOOL SHIPS ON. One line, 27 builders.
+ *
+ * This is the switch: change it and every per-school page changes geometry,
+ * print output, part sizes and grid together, because none of that is per-school
+ * data — a kit carries colours, words and artwork and cannot carry a dimension
+ * (see `SchoolKit`, and the guard in school-kits.geometry.test.ts that fails if a
+ * geometry field ever appears on one). What a kit CAN vary and what it must NOT
+ * is the whole reason the rollout can be updated in one place.
+ *
+ * It is `flush` because that frame is the only school geometry ever printed and
+ * hung on a car. The lab routes deliberately name their own variant instead of
+ * reading this, so a fork stays a fork.
+ */
+export const SCHOOL_SHIPPING_VARIANT: SchoolVariantId = "flush";

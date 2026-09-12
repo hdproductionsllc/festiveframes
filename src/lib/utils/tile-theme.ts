@@ -557,12 +557,28 @@ const MERROW_MIN_CONTRAST = 0.25;
  * that is too close (gold lettering on a gold frame) move the thread away from
  * the type instead of drawing an invisible one.
  */
-export function merrowThread(textColour: string, rimColor?: string | null): string {
+export function merrowThread(
+  textColour: string,
+  rimColor?: string | null,
+  /** What the lettering SITS ON. Optional so the brass default and every existing
+   *  caller keep their exact behaviour; pass it wherever the field is known. */
+  fieldColour?: string | null,
+): string {
   const lumText = luminance(textColour);
   // Light type takes the body stop, dark type the lit one — the brass rule, unchanged,
   // so a frame with no override is byte-identical to the one that shipped.
   const stop = (ramp: { light: string; mid: string }) => (lumText > 0.6 ? ramp.mid : ramp.light);
-  const reads = (colour: string) => Math.abs(luminance(colour) - lumText) >= MERROW_MIN_CONTRAST;
+  const gap = (a: string, b: string) => Math.abs(luminance(a) - luminance(b));
+  // A thread has TWO neighbours and has to be seen against both: the letterform it
+  // borders, and the banner it lies on. The original rule only checked the type,
+  // which is the half that SLUH needed — white thread on white type. The other half
+  // showed up the moment schools arrived whose two colours are both dark: Priory's
+  // red thread on its navy banner differs from that field by 0.07, so the border
+  // disappears and all it contributes is weight on the glyph. That is the SAME
+  // defect as the white-on-white one, wearing the opposite costume.
+  const reads = (colour: string) =>
+    gap(colour, textColour) >= MERROW_MIN_CONTRAST &&
+    (!fieldColour || gap(colour, fieldColour) >= MERROW_MIN_CONTRAST);
 
   const override = stop(rimRamp(rimColor));
   if (reads(override)) return override;
@@ -638,12 +654,17 @@ export function ringCss(fill: string, gradient: string): string {
  * `depth` stays a fraction of the font size, not a fixed pixel: at 1px a headline
  * looks flat and a tagline looks smeared.
  */
-export function textEmboss(fontPx: number, textColour: string, rimColor?: string | null) {
+export function textEmboss(
+  fontPx: number,
+  textColour: string,
+  rimColor?: string | null,
+  fieldColour?: string | null,
+) {
   const lightText = luminance(textColour) > 0.6;
   // The merrow thread is the SAME metal as the rim, so it takes the same override.
   // A frame whose badge edges are vegas gold and whose lettering is still brass reads
   // as two different products bolted together.
-  const thread = merrowThread(textColour, rimColor);
+  const thread = merrowThread(textColour, rimColor, fieldColour);
   return {
     // ANTI-ZERO GUARDS, and nothing more — see the merrow note below, which is
     // the same defect found in the same file and fixed only for the stroke.
@@ -705,8 +726,13 @@ export function textEmboss(fontPx: number, textColour: string, rimColor?: string
  * Returns the same shape as `textEmboss` so the two are interchangeable at the call
  * site and the renderers do not branch.
  */
-export function textChenille(fontPx: number, textColour: string, rimColor?: string | null) {
-  const base = textEmboss(fontPx, textColour, rimColor);
+export function textChenille(
+  fontPx: number,
+  textColour: string,
+  rimColor?: string | null,
+  fieldColour?: string | null,
+) {
+  const base = textEmboss(fontPx, textColour, rimColor, fieldColour);
   return {
     ...base,
     depth: base.depth * 0.55,
@@ -733,12 +759,17 @@ export function textChenille(fontPx: number, textColour: string, rimColor?: stri
  * the innermost text-shadow ring instead, which is close enough at banner sizes and
  * is the only option that does not need a duplicated DOM node per line.
  */
-export function textChenilleCss(fontPx: number, textColour: string, rimColor?: string | null): {
+export function textChenilleCss(
+  fontPx: number,
+  textColour: string,
+  rimColor?: string | null,
+  fieldColour?: string | null,
+): {
   textShadow: string;
   WebkitTextStroke: string;
   paintOrder: "stroke fill";
 } {
-  const e = textChenille(fontPx, textColour, rimColor);
+  const e = textChenille(fontPx, textColour, rimColor, fieldColour);
   const d = e.depth.toFixed(2);
   const s = e.shadow;
   const seat = (e.merrow.seat / 2).toFixed(2);

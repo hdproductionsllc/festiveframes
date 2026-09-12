@@ -546,7 +546,7 @@ function drawTextBar(
   {
     const bx = x + w / 2;
     const by = y + h / 2 + h * 0.04;
-    const em = textChenille(fontPx, cfg.textColor, rimColor);
+    const em = textChenille(fontPx, cfg.textColor, rimColor, cfg.backgroundColor);
     ctx.lineJoin = "round";
     ctx.miterLimit = 2;
 
@@ -723,7 +723,7 @@ function drawTextBlock(
     // here is why the print sheet kept the brass thread while the builder drew a
     // white one: the two renderers were passing different arguments to the same
     // function, which is exactly the drift tile-theme exists to prevent.
-    const em = textChenille(fontPx, cfg.textColor, rimColor);
+    const em = textChenille(fontPx, cfg.textColor, rimColor, cfg.backgroundColor);
     ctx.lineJoin = "round";
     ctx.miterLimit = 2;
     for (const ln of lines) {
@@ -805,7 +805,7 @@ function drawTextBlock(
       ctx.font = `800 ${fontPx}px ${family}`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      const ch = textChenille(fontPx, cfg.textColor, rimColor);
+      const ch = textChenille(fontPx, cfg.textColor, rimColor, cfg.backgroundColor);
       const cx = x + w / 2;
       const cy = y - rise + box.centerFromTop;
       ctx.lineJoin = "round";

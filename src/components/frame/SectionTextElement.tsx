@@ -186,7 +186,7 @@ export function SectionTextElement({
     // Chenille — the CSS twin of the canvas's merrow-stroke + softened emboss. Both
     // renderers must carry this or the builder and the print sheet drift, which is the
     // whole reason tile-theme exists.
-    ...textChenilleCss(fontPx, config.textColor, rimColor),
+    ...textChenilleCss(fontPx, config.textColor, rimColor, config.backgroundColor),
   });
 
   return (

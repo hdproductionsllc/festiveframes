@@ -15,6 +15,7 @@ import {
   type SchoolImageBundle,
 } from "@/lib/utils/compose-school-frame";
 import type { PlacedTile } from "@/lib/types";
+import { registerNodeFonts, registeredFamilies } from "@/lib/utils/node-fonts";
 
 // ─── LOOK AT THE SCHOOL, not at a test fixture ───────────────────────────────
 //
@@ -32,6 +33,10 @@ import type { PlacedTile } from "@/lib/types";
 // PNG is missing renders an empty pocket and nothing fails anywhere else.
 
 const PUBLIC = join(process.cwd(), "public");
+
+// Without this every banner below renders in node's fallback sans while the
+// product draws Graduate over Oswald — a render that looks fine and is a lie.
+registerNodeFonts();
 
 async function bundleFor(design: SchoolDesign): Promise<SchoolImageBundle> {
   const pieces = new Map<string, Image>();
@@ -71,6 +76,13 @@ function designFor(kit: SchoolKit, variantId: SchoolVariantId): SchoolDesign {
   } as SchoolDesign;
 }
 
+describe("the banner faces are actually available to the renderer", () => {
+  it("has Graduate and Oswald registered, not a fallback", () => {
+    const families = registeredFamilies();
+    for (const face of ["Graduate", "Oswald"]) expect(families).toContain(face);
+  });
+});
+
 describe("every kit renders on the frame it ships on", () => {
   for (const kit of allSchoolKits()) {
     it(`${kit.slug} draws with all of its seeded artwork present`, async () => {
@@ -91,6 +103,31 @@ describe("every kit renders on the frame it ships on", () => {
       expect(canvas.toBuffer("image/png").length).toBeGreaterThan(1000);
     });
   }
+});
+
+describe("contact sheet", () => {
+  it("writes EVERY kit to KIT_SAMPLE_ALL_DIR", async () => {
+    const dir = process.env.KIT_SAMPLE_ALL_DIR;
+    if (!dir) return;
+    // A rollout is 27 schools, and the defects worth catching are the ones that
+    // only show up on ONE of them — a nickname too long for the banner, a rim
+    // that vanishes into its own field. Rendering them one at a time is how you
+    // end up checking three and shipping twenty-four.
+    const variant = (process.env.KIT_SAMPLE_VARIANT ?? "flush") as SchoolVariantId;
+    for (const kit of allSchoolKits()) {
+      const design = designFor(kit, variant);
+      const images = await bundleFor(design);
+      const { width, height } = schoolCanvasSize(design.frameConfig, SCHOOL_PRINT_DPI);
+      const canvas = createCanvas(width, height);
+      drawSchoolFrame(
+        canvas.getContext("2d") as unknown as CanvasRenderingContext2D,
+        design,
+        images,
+        width,
+      );
+      writeFileSync(join(dir, `${kit.slug}.png`), canvas.toBuffer("image/png"));
+    }
+  }, 120_000);
 });
 
 describe("sample artifact", () => {

@@ -71,7 +71,7 @@ export function BottomTabElement({
           color: config.textColor,
           // The tab's lettering is the banner's lettering. Same merrow, same
           // contrast rule, or the two lines of the lockup read as two products.
-          ...textChenilleCss(fontPx, config.textColor, rimColor),
+          ...textChenilleCss(fontPx, config.textColor, rimColor, config.backgroundColor),
         }}
       >
         {line}
