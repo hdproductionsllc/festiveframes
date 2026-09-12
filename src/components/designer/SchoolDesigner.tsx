@@ -18,6 +18,7 @@ import { BUYERS, DEFAULT_BUYER, getBuyer, yearsFor, type BuyerId } from "@/data/
 import { SCHOOL_CHECKOUT_OPEN } from "@/config/offers";
 import { presetsFor, presetTiles, getPreset, SCHOOL_PRESETS, type SchoolPreset } from "@/data/school-presets";
 import { schoolVariant, type SchoolVariantId } from "@/data/school-variants";
+import { kitSeedTiles } from "@/data/kit-seed";
 import { markPieceId } from "@/data/sets/school-marks";
 import { GraduateExpress } from "./GraduateExpress";
 import {
@@ -53,8 +54,7 @@ import { migrateSchoolDesign } from "@/lib/utils/school-migration";
 import { schoolTopLine } from "@/lib/utils/school-banner";
 import { ACTIVITIES, ACTIVITY_GROUPS, hasJerseyNumber } from "@/data/activities";
 import { kitSections, kitPlateState, type SchoolKit } from "@/data/school-kits";
-import type { BannerPreview, FrameConfig } from "@/lib/types";
-import { getAllSlotIds } from "@/lib/utils/slot-generator";
+import type { BannerPreview } from "@/lib/types";
 import type { SnappetPreview } from "@/lib/utils/snappet";
 
 /** The school builder's own persist key — its design never touches /build's. */
@@ -1220,12 +1220,6 @@ export function SchoolDesigner({
   );
 }
 
-/** A kit's seed tiles, restricted to slot ids that exist on `config`'s grid. */
-function seedsOnGrid(seeds: NonNullable<SchoolKit["seedSlots"]>, config: FrameConfig) {
-  const ids = new Set(getAllSlotIds(config));
-  return Object.fromEntries(Object.entries(seeds).filter(([id]) => ids.has(id)));
-}
-
 // Wrapper that owns the ISOLATED school store and provides it to the builder. It
 // MUST sit above SchoolDesigner so that component's top-level store hooks read the
 // school store (not /build's). The store is created once on the client (lazy
@@ -1248,7 +1242,7 @@ export function SchoolBuilder({
    *  should name a variant. */
   frameConfig?: typeof SCHOOL_FRAME_CONFIG;
 }) {
-  const { presets } = schoolVariant(variant);
+  const { presets, badgeStack } = schoolVariant(variant);
   // The school store is configured two ways:
   //  - `frameConfig`: the school frame is ONE printable geometry (it must fit the
   //    eufyMake E1 bed), so the store owns it outright — initial state, and it wins
@@ -1270,10 +1264,10 @@ export function SchoolBuilder({
       // Top/bottom start as TEXT banners — kit-branded when there is a kit. Initial
       // state only; a returning user's persisted sections still win.
       sections: kit ? kitSections(kit) : SCHOOL_DEFAULT_SECTIONS,
-      // A kit's seeds name slot ids on the LIVE lattice. On a fork with a different
-      // grid (the flush frame's three side rows) some of those ids do not exist;
-      // seed only the ones that do, so nothing lands off the frame.
-      initialSlots: kit?.seedSlots ? seedsOnGrid(kit.seedSlots, frameConfig) : undefined,
+      // The seed is DERIVED from the kit's signature badges against this
+      // variant's own side column (data/kit-seed.ts), so a school lands on a
+      // finished frame whichever geometry it is wearing. Kits name no slot ids.
+      initialSlots: kit ? kitSeedTiles(kit, frameConfig, badgeStack) : undefined,
       // The plate under the frame is part of the mockup. It was hard-coded to
       // Missouri, so a school in any other state opened on a car that could not
       // be in its own parking lot. Read off the kit's city, initial state only —

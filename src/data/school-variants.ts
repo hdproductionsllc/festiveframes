@@ -4,7 +4,15 @@ import {
   SCHOOL_FRAME_CONFIG,
   SCHOOL_SLIM_FRAME_CONFIG,
 } from "@/lib/constants/frame";
-import { FLUSH_PRESETS, SCHOOL_PRESETS, SLIM_PRESETS, type SchoolPreset } from "@/data/school-presets";
+import {
+  FLUSH_PRESETS,
+  FLUSH_STACK,
+  FULL_STACK,
+  SCHOOL_PRESETS,
+  SLIM_PRESETS,
+  SLIM_STACK,
+  type SchoolPreset,
+} from "@/data/school-presets";
 
 // ─── Frame variants: a geometry and everything that belongs to it ────────────
 //
@@ -29,12 +37,39 @@ export interface SchoolVariant {
   config: FrameConfig;
   /** Start-from-a-design layouts, anchored on this variant's own grid. */
   presets: SchoolPreset[];
+  /**
+   * How this frame's side panel divides into badges, top to bottom, in grid rows.
+   *
+   * The presets already encoded this privately (the live frame's 2+2+2+3, the
+   * flush fork's 1+1+1); kit seeding needs the same answer, and a second copy of
+   * it is a second thing to forget when a geometry changes. It lives on the
+   * variant because it is a fact ABOUT the geometry, not about any one design.
+   */
+  badgeStack: number[];
 }
 
 export const SCHOOL_VARIANTS: Record<SchoolVariantId, SchoolVariant> = {
-  live: { id: "live", label: "Live frame", config: SCHOOL_FRAME_CONFIG, presets: SCHOOL_PRESETS },
-  slim: { id: "slim", label: "Slim (half cantilever)", config: SCHOOL_SLIM_FRAME_CONFIG, presets: SLIM_PRESETS },
-  flush: { id: "flush", label: "Flush 15 x 6.75", config: SCHOOL_FLUSH_FRAME_CONFIG, presets: FLUSH_PRESETS },
+  live: {
+    id: "live",
+    label: "Live frame",
+    config: SCHOOL_FRAME_CONFIG,
+    presets: SCHOOL_PRESETS,
+    badgeStack: FULL_STACK,
+  },
+  slim: {
+    id: "slim",
+    label: "Slim (half cantilever)",
+    config: SCHOOL_SLIM_FRAME_CONFIG,
+    presets: SLIM_PRESETS,
+    badgeStack: SLIM_STACK,
+  },
+  flush: {
+    id: "flush",
+    label: "Flush 15 x 6.75",
+    config: SCHOOL_FLUSH_FRAME_CONFIG,
+    presets: FLUSH_PRESETS,
+    badgeStack: FLUSH_STACK,
+  },
 };
 
 /** The variant for an id, defaulting to the live frame — which is what every

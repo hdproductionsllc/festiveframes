@@ -260,6 +260,39 @@ error of 49/255 where the real figure was under 1/255.
   wide outside radius to row 0, which no badge reaches here (cosmetic); top-banner
   text has no keep-out at the screw slots yet (centred text clears them so far).
 
+## The per-school builders — what a parent actually gets (2026-09-12)
+
+- **`/s/<slug>` serves the FLUSH frame.** It is the only school geometry ever
+  printed AND hung on a car (photo: 15 x 6.75 on a Honda Pilot, 2026-09-12), which
+  retires the live 15.856 x 8.919 config from the parent-facing route. That config
+  is on the 0.991 pitch Bill had to stretch and nothing built from it has been on a
+  car; it stays reachable at `/lab/school`. Saved designs are safe — the persist
+  key is namespaced by variant, so nobody's old design is reinterpreted on a grid
+  it was never drawn against.
+- **A kit names NO slot ids.** It names `signature`: four badges that are true of
+  that school, most distinctive first. `data/kit-seed.ts` walks the active
+  variant's own side column and lands them, alternating with the school's marks.
+  Add a school → finished frame on every geometry; add a geometry → finished frame
+  for every school. The old hand-written `seedSlots` were tied to one lattice and
+  the fork silently DROPPED the ids it did not have, which is a half-empty frame
+  and no failure anywhere.
+- **The catalogue is 26 St. Louis-area schools**, all `status: "demo"`. Every
+  colour but SLUH's and MICDS's is an APPROXIMATION — no school publishes a hex we
+  could reach, and each kit's `colorSource` says so. That alone blocks `verified`.
+- **Two kits are only partly researched** (Kirkwood, MICDS): their last two
+  signature badges are deliberately non-claiming (honor roll, service) because we
+  could not source programme facts. Do not "improve" them by guessing.
+- **The graduate express leads, and it overrides the kit seed.** Opening a kit page
+  applies the `graduate` preset, so the first frame a parent sees is cap / crest /
+  diploma — the signature badges appear on "Or customize it". For a school with no
+  marks of its own that middle badge is the generic crest, so the graduate frame is
+  the LEAST school-specific view we have. Owner's call whether that stays.
+- `src/lib/utils/kit-sample.test.ts` renders any kit on any variant with the real
+  badge PNGs (`KIT_SAMPLE_OUT`, `KIT_SAMPLE_SLUG`, `KIT_SAMPLE_VARIANT`). Use it
+  before reporting anything about how a school's frame looks. It must carry ALL
+  THREE brand colours — passing only `frameColor` renders every school's badges on
+  stock navy and reads as a product defect that is really the harness lying.
+
 ## Geometry facts worth not re-deriving
 
 - eufyMake E1 bed: 16.5" × 13". School frame tile pitch 0.991".

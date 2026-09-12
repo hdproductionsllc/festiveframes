@@ -52,5 +52,17 @@ export default async function SchoolKitBuilderPage(
   if (!kit) notFound();
   // The page body lives in SchoolKitPage so the slim fork can serve the SAME page
   // on a different geometry instead of a copy of it. See that component.
-  return <SchoolKitPage kit={kit} />;
+  //
+  // THE FLUSH FRAME IS WHAT A PARENT GETS (2026-09-12). It is the only school
+  // geometry that has been printed AND hung on a car — the photo of the 15 x 6.75
+  // fork on a Honda Pilot is the first school frame to complete design → physical
+  // part since July. The live 15.856 x 8.919 config this route used to serve is
+  // the one on the 0.991 pitch that Bill had to stretch in eufyMake, and nothing
+  // built from it has ever been on a car. Serving unproven geometry to parents
+  // was the risk; it is retired here, not deleted (it stays at /lab/school).
+  //
+  // Saved designs are SAFE: the persist key is namespaced by variant, so a
+  // returning visitor's live-frame design is not reinterpreted on a grid it was
+  // never drawn against — they start fresh on the frame we can actually ship.
+  return <SchoolKitPage kit={kit} variant="flush" />;
 }

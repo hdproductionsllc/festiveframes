@@ -124,8 +124,11 @@ export const MASCOT_ALT = "__MASCOT_ALT__";
 // rightward from onto the rail. Mirrored by construction, because the frame is
 // symmetrical and an asymmetric layout reads as unfinished.
 
-/** Anchor slot ids for a stack of badges `rowSpans` tall, down one side panel. */
-function sideAnchors(config: FrameConfig, side: SectionId, rowSpans: number[]): string[] {
+/** Anchor slot ids for a stack of badges `rowSpans` tall, down one side panel.
+ *  Exported because kit seeding (data/kit-seed.ts) walks the same column: a kit
+ *  lands its school's own badges on the very anchors a preset would use, so the
+ *  two can never disagree about where a side badge goes. */
+export function sideAnchors(config: FrameConfig, side: SectionId, rowSpans: number[]): string[] {
   const grid = buildGrid(config);
   const rect = panelRects(config)[side];
   const out: string[] = [];
@@ -169,7 +172,7 @@ function mirrored(
  * exactly what the empty notch would have looked like anyway, except it belongs to
  * the badge instead of being a hole in the design.
  */
-const FULL_STACK = [2, 2, 2, 3];
+export const FULL_STACK = [2, 2, 2, 3];
 
 export const SCHOOL_PRESETS: SchoolPreset[] = [
   {
@@ -252,7 +255,7 @@ export const SCHOOL_PRESETS: SchoolPreset[] = [
 // is also the natural home for a school's mascot redrawn upright, a jersey
 // carrying their number, or the student's own photo.
 
-const SLIM_STACK = [2, 4, 2];
+export const SLIM_STACK = [2, 4, 2];
 
 /** Mirror a three-badge column onto both sides, with the middle one 2x4. */
 function slimLayout(top: string, middle: string, bottom: string): SchoolPreset["layout"] {
@@ -303,7 +306,7 @@ export const SLIM_PRESETS: SchoolPreset[] = [
 // badge there is two cells wide and ONE side-row tall. Square art draws into the
 // 2 x 2.25 contained, with a hair of field above and below.
 
-const FLUSH_STACK = [1, 1, 1];
+export const FLUSH_STACK = [1, 1, 1];
 
 /** Mirror a three-badge column onto both sides, one side-row each. */
 function flushLayout(top: string, middle: string, bottom: string): SchoolPreset["layout"] {
