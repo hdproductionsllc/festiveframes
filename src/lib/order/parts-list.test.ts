@@ -1,6 +1,9 @@
 import { describe, it, expect } from "vitest";
 import { buildPartsList, buildPanelPartsList, skuFor, partsListCsv, partsListHtml, type BuildPartsListInput } from "./parts-list";
 import { DEFAULT_FRAME_CONFIG, SCHOOL_FRAME_CONFIG } from "@/lib/constants/frame";
+import { SCHOOL_SHIPPING_VARIANT, schoolVariant } from "@/data/school-variants";
+import { buildGrid } from "@/lib/utils/slot-generator";
+import { panelRects, panelSizeInches } from "@/lib/utils/panels";
 import type { PlacedTile, TileSpan } from "@/lib/types";
 
 // Stage 5: the parts list is span-aware. A multi-cell snappet is a DISTINCT
@@ -248,5 +251,56 @@ describe("buildPanelPartsList — section suppression (direct-print panels)", ()
     });
     const without = buildPanelPartsList({ ...panelBase, slots });
     expect(withTiles).toEqual(without);
+  });
+});
+
+// ─── Sizes are the PART's, read off the frame — not span x pitch ─────────────
+//
+// The third renderer to miss the fix. `panelSizeInches` and the print composer
+// already size a badge from the grid; this list still did `span x pitch`, and on
+// the 15.5" frame that told Bill "2.00 x 1.00" for a 2.25 x 2.25 square and
+// "11.00 x 1.00" for BOTH runners, which print at 0.75 and 1.80. A parts list
+// that disagrees with the print is the eufyMake stretch in miniature.
+describe("parts list sizes are the physical part, on the shipping frame", () => {
+  const cfg = schoolVariant(SCHOOL_SHIPPING_VARIANT).config;
+  const leftAnchor = (() => {
+    const g = buildGrid(cfg);
+    const p = panelRects(cfg)["wing-left"]!;
+    return g.cellAt(0, p.col0)!.id;
+  })();
+
+  it("sizes a side badge as the 2.25 x 2.25 square it prints, not 2.00 x 1.00", () => {
+    const list = buildPanelPartsList({
+      ...base,
+      tileSizeInches: cfg.tileSizeInches,
+      frameConfig: cfg,
+      slots: { [leftAnchor]: t("test:crest", { cols: 2, rows: 1 }) },
+    });
+    const row = list.rows.find((r) => r.pieceId === "test:crest")!;
+    expect(row.size).toBe("2.25 x 2.25");
+    // and the per-panel view agrees with the flat one
+    expect(list.panels.find((p) => p.panel === "wing-left")!.rows[0].size).toBe("2.25 x 2.25");
+  });
+
+  it("sizes every direct-print panel exactly as panelSizeInches does", () => {
+    const sections = Object.fromEntries(
+      (["top", "bottom", "wing-left", "wing-right"] as const).map((id) => [id, { mode: "text", text: { text: "x", backgroundColor: "#000000" } }]),
+    ) as never;
+    const list = buildPanelPartsList({ ...base, tileSizeInches: cfg.tileSizeInches, frameConfig: cfg, slots: {}, sections });
+    for (const id of ["top", "bottom", "wing-left", "wing-right"] as const) {
+      const { width, height } = panelSizeInches(id, cfg);
+      const row = list.rows.find((r) => r.pieceId === `panel:${id}`)!;
+      expect(row.size, id).toBe(`${width.toFixed(2)} x ${height.toFixed(2)}`);
+    }
+    // The two rows on every school order: the runners.
+    expect(list.rows.find((r) => r.pieceId === "panel:top")!.size).toBe("11.00 x 0.75");
+    expect(list.rows.find((r) => r.pieceId === "panel:bottom")!.size).toBe("11.00 x 1.80");
+  });
+
+  it("is byte-identical for /build, where every column is one tile wide", () => {
+    const slots = { "frame:top-0": t("test:flag"), "frame:top-3": t("test:flag", { cols: 2, rows: 1 }) };
+    const without = buildPartsList({ ...base, tileSizeInches: DEFAULT_FRAME_CONFIG.tileSizeInches, slots });
+    const withCfg = buildPartsList({ ...base, tileSizeInches: DEFAULT_FRAME_CONFIG.tileSizeInches, slots, frameConfig: DEFAULT_FRAME_CONFIG });
+    expect(withCfg).toEqual(without);
   });
 });

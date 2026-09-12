@@ -6,7 +6,7 @@ import { useDesignStore } from "@/stores/design-store";
 import { SECTION_IDS, SECTION_LABELS } from "@/lib/utils/sections";
 import { buildGrid } from "@/lib/utils/slot-generator";
 import { coveredSlotIds } from "@/lib/utils/text-bar";
-import { panelSnappetPlacement } from "@/lib/utils/snappet";
+import { panelSnappetPlacement, snappetInches } from "@/lib/utils/snappet";
 import { putFullRes } from "@/lib/utils/image-store";
 import { fieldForArtPixels } from "@/lib/utils/tile-theme";
 import { reviewUploadedImage } from "@/lib/utils/image-moderation";
@@ -121,12 +121,17 @@ export function useSnappetUpload(): SnappetUpload {
     const span = placement?.span ?? frameConfig.minTileSpan ?? { cols: 1, rows: 1 };
     pendingSpan.current = span;
     pendingName.current = file.name.replace(/\.[^.]+$/, "").slice(0, 40) || "Upload";
-    // Every grid column is exactly one tile wide (the grid invariant), so the snappet's
-    // physical size is just span × tile — the crop's aspect target + the gate denominator.
-    setCropTarget({
-      width: span.cols * frameConfig.tileSizeInches,
-      height: span.rows * frameConfig.tileSizeInches,
-    });
+    // The footprint's PHYSICAL size at the cell it will land on — the crop's
+    // aspect target and the DPI gate's denominator. `span x tile` assumed every
+    // column is one tile wide; on the 15.5" frame a side badge is 2.25 x 2.25 and
+    // that formula locked the crop to 2 x 1, then reported 300 DPI on a print
+    // that resolves at 133 — below the hard block, which could therefore never
+    // fire. No placement means no anchor yet: fall back to the panel's own cell.
+    setCropTarget(
+      placement
+        ? snappetInches(frameConfig, placement.anchorSlotId, span)
+        : { width: span.cols * frameConfig.tileSizeInches, height: span.rows * frameConfig.tileSizeInches },
+    );
     setTarget(sectionId);
     setCropFile(file);
   };

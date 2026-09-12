@@ -87,7 +87,12 @@ export async function POST(request: Request): Promise<NextResponse> {
     // we managed to print it, and the two must never be able to disagree. The
     // call is idempotent by orderId and swallows its own errors — a failed ledger
     // write must not make Stripe retry an order that was already fulfilled.
-    if (metadata.kind === "school-frame" && metadata.orderId && metadata.school) {
+    // PAID, not merely "not unpaid". A 100%-off promo completes as
+    // `no_payment_required`, which passed this gate and credited the school a
+    // donation on an order that collected nothing — a number the club would be
+    // told it earned and could never be sent. The order still fulfils below;
+    // only the ledger insists on money having changed hands.
+    if (metadata.kind === "school-frame" && session.payment_status === "paid" && metadata.orderId && metadata.school) {
       await recordSchoolOrder({
         orderId: metadata.orderId,
         school: metadata.school,

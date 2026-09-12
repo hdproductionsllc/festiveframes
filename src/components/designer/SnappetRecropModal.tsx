@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { snappetInches } from "@/lib/utils/snappet";
 import { useUIStore } from "@/stores/ui-store";
 import { useDesignStore } from "@/stores/design-store";
 import { getFullRes, putFullRes } from "@/lib/utils/image-store";
@@ -76,13 +77,14 @@ export function SnappetRecropModal() {
   const source = loaded && loaded.key === requestKey ? loaded.blob : null;
   if (!recropRequest || !image || !source) return null;
 
-  // Every grid column is exactly one tile wide (the grid invariant), so the new
-  // footprint's physical size — the crop aspect target and the DPI denominator — is
-  // just span × tile.
-  const targetInches = {
-    width: recropRequest.cols * frameConfig.tileSizeInches,
-    height: recropRequest.rows * frameConfig.tileSizeInches,
-  };
+  // The new footprint's PHYSICAL size — the crop's aspect target and the DPI
+  // gate's denominator — read off the grid at this anchor. It used to be
+  // `span x tile`, which assumed every column is one tile wide; the 15.5" frame's
+  // side badges are 2.25 x 2.25 and that formula called them 2.00 x 1.00.
+  const targetInches = snappetInches(frameConfig, recropRequest.slotId, {
+    cols: recropRequest.cols,
+    rows: recropRequest.rows,
+  });
 
   // Best-effort panel name for the modal header (which panel the snappet sits in).
   const grid = buildGrid(frameConfig);

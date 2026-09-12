@@ -17,6 +17,7 @@ import type {
 } from "@/lib/types";
 import type { LookPreset, LookBanner } from "@/data/look-presets";
 import { DEFAULT_FRAME_CONFIG, getWingFrameConfig, getStandardConfig, SCHOOL_DEFAULT_FONT_FAMILY } from "@/lib/constants/frame";
+import { wingColWidthInches } from "@/lib/utils/cols";
 import {
   DEFAULT_BOTTOM_BAR,
   DEFAULT_QR_CODE,
@@ -1617,8 +1618,13 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
           set((state) => {
             if (!state.frameConfig.wings) return state;
             const clamped = Math.max(1, Math.min(5, columns));
-            const wingWidth = clamped * state.frameConfig.tileSizeInches;
-            const newConfig = getWingFrameConfig(state.frameConfig, wingWidth);
+            // Columns of THIS wing's width, not of the tile pitch, and the column
+            // count passed explicitly so `getWingFrameConfig` does not snap the
+            // result to the grid. On the 15.5" frame the wing column is 1.25" on a
+            // 1.000" pitch; `clamped * tileSizeInches` without the count turned it
+            // back into 15.0" and un-squared every side badge, silently.
+            const wingWidth = clamped * wingColWidthInches(state.frameConfig);
+            const newConfig = getWingFrameConfig(state.frameConfig, wingWidth, clamped);
 
             // Remove tiles in slots that no longer exist when shrinking. The wing's
             // row count is unaffected by the column count, so a surviving flat index

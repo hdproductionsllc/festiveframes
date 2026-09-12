@@ -116,9 +116,11 @@ describe("migrateSchoolDesign (v6 → v7 wing trim)", () => {
   });
 
   it("survives a blob with no slots or no frameConfig", () => {
+    // No frameConfig is NOT stamped with one: the store's `merge` installs the
+    // config it owns, and a fabricated "saved against" config would make it
+    // drop slots that never moved.
     expect(migrateSchoolDesign({ designName: "x" })).toEqual({
       designName: "x",
-      frameConfig: { ...SCHOOL_FRAME_CONFIG },
       // Top/bottom are seeded as text banners — see the default-sections tests below.
       sections: { ...SCHOOL_DEFAULT_SECTIONS },
     });

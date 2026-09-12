@@ -19,6 +19,7 @@
 // what keeps /build unchanged by construction.
 
 import type {
+  FrameConfig,
   FrameSlot,
   GridCoord,
   PlacedTile,
@@ -27,6 +28,8 @@ import type {
   TilePiece,
   TileSpan,
 } from "@/lib/types";
+import { buildGrid } from "@/lib/utils/slot-generator";
+import { getTotalWidthInches } from "@/lib/constants/frame";
 import type { FrameGrid } from "@/lib/utils/slot-generator";
 import { panelSuppressed } from "@/lib/utils/sections";
 import { NO_CORNERS, type CornerFlags } from "@/lib/utils/tile-theme";
@@ -191,6 +194,59 @@ export function snappetRect(
     width,
     height,
   };
+}
+
+/**
+ * A footprint's PHYSICAL size in inches at an anchor, on this frame.
+ *
+ * `span.cols * tileSizeInches` was right while every column was one tile wide.
+ * The 15.5" frame's wing columns are 1.25" on a 1.000" pitch and its side rows
+ * are 2.25", so a 2x1 side badge is 2.25 x 2.25 — and three different places
+ * (the upload crop's aspect target, the re-crop modal, and the DPI gate's
+ * denominator) were still multiplying by the pitch. The crop was locked to the
+ * wrong shape and the gate read 300 DPI on a print that resolves at 133.
+ *
+ * Computed on a grid at ONE px per inch, so `snappetRect` — the function both
+ * renderers size a badge with — answers directly in inches. Falls back to the
+ * pitch arithmetic only for an id that is not on this grid.
+ */
+export function snappetInches(
+  config: FrameConfig,
+  anchorSlotId: string,
+  span: TileSpan,
+): { width: number; height: number } {
+  const inchGrid = buildGrid(config, getTotalWidthInches(config));
+  const at = inchGrid.coordOf(anchorSlotId);
+  const cell = at ? inchGrid.cellAt(at.row, at.col) : null;
+  if (!cell) return { width: span.cols * config.tileSizeInches, height: span.rows * config.tileSizeInches };
+  const r = snappetRect(cell, span, config.tileSizeInches, inchGrid);
+  return { width: r.width, height: r.height };
+}
+
+/**
+ * The individual cells of a footprint, in inches, at an anchor — the widths
+ * across and the heights down. `grabOffsetIn` scales these to the on-screen
+ * rect so the grabbed cell is the cell under the pointer even when the cells
+ * are not all the same size.
+ */
+export function footprintCellsInches(
+  config: FrameConfig,
+  anchorSlotId: string,
+  span: TileSpan,
+): { widths: number[]; heights: number[] } {
+  const inchGrid = buildGrid(config, getTotalWidthInches(config));
+  const at = inchGrid.coordOf(anchorSlotId);
+  const widths: number[] = [];
+  const heights: number[] = [];
+  for (let c = 0; c < span.cols; c++) {
+    const cell = at ? inchGrid.cellAt(at.row, at.col + c) : null;
+    widths.push(cell ? cell.width : config.tileSizeInches);
+  }
+  for (let r = 0; r < span.rows; r++) {
+    const cell = at ? inchGrid.cellAt(at.row + r, at.col) : null;
+    heights.push(cell ? cell.height : config.tileSizeInches);
+  }
+  return { widths, heights };
 }
 
 export type PlacementRejection = "plate" | "suppressed" | "offgrid" | "bar" | "panel" | "banner";
@@ -359,8 +415,31 @@ export function grabOffsetIn(
   rect: { left: number; top: number; width: number; height: number },
   point: { x: number; y: number },
   span: TileSpan,
+  /**
+   * The footprint's cells, in px, when the caller has the grid. Dividing the
+   * rect evenly assumes equal cells; on the 15.5" frame a left side badge is a
+   * 1.25" wing column beside a 1.000" rail, so an even split put a pointer in
+   * the last 0.125" of the wing into the rail — and the drop landed one column
+   * left of where the parent grabbed it. Absent, the even split stands, which is
+   * exact on any frame whose cells are all one pitch.
+   */
+  cells?: { widths: number[]; heights: number[] },
 ): GrabOffset {
   const clamp = (v: number, max: number) => Math.min(Math.max(0, v), max);
+  const indexIn = (offset: number, sizes: number[], count: number): number => {
+    let edge = 0;
+    for (let i = 0; i < sizes.length; i++) {
+      edge += sizes[i];
+      if (offset < edge) return clamp(i, count - 1);
+    }
+    return count - 1;
+  };
+  if (cells && cells.widths.length === span.cols && cells.heights.length === span.rows) {
+    return {
+      dr: indexIn(point.y - rect.top, cells.heights, span.rows),
+      dc: indexIn(point.x - rect.left, cells.widths, span.cols),
+    };
+  }
   const cellW = rect.width / span.cols;
   const cellH = rect.height / span.rows;
   return {

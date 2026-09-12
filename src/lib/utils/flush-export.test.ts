@@ -7,6 +7,7 @@
 // disagree, the exporter has drifted from its own geometry.
 
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
 import { createCanvas, type Canvas, type SKRSContext2D } from "@napi-rs/canvas";
 import { SCHOOL_FLUSH_FRAME_CONFIG, EUFY_BED_LONG_INCHES, EUFY_BED_SHORT_INCHES } from "@/lib/constants/frame";
 import { SCHOOL_DEFAULT_SECTIONS } from "@/lib/constants/defaults";
@@ -158,6 +159,44 @@ describe("flush frame: the print files", () => {
         const y = 2 + (panel.height - 4) * (j / 4);
         expect(alphaAt(ctx, x, y), `(${x.toFixed(0)},${y.toFixed(0)})`).toBe(255);
       }
+    }
+  });
+});
+
+// ─── An order is FOUR print files, and this file must cut them the way the exporter does ──
+describe("flush frame: the order's part set", () => {
+  const { width: W, height: H } = schoolCanvasSize(C, DPI);
+  const full = createCanvas(W, H) as Canvas;
+  drawSchoolFrame(full.getContext("2d") as unknown as CanvasRenderingContext2D, seededDesign(), emptyBundle(), W);
+
+  it("cuts exactly four panels and none of them is blank", () => {
+    // `composeSchoolPanels` silently DROPS a panel that renders blank, and the
+    // submit route accepts zero panels. So the guard has to be here: every panel
+    // of the shipping frame carries ink after the exporter's own crop.
+    const ids: SectionId[] = ["top", "bottom", "wing-left", "wing-right"];
+    expect(Object.keys(panelRects(C)).sort()).toEqual([...ids].sort());
+    for (const id of ids) {
+      const panel = cutPanel(full, id);
+      const ctx = panel.getContext("2d");
+      const px = ctx.getImageData(0, 0, panel.width, panel.height).data;
+      let ink = 0;
+      for (let i = 3; i < px.length; i += 4 * 53) if (px[i] > 8) ink++;
+      expect(ink, `${id} is blank`).toBeGreaterThan(50);
+    }
+  });
+
+  it("this file's cutPanel passes the exporter the SAME geometry arguments", () => {
+    // The recipe here is a copy of `composeSchoolPanels`, and a copy drifts: it
+    // was missing `panelColsPx` for one afternoon while the exporter had it, and
+    // cut a 2.000" side column for a 2.250" part. Read the exporter's call.
+    const exporter = readFileSync("src/lib/utils/compose-school-frame.ts", "utf8");
+    const call = exporter.slice(exporter.indexOf("const box = panelBleedBox("));
+    for (const arg of ["panelOverhangTiles(id, config)", "panelRowsPx(config, dpi, id)", "panelColsPx(config, dpi)"]) {
+      expect(call.slice(0, 400), `exporter passes ${arg}`).toContain(arg);
+    }
+    const here = readFileSync("src/lib/utils/flush-export.test.ts", "utf8");
+    for (const arg of ["panelOverhangTiles(id, C)", "panelRowsPx(C, DPI, id)", "panelColsPx(C, DPI)"]) {
+      expect(here, `this file passes ${arg}`).toContain(arg);
     }
   });
 });

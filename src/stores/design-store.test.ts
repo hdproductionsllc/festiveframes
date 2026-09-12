@@ -1,4 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import { SCHOOL_SHIPPING_VARIANT, schoolVariant } from "@/data/school-variants";
+import { getSchoolKit } from "@/data/school-kits";
+import { kitSeedTiles } from "@/data/kit-seed";
 import type { FrameConfig, PlacedTile } from "@/lib/types";
 import { DEFAULT_FRAME_CONFIG, SCHOOL_FRAME_CONFIG, MAX_HISTORY_DEPTH } from "@/lib/constants/frame";
 import { getAllSlotIds, buildGrid } from "@/lib/utils/slot-generator";
@@ -918,5 +921,35 @@ describe("the background override reaches the BANNERS too", () => {
     const before = store.getState().sections;
     store.getState().setTileFieldColor("#8C1D40");
     expect(store.getState().sections).toBe(before); // same object → no render churn
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+describe("a returning visitor survives a persist version bump, on the frame we ship", () => {
+  const KEY = "festive-frames-school-bump-test";
+
+  it("keeps every seeded flush badge when the stored version is one behind", () => {
+    // `migrateSchoolDesign` used to stamp the RETIRED live geometry over the blob
+    // before `merge` ran, so `dropRelocatedSlots` reconciled from a frame the
+    // design was never drawn on: 0 of 6 seeded side badges survived. Latent at
+    // the current version, fatal on the next bump — exactly when nobody is
+    // looking at the school builder.
+    const { config, badgeStack } = schoolVariant(SCHOOL_SHIPPING_VARIANT);
+    const kit = getSchoolKit("sluh-jr-bills")!;
+    const seeds = kitSeedTiles(kit, config, badgeStack);
+    expect(Object.keys(seeds)).toHaveLength(6);
+
+    memoryStorage.setItem(
+      KEY,
+      JSON.stringify({ state: { slots: seeds, frameConfig: { ...config }, designName: "Miller" }, version: 6 }),
+    );
+    const store = createDesignStore(KEY, { frameConfig: config, migrateExtra: migrateSchoolDesign });
+    const after = store.getState();
+    for (const [slot, tile] of Object.entries(seeds)) {
+      expect(after.slots[slot]?.pieceId, slot).toBe(tile.pieceId);
+      expect(after.slots[slot]?.span, slot).toEqual(tile.span);
+    }
+    expect(after.frameConfig).toEqual(config);
+    expect(after.designName).toBe("Miller");
   });
 });

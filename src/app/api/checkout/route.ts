@@ -17,7 +17,7 @@ import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 
 import { getStripe } from "@/lib/stripe";
-import { offer, priceForFramesCents, MAX_CART_FRAMES, schoolOffer } from "@/config/offers";
+import { offer, priceForFramesCents, MAX_CART_FRAMES, schoolOffer, SCHOOL_CHECKOUT_OPEN } from "@/config/offers";
 import { SITE_URL, season } from "@/config/season";
 import { getDraft, saveCartDraft, type CartLineRef } from "@/lib/order/store";
 
@@ -114,6 +114,15 @@ export async function POST(request: Request): Promise<NextResponse> {
   // session metadata carries the school slug + per-frame donation so every
   // school's fundraiser take can be totalled straight from Stripe.
   if ((rawBody as Record<string, unknown>)?.kind === "school-frame") {
+    // The parked-checkout decision is stated in config/offers and hides the Buy
+    // button on the client. A hidden button is not a lock: a direct POST charged
+    // the unconfirmed $49. The server holds the same line.
+    if (!SCHOOL_CHECKOUT_OPEN) {
+      return NextResponse.json(
+        { error: "School checkout is not open yet. Send your design instead and we will follow up." },
+        { status: 409 },
+      );
+    }
     const orderId = (rawBody as Record<string, unknown>).orderId;
     if (typeof orderId !== "string" || !orderId) {
       return badRequest("Missing orderId for school order.");

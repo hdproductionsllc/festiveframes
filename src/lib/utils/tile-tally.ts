@@ -31,6 +31,13 @@ export interface TileTally {
   pieceId: string;
   span: TileSpan;
   qty: number;
+  /**
+   * The part's PHYSICAL size, "W x H" in inches, when the caller can resolve it
+   * from the frame's geometry. Two badges of the same piece and the same cell span
+   * can still be different physical parts on a frame whose columns are not all
+   * one tile wide — so when this is known it is part of the identity too.
+   */
+  size?: string;
 }
 
 /**
@@ -51,16 +58,26 @@ export function tallyKey(pieceId: string, span: TileSpan): string {
 export function tallyTiles(
   slots: Record<string, PlacedTile>,
   textBars: TextBarPlacement[],
+  /**
+   * Resolve a placed tile's physical size in inches from where it sits. Optional
+   * and additive: without it the tally is byte-identical to what every consumer
+   * has always read. With it, a piece+span that comes out at two different
+   * physical sizes (a side badge on the 15.5" frame is 2.25 x 2.25 where the same
+   * 2x1 span on the pitch would be 2.00 x 1.00) tallies as two parts, because on
+   * the production floor it IS two parts.
+   */
+  sizeOf?: (slotId: string, span: TileSpan) => string | undefined,
 ): Map<string, TileTally> {
   const covered = new Set(coveredSlotIds(textBars));
   const counts = new Map<string, TileTally>();
   for (const [slotId, placed] of Object.entries(slots)) {
     if (covered.has(slotId)) continue; // hidden under a text bar — not produced
     const span = tileSpan(placed); // absent span ⇒ 1x1, same key as an explicit 1x1
-    const key = tallyKey(placed.pieceId, span);
+    const size = sizeOf?.(slotId, span);
+    const key = size ? `${tallyKey(placed.pieceId, span)}@${size}` : tallyKey(placed.pieceId, span);
     const existing = counts.get(key);
     if (existing) existing.qty += 1;
-    else counts.set(key, { pieceId: placed.pieceId, span, qty: 1 });
+    else counts.set(key, { pieceId: placed.pieceId, span, qty: 1, ...(size ? { size } : {}) });
   }
   return counts;
 }

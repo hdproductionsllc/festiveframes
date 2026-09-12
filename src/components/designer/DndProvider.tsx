@@ -527,6 +527,12 @@ export function DndProvider({
 
   return (
     <DndContext
+      // A fixed id. dnd-kit numbers its aria-describedby ids from a module
+      // counter, which the server and the client advance differently, so every
+      // school page hydrated with a mismatch on each PaletteTile — one
+      // "hydration failed" console error per visit, and the first React dev
+      // overlay a parent on a preview build ever saw.
+      id="ff-dnd"
       sensors={sensors}
       collisionDetection={collisionStrategy}
       onDragStart={handleDragStart}

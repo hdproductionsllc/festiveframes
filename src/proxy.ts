@@ -36,6 +36,12 @@ const RULES: Record<string, Rule> = {
   // A full-frame 300-DPI print PNG is a few MB; base64 in the JSON body inflates it
   // ~1.33x, so allow ~20MB encoded (the route enforces an 18MB DECODED ceiling).
   "/api/school/submit": { windowMs: 10 * 60_000, max: 10, maxBytes: 32 * MB },
+  // Both fetch an ARBITRARY user-supplied URL server-side (a school site, then
+  // its stylesheets and logos — dozens of outbound requests per call, 22s
+  // budget). An SSRF relay with no per-IP gate is a free proxy; the payloads
+  // themselves are a URL and a slug, so the byte ceiling is small.
+  "/api/school/brand-scan": { windowMs: 10 * 60_000, max: 8, maxBytes: 16 * 1024 },
+  "/api/school/brand-asset": { windowMs: 10 * 60_000, max: 12, maxBytes: 16 * 1024 },
   "/api/save-design": { windowMs: 5 * 60_000, max: 15, maxBytes: 6 * MB },
   // 20MB, not 12: a school-frame draft carries the assembled overview PLUS four
   // 300-DPI panel PNGs (same payload class as /api/school/submit below).
@@ -97,6 +103,8 @@ export const config = {
     "/api/pet-caption",
     "/api/lab/pet-submit",
     "/api/school/submit",
+    "/api/school/brand-scan",
+    "/api/school/brand-asset",
     "/api/save-design",
     "/api/order/draft",
     "/api/contact",

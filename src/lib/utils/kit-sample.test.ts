@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { createCanvas, loadImage, type Image } from "@napi-rs/canvas";
 import { allSchoolKits, getSchoolKit, kitSections, type SchoolKit } from "@/data/school-kits";
 import { kitSeedTiles } from "@/data/kit-seed";
-import { schoolVariant, type SchoolVariantId } from "@/data/school-variants";
+import { SCHOOL_SHIPPING_VARIANT, schoolVariant, type SchoolVariantId } from "@/data/school-variants";
 import { getPiece } from "@/data/sets";
 import {
   SCHOOL_PRINT_DPI,
@@ -86,7 +86,7 @@ describe("the banner faces are actually available to the renderer", () => {
 describe("every kit renders on the frame it ships on", () => {
   for (const kit of allSchoolKits()) {
     it(`${kit.slug} draws with all of its seeded artwork present`, async () => {
-      const design = designFor(kit, "flush");
+      const design = designFor(kit, SCHOOL_SHIPPING_VARIANT);
       // The assertion that matters: every seeded badge resolved to a real piece
       // with a real file. bundleFor throws on a missing PNG, which is the point.
       const images = await bundleFor(design);
@@ -100,6 +100,29 @@ describe("every kit renders on the frame it ships on", () => {
         images,
         width,
       );
+      // A blank 4650 x 2025 canvas encodes to 36,756 bytes, so ">1000 bytes" was
+      // an assertion `drawSchoolFrame` could satisfy by drawing nothing. Measure
+      // the render instead: the frame body must cover most of the sheet, and the
+      // kit's badge cells must carry INK that differs from the body colour.
+      const ctx = canvas.getContext("2d");
+      const px = ctx.getImageData(0, 0, width, height).data;
+      let opaque = 0;
+      for (let i = 3; i < px.length; i += 4 * 97) if (px[i] > 250) opaque++;
+      const sampled = Math.ceil(px.length / (4 * 97));
+      expect(opaque / sampled, `${kit.slug}: opaque share`).toBeGreaterThan(0.9);
+      // The first left side badge: a 2.25" square anchored at the frame's top-left.
+      // Artwork is many colours; a bare pocket is one. Count distinct colours
+      // across the cell (quantised to 16 levels so anti-aliasing does not inflate
+      // it) rather than comparing one centre pixel against one body pixel — that
+      // version failed Parkway Central, whose near-black rim met a dark centre.
+      const side = Math.round(2.25 * SCHOOL_PRINT_DPI);
+      const cell = ctx.getImageData(0, 0, side, side).data;
+      const colours = new Set<number>();
+      for (let i = 0; i < cell.length; i += 4 * 8) {
+        if (cell[i + 3] < 250) continue;
+        colours.add(((cell[i] >> 4) << 8) | ((cell[i + 1] >> 4) << 4) | (cell[i + 2] >> 4));
+      }
+      expect(colours.size, `${kit.slug}: distinct colours in first side badge`).toBeGreaterThan(12);
       expect(canvas.toBuffer("image/png").length).toBeGreaterThan(1000);
       // A full 4650 x 2025 canvas per kit runs ~0.7s idle and HAS exceeded the
       // default 5s under CPU contention (three of these failed once while lint

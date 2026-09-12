@@ -93,8 +93,25 @@ export function SnappetResizeHandles({
     // sitting exactly on a boundary.
     const localX = clientX - box.left;
     const localY = clientY - box.top;
-    const cols = clamp(Math.ceil((localX - anchorSlot.x) / tileSize - 0.001), maxCols);
-    const rows = clamp(Math.ceil((localY - anchorSlot.y) / tileSize - 0.001), maxRows);
+    // Count the REAL cells from the anchor until the pointer is covered, reading
+    // each one's own width/height off the grid — the inverse of `snappetRect`.
+    // `/ tileSize` assumed every cell is one pitch; on a 2.25" side badge that made
+    // a mere PRESS on the corner handle ask for 3 x 3 before the pointer moved.
+    const cellsToCover = (start: number, offset: number, sizeOf: (i: number) => number, max: number) => {
+      let edge = start;
+      let n = 0;
+      while (n < max && edge < offset - 0.001) {
+        edge += sizeOf(n);
+        n += 1;
+      }
+      return Math.max(1, n);
+    };
+    const cellW = (i: number) =>
+      (anchorSlot.row !== undefined && anchorSlot.col !== undefined && grid?.cellAt(anchorSlot.row, anchorSlot.col + i)?.width) || tileSize;
+    const cellH = (i: number) =>
+      (anchorSlot.row !== undefined && anchorSlot.col !== undefined && grid?.cellAt(anchorSlot.row + i, anchorSlot.col)?.height) || tileSize;
+    const cols = clamp(cellsToCover(anchorSlot.x, localX, cellW, maxCols), maxCols);
+    const rows = clamp(cellsToCover(anchorSlot.y, localY, cellH, maxRows), maxRows);
     return {
       cols: handle === "bottom" ? span.cols : cols,
       rows: handle === "right" ? span.rows : rows,

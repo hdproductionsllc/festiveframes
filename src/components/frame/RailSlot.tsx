@@ -10,6 +10,7 @@ import {
   minSpanFor,
   resolveSnappetDrop,
   tileSpan,
+  footprintCellsInches,
   type GrabOffset,
 } from "@/lib/utils/snappet";
 import { buildGrid } from "@/lib/utils/slot-generator";
@@ -301,7 +302,8 @@ function PlacedTileCell({
   // through FrameCanvas. Selecting the TILE (not a derived object) keeps the
   // reference stable until the tile itself changes.
   const ownColors = useDesignStore((s) => s.slots[slotId]);
-  const wings = useDesignStore((s) => s.frameConfig.wings);
+  const frameConfig = useDesignStore((s) => s.frameConfig);
+  const wings = frameConfig.wings;
   const soundEnabled = useUIStore((s) => s.soundEnabled);
   const selectSnappet = useUIStore((s) => s.selectSnappet);
   const selectBar = useDesignStore((s) => s.selectBar);
@@ -323,7 +325,18 @@ function PlacedTileCell({
   const captureGrab = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!isMultiCell(span)) return;
     const rect = e.currentTarget.getBoundingClientRect();
-    grabOffset.current = grabOffsetIn(rect, { x: e.clientX, y: e.clientY }, span);
+    // The footprint's real cells, scaled onto the on-screen rect. An even split
+    // assumed equal cells; a left side badge on the 15.5" frame is a 1.25" wing
+    // beside a 1.000" rail, and the even split handed the drop the wrong column
+    // for a grab in the wing's last eighth-inch.
+    const inches = footprintCellsInches(frameConfig, slotId, span);
+    const wIn = inches.widths.reduce((a, b) => a + b, 0);
+    const hIn = inches.heights.reduce((a, b) => a + b, 0);
+    const cells = {
+      widths: inches.widths.map((w) => (rect.width * w) / wIn),
+      heights: inches.heights.map((h) => (rect.height * h) / hIn),
+    };
+    grabOffset.current = grabOffsetIn(rect, { x: e.clientX, y: e.clientY }, span, cells);
   };
 
   const { setNodeRef, attributes, listeners, isDragging } = useDraggable({

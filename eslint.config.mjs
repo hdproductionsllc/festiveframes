@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Agent worktrees are full checkouts of this repo; linting them doubles
+    // every warning and takes the run past five minutes.
+    ".claude/worktrees/**",
   ]),
   {
     // These two rules fire on long-standing, intentional patterns used across

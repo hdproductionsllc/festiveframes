@@ -84,7 +84,12 @@ export async function POST(request: Request): Promise<NextResponse> {
   // — whichever arrives second is a no-op. Recording in only one place would make
   // a school's total depend on which trigger happened to win the race.
   const meta = session.metadata ?? {};
-  if (meta.kind === "school-frame" && meta.school) {
+  // PAID, not merely "not unpaid". A 100%-off promo completes as
+  // `no_payment_required`, which passed this gate and credited the school a
+  // donation on an order that collected nothing — a number the club would be
+  // told it earned and could never be sent. The order still fulfils below;
+  // only the ledger insists on money having changed hands.
+  if (meta.kind === "school-frame" && session.payment_status === "paid" && meta.school) {
     await recordSchoolOrder({
       orderId: body.orderId!,
       school: meta.school,

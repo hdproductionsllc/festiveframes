@@ -149,9 +149,17 @@ export function migrateSchoolDesign(persisted: unknown): unknown {
 
   const next: Record<string, unknown> = { ...blob };
 
-  // (2) Always refresh the frame. The school builder is not a frame the user
-  // configures — it is one product with one printable geometry.
-  next.frameConfig = { ...SCHOOL_FRAME_CONFIG };
+  // (2) The frame is refreshed ONLY for the blob this migration exists for — the
+  // retired 3-column live geometry — and that happens below, next to the wing
+  // trim it belongs with. It used to be stamped with SCHOOL_FRAME_CONFIG
+  // unconditionally ("one product with one printable geometry"), which was true
+  // once and is now the RETIRED geometry: the store's `merge` installs the owned
+  // config for whichever variant is hydrating and reads the blob's own frameConfig
+  // as the truth about what the saved slot ids MEANT. Overwriting it here fed
+  // `dropRelocatedSlots` a fabricated "from" shape, and the trim below then
+  // measured a flush blob's 3 side rows against the live frame's and called every
+  // side badge "re-banded": on the next version bump, 0 of 6 seeded badges
+  // survived for every returning visitor on every school page.
 
   // Image mode is RETIRED: uploaded art is now a snappet in a tiles panel, not a
   // whole-panel section overlay. A returning user's blob may still carry a section
@@ -196,6 +204,18 @@ export function migrateSchoolDesign(persisted: unknown): unknown {
   if (!slots || typeof slots !== "object") return next;
 
   const oldConfig = blob.frameConfig as Partial<FrameConfig> | undefined;
+  // The trim addresses ONE blob: a design saved on the old multi-column wings.
+  // Any other config — the flush frame's own, a July ring's — is reconciled
+  // cell-by-cell by `dropRelocatedSlots` in `merge`, against the config the
+  // store actually owns. (The persist key is namespaced by variant, so a legacy
+  // blob only ever hydrates into the legacy store.)
+  const fromLegacyWings =
+    typeof oldConfig?.wingColumns === "number" &&
+    typeof oldConfig.leftSlots === "number" &&
+    oldConfig.wingColumns > SCHOOL_FRAME_CONFIG.wingColumns;
+  if (!fromLegacyWings) return next;
+  next.frameConfig = { ...SCHOOL_FRAME_CONFIG };
+
   const newRows = wingRowCount(SCHOOL_FRAME_CONFIG);
   // A flat index only means the same CELL if the wing's row count is unchanged. It is
   // (the trim touched columns only), but if a future migration ever changes the row

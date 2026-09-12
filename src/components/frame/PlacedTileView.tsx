@@ -63,26 +63,49 @@ export function PlacedTileView({
   const tileFieldColor = useDesignStore((s) => s.tileFieldColor);
   const rimColor = useDesignStore((s) => s.rimColor);
 
-  // Uploaded art: render the image itself, sized to the snappet rect. `cover` fills
-  // the footprint at the image's aspect; a native-aspect placement (the default on
-  // upload) shows the whole photo with no crop.
+  // Uploaded art wears the SAME chrome as a catalogue badge — the corner radii,
+  // the brass rim and the bevel — because that is what the print path draws for
+  // it (compose-school-frame: field, then the photo `cover`ed over the whole
+  // tile, then `drawBevel` on top). This used to return a bare 3px-rounded box
+  // with a drop shadow, so a parent's photo previewed as a sticker and printed
+  // as a badge, and the corner tiles' wide outside radius never showed at all.
+  //
+  // The rings are OVERLAYS rather than the nested boxes the badge path uses,
+  // because print puts the photo under the rings (full rect, cover) where a
+  // badge's art is inset past them. `mask-composite: exclude` cuts each ring's
+  // middle out so the photo shows through; `ringCss`'s padding-box fill would
+  // hide it.
   if (image) {
+    const size = Math.min(width, height);
+    const field = fieldOverride ?? tileField({ backgroundColor: image.field ?? "#FFFFFF" }, tileFieldColor);
+    const edge = tileEdgeCss(size, field, width, height, unit ?? size, rimOverride ?? rimColor);
+    const radii = cornerRadii(unit ?? size, corners ?? NO_CORNERS);
+    const rimRadii = insetRadii(radii, edge.rimInset);
+    const bevelRadii = insetRadii(rimRadii, edge.rimWidth);
+    const ring = (inset: number, ringWidth: number, gradient: string, r: ReturnType<typeof cornerRadii>): React.CSSProperties => ({
+      position: "absolute",
+      inset,
+      padding: ringWidth,
+      borderRadius: radiusCss(r),
+      background: gradient,
+      WebkitMask: "linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)",
+      WebkitMaskComposite: "xor",
+      mask: "linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)",
+      maskComposite: "exclude",
+      pointerEvents: "none",
+    });
     return (
       <div
-        className="rounded-[3px] overflow-hidden flex items-center justify-center"
+        className={`relative overflow-hidden ${animate ? "animate-tile-snap" : ""}`}
         style={{
           width,
           height,
           // The SAME field the print paints under this art (fieldForArtPixels at
-          // crop time, white for older uploads). This box used to have no
-          // background at all, so a white-on-transparent logo read fine against
-          // the dark frame body on screen and vanished on the white print field —
-          // the two renderers must show the art on the same ground or the
-          // customer approves a frame the printer cannot reproduce.
-          backgroundColor:
-            fieldOverride ?? tileField({ backgroundColor: image.field ?? "#FFFFFF" }, tileFieldColor),
-          boxShadow:
-            "0 2px 6px rgba(0,0,0,0.5), 0 1px 2px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.15), inset 0 -1px 0 rgba(0,0,0,0.1)",
+          // crop time, white for older uploads), visible only where the photo has
+          // alpha — the two renderers must show the art on the same ground.
+          backgroundColor: field,
+          borderRadius: radiusCss(radii),
+          boxShadow: edge.outerShadow,
         }}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -90,8 +113,10 @@ export function PlacedTileView({
           src={image.url}
           alt=""
           draggable={false}
-          style={{ width: "100%", height: "100%", objectFit: "cover" }}
+          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
         />
+        <div style={ring(edge.rimInset, edge.rimWidth, edge.brassGradient, rimRadii)} />
+        <div style={ring(edge.rimInset + edge.rimWidth, edge.bevelWidth, edge.bevelGradient, bevelRadii)} />
       </div>
     );
   }

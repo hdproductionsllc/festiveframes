@@ -1,12 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { allSchoolKits, type SchoolKit } from "@/data/school-kits";
+import { allSchoolKits, kitSections, type SchoolKit } from "@/data/school-kits";
 import { kitSeedTiles } from "@/data/kit-seed";
 import { SCHOOL_SHIPPING_VARIANT, schoolVariant } from "@/data/school-variants";
-import { getTotalWidthInches, getRenderHeightInches } from "@/lib/constants/frame";
-import { panelRects, panelSizeInches, panelOverhangTiles } from "@/lib/utils/panels";
-import { getAllSlotIds } from "@/lib/utils/slot-generator";
 import { SCHOOL_PRINT_DPI, schoolCanvasSize } from "@/lib/utils/compose-school-frame";
-import type { SectionId } from "@/lib/types";
+import type { PlacedTile } from "@/lib/types";
+import { buildPanelPartsList } from "@/lib/order/parts-list";
 
 // ─── ONE CHANGE UPDATES ALL 27 ───────────────────────────────────────────────
 //
@@ -26,49 +24,59 @@ import type { SectionId } from "@/lib/types";
 // with the field named, rather than quietly forking one school's geometry away
 // from the other 26.
 
-/** Everything about a kit's rendering that MUST be identical across schools. */
-function geometryOf(kit: SchoolKit) {
+/**
+ * Everything about a kit's rendering that MUST be identical across schools —
+ * computed FROM THE KIT, or the comparison is a constant against itself.
+ *
+ * The first version of this derived the canvas, slot ids and panel rects purely
+ * from the variant; `kit` was not an input to any of them, so 26 cases compared
+ * a pure function of a constant to itself and could not fail. A kit can still
+ * fork geometry through a route the field allowlist below does not see: its
+ * SECTIONS (`kitSections`) decide which panels are direct-printed, and that
+ * changes the part set Bill cuts. So the comparison is the parts list built
+ * from the kit's own sections and seeds.
+ */
+function partsOf(kit: SchoolKit) {
   const { config, badgeStack } = schoolVariant(SCHOOL_SHIPPING_VARIANT);
-  const canvas = schoolCanvasSize(config, SCHOOL_PRINT_DPI);
+  const slots = kitSeedTiles(kit, config, badgeStack) as Record<string, PlacedTile>;
+  const list = buildPanelPartsList({
+    slots,
+    textBars: [],
+    qrCode: { enabled: false, url: "", size: 0 },
+    plateState: "MO",
+    designName: kit.slug,
+    tileSizeInches: config.tileSizeInches,
+    dieCut: false,
+    frameConfig: config,
+    sections: kitSections(kit),
+  });
   return {
-    totalWidthInches: getTotalWidthInches(config),
-    renderHeightInches: getRenderHeightInches(config),
-    canvas: [canvas.width, canvas.height],
-    slotIds: getAllSlotIds(config),
-    seedSlots: Object.keys(kitSeedTiles(kit, config, badgeStack)).sort(),
-    seedSpans: Object.values(kitSeedTiles(kit, config, badgeStack))
-      .map((t) => `${t.span.cols}x${t.span.rows}`)
-      .sort(),
-    // Whichever panels this geometry HAS — the flush frame has four (two side
-    // columns and two runners; its left/right rail zones are empty), and a
-    // hard-coded list would quietly skip a panel a future variant adds.
-    panels: (Object.keys(panelRects(config)) as SectionId[]).sort().map((id) => {
-      const rect = panelRects(config)[id]!;
-      const size = panelSizeInches(id, config);
-      // Inches AND the pixels they print at: "size" is what Bill cuts, and a
-      // rounding change that moved one by a pixel while leaving the inches alone
-      // is exactly the drift worth failing on.
-      return [id, rect.row0, rect.col0, rect.row1, rect.col1, size.width, size.height,
-        Math.round(size.width * SCHOOL_PRINT_DPI), Math.round(size.height * SCHOOL_PRINT_DPI),
-        JSON.stringify(panelOverhangTiles(id, config))];
-    }),
+    canvas: (({ width, height }) => [width, height])(schoolCanvasSize(config, SCHOOL_PRINT_DPI)),
+    // Which panels are direct-printed and at what size — the kit's sections
+    // decide this, so it is the geometry a kit COULD fork.
+    directParts: list.rows.filter((r) => r.pieceId.startsWith("panel:")).map((r) => [r.pieceId, r.size]).sort(),
+    // Every badge part's size: the seeds land on the same anchors for every kit,
+    // so the multiset of sizes must match even though the pieces differ.
+    badgeSizes: list.rows.filter((r) => !r.pieceId.startsWith("panel:")).map((r) => r.size).sort(),
+    seedSlots: Object.keys(slots).sort(),
   };
 }
 
 describe("dimensions, output and size are shared by every school", () => {
   const kits = allSchoolKits();
-  const reference = geometryOf(kits[0]);
+  const reference = partsOf(kits[0]);
+
+  it("the reference kit really produces parts (or the comparison below is empty)", () => {
+    expect(reference.directParts.length).toBeGreaterThan(0);
+    expect(reference.badgeSizes.length).toBe(6);
+    expect(reference.canvas).toEqual([4650, 2025]);
+  });
 
   for (const kit of kits.slice(1)) {
-    it(`${kit.slug} renders on exactly ${kits[0].slug}'s geometry`, () => {
-      expect(geometryOf(kit)).toEqual(reference);
+    it(`${kit.slug} cuts exactly ${kits[0].slug}'s part set`, () => {
+      expect(partsOf(kit)).toEqual(reference);
     });
   }
-
-  it("the whole catalogue agrees on the print canvas, to the pixel", () => {
-    const sizes = new Set(kits.map((k) => geometryOf(k).canvas.join("x")));
-    expect([...sizes]).toHaveLength(1);
-  });
 });
 
 describe("colours, words and artwork are NOT shared", () => {

@@ -14,11 +14,12 @@
 import { getPiece } from "@/data/sets";
 import { canDieCut } from "@/components/tiles/TileArtwork";
 import { tallyTiles, tallyKey, type TileTally } from "@/lib/utils/tile-tally";
-import { isMultiCell, tileSpan } from "@/lib/utils/snappet";
+import { isMultiCell, snappetRect, tileSpan } from "@/lib/utils/snappet";
 import { buildGrid } from "@/lib/utils/slot-generator";
 import { coveredSlotIds } from "@/lib/utils/text-bar";
 import { SECTION_LABELS, panelSuppressed, slotSuppressed } from "@/lib/utils/sections";
-import { panelRects } from "@/lib/utils/panels";
+import { panelRects, panelSizeInches } from "@/lib/utils/panels";
+import { getTotalWidthInches } from "@/lib/constants/frame";
 import type { FrameConfig, PlacedTile, PlacedTextBar, QRCodeConfig, SectionId, SectionState, TileSpan } from "@/lib/types";
 
 // Short, stable part-number prefixes per set. Falls back to the first 3 letters.
@@ -88,18 +89,50 @@ export interface BuildPartsListInput {
   tileSizeInches: number;
   /** Design-level die-cut mode. Eligible tiles print die-cut when this is on. */
   dieCut: boolean;
+  /**
+   * The frame the design sits on. Optional here so /build's caller is untouched;
+   * when present, every row's `size` is the part's PHYSICAL size read off the
+   * grid, not `span x pitch`. On a frame whose columns are all one tile wide the
+   * two are the same number and the output is byte-identical.
+   */
+  frameConfig?: FrameConfig;
+}
+
+/** "W x H" inches, the way every PartsRow states it. */
+const sizeString = (w: number, h: number) => `${w.toFixed(2)} x ${h.toFixed(2)}`;
+
+/**
+ * A resolver from anchor slot id to the part's physical size, for THIS frame.
+ *
+ * Built once per list: a grid at ONE px per inch, so `snappetRect` — the same
+ * function both renderers size a badge with — answers directly in inches. This is
+ * the fix `panelSizeInches` and the print composer already got; the parts list
+ * was the third place sizing a badge as `span x pitch`, and on the 15.5" frame
+ * that told Bill "2.00 x 1.00" for a 2.25 x 2.25 square. A part list that
+ * disagrees with the print is the eufyMake stretch in miniature.
+ */
+function physicalSizeOf(config: FrameConfig): (slotId: string, span: TileSpan) => string | undefined {
+  const inchGrid = buildGrid(config, getTotalWidthInches(config));
+  return (slotId, span) => {
+    const at = inchGrid.coordOf(slotId);
+    const cell = at ? inchGrid.cellAt(at.row, at.col) : null;
+    if (!cell) return undefined; // off-grid: the caller's longhand still applies
+    const r = snappetRect(cell, span, config.tileSizeInches, inchGrid);
+    return sizeString(r.width, r.height);
+  };
 }
 
 /** Build the structured parts list. Tiles hidden under a text bar are excluded. */
 export function buildPartsList(input: BuildPartsListInput): PartsList {
-  const { slots, textBars, qrCode, plateState, designName, tileSizeInches, dieCut } = input;
+  const { slots, textBars, qrCode, plateState, designName, tileSizeInches, dieCut, frameConfig } = input;
 
   // Which tiles get produced is owned by `tallyTiles` (utils/tile-tally) — shared
   // with the print queue and the in-builder export sheet so they can't drift.
-  const counts = tallyTiles(slots, textBars);
+  // With a frame in hand the tally also carries each part's physical size.
+  const counts = tallyTiles(slots, textBars, frameConfig ? physicalSizeOf(frameConfig) : undefined);
 
   const rows: PartsRow[] = Array.from(counts.values())
-    .map(({ pieceId, span, qty }) => {
+    .map(({ pieceId, span, qty, size }) => {
       const piece = getPiece(pieceId);
       return {
         sku: skuFor(pieceId, span),
@@ -108,7 +141,7 @@ export function buildPartsList(input: BuildPartsListInput): PartsList {
         color: piece?.backgroundColor ?? "#FFFFFF",
         qty,
         span,
-        size: `${(span.cols * tileSizeInches).toFixed(2)} x ${(span.rows * tileSizeInches).toFixed(2)}`,
+        size: size ?? sizeString(span.cols * tileSizeInches, span.rows * tileSizeInches),
         dieCut: dieCut && canDieCut(pieceId),
       };
     })
@@ -202,7 +235,7 @@ function partsRowOf(t: TileTally, tileSizeInches: number, dieCut: boolean): Part
     color: piece?.backgroundColor ?? "#FFFFFF",
     qty: t.qty,
     span: t.span,
-    size: `${(t.span.cols * tileSizeInches).toFixed(2)} x ${(t.span.rows * tileSizeInches).toFixed(2)}`,
+    size: t.size ?? sizeString(t.span.cols * tileSizeInches, t.span.rows * tileSizeInches),
     dieCut: dieCut && canDieCut(t.pieceId),
   };
 }
@@ -235,7 +268,11 @@ function directPrintPanelRow(
     color: isText ? sec.text?.backgroundColor ?? "#FFFFFF" : "#FFFFFF",
     qty: 1,
     span,
-    size: `${(span.cols * tileSizeInches).toFixed(2)} x ${(span.rows * tileSizeInches).toFixed(2)}`,
+    // The part's real size — `panelSizeInches` is the one function that knows a
+    // 0.75" top bar, a 1.25" wing column and a keystone's rise. `span x pitch`
+    // said "11.00 x 1.00" for BOTH runners of the shipping frame, which print at
+    // 0.75 and 1.80, on every school order ever placed.
+    size: (({ width, height }) => sizeString(width, height))(panelSizeInches(panel, config)),
     dieCut: false,
   };
 }
@@ -293,18 +330,20 @@ export function buildPanelPartsList(input: BuildPanelPartsListInput): PanelParts
   // on the anchor's panel, so a snappet lands in exactly one bucket. Suppressed tiles
   // are gone from `visibleSlots`, so a text/image panel yields an empty bucket.
   const byPanel = new Map<SectionId, Map<string, TileTally>>();
+  const sizeOf = physicalSizeOf(frameConfig);
   for (const [slotId, placed] of Object.entries(visibleSlots)) {
     if (covered.has(slotId)) continue; // hidden under a banner — not produced
     const coord = grid.coordOf(slotId);
     const panel = coord ? grid.panelAt(coord.row, coord.col) : null;
     if (!panel) continue; // off-grid / plate — no panel to attribute it to
     const span = tileSpan(placed);
-    const key = tallyKey(placed.pieceId, span);
+    const size = sizeOf(slotId, span);
+    const key = size ? `${tallyKey(placed.pieceId, span)}@${size}` : tallyKey(placed.pieceId, span);
     let bucket = byPanel.get(panel);
     if (!bucket) { bucket = new Map(); byPanel.set(panel, bucket); }
     const existing = bucket.get(key);
     if (existing) existing.qty += 1;
-    else bucket.set(key, { pieceId: placed.pieceId, span, qty: 1 });
+    else bucket.set(key, { pieceId: placed.pieceId, span, qty: 1, ...(size ? { size } : {}) });
   }
 
   const panels: PanelPartsGroup[] = [];

@@ -969,7 +969,15 @@ export function SchoolDesigner({
               Mobile keeps ordinary flow: one column, no pinning, no nested scroll — a
               pinned frame on a phone leaves nowhere to type. */}
           <div className="contents lg:flex lg:order-none lg:flex-col lg:gap-6 lg:min-w-0 lg:sticky lg:top-3 lg:h-[calc(100vh-1.5rem)]">
-            <div className="ff-frame-dock order-1 min-w-0 flex flex-col gap-3 sticky top-0 z-30 -mx-4 px-4 pt-2 pb-2 lg:static lg:order-none lg:z-auto lg:w-full lg:mx-0 lg:px-0 lg:pt-0 lg:pb-0 lg:shrink-0">
+            {/* NOT sticky on a phone. The comment above promises "Mobile keeps
+                ordinary flow: one column, no pinning" and this element pinned
+                anyway: with the graduate card inside it the dock measured 702px
+                of an 844px viewport, so the badge tray rendered UNDERNEATH it and
+                `elementFromPoint` on every badge returned the card's own button.
+                A parent could not tap a badge on a first visit — the core loop
+                was blocked on the one device the QR is for. Pinning is the
+                desktop column's job (`lg:sticky` on the parent). */}
+            <div className="ff-frame-dock order-1 min-w-0 flex flex-col gap-3 -mx-4 px-4 pt-2 pb-2 lg:static lg:order-none lg:w-full lg:mx-0 lg:px-0 lg:pt-0 lg:pb-0 lg:shrink-0">
               {/* Make-it-theirs intake: the first thing a parent touches. Three
                   quick fields -> the frame is suddenly about THEIR kid. Writes
                   ordinary store state via applyKidIntake. */}
