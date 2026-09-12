@@ -47,8 +47,8 @@ export function TileArtImg({
   const style = { width: "100%", height: "100%", objectFit: "cover" as const, ...styleOverride };
 
   if (!local) {
-    // eslint-disable-next-line @next/next/no-img-element
     return (
+      // eslint-disable-next-line @next/next/no-img-element
       <img
         src={src}
         alt={alt}

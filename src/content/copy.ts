@@ -95,39 +95,6 @@ export interface SiteCopy {
   tagline: string;
 }
 
-export interface BuyCopy {
-  metaTitle: string;
-  /** Meta + Open Graph description for the /buy conversion page. */
-  metaDescription: string;
-  h1: string;
-  subhead: string;
-  /** One line shown under the primary CTA. */
-  ctaSubline: string;
-  /** Guarantee line shown under the buy buttons. */
-  guarantee: string;
-  /** "What's in every kit" completeness anchor. */
-  whatsInKit: {
-    heading: string;
-    items: string[];
-    caption: string;
-  };
-  /** "How it works" three-beat line. */
-  howItWorks: { heading: string; line: string };
-  /** "Built to last" durability block (plain-language material, UV-printed tiles). */
-  builtToLast: { heading: string; body: string };
-  /** Light trust strip (no fake reviews). */
-  trust: { heading: string; caption: string };
-  /** Offer block card copy. */
-  offer: {
-    single: { title: string; items: string[]; cta: string };
-    bundle: { title: string; items: string[]; cta: string; mixLabel: string };
-  };
-  /** The five /buy FAQ entries (sourced from home FAQ where noted). */
-  faq: FaqItem[];
-  /** Friendly client-side checkout error (never leaks raw errors). */
-  checkoutError: string;
-}
-
 /** Designer/builder page copy (/build). Metadata-focused: the page itself is
  *  the self-contained designer app, so this drives its title/description/OG. */
 export interface BuildCopy {
@@ -160,7 +127,6 @@ export interface ThanksCopy {
 export interface Copy {
   site: SiteCopy;
   home: HomeCopy;
-  buy: BuyCopy;
   build: BuildCopy;
   thanks: ThanksCopy;
   /** Reusable brand anchor phrases for headings, badges, and CTAs. */
@@ -386,99 +352,6 @@ export const copy: Copy = {
         name: "Heather W., Kirkwood",
       },
     ],
-  },
-
-  buy: {
-    metaTitle: "Design Your Own Custom License Plate Frame",
-    metaDescription:
-      "Design your own custom license plate frame: pick a theme, snap on the tiles you want, and add your phrase. Made by hand to order in the USA, with a goodie bag of surprise extra tiles. Ships nationwide, $5 flat rate.",
-    h1: "Make your license plate the most fun part of your car.",
-    subhead: "Design it. We hand-make it.",
-    ctaSubline: "$5 flat US shipping. Order by June 28 for the best chance to arrive before the Fourth.",
-    guarantee: "30-day guarantee. If you do not love it, send it back.",
-
-    whatsInKit: {
-      heading: "What you get",
-      items: [
-        "Your custom frame, designed by you, fits all standard US plates and installs with your existing screws",
-        "A goodie bag of surprise extra tiles in every order",
-        "Ready-made bottom-bar slogans to start from, or write your own: USA, LAND OF THE FREE, HOME OF THE BRAVE, and LET FREEDOM RING",
-        "Quick-start card",
-      ],
-      caption:
-        "You design the frame, pick a theme, and add your phrase. Then every order ships with a goodie bag of surprise extra tiles so you can mix, match, and restyle any time.",
-    },
-
-    howItWorks: {
-      heading: "How it works",
-      line: "Pick a theme, snap on the tiles you want, and add your phrase in the online builder. We hand-make your frame to order, then it ships. It installs with the same two screws that already hold a frame to your plate, no drilling and no new hardware.",
-    },
-
-    builtToLast: {
-      heading: "Built to last",
-      // Material in plain language (same hard automotive plastics, not named).
-      // Tiles are UV printed, so the colors-stay-bright claim is supported.
-      body:
-        "Festive Frames is designed and made in the USA, right here in St. Louis. The frame and tiles are built tough and vetted for the real world: they hold up to highway speeds, car washes, sun, rain, and snow. The tiles snap on and off in seconds with a satisfying click, and every tile is UV printed so the colors stay bright. Built to last.",
-    },
-
-    trust: {
-      heading: "Out around St. Louis",
-      caption: "A few custom Festive Frames on the road.",
-    },
-
-    offer: {
-      single: {
-        title: "Your custom frame",
-        items: [
-          "A frame you design yourself",
-          "A goodie bag of surprise extra tiles",
-          "Bottom-bar phrases to start from, or make your own",
-        ],
-        cta: "Buy Now",
-      },
-      bundle: {
-        title: "Design two frames",
-        items: [
-          "Two custom frames, designed your way",
-          "One for you, one for a gift or the second car",
-        ],
-        cta: "Buy Now",
-        mixLabel: "Two frames",
-      },
-    },
-
-    faq: [
-      {
-        question: "Will it fit my car?",
-        answer:
-          "It fits all standard US license plates, across all 50 states.",
-      },
-      {
-        // EXACT homepage legality wording. Never drop this.
-        question: "Is it legal?",
-        answer:
-          "The frame and tiles sit on the border only and never cover your plate numbers, registration stickers, or the state name. Drivers are responsible for following their own state's plate display rules.",
-      },
-      {
-        question: "How do I install it?",
-        answer:
-          "The frame installs once over your plate using your existing screws. After that, tiles snap into the border and swap out whenever you want.",
-      },
-      {
-        // Matches the homepage weather answer (plain-language material, UV-printed tiles).
-        question: "What about weather and car washes?",
-        answer:
-          "Yes. The frame and tiles are vetted for everyday driving: highway speeds, automatic car washes, and the full range of weather, from freezing winters to summer heat, sun, and rain. The tiles are UV printed, so the colors stay bright. And whenever you want a new look, they still pop off in seconds.",
-      },
-      {
-        question: "How does shipping work?",
-        answer:
-          "We ship anywhere in the US for a $5 flat rate. Order by June 28 for the best chance to arrive before the Fourth.",
-      },
-    ],
-
-    checkoutError: "Checkout is warming up, try again.",
   },
 
   build: {
