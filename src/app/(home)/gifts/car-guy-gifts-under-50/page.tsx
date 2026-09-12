@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
 import { copy } from "@/content/copy";
-import { SITE_URL } from "@/config/season";
+import { OG_IMAGE_ALT, SITE_URL } from "@/config/season";
 import { Header } from "../../_components/Header";
 import { Footer } from "../../_components/Footer";
 
@@ -12,11 +12,11 @@ const PAGE_URL = `${SITE_URL}${PAGE_PATH}`;
 
 // Price-qualified gift listicle targeting "car guy gifts under $50". Anchors the
 // $39 custom frame as the hero pick alongside honest, general gift categories.
-// Gift-intent title; append the locked brand entity so the brand and its
-// "License Plate Frames" category co-occur in the <title> (this page's headline
-// targets the gift keyword, not the category).
-const META_TITLE =
-  "Car Guy Gifts Under $50 They'll Actually Use | Festive Frames – Custom License Plate Frames";
+// Gift-intent title, 44 chars. The locked brand entity used to be appended for
+// brand/category co-occurrence, which pushed the title to 91 and had the SERP
+// truncate it mid-brand — the opposite of the intent. og:site_name below still
+// carries the entity on every share.
+const META_TITLE = "Car Guy Gifts Under $50 They'll Actually Use";
 const META_DESCRIPTION =
   "Car guy gifts under $50 he'll actually use, led by a $39 custom patriotic license plate frame he designs himself. Handmade in St. Louis, ships fast.";
 
@@ -30,13 +30,13 @@ export const metadata: Metadata = {
     siteName: copy.site.brandEntity,
     title: META_TITLE,
     description: META_DESCRIPTION,
-    images: [`${SITE_URL}/opengraph-image`],
+    images: [{ url: `${SITE_URL}/opengraph-image`, width: 1200, height: 630, alt: OG_IMAGE_ALT }],
   },
   twitter: {
     card: "summary_large_image",
     title: META_TITLE,
     description: META_DESCRIPTION,
-    images: [`${SITE_URL}/opengraph-image`],
+    images: [{ url: `${SITE_URL}/opengraph-image`, width: 1200, height: 630, alt: OG_IMAGE_ALT }],
   },
 };
 
@@ -98,18 +98,36 @@ function buildJsonLd() {
     })),
   };
 
+  // ItemList over the same PICKS array the page renders as a numbered <ol>, so
+  // the structured data describes something a reader can actually see. The other
+  // two gift pages are long-form prose with no such list and get none.
+  const itemList = {
+    "@type": "ItemList",
+    name: META_TITLE,
+    itemListOrder: "https://schema.org/ItemListOrderDescending",
+    numberOfItems: PICKS.length,
+    itemListElement: PICKS.map((pick, index) => ({
+      "@type": "ListItem",
+      position: index + 1,
+      name: pick.title,
+      description: pick.body,
+    })),
+  };
+
+  // Two rungs, not three. The middle rung named a section ("Gifts" / "Blog")
+  // and pointed at THIS page's own URL, because no index route exists — a
+  // breadcrumb that claims a parent it does not have.
   const breadcrumbList = {
     "@type": "BreadcrumbList",
     itemListElement: [
       { "@type": "ListItem", position: 1, name: "Home", item: SITE_URL },
-      { "@type": "ListItem", position: 2, name: "Gifts", item: `${SITE_URL}/gifts/car-guy-gifts-under-50` },
-      { "@type": "ListItem", position: 3, name: "Car Guy Gifts Under $50", item: PAGE_URL },
+      { "@type": "ListItem", position: 2, name: "Car Guy Gifts Under $50", item: PAGE_URL },
     ],
   };
 
   return {
     "@context": "https://schema.org",
-    "@graph": [faqPage, breadcrumbList],
+    "@graph": [itemList, faqPage, breadcrumbList],
   };
 }
 

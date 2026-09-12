@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { copy } from "@/content/copy";
 import { getKit, getActiveKits } from "@/config/kits";
 import { offer } from "@/config/offers";
-import { SITE_URL } from "@/config/season";
+import { OG_IMAGE_ALT, SITE_URL } from "@/config/season";
 import { Header } from "./_components/Header";
 import { Hero } from "./_components/Hero";
 import { Marquee } from "./_components/Marquee";
@@ -36,13 +36,13 @@ export const metadata: Metadata = {
     siteName: copy.site.brandEntity,
     title: copy.home.metaTitle,
     description: copy.home.metaDescription,
-    images: [`${SITE_URL}/opengraph-image`],
+    images: [{ url: `${SITE_URL}/opengraph-image`, width: 1200, height: 630, alt: OG_IMAGE_ALT }],
   },
   twitter: {
     card: "summary_large_image",
     title: copy.home.metaTitle,
     description: copy.home.metaDescription,
-    images: [`${SITE_URL}/opengraph-image`],
+    images: [{ url: `${SITE_URL}/opengraph-image`, width: 1200, height: 630, alt: OG_IMAGE_ALT }],
   },
 };
 

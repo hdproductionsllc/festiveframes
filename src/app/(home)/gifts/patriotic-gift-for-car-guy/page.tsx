@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
 import { copy } from "@/content/copy";
-import { SITE_URL } from "@/config/season";
+import { OG_IMAGE_ALT, SITE_URL } from "@/config/season";
 import { Header } from "../../_components/Header";
 import { Footer } from "../../_components/Footer";
 
@@ -14,11 +14,11 @@ const PAGE_URL = `${SITE_URL}${PAGE_PATH}`;
 // guy". Funnels gift shoppers straight into the builder. Lives in the (home)
 // route group so it inherits the sticker theme + fonts; brings its own
 // Header/Footer for full home chrome.
-// Gift-intent title; append the locked brand entity so the brand and its
-// "License Plate Frames" category co-occur in the <title> (this page's headline
-// targets the gift keyword, not the category).
-const META_TITLE =
-  "Patriotic Gift for the Car Guy Who Has Everything | Festive Frames – Custom License Plate Frames";
+// Gift-intent title, 48 chars. The locked brand entity used to be appended for
+// brand/category co-occurrence, which pushed the title to 96 and had the SERP
+// truncate it mid-brand — the opposite of the intent. og:site_name below still
+// carries the entity on every share.
+const META_TITLE = "Patriotic Gift for the Car Guy Who Has Everything";
 const META_DESCRIPTION =
   "The patriotic gift for the car guy who has everything: a custom America's 250th license plate frame he designs himself. $39, handmade in St. Louis, ships fast.";
 
@@ -32,13 +32,13 @@ export const metadata: Metadata = {
     siteName: copy.site.brandEntity,
     title: META_TITLE,
     description: META_DESCRIPTION,
-    images: [`${SITE_URL}/opengraph-image`],
+    images: [{ url: `${SITE_URL}/opengraph-image`, width: 1200, height: 630, alt: OG_IMAGE_ALT }],
   },
   twitter: {
     card: "summary_large_image",
     title: META_TITLE,
     description: META_DESCRIPTION,
-    images: [`${SITE_URL}/opengraph-image`],
+    images: [{ url: `${SITE_URL}/opengraph-image`, width: 1200, height: 630, alt: OG_IMAGE_ALT }],
   },
 };
 
@@ -77,12 +77,14 @@ function buildJsonLd() {
     })),
   };
 
+  // Two rungs, not three. The middle rung named a section ("Gifts" / "Blog")
+  // and pointed at THIS page's own URL, because no index route exists — a
+  // breadcrumb that claims a parent it does not have.
   const breadcrumbList = {
     "@type": "BreadcrumbList",
     itemListElement: [
       { "@type": "ListItem", position: 1, name: "Home", item: SITE_URL },
-      { "@type": "ListItem", position: 2, name: "Gifts", item: `${SITE_URL}/gifts/patriotic-gift-for-car-guy` },
-      { "@type": "ListItem", position: 3, name: "Patriotic Gift for the Car Guy", item: PAGE_URL },
+      { "@type": "ListItem", position: 2, name: "Patriotic Gift for the Car Guy", item: PAGE_URL },
     ],
   };
 

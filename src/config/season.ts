@@ -5,6 +5,8 @@
 // Current season: July 4, 2026.
 // ─────────────────────────────────────────────────────────────
 
+import { copy } from "@/content/copy";
+
 export interface Season {
   /** Stable theme key for this season's styling/content. */
   theme: string;
@@ -38,3 +40,12 @@ export const season: Season = {
 // festiveframes.co 301s here at the Cloudflare edge. Stripe return URLs,
 // canonicals, sitemap, and og URLs all build from this.
 export const SITE_URL = "https://www.myschoolframe.com";
+
+/**
+ * Alt text for the site-wide Open Graph card rendered at /opengraph-image.
+ * Derived from the brand copy (never written longhand) and declared HERE rather
+ * than in the route module, so a page can describe the image in its own
+ * `openGraph.images` without importing `next/og`; the route re-exports this as
+ * its required `alt`. One string, twelve pages.
+ */
+export const OG_IMAGE_ALT = `${copy.site.brandName} — ${copy.site.tagline}`;

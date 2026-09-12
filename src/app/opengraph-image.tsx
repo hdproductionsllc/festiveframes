@@ -1,5 +1,6 @@
 import { ImageResponse } from "next/og";
 import { copy } from "@/content/copy";
+import { OG_IMAGE_ALT } from "@/config/season";
 
 // Code-rendered default Open Graph / social-share image for the whole site,
 // served by Next's file convention at /opengraph-image. 1200x630, no external
@@ -12,7 +13,9 @@ import { copy } from "@/content/copy";
 
 export const runtime = "edge";
 
-export const alt = `${copy.site.brandName} — ${copy.site.tagline}`;
+// Shared with every page that names this image in its own openGraph.images, so
+// the card and the pages pointing at it can never describe it differently.
+export const alt = OG_IMAGE_ALT;
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
