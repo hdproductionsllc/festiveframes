@@ -116,7 +116,7 @@ function PlacedBar({
 }
 
 export const FrameCanvas = forwardRef<FrameCanvasHandle, FrameCanvasProps>(
-  function FrameCanvas({ frameConfig, slots, bottomBar, qrCode, plateState, plateImageOverride, overSlotId, snappetPreview, bannerPreview }, ref) {
+  function FrameCanvas({ frameConfig, slots, qrCode, plateState, plateImageOverride, overSlotId, snappetPreview, bannerPreview }, ref) {
     const frameRef = useRef<HTMLDivElement>(null);
     // The overflow layer that holds the snappet anchors + resize handles. Its
     // top-left equals the frame's origin, so the handles read pointer→grid from it.

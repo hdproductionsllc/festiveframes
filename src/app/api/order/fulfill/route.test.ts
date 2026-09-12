@@ -19,8 +19,8 @@ vi.mock("@/lib/stripe", () => ({
     },
   }),
 }));
-const fulfillOrder = vi.fn().mockResolvedValue("fulfilled");
-const fulfillCart = vi.fn().mockResolvedValue("fulfilled");
+const fulfillOrder = vi.fn().mockResolvedValue("sent");
+const fulfillCart = vi.fn().mockResolvedValue("sent");
 vi.mock("@/lib/order/fulfill", () => ({
   fulfillOrder: (...a: unknown[]) => fulfillOrder(...a),
   fulfillCart: (...a: unknown[]) => fulfillCart(...a),
@@ -82,7 +82,7 @@ describe("POST /api/order/fulfill", () => {
     const artifacts = { overview: "data:x" };
     const res = await POST(req({ sessionId: "cs_1", orderId: "o-1", parts, artifacts }));
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ ok: true, result: "fulfilled" });
+    expect(await res.json()).toEqual({ ok: true, result: "sent" });
     expect(fulfillOrder).toHaveBeenCalledWith("o-1", session, { parts, artifacts });
     const t = await schoolTotals("sluh-jr-bills");
     expect(t.frames).toBe(1);

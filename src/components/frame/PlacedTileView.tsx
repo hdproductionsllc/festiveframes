@@ -10,7 +10,6 @@ import {
   radiusCss,
   ringCss,
   solidFill,
-  tileBackground,
   tileField,
   tileEdgeCss,
   NO_CORNERS,

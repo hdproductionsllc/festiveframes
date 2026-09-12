@@ -601,7 +601,7 @@ describe("the keystone and the bar are ONE piece of material", () => {
     const inset = rimMetrics(c.unit, c.unit, c.unit).inset;
     const onEdge = c.rgb(c.underTab, tabTop + inset);
     expect(onEdge, "the tab's top edge lost its rim").not.toBe(bg);
-    const [r, g, b] = onEdge.split(",").map(Number);
+    const [r, , b] = onEdge.split(",").map(Number);
     expect(r, "the tab's top edge is not metal").toBeGreaterThan(150);
     expect(r, "a rim should be warm, not white").toBeGreaterThan(b);
   });

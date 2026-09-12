@@ -426,8 +426,10 @@ error of 49/255 where the real figure was under 1/255.
   groups; the root keeps them `preload: false` for /school and /s/[slug]/raised.
 - **eslint ignores `.claude/worktrees/**`.** Agent worktrees are full checkouts;
   linting them once reported 1,200 errors that did not exist in the tree.
-- `scripts/`, `tasks/`, dead marketing/checkout islands and 44 MB of unreferenced
-  assets were removed by the hygiene pass (commit dde0167 lists every file).
+- The hygiene pass (commit dde0167 lists every file) removed the dead marketing
+  and checkout islands, orphan components and hooks, and 44 MB of unreferenced
+  assets — `scripts/` and `tasks/` are intact; each deletion was grep-verified
+  against all three before it went.
 
 ## Geometry facts worth not re-deriving
 

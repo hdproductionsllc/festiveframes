@@ -77,7 +77,6 @@ import { screwNotches } from "@/lib/utils/screw-slots";
 import { bannerConfigFor, bannerLogoLayout, sectionSupportsLogo } from "@/lib/utils/banner-logo";
 import { getPiece } from "@/data/sets";
 import {
-  BRASS,
   rimRamp,
   artInset,
   tileField,
@@ -94,7 +93,6 @@ import {
   rimMetrics,
   shift,
   textChenille,
-  tileBackground,
 } from "@/lib/utils/tile-theme";
 import { getFullRes } from "@/lib/utils/image-store";
 

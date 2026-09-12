@@ -3,7 +3,7 @@
 import { useMemo, useState, useRef, useEffect } from "react";
 import type { FrameConfig, FrameSlot } from "@/lib/types";
 import { generateSlots } from "@/lib/utils/slot-generator";
-import { getContainerHeight, getPlateArea, getWingArea } from "@/lib/utils/layout";
+import { getContainerHeight, getPlateArea } from "@/lib/utils/layout";
 
 export function useFrameLayout(config: FrameConfig) {
   const [containerWidth, setContainerWidth] = useState(0);
@@ -37,23 +37,11 @@ export function useFrameLayout(config: FrameConfig) {
     [config, containerWidth]
   );
 
-  const wingLeftArea = useMemo(
-    () => (containerWidth > 0 ? getWingArea(config, "left", containerWidth) : null),
-    [config, containerWidth]
-  );
-
-  const wingRightArea = useMemo(
-    () => (containerWidth > 0 ? getWingArea(config, "right", containerWidth) : null),
-    [config, containerWidth]
-  );
-
   return {
     containerRef,
     containerWidth,
     containerHeight,
     slots,
     plateArea,
-    wingLeftArea,
-    wingRightArea,
   };
 }

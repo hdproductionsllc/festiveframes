@@ -1,6 +1,6 @@
 import type { FrameConfig } from "@/lib/types";
 import { getTotalWidthInches } from "@/lib/constants/frame";
-import { plateTopInches, rowTopInches } from "@/lib/utils/rows";
+import { plateTopInches } from "@/lib/utils/rows";
 
 /**
  * Convert inches to pixels at a given container width.
@@ -66,28 +66,3 @@ export function getPlateArea(
   };
 }
 
-/**
- * Wing area bounds (for groove rendering). Returns null when wings are off.
- */
-export function getWingArea(
-  config: FrameConfig,
-  side: "left" | "right",
-  containerWidth: number
-): { x: number; y: number; width: number; height: number } | null {
-  if (!config.wings || config.wingColumns <= 0) return null;
-
-  const scale = getScale(config, containerWidth);
-  const containerHeight = getContainerHeight(config, containerWidth);
-  const wingWidth = config.wingWidthInches * scale;
-  const innerWidth = config.widthInches * scale;
-  // From under the top bar (one tile on every frame but the flush one) to the
-  // bottom of the frame, extra rows included.
-  const top = rowTopInches(config, 1) * scale;
-
-  return {
-    x: side === "left" ? 0 : wingWidth + innerWidth,
-    y: top,
-    width: wingWidth,
-    height: containerHeight - top,
-  };
-}

@@ -19,7 +19,7 @@ vi.mock("@/lib/stripe", () => ({
     },
   }),
 }));
-const fulfillOrder = vi.fn().mockResolvedValue({ ok: true });
+const fulfillOrder = vi.fn().mockResolvedValue("sent");
 vi.mock("@/lib/order/fulfill", () => ({ fulfillOrder: (...a: unknown[]) => fulfillOrder(...a), fulfillCart: vi.fn() }));
 
 import { POST } from "./route";

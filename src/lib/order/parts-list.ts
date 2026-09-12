@@ -249,14 +249,13 @@ const PANEL_ORDER: SectionId[] = ["wing-left", "top", "bottom", "wing-right"];
 /**
  * The single DIRECT-PRINT part for a panel switched out of tiles (text/image mode).
  * The print renderer replaces the whole panel with one piece over its bounding box,
- * so it is ONE physical part whose footprint is the panel rectangle. Size follows the
- * same tile-pitch convention as every other `PartsRow` (cols×tile × rows×tile).
+ * so it is ONE physical part whose footprint is the panel rectangle. Its size is the
+ * panel's real inches (`panelSizeInches`), like every other `PartsRow`.
  */
 function directPrintPanelRow(
   panel: SectionId,
   sec: SectionState,
   config: FrameConfig,
-  tileSizeInches: number,
 ): PartsRow {
   const rect = panelRects(config)[panel];
   const span: TileSpan = { cols: rect.col1 - rect.col0 + 1, rows: rect.row1 - rect.row0 + 1 };
@@ -319,7 +318,7 @@ export function buildPanelPartsList(input: BuildPanelPartsListInput): PanelParts
     ? Object.fromEntries(Object.entries(slots).filter(([id]) => !suppressed.has(id)))
     : slots;
 
-  const directRows = suppressedPanels.map((p) => directPrintPanelRow(p, sections[p]!, frameConfig, tileSizeInches));
+  const directRows = suppressedPanels.map((p) => directPrintPanelRow(p, sections[p]!, frameConfig));
   const directByPanel = new Map(suppressedPanels.map((p, i) => [p, directRows[i]] as const));
 
   // Flat half: the section-aware tile list (byte-identical to `buildPartsList` when
