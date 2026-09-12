@@ -2,23 +2,28 @@
 
 import { useEffect } from "react";
 
-// ─── The font picker's optional faces, AFTER paint ───────────────────────────
+// ─── The font picker's optional faces, WHEN THE PICKER IS OPENED ─────────────
 //
 // Sixty-odd Google faces used to arrive through seven chained `@import` rules
 // inside the school builder's stylesheet. Chained @imports are render-blocking
 // AND serialized: the browser fetches our CSS, parses it, discovers seven more
 // stylesheets, fetches those, and only then paints. On a phone that sits between
 // a parent scanning a QR code in the bleachers and seeing their school's frame.
+// They moved here, to after first paint — and that fixed the blocking, but every
+// school page still fetched eight third-party stylesheets, and then the font
+// files behind whichever faces they matched, for a MENU that most parents never
+// open. The graduate express means the first frame they see is already right.
 //
-// None of it is needed for the frame to be RIGHT. Everything the product is set
-// in — Graduate on the banners, Oswald on the tagline, Stars and Stripes on the
-// text bars — is served from our own origin (see self-hosted-fonts.css), which
-// is also what stops those faces losing the race and rendering as something
-// heavier. The rest is a menu of alternatives, and a menu can arrive a moment
-// after the thing it is a menu for.
+// So they load on the first OPEN of a font picker instead. Nothing the product
+// is set in depends on them — Graduate on the banners, Oswald on the tagline,
+// Stars and Stripes on the text bars are all served from our own origin (see
+// self-hosted-fonts.css), which is also what stops those faces losing the race
+// and rendering as something heavier. The rest is a menu of alternatives, and a
+// menu can arrive when it is asked for.
 //
-// So they load here instead: after first paint, in parallel, non-blocking. The
-// preconnects go up first so the fetch does not pay for DNS and TLS twice.
+// The two preconnects still go up on mount: they are one DNS + TLS handshake
+// each, they carry no bytes, and paying for them early is exactly what makes the
+// picker feel instant when it is opened.
 
 const PRECONNECT = ["https://fonts.googleapis.com", "https://fonts.gstatic.com"];
 
@@ -40,25 +45,52 @@ const SHEETS = [
   "https://fonts.cdnfonts.com/css/license-plate-usa",
 ];
 
+function addLink(rel: string, href: string, crossOrigin?: string) {
+  if (typeof document === "undefined") return;
+  // An identical link may already be there from a previous mount — these calls
+  // are cheap but not idempotent by accident.
+  if (document.head.querySelector(`link[rel="${rel}"][href="${CSS.escape(href)}"]`)) return;
+  const el = document.createElement("link");
+  el.rel = rel;
+  el.href = href;
+  if (crossOrigin) el.crossOrigin = crossOrigin;
+  document.head.appendChild(el);
+}
+
+/** The handshakes, with no bytes behind them. Safe to call repeatedly. */
+export function preconnectPickerFonts() {
+  for (const origin of PRECONNECT) addLink("preconnect", origin, "anonymous");
+}
+
+/**
+ * Load the picker's faces. Call this the first time a font menu is OPENED — from
+ * the pointerdown/focus that opens it, not from the render that draws it, so a
+ * page nobody types on never pays for them.
+ *
+ * Idempotent by a module flag as well as by the DOM check, so the twenty pointer
+ * events a fidgety user aims at a <select> cost one pass.
+ *
+ * Deliberately never unwound: a face already applied to text on the page would
+ * un-apply, and moving around inside the builder should not pay for these twice.
+ */
+let requested = false;
+export function loadPickerFonts() {
+  if (requested || typeof document === "undefined") return;
+  requested = true;
+  // Preconnects first, so the stylesheet fetch does not pay for DNS and TLS
+  // again. On /build these are the only place they get added at all — that page
+  // has no mounted <BuilderFontsDeferred/>.
+  preconnectPickerFonts();
+  for (const href of SHEETS) addLink("stylesheet", href);
+}
+
+/**
+ * Mounted by every school page. Opens the connections to the font hosts after
+ * first paint; the stylesheets themselves wait for `loadPickerFonts()`.
+ */
 export function BuilderFontsDeferred() {
   useEffect(() => {
-    const added: HTMLLinkElement[] = [];
-    const add = (rel: string, href: string, crossOrigin?: string) => {
-      // An identical link may already be there from a previous mount — this
-      // component is cheap but not idempotent by accident.
-      if (document.head.querySelector(`link[rel="${rel}"][href="${CSS.escape(href)}"]`)) return;
-      const el = document.createElement("link");
-      el.rel = rel;
-      el.href = href;
-      if (crossOrigin) el.crossOrigin = crossOrigin;
-      document.head.appendChild(el);
-      added.push(el);
-    };
-    for (const origin of PRECONNECT) add("preconnect", origin, "anonymous");
-    for (const href of SHEETS) add("stylesheet", href);
-    // Deliberately NOT removed on unmount: a face already applied to text on the
-    // page would un-apply, and the user navigating within the builder should not
-    // pay for these twice.
+    preconnectPickerFonts();
   }, []);
   return null;
 }

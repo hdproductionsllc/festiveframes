@@ -1,6 +1,7 @@
 "use client";
 
 import { useDesignStore } from "@/stores/design-store";
+import { loadPickerFonts } from "@/app/BuilderFontsDeferred";
 import { SECTION_LABELS, sectionSupportsText, sectionSupportsTiles } from "@/lib/utils/sections";
 import { SCHOOL_COLLEGIATE_FONTS, SCHOOL_OTHER_FONTS } from "@/lib/constants/frame";
 import { SCHOOL_PHRASE_GROUPS } from "@/data/school-phrases";
@@ -132,8 +133,19 @@ export function SectionEditor() {
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="block">
               <span className="ff-label mb-1 block">Font</span>
+              {/* THE font menu of the school builder — and the moment its faces are
+                  worth fetching. They are sixty-odd Google families behind eight
+                  third-party stylesheets; every school page used to pull them in
+                  after paint whether or not anyone ever came here, which on a phone
+                  in a car park is bytes spent on a menu instead of on the frame.
+                  A native <select> fires no "open" event, so the two things that
+                  always precede one — the pointer going down on it, and it taking
+                  focus (keyboard, or an assistive technology) — are the trigger.
+                  `loadPickerFonts` is idempotent; firing it twice costs a flag read. */}
               <select
                 value={sec.text?.fontFamily ?? ""}
+                onPointerDown={loadPickerFonts}
+                onFocus={loadPickerFonts}
                 onChange={(e) => setSectionText(selectedSectionId, { fontFamily: e.target.value })}
                 className="ff-field w-full"
               >

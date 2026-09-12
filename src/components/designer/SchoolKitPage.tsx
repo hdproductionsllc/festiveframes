@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { Graduate } from "next/font/google";
 import type { FrameConfig } from "@/lib/types";
 import type { SchoolVariantId } from "@/data/school-variants";
@@ -66,12 +67,31 @@ export function SchoolKitPage({
                 thing on the page for a reason: a parent should recognise their
                 school before they read anything. Only kits carrying authorized
                 marks have one — everyone else opens on the headline. */}
-            {/* Kit marks are arbitrary per-school files, so next/image would need
-                every one of them whitelisted. */}
-            {kit.marks?.lockup && (
+            {/* Whitelisting is a REMOTE-url rule. A kit's marks are files we ship
+                under public/kits, so next/image optimizes them with nothing added
+                to next.config — which matters here, because this is the first and
+                largest thing on the page (SLUH's lockup is a 115 KB PNG drawn into
+                304 CSS px on a phone). A kit pointing at somebody else's host would
+                need the whitelist, so that case keeps the raw <img>.
+                The intrinsic size is SLUH's lockup, the only one in the catalogue;
+                it sets the pre-decode aspect ratio only — `.msf-kit-lockup` gives
+                the box `width: min(400px, 78vw); height: auto`, and once the file
+                is decoded the browser uses its real ratio. A future kit with a
+                differently-shaped lockup would reflow once on load, not stretch. */}
+            {kit.marks?.lockup && (kit.marks.lockup.startsWith("/") ? (
+              <Image
+                className="msf-kit-lockup"
+                src={kit.marks.lockup}
+                alt={`${kit.schoolName} logo`}
+                width={776}
+                height={249}
+                sizes="(max-width: 512px) 78vw, 400px"
+                priority
+              />
+            ) : (
               // eslint-disable-next-line @next/next/no-img-element
               <img className="msf-kit-lockup" src={kit.marks.lockup} alt={`${kit.schoolName} logo`} />
-            )}
+            ))}
             <p className={`msf-kit-headline ${graduate.className}`}>{w.headline}</p>
             {w.message.map((m) => (
               <p className="msf-kit-line" key={m.slice(0, 24)}>
