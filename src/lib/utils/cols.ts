@@ -114,3 +114,22 @@ export function colLeftInches(config: FrameConfig, col: number): number {
 export function totalWidthInches(config: FrameConfig): number {
   return config.widthInches + (hasWings(config) ? config.wingWidthInches * 2 : 0);
 }
+
+/**
+ * The frame's PITCH in px, recovered from any one cell's rendered width.
+ *
+ * The on-screen renderer knows a slot's px width; the print renderer carries the
+ * pitch directly as `m.tileSize`. Badge CHROME — corner radius, bevel thickness,
+ * art inset — is scaled by the pitch in print, so the screen has to scale by the
+ * same thing or the two disagree. It did: once wing columns became 1.25" on a
+ * 1.000" pitch, a LEFT side badge's own cell was 1.25" and a RIGHT one's 1.000",
+ * so the left column wore 25% fatter brass than the right column AND than the
+ * print. One formula, here, so neither renderer can hold a different one.
+ *
+ * On a frame whose every column is one tile wide this returns `slotWidthPx`
+ * unchanged, which is exactly what the screen passed before.
+ */
+export function pitchPxFromCell(config: FrameConfig, slotWidthPx: number, col: number): number {
+  const w = colWidthInches(config, col);
+  return w > 0 ? (slotWidthPx / w) * config.tileSizeInches : slotWidthPx;
+}

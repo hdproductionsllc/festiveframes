@@ -7,6 +7,7 @@
 // SQUARE 2.25 x 2.25 badges).
 
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
 import {
   SCHOOL_FLUSH_FRAME_CONFIG,
   SCHOOL_FRAME_CONFIG,
@@ -16,6 +17,7 @@ import {
 } from "@/lib/constants/frame";
 import { buildGrid, gridInvariantHolds, generateSlots } from "@/lib/utils/slot-generator";
 import { panelRects, panelSizeInches, panelOverhangTiles } from "@/lib/utils/panels";
+import { pitchPxFromCell } from "@/lib/utils/cols";
 import { canPlace, snappetRect, type PlacementContext } from "@/lib/utils/snappet";
 import { sectionBounds } from "@/lib/utils/sections";
 import { panelBleedBox, panelColsPx, panelRowsPx, schoolBannerRect, schoolRenderMetrics } from "@/lib/utils/compose-school-frame";
@@ -194,6 +196,36 @@ describe("flush frame: the two renderers agree", () => {
     expect(left.y).toBe(0);
     expect(left.height).toBeCloseTo(675, 9);
     expect(left.width).toBeCloseTo(225, 9);
+  });
+
+  it("badge CHROME is scaled by the pitch on both sides and in print", () => {
+    // The screen scales a badge's radius/bevel/art-inset by `unit`; print scales
+    // by `m.tileSize`, the pitch. Once the wing column became 1.25" on a 1.000"
+    // pitch, passing the anchor cell's own width made the LEFT column's badges
+    // 25% fatter than the RIGHT column's and than the print — the same shared
+    // helper handed different arguments by the two renderers.
+    const g = buildGrid(C, W);
+    const pitchPx = C.tileSizeInches * (W / getTotalWidthInches(C));
+    for (const side of ["wing-left", "wing-right"] as const) {
+      const p = panelRects(C)[side]!;
+      for (let row = 0; row < 3; row++) {
+        const cell = g.cellAt(row, p.col0)!;
+        expect(pitchPxFromCell(C, cell.width, cell.col)).toBeCloseTo(pitchPx, 9);
+      }
+    }
+    // And the left cell really is the wider one — otherwise this test proves nothing.
+    const left = g.cellAt(0, panelRects(C)["wing-left"]!.col0)!;
+    const right = g.cellAt(0, panelRects(C)["wing-right"]!.col0)!;
+    expect(left.width).toBeGreaterThan(right.width);
+
+    // The assertions above prove the HELPER is right; they cannot notice the
+    // renderer going back to passing the raw cell width, which is the actual
+    // defect. So read the call site. A source assertion is blunt, but a test
+    // that cannot fail on the thing it is named after is worth nothing — the
+    // 27 kit renders asserted a PNG was >1000 bytes when a blank one is 36,756.
+    const railSlot = readFileSync("src/components/frame/RailSlot.tsx", "utf8");
+    expect(railSlot).toContain("pitchPxFromCell(frameConfig, slot.width, slot.col)");
+    expect(railSlot).not.toContain("unit={slot.width}");
   });
 
   it("the per-panel print crop lands exactly on the panel's drawn bounds", () => {

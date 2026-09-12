@@ -20,6 +20,7 @@ import { NO_CORNERS, type CornerFlags } from "@/lib/utils/tile-theme";
 import { PlacedTileView } from "./PlacedTileView";
 import { SparkleBurst } from "./SparkleBurst";
 import { useDesignStore } from "@/stores/design-store";
+import { pitchPxFromCell } from "@/lib/utils/cols";
 import { usePaletteStore } from "@/stores/palette-store";
 import { useUIStore } from "@/stores/ui-store";
 import { playSound } from "@/lib/utils/sound";
@@ -213,7 +214,14 @@ function RailSlotInner({ slot, placedTile, covered, spanWidth, spanHeight }: Rai
           span={tileSpan(placedTile)}
           width={tileWidth}
           height={tileHeight}
-          unit={slot.width}
+          // The PITCH, not this cell's own width. `unit` is the style scale for
+          // corner radius, bevel thickness and art inset, and the print path
+          // passes `m.tileSize` (the pitch) for every badge. Since the 15.5"
+          // frame made wing columns 1.25" on a 1.000" pitch, `slot.width` is
+          // 1.25" for a LEFT side badge and 1.000" for a RIGHT one — so the left
+          // column wore 25% fatter brass than the right and than the print.
+          // Derived so a frame whose columns are all one tile wide is unchanged.
+          unit={pitchPxFromCell(frameConfig, slot.width, slot.col)}
           corners={corners}
           armed={selectedPieceId != null}
           landing={landing}
