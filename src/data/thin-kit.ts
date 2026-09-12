@@ -210,7 +210,12 @@ export function thinKitFromRoster(entry: RosterEntry): SchoolKit {
     mascot: "",
     city: cityLabel(entry),
     colors: { ...NEUTRAL_COLORS },
-    banners: { top: "HOME OF THE", bottom, tagline, text: "#FFFFFF" },
+    // "HOME OF THE" is the authored kits' rule because their bottom banner is a
+    // nickname. With no mascot the bottom banner is the school's NAME, and
+    // "HOME OF THE ALBERTVILLE" is wrong on the first frame a parent sees.
+    // "HOME OF" reads correctly over a name and over the nickname they may
+    // type in its place.
+    banners: { top: "HOME OF", bottom, tagline, text: "#FFFFFF" },
     signature: [...GENERIC_SIGNATURE],
     welcome: {
       headline: `${shortName}, on the back of the car.`,
