@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useCartStore } from "@/stores/cart-store";
+import { copy } from "@/content/copy";
 
 // Client relay for a paid builder order. After Stripe redirects back to /thanks,
 // this POSTs to /api/order/fulfill, which verifies the session is paid before
@@ -77,17 +78,22 @@ export function OrderFulfiller({
       style={{ boxShadow: "5px 5px 0 #1e1b17" }}
     >
       {status === "working" && (
-        <p className="text-base font-semibold text-[#3a352c]">Preparing your proof and sending it to your inbox…</p>
+        <p className="text-base font-semibold text-[#3a352c]">{copy.thanks.fulfill.working}</p>
       )}
       {status === "done" && (
-        <p className="text-base font-bold text-[#1e1b17]">
-          ✓ Your proof is on its way to your email, and your frame is now in our production queue.
-        </p>
+        <p className="text-base font-bold text-[#1e1b17]">{copy.thanks.fulfill.done}</p>
       )}
+      {/* The call failed, so the ONE thing we know is that Stripe took the money
+          (this island only renders on a session the page confirmed as paid). Say
+          that and that we are on it — "confirmed" would be claiming the half we
+          just failed to do. */}
       {status === "error" && (
         <p className="text-base font-semibold text-[#3a352c]">
-          Your order is confirmed. If your proof email doesn&apos;t arrive shortly, reply to your
-          receipt or email hello@festiveframes.co and we&apos;ll send it right over.
+          {copy.thanks.fulfill.failed}{" "}
+          <a className="font-bold underline" href={`mailto:${copy.thanks.supportEmail}`}>
+            {copy.thanks.supportEmail}
+          </a>
+          .
         </p>
       )}
     </div>

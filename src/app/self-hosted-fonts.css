@@ -56,13 +56,13 @@
   font-display: block;
 }
 
-/* Stars & Stripes — a free font that isn't on a CDN. Drop the file at
-   public/fonts/stars-and-stripes.(woff2|ttf) and it becomes the default text-bar
-   face automatically; until then the stack falls back to Bebas Neue. */
+/* Stars & Stripes — a free font that isn't on a CDN. Only the .ttf is in
+   public/fonts/, and naming a woff2 that isn't there costs every page a 404
+   before the browser falls through to the file that exists: name the faces we
+   actually ship. Add the woff2 source back the day the file lands beside it. */
 @font-face {
   font-family: 'Stars and Stripes';
-  src: url('/fonts/stars-and-stripes.woff2') format('woff2'),
-       url('/fonts/stars-and-stripes.ttf') format('truetype');
+  src: url('/fonts/stars-and-stripes.ttf') format('truetype');
   font-weight: 400 700;
   font-display: swap;
 }

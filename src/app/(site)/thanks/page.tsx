@@ -18,8 +18,10 @@ import { SITE_URL } from "@/config/season";
 // capture form and the share prompt.
 //
 // This page reads the Stripe Checkout session server-side to show the real
-// order. If there is no session, an invalid one, or Stripe is not configured,
-// it renders a graceful generic confirmation. It never redirects or crashes.
+// order. ONLY a session we retrieved and that Stripe says is paid may be called
+// confirmed: with no session, an unreadable one, or Stripe not configured we
+// have no order to speak of, so the page says exactly that and points back at
+// the builder. It never redirects or crashes.
 
 export const metadata: Metadata = {
   title: copy.thanks.metaTitle,
@@ -112,8 +114,10 @@ async function getOrderView(sessionId: string): Promise<OrderView | null> {
     const session = await stripe.checkout.sessions.retrieve(sessionId, {
       expand: ["line_items"],
     });
-    // Only treat a paid session as a confirmed order.
-    if (session.payment_status === "unpaid") return null;
+    // Only a session Stripe calls settled is a confirmed order. A 100%-off promo
+    // completes as `no_payment_required`; anything else (including "unpaid" and
+    // any status added later) is not ours to confirm.
+    if (session.payment_status !== "paid" && session.payment_status !== "no_payment_required") return null;
     return buildOrderView(session);
   } catch {
     // Missing key, bad id, or network failure: fall back to generic.
@@ -133,9 +137,47 @@ export default async function ThanksPage({ searchParams }: ThanksPageProps) {
   const order = sessionId ? await getOrderView(sessionId) : null;
   const shareUrl = process.env.SITE_URL || SITE_URL;
 
+  // No session, or one Stripe would not confirm as paid. There is no order to
+  // show and none to fulfill, so nothing below this line runs: no relay, no
+  // purchase event, no "reserved" headline. Just what we know, and a way on.
+  if (!order) {
+    return (
+      <section className="bg-[#faf0d6]">
+        <div className="mx-auto max-w-2xl px-4 py-20 sm:px-6 sm:py-24">
+          <div
+            className="mb-[22px] inline-flex items-center gap-2 rounded-full border-[3px] border-[#1e1b17] bg-[#fff9ec] px-4 py-[7px] text-sm font-extrabold tracking-[0.3px] text-[#1e1b17]"
+            style={{ boxShadow: "3px 3px 0 #1e1b17" }}
+          >
+            <span className="inline-block h-[11px] w-[11px] rounded-full bg-[#9a938a]" />
+            {copy.thanks.notFound.badge}
+          </div>
+          <h1 className="m-0 text-[clamp(36px,7vw,56px)] font-bold leading-[0.98] tracking-[-1.5px] text-[#1e1b17]">
+            {copy.thanks.notFound.headline}
+          </h1>
+          <p className="mt-6 max-w-prose text-lg font-medium text-[#3a352c]">
+            {copy.thanks.notFound.body}
+          </p>
+          <p className="mt-4 max-w-prose text-base font-medium text-[#3a352c]">
+            {copy.thanks.notFound.help}{" "}
+            <a className="font-bold underline" href={`mailto:${copy.thanks.supportEmail}`}>
+              {copy.thanks.supportEmail}
+            </a>
+          </p>
+          <a
+            href={copy.thanks.notFound.cta.href}
+            className="mt-8 inline-block rounded-full border-[3px] border-[#1e1b17] bg-[#f8c53b] px-6 py-3 text-base font-extrabold text-[#1e1b17]"
+            style={{ boxShadow: "5px 5px 0 #1e1b17" }}
+          >
+            {copy.thanks.notFound.cta.label}
+          </a>
+        </div>
+      </section>
+    );
+  }
+
   // Only when the kit is one we actually have a page for: sharing a link to a
   // school whose page does not exist is worse than not asking.
-  const shareKit = order?.school ? getSchoolKit(order.school) : undefined;
+  const shareKit = order.school ? getSchoolKit(order.school) : undefined;
   const schoolShare = shareKit
     ? {
         shortName: shareKit.shortName,
@@ -152,10 +194,10 @@ export default async function ThanksPage({ searchParams }: ThanksPageProps) {
           style={{ boxShadow: "3px 3px 0 #1e1b17" }}
         >
           <span className="inline-block h-[11px] w-[11px] rounded-full bg-[#ed5aa0]" />
-          Order confirmed
+          {copy.thanks.confirmedBadge}
         </div>
         <h1 className="m-0 text-[clamp(36px,7vw,56px)] font-bold leading-[0.98] tracking-[-1.5px] text-[#1e1b17]">
-          {order ? copy.thanks.headline : copy.thanks.genericHeadline}
+          {copy.thanks.headline}
         </h1>
 
         {/* Builder order: relay to fulfillment (verifies payment server-side,
@@ -167,63 +209,54 @@ export default async function ThanksPage({ searchParams }: ThanksPageProps) {
           orderId && sessionId && <OrderFulfiller orderId={orderId} sessionId={sessionId} />
         )}
 
-        {/* Fire the funnel `purchase` event once when a real order rendered. */}
-        {order && (
-          <PurchaseTracker
-            selection={order.selection ?? ""}
-            kitIds={order.analytics.kitIds}
-            quantity={order.analytics.quantity}
-          />
-        )}
+        {/* Fire the funnel `purchase` event once. Only a confirmed order reaches
+            this render, so it can never fire on a bogus session id. */}
+        <PurchaseTracker
+          selection={order.selection ?? ""}
+          kitIds={order.analytics.kitIds}
+          quantity={order.analytics.quantity}
+        />
 
-        {/* Order summary or generic confirmation */}
-        {order ? (
-          <div
-            className="mt-8 rounded-[24px] border-[4px] border-[#1e1b17] bg-[#f8c53b] px-6 py-6"
-            style={{ boxShadow: "8px 8px 0 #1e1b17" }}
-          >
-            {order.kitNames.length > 0 && (
-              <>
-                <h2 className="s-display text-sm font-bold uppercase tracking-[0.12em] text-[#3a2f0c]">
-                  Your order
-                </h2>
-                <ul className="mt-3 space-y-1">
-                  {order.kitNames.map((name, i) => (
-                    <li key={`${name}-${i}`} className="s-display text-xl font-semibold text-[#1e1b17]">
-                      {name}
-                    </li>
-                  ))}
-                </ul>
-              </>
-            )}
-            {order.quantityLabel && (
-              <p className="mt-3 text-base font-bold text-[#3a2f0c]">{order.quantityLabel}</p>
-            )}
-            {order.alphabetQty > 0 && (
-              <p className="mt-3 text-base font-bold text-[#3a2f0c]">
-                {order.alphabetQty} x A-Z &amp; 0-9 letter set
-                {order.alphabetQty > 1 ? "s" : ""}
-              </p>
-            )}
-          </div>
-        ) : (
-          <p className="mt-6 max-w-prose text-lg font-medium text-[#3a352c]">
-            {copy.thanks.genericBody}
-          </p>
-        )}
+        {/* Order summary */}
+        <div
+          className="mt-8 rounded-[24px] border-[4px] border-[#1e1b17] bg-[#f8c53b] px-6 py-6"
+          style={{ boxShadow: "8px 8px 0 #1e1b17" }}
+        >
+          {order.kitNames.length > 0 && (
+            <>
+              <h2 className="s-display text-sm font-bold uppercase tracking-[0.12em] text-[#3a2f0c]">
+                Your order
+              </h2>
+              <ul className="mt-3 space-y-1">
+                {order.kitNames.map((name, i) => (
+                  <li key={`${name}-${i}`} className="s-display text-xl font-semibold text-[#1e1b17]">
+                    {name}
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+          {order.quantityLabel && (
+            <p className="mt-3 text-base font-bold text-[#3a2f0c]">{order.quantityLabel}</p>
+          )}
+          {order.alphabetQty > 0 && (
+            <p className="mt-3 text-base font-bold text-[#3a2f0c]">
+              {order.alphabetQty} x A-Z &amp; 0-9 letter set
+              {order.alphabetQty > 1 ? "s" : ""}
+            </p>
+          )}
+        </div>
 
         {/* All orders ship from St. Louis. */}
-        {order && (
-          <div
-            className="mt-6 rounded-[24px] border-[3px] border-[#1e1b17] bg-[#fff9ec] px-6 py-6"
-            style={{ boxShadow: "5px 5px 0 #1e1b17" }}
-          >
-            <h2 className="s-display text-xl font-bold tracking-[-0.5px] text-[#1e1b17]">
-              {copy.thanks.shipping.heading}
-            </h2>
-            <p className="mt-2 text-base font-medium text-[#3a352c]">{copy.thanks.shipping.body}</p>
-          </div>
-        )}
+        <div
+          className="mt-6 rounded-[24px] border-[3px] border-[#1e1b17] bg-[#fff9ec] px-6 py-6"
+          style={{ boxShadow: "5px 5px 0 #1e1b17" }}
+        >
+          <h2 className="s-display text-xl font-bold tracking-[-0.5px] text-[#1e1b17]">
+            {copy.thanks.shipping.heading}
+          </h2>
+          <p className="mt-2 text-base font-medium text-[#3a352c]">{copy.thanks.shipping.body}</p>
+        </div>
 
         {/* Future tile drops tease (the ONLY place this lives) + email capture */}
         <div

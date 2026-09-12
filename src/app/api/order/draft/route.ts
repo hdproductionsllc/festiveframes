@@ -1,9 +1,11 @@
 // ─────────────────────────────────────────────────────────────
 // POST /api/order/draft — stash a custom order's design + rendered
 // artifacts BEFORE the customer is sent to Stripe. Keyed by orderId so the
-// webhook (or the /thanks relay) can fulfill it after payment. Best-effort:
-// a failure here never blocks checkout (the /thanks relay also carries the
-// payload in the customer's localStorage).
+// webhook (or the /thanks relay) can fulfill it after payment.
+//
+// A store failure answers 503, not a 200 with {ok:false}: the caller adds this
+// design to the cart on a 2xx, and a design that was never stored 409s at
+// checkout instead. The status is the half of the answer clients read.
 // ─────────────────────────────────────────────────────────────
 
 import { NextResponse } from "next/server";
@@ -35,7 +37,6 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json({ ok: true }, { status: 200 });
   } catch (err) {
     console.error("[order/draft] save failed:", err);
-    // Non-fatal: the localStorage relay is the backup.
-    return NextResponse.json({ ok: false }, { status: 200 });
+    return NextResponse.json({ ok: false }, { status: 503 });
   }
 }

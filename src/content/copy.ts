@@ -108,10 +108,25 @@ export interface ThanksCopy {
   metaDescription: string;
   /** Confirmed-order headline. */
   headline: string;
-  /** Generic headline when no order can be read (graceful fallback). */
-  genericHeadline: string;
-  /** Generic supporting line for the fallback state. */
-  genericBody: string;
+  /** Badge above the headline on a confirmed order. */
+  confirmedBadge: string;
+  /** Where an order question goes. Rendered as a mailto, never typed inline. */
+  supportEmail: string;
+  /** No session id, or one Stripe could not confirm as paid. This page must NOT
+   *  claim an order exists on that path, so it says so plainly and points back
+   *  at the builder. `help` is completed by `supportEmail`. */
+  notFound: {
+    badge: string;
+    headline: string;
+    body: string;
+    help: string;
+    cta: { label: string; href: string };
+  };
+  /** The fulfilment relay's three states (OrderFulfiller). `failed` is the one
+   *  that matters: the payment landed, so say that and that we are on it -
+   *  never "confirmed", which we cannot know from a failed call. Completed by
+   *  `supportEmail`. */
+  fulfill: { working: string; done: string; failed: string };
   /** Shipping fulfillment block. */
   shipping: { heading: string; body: string };
   /** Future tile-drop tease (the ONLY place this lives). */
@@ -369,9 +384,22 @@ export const copy: Copy = {
     metaDescription:
       "Your custom Festive Frames frame is reserved. See your order details and what comes next.",
     headline: "You're in. Your frame is reserved.",
-    genericHeadline: "You're in. Your frame is reserved.",
-    genericBody:
-      "Your order is confirmed. Check your email for the receipt and the details on getting your frame.",
+    confirmedBadge: "Order confirmed",
+    supportEmail: "hello@festiveframes.co",
+    notFound: {
+      badge: "Order not found",
+      headline: "We couldn't find that order.",
+      body:
+        "This link doesn't carry an order we can look up. If you just checked out, your emailed receipt is the record of it - send that to us and we'll track the order down. If you haven't ordered yet, your design is still waiting in the builder.",
+      help: "Questions about an order? Email us at",
+      cta: { label: "Back to the builder", href: "/build" },
+    },
+    fulfill: {
+      working: "Preparing your proof and sending it to your inbox…",
+      done: "✓ Your proof is on its way to your email, and your frame is now in our production queue.",
+      failed:
+        "Your payment went through and your order is with us. We're still preparing your proof - if it doesn't reach your inbox shortly, reply to your receipt or email us at",
+    },
     shipping: {
       heading: "On its way to you",
       body: "We hand-make your frame to order in St. Louis, then ship it to the address you entered. Your emailed receipt has the details.",

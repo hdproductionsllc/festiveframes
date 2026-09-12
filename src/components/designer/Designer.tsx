@@ -69,12 +69,18 @@ export function Designer() {
   // Once the visitor saves this session, stop nagging them on close.
   const [savedThisSession, setSavedThisSession] = useState(false);
 
+  // Set right before a navigation WE start (add to cart). The guard below is for
+  // a visitor closing the tab on unsaved work — firing it on the one trip the
+  // buyer asked for put "Leave site?" between them and their cart, and Cancel
+  // left the modal stuck on "Adding…" over a line that was already added.
+  const leavingRef = useRef(false);
+
   // Save-on-close: if there's an unsaved design, the browser's native
   // "leave site?" prompt gives them a beat to hit "Save design" first. Skipped
   // once they've saved. (The design also persists to localStorage regardless.)
   useEffect(() => {
     const onBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (savedThisSession) return;
+      if (leavingRef.current || savedThisSession) return;
       const st = api.getState();
       const hasContent = Object.keys(st.slots).length > 0 || st.textBars.length > 0;
       if (!hasContent) return;
@@ -358,10 +364,22 @@ export function Designer() {
           design: { slots: s.slots, textBars: s.textBars, qrCode: s.qrCode, plateState: s.plateState, frameConfig: s.frameConfig, designName: s.designName },
         }),
       });
+    // A store failure answers 503, but read the body too: a 200 carrying
+    // {ok:false} is the same failure, and treating it as success puts an
+    // unstored design in the cart that 409s at checkout.
+    const stored = async (res: Response): Promise<boolean> => {
+      if (!res.ok) return false;
+      try {
+        const body = (await res.json()) as { ok?: boolean };
+        return body.ok === true;
+      } catch {
+        return false;
+      }
+    };
     try {
       let res = await saveDraft(true);
       if (!res.ok && printSheets.length) res = await saveDraft(false); // payload too large → retry lean
-      if (!res.ok) return null;
+      if (!(await stored(res))) return null;
     } catch {
       return null;
     }
@@ -392,7 +410,20 @@ export function Designer() {
         thumbDataUrl: prepared.thumbDataUrl,
         quantity: 1,
       });
+      // The design is now in the cart AND in the server draft, so there is no
+      // unsaved work to warn about: disarm the beforeunload guard (both halves —
+      // the ref takes effect this tick, the state keeps it off across renders)
+      // before leaving, or the browser asks "Leave site?" on the buyer's own
+      // click. It stays off for the rest of this page's life, which is right:
+      // the design they just added is stored server-side, so there is no longer
+      // unsaved work to warn about.
+      leavingRef.current = true;
+      setSavedThisSession(true);
       window.location.href = "/cart";
+      // Belt and braces: if the navigation is blocked or slow, the modal must
+      // not sit on "Adding…" with its close button disabled over a line that is
+      // already in the cart. Unmounting on navigation makes this a no-op.
+      window.setTimeout(() => setOrdering(false), 4000);
     } catch {
       setOrdering(false);
       setOrderError("Something went wrong adding your design to the cart. Please try again.");
