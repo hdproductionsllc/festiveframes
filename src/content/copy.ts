@@ -380,7 +380,9 @@ export const copy: Copy = {
   },
 
   thanks: {
-    metaTitle: "Order Confirmed",
+    // Neutral on purpose: this page also renders the "we could not find that
+    // order" state, and static metadata cannot tell the two apart.
+    metaTitle: "Your order",
     metaDescription:
       "Your custom Festive Frames frame is reserved. See your order details and what comes next.",
     headline: "You're in. Your frame is reserved.",
