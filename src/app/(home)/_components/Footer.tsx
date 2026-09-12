@@ -22,10 +22,30 @@ const HELP = [
   { label: "hello@festiveframes.co", href: "mailto:hello@festiveframes.co" },
 ];
 
+// The six theme landing pages and the four gift/idea posts. They rank and they
+// convert, but nothing on the site linked to them — every one was an orphan
+// reachable only from the sitemap. The footer is on every (home) page, so this
+// is the internal link the crawler (and the reader) was missing.
+const THEMES = [
+  { label: "America's 250th", href: "/america-250-license-plate-frame" },
+  { label: "Patriotic", href: "/patriotic-license-plate-frame" },
+  { label: "Veteran", href: "/veteran-license-plate-frame" },
+  { label: "Made in the USA", href: "/made-in-usa-license-plate-frame" },
+  { label: "4th of July", href: "/4th-of-july-license-plate-frame" },
+  { label: "Red, white & blue", href: "/red-white-and-blue-license-plate-frame" },
+];
+
+const GUIDES = [
+  { label: "Patriotic gift for a car guy", href: "/gifts/patriotic-gift-for-car-guy" },
+  { label: "Car guy gifts under $50", href: "/gifts/car-guy-gifts-under-50" },
+  { label: "Personalized gift for dad", href: "/gifts/personalized-gift-for-dad" },
+  { label: "50 frame sayings", href: "/blog/license-plate-frame-sayings" },
+];
+
 export function Footer({ year }: { year: number }) {
   return (
     <footer className="bg-[#1e1b17] text-[#faf0d6]">
-      <div className="mx-auto grid max-w-[1240px] gap-8 px-5 pb-9 pt-[54px] sm:px-7 md:grid-cols-2 lg:grid-cols-[1.5fr_1fr_1fr_1.1fr]">
+      <div className="mx-auto grid max-w-[1240px] gap-8 px-5 pb-9 pt-[54px] sm:px-7 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-[1.5fr_1fr_1fr_1fr_1fr_1.1fr]">
         <div>
           <Image
             src="/redesign/logo.png"
@@ -54,6 +74,8 @@ export function Footer({ year }: { year: number }) {
         </div>
 
         <FooterColumn title="Shop" links={SHOP} />
+        <FooterColumn title="Frames by theme" links={THEMES} />
+        <FooterColumn title="Gift guides & ideas" links={GUIDES} />
         <FooterColumn title="Help" links={HELP} />
 
         <div>

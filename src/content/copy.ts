@@ -141,8 +141,12 @@ export const copy: Copy = {
   },
 
   home: {
-    metaTitle:
-      "Custom Patriotic License Plate Frames | America's 250th",
+    // Leads with the H1's own phrase. The old title ("Custom Patriotic License
+    // Plate Frames | America's 250th") was a near-duplicate of
+    // /patriotic-license-plate-frame's, so the two pages competed for the same
+    // query; the landing page keeps that phrasing and the homepage takes the
+    // design-your-own angle it actually leads with on the page.
+    metaTitle: "Design Your Own Custom Patriotic License Plate Frame",
     metaDescription:
       "Design your own patriotic license plate frame for America's 250th. Snap-on stars, eagles & a custom phrase. $39, handmade in USA, ships fast. 30-day guarantee.",
     heroH1: "Design Your Own Custom Patriotic License Plate Frame",

@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
 import { copy } from "@/content/copy";
-import { SITE_URL } from "@/config/season";
+import { offer } from "@/config/offers";
+import { OG_IMAGE_ALT, SITE_URL } from "@/config/season";
 import { Header } from "../_components/Header";
 import { Footer } from "../_components/Footer";
 
@@ -14,7 +15,7 @@ const PAGE_URL = `${SITE_URL}${PAGE_PATH}`;
 // energy + "ships fast for last-minute gifts" for the late-June rush.
 const META_TITLE = "4th of July License Plate Frames | Ships Fast";
 const META_DESCRIPTION =
-  "Roll into the 4th of July with a custom license plate frame: flags, fireworks & a bomb pop, plus your own phrase. $39, handmade in the USA, ships fast for last-minute gifts.";
+  "Roll into the 4th of July with a custom license plate frame: flags, fireworks & a bomb pop, plus your own phrase. $39, handmade in the USA, ships fast.";
 
 export const metadata: Metadata = {
   title: { absolute: META_TITLE },
@@ -26,13 +27,13 @@ export const metadata: Metadata = {
     siteName: copy.site.brandEntity,
     title: META_TITLE,
     description: META_DESCRIPTION,
-    images: [`${SITE_URL}/opengraph-image`],
+    images: [{ url: `${SITE_URL}/opengraph-image`, width: 1200, height: 630, alt: OG_IMAGE_ALT }],
   },
   twitter: {
     card: "summary_large_image",
     title: META_TITLE,
     description: META_DESCRIPTION,
-    images: [`${SITE_URL}/opengraph-image`],
+    images: [{ url: `${SITE_URL}/opengraph-image`, width: 1200, height: 630, alt: OG_IMAGE_ALT }],
   },
 };
 
@@ -71,6 +72,43 @@ function buildJsonLd() {
     })),
   };
 
+  // Product + Offer, the same node the homepage builds (see (home)/page.tsx)
+  // with this page's own name, URL and description. Price and currency come from
+  // config/offers, so the schema cannot drift from the buy button. No
+  // aggregateRating/review: Google requires those to reflect genuine collected
+  // reviews, which we don't yet surface on-page.
+  const product = {
+    "@type": "Product",
+    "@id": `${PAGE_URL}#product`,
+    name: "4th of July License Plate Frame",
+    description: META_DESCRIPTION,
+    image: [`${SITE_URL}/redesign/looks/years250.png`, `${SITE_URL}/redesign/looks/sampler.png`],
+    brand: { "@type": "Brand", name: copy.site.brandName },
+    category: "License Plate Frames",
+    url: PAGE_URL,
+    offers: {
+      "@type": "Offer",
+      price: (offer.singlePrice / 100).toFixed(2),
+      priceCurrency: offer.currency.toUpperCase(),
+      availability: "https://schema.org/InStock",
+      itemCondition: "https://schema.org/NewCondition",
+      priceValidUntil: "2026-12-31",
+      url: PAGE_URL,
+      seller: { "@id": `${SITE_URL}/#organization` },
+      shippingDetails: {
+        "@type": "OfferShippingDetails",
+        shippingRate: { "@type": "MonetaryAmount", value: "5.00", currency: "USD" },
+        shippingDestination: { "@type": "DefinedRegion", addressCountry: "US" },
+      },
+      hasMerchantReturnPolicy: {
+        "@type": "MerchantReturnPolicy",
+        applicableCountry: "US",
+        returnPolicyCategory: "https://schema.org/MerchantReturnFiniteReturnWindow",
+        merchantReturnDays: 30,
+      },
+    },
+  };
+
   const breadcrumbList = {
     "@type": "BreadcrumbList",
     itemListElement: [
@@ -81,7 +119,7 @@ function buildJsonLd() {
 
   return {
     "@context": "https://schema.org",
-    "@graph": [faqPage, breadcrumbList],
+    "@graph": [product, faqPage, breadcrumbList],
   };
 }
 

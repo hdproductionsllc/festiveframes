@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
 import { copy } from "@/content/copy";
-import { SITE_URL } from "@/config/season";
+import { offer } from "@/config/offers";
+import { OG_IMAGE_ALT, SITE_URL } from "@/config/season";
 import { Header } from "../_components/Header";
 import { Footer } from "../_components/Footer";
 
@@ -14,7 +15,7 @@ const PAGE_URL = `${SITE_URL}${PAGE_PATH}`;
 // design-your-own differentiator so it stays relevant long after the Fourth.
 const META_TITLE = "Custom Patriotic License Plate Frames | $39";
 const META_DESCRIPTION =
-  "Design your own patriotic license plate frame: snap on flags, eagles & stars, then add a custom phrase. $39, made to order by hand in the USA, ships fast. 30-day guarantee.";
+  "Design your own patriotic license plate frame: snap on flags, eagles & stars, then add a custom phrase. $39, made to order by hand in the USA.";
 
 export const metadata: Metadata = {
   title: { absolute: META_TITLE },
@@ -26,13 +27,13 @@ export const metadata: Metadata = {
     siteName: copy.site.brandEntity,
     title: META_TITLE,
     description: META_DESCRIPTION,
-    images: [`${SITE_URL}/opengraph-image`],
+    images: [{ url: `${SITE_URL}/opengraph-image`, width: 1200, height: 630, alt: OG_IMAGE_ALT }],
   },
   twitter: {
     card: "summary_large_image",
     title: META_TITLE,
     description: META_DESCRIPTION,
-    images: [`${SITE_URL}/opengraph-image`],
+    images: [{ url: `${SITE_URL}/opengraph-image`, width: 1200, height: 630, alt: OG_IMAGE_ALT }],
   },
 };
 
@@ -71,6 +72,43 @@ function buildJsonLd() {
     })),
   };
 
+  // Product + Offer, the same node the homepage builds (see (home)/page.tsx)
+  // with this page's own name, URL and description. Price and currency come from
+  // config/offers, so the schema cannot drift from the buy button. No
+  // aggregateRating/review: Google requires those to reflect genuine collected
+  // reviews, which we don't yet surface on-page.
+  const product = {
+    "@type": "Product",
+    "@id": `${PAGE_URL}#product`,
+    name: "Custom Patriotic License Plate Frame",
+    description: META_DESCRIPTION,
+    image: [`${SITE_URL}/redesign/looks/years250.png`, `${SITE_URL}/redesign/looks/sampler.png`],
+    brand: { "@type": "Brand", name: copy.site.brandName },
+    category: "License Plate Frames",
+    url: PAGE_URL,
+    offers: {
+      "@type": "Offer",
+      price: (offer.singlePrice / 100).toFixed(2),
+      priceCurrency: offer.currency.toUpperCase(),
+      availability: "https://schema.org/InStock",
+      itemCondition: "https://schema.org/NewCondition",
+      priceValidUntil: "2026-12-31",
+      url: PAGE_URL,
+      seller: { "@id": `${SITE_URL}/#organization` },
+      shippingDetails: {
+        "@type": "OfferShippingDetails",
+        shippingRate: { "@type": "MonetaryAmount", value: "5.00", currency: "USD" },
+        shippingDestination: { "@type": "DefinedRegion", addressCountry: "US" },
+      },
+      hasMerchantReturnPolicy: {
+        "@type": "MerchantReturnPolicy",
+        applicableCountry: "US",
+        returnPolicyCategory: "https://schema.org/MerchantReturnFiniteReturnWindow",
+        merchantReturnDays: 30,
+      },
+    },
+  };
+
   const breadcrumbList = {
     "@type": "BreadcrumbList",
     itemListElement: [
@@ -81,7 +119,7 @@ function buildJsonLd() {
 
   return {
     "@context": "https://schema.org",
-    "@graph": [faqPage, breadcrumbList],
+    "@graph": [product, faqPage, breadcrumbList],
   };
 }
 

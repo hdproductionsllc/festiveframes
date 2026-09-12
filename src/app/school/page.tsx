@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { FindMySchool } from "@/components/school/FindMySchool";
 import { allSchoolKits } from "@/data/school-kits";
+import { SITE_URL } from "@/config/season";
 import Image from "next/image";
 import { Graduate } from "next/font/google";
 import "./school-landing.css";
@@ -32,11 +33,21 @@ export const metadata: Metadata = {
   // winnable buying queries from the July 2026 SERP research ("custom school
   // license plate frame", "school spirit license plate frame") — both SERPs are
   // Etsy aggregation pages and dated vendors, with no dedicated brand.
+  // 57 chars: "& Graduation" was dropped to clear the ~60-char SERP truncation
+  // (the old one was 69 and lost the brand); the graduate plate keeps its own
+  // section and its own H2 on the page.
   title: {
-    absolute: "Custom School Spirit & Graduation License Plate Frames | MySchoolFrame",
+    absolute: "Custom School Spirit License Plate Frames | MySchoolFrame",
   },
+  // 143 chars. The old 189-char version led with the graduate-plate sentence and
+  // was cut off before it said what the product is.
   description:
-    "The graduate plate takes two fields: their last name and their class year. A custom school license plate frame in your school's colors, with badges for their sport, band or club. Made in USA.",
+    "A custom school license plate frame in your school's colors, with badges for their sport, band or club. Free to design, made in St. Louis, USA.",
+  // Canonical is the ROOT, not /school: next.config rewrites "/" on the
+  // myschoolframe hosts to this page, so the root is the URL that serves this
+  // content and the one we want indexed. SITE_URL is also the root layout's
+  // metadataBase, so the two agree.
+  alternates: { canonical: SITE_URL },
   // The root layout sets siteName to the Festive Frames brand entity, which is
   // correct for festiveframes.co and wrong here: this page IS myschoolframe.com,
   // and every share of it carried the other brand's name under the card.

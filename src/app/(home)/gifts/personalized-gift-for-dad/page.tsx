@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
 import { copy } from "@/content/copy";
-import { SITE_URL } from "@/config/season";
+import { OG_IMAGE_ALT, SITE_URL } from "@/config/season";
 import { Header } from "../../_components/Header";
 import { Footer } from "../../_components/Footer";
 
@@ -14,7 +14,7 @@ const PAGE_URL = `${SITE_URL}${PAGE_PATH}`;
 // Leans on the Father's Day -> July 4 dual gift window and the "car dad" angle.
 const META_TITLE = "Personalized License Plate Frame Gift for Dad | $39";
 const META_DESCRIPTION =
-  "A personalized license plate frame gift for dad he designs himself: flag, eagle, his own phrase. $39, handmade in St. Louis, ships fast for Father's Day or July 4.";
+  "A personalized license plate frame gift for dad he designs himself: flag, eagle, his own phrase. $39, handmade in St. Louis, ships fast for Father's Day.";
 
 export const metadata: Metadata = {
   title: { absolute: META_TITLE },
@@ -26,13 +26,13 @@ export const metadata: Metadata = {
     siteName: copy.site.brandEntity,
     title: META_TITLE,
     description: META_DESCRIPTION,
-    images: [`${SITE_URL}/opengraph-image`],
+    images: [{ url: `${SITE_URL}/opengraph-image`, width: 1200, height: 630, alt: OG_IMAGE_ALT }],
   },
   twitter: {
     card: "summary_large_image",
     title: META_TITLE,
     description: META_DESCRIPTION,
-    images: [`${SITE_URL}/opengraph-image`],
+    images: [{ url: `${SITE_URL}/opengraph-image`, width: 1200, height: 630, alt: OG_IMAGE_ALT }],
   },
 };
 
@@ -71,12 +71,14 @@ function buildJsonLd() {
     })),
   };
 
+  // Two rungs, not three. The middle rung named a section ("Gifts" / "Blog")
+  // and pointed at THIS page's own URL, because no index route exists — a
+  // breadcrumb that claims a parent it does not have.
   const breadcrumbList = {
     "@type": "BreadcrumbList",
     itemListElement: [
       { "@type": "ListItem", position: 1, name: "Home", item: SITE_URL },
-      { "@type": "ListItem", position: 2, name: "Gifts", item: `${SITE_URL}/gifts/personalized-gift-for-dad` },
-      { "@type": "ListItem", position: 3, name: "Personalized Gift for Dad", item: PAGE_URL },
+      { "@type": "ListItem", position: 2, name: "Personalized Gift for Dad", item: PAGE_URL },
     ],
   };
 

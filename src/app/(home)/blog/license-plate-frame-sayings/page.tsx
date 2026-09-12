@@ -2,13 +2,19 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
 import { copy } from "@/content/copy";
-import { SITE_URL } from "@/config/season";
+import { OG_IMAGE_ALT, SITE_URL } from "@/config/season";
 import { Header } from "../../_components/Header";
 import { Footer } from "../../_components/Footer";
 
 const INK = "#1e1b17";
 const PAGE_PATH = "/blog/license-plate-frame-sayings";
 const PAGE_URL = `${SITE_URL}${PAGE_PATH}`;
+
+// Publication dates as CONSTANTS. A date derived from `new Date()` would claim
+// the post was rewritten on every request, which is worth nothing as a freshness
+// signal. Bump DATE_MODIFIED when the phrase list actually changes.
+const DATE_PUBLISHED = "2026-09-12";
+const DATE_MODIFIED = "2026-09-12";
 
 // Useful list-post targeting "license plate frame sayings / ideas". Genuinely
 // helpful phrase list that funnels into the builder.
@@ -26,13 +32,13 @@ export const metadata: Metadata = {
     siteName: copy.site.brandEntity,
     title: META_TITLE,
     description: META_DESCRIPTION,
-    images: [`${SITE_URL}/opengraph-image`],
+    images: [{ url: `${SITE_URL}/opengraph-image`, width: 1200, height: 630, alt: OG_IMAGE_ALT }],
   },
   twitter: {
     card: "summary_large_image",
     title: META_TITLE,
     description: META_DESCRIPTION,
-    images: [`${SITE_URL}/opengraph-image`],
+    images: [{ url: `${SITE_URL}/opengraph-image`, width: 1200, height: 630, alt: OG_IMAGE_ALT }],
   },
 };
 
@@ -154,18 +160,43 @@ function buildJsonLd() {
     })),
   };
 
+  // Article: this is the one editorial page on the site, and it had no node
+  // saying so. Author and publisher are both the Festive Frames organization,
+  // referenced by the @id the homepage's Organization node defines.
+  const article = {
+    "@type": "Article",
+    "@id": `${PAGE_URL}#article`,
+    headline: META_TITLE,
+    description: META_DESCRIPTION,
+    datePublished: DATE_PUBLISHED,
+    dateModified: DATE_MODIFIED,
+    author: {
+      "@type": "Organization",
+      "@id": `${SITE_URL}/#organization`,
+      name: copy.site.brandName,
+    },
+    publisher: {
+      "@type": "Organization",
+      "@id": `${SITE_URL}/#organization`,
+      name: copy.site.brandName,
+    },
+    mainEntityOfPage: { "@type": "WebPage", "@id": PAGE_URL },
+  };
+
+  // Two rungs, not three. The middle rung named a section ("Gifts" / "Blog")
+  // and pointed at THIS page's own URL, because no index route exists — a
+  // breadcrumb that claims a parent it does not have.
   const breadcrumbList = {
     "@type": "BreadcrumbList",
     itemListElement: [
       { "@type": "ListItem", position: 1, name: "Home", item: SITE_URL },
-      { "@type": "ListItem", position: 2, name: "Blog", item: `${SITE_URL}/blog/license-plate-frame-sayings` },
-      { "@type": "ListItem", position: 3, name: "License Plate Frame Sayings", item: PAGE_URL },
+      { "@type": "ListItem", position: 2, name: "License Plate Frame Sayings", item: PAGE_URL },
     ],
   };
 
   return {
     "@context": "https://schema.org",
-    "@graph": [faqPage, breadcrumbList],
+    "@graph": [article, faqPage, breadcrumbList],
   };
 }
 
