@@ -366,6 +366,32 @@ error of 49/255 where the real figure was under 1/255.
   Do not move `MERROW_MIN_CONTRAST` to catch it: 0.25 is what every currently-good
   school clears, and raising it restyles schools that look right.
 
+## School colours: what this environment can and cannot get (tested 2026-09-12)
+
+- **Colour NAMES: yes, and they are already sourced** for all 27 (WebSearch works).
+- **Exact hex: NOT from here.** Tested, not assumed — `WebFetch` returns
+  `EGRESS_BLOCKED` for every school domain, Wikipedia and MSHSAA; `curl` returns 000
+  for all of them; **headless Chromium hits the same proxy** (`ERR_TUNNEL_CONNECTION_FAILED`).
+  Reachable: WebSearch, `generativelanguage.googleapis.com` (no key in this checkout),
+  `api.github.com`, `raw.githubusercontent.com`, the package registries. Hex values
+  live in brand PDFs and CSS, which search indexes as prose and never quotes, so a
+  search pass finds the brand page and not the number.
+- **So the grab stays the owner's — but it is now a two-minute job.**
+  `scripts/sample-brand-colors.mjs` measures a school's own artwork and prints the
+  kit block plus the honest `colorSource` line:
+  `node scripts/sample-brand-colors.mjs --slug cbc-cadets <image...>`
+  Measured-from-the-artwork beats a published hex anyway — it is the ink the
+  school's designer actually chose.
+- **Validated against the one kit measured by hand**: from SLUH's own lockup and
+  Billiken it independently returns `#1A3A67` / `#FCFCFC` against the shipped
+  `#183B67` / `#FFFFFF` — within 2/255 per channel, with no knowledge of the kit.
+- Two bugs it had first, both worth not repeating: it pooled RAW PIXEL COUNTS
+  across files, so a 275k-pixel mascot outvoted a 64k-pixel wordmark and it called
+  SLUH columbia-blue; and it SUMMED shares across files, printing "58.7%" of a
+  colour that is 29.3% of each. Share not count, mean not sum — one file, one vote.
+- It recommends a rim that clears `merrowThread`'s own 0.25 luminance gap, so the
+  suggested value is one the renderer will not have to override.
+
 ## Geometry facts worth not re-deriving
 
 - eufyMake E1 bed: 16.5" × 13". School frame tile pitch 0.991".
