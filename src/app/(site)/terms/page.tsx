@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { SITE_URL } from "@/config/season";
+import { ARTWORK_TAKEDOWN_EMAIL, UPLOAD_RIGHTS_TERMS } from "@/content/upload-rights";
 
 // Terms of Service at "/terms". Server Component in the (site) route group, so
 // it inherits SiteHeader, SiteFooter, and .sticker-theme chrome and renders
@@ -122,6 +123,28 @@ export default function TermsPage() {
             users. All content on this site, including text, images, and logos,
             is owned by Festive Frames or its licensors and may not be used
             without permission.
+          </p>
+        </section>
+
+        {/* Uploaded artwork. The PROSE is `content/upload-rights.ts`, which is also
+            what the builder's upload gate renders — the deal a customer agrees to
+            and the deal described here are the same words by construction, not by
+            somebody remembering to edit two files. */}
+        <section>
+          <h2 className="s-display text-xl font-bold tracking-[-0.5px] text-[#1e1b17]">
+            {UPLOAD_RIGHTS_TERMS.heading}
+          </h2>
+          {UPLOAD_RIGHTS_TERMS.paragraphs.map((para) => (
+            <p key={para} className="mt-3">
+              {para}
+            </p>
+          ))}
+          <p className="mt-3">
+            {UPLOAD_RIGHTS_TERMS.takedown}{" "}
+            <a className="font-bold underline" href={`mailto:${ARTWORK_TAKEDOWN_EMAIL}`}>
+              {ARTWORK_TAKEDOWN_EMAIL}
+            </a>
+            .
           </p>
         </section>
 

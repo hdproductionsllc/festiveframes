@@ -57,6 +57,13 @@ import {
   UPLOAD_ID_PREFIX,
   type UploadedArt,
 } from "@/lib/utils/uploads";
+import { UPLOAD_RIGHTS_VERSION } from "@/content/upload-rights";
+// The attestation's type and rules live with the ORDER, not with this store: the
+// server has to validate the same shape without importing a client store. It is
+// deliberately NOT in `LoadableDesign` — a design restored from a save link may be
+// opened by someone who never accepted anything, and copying an attestation onto a
+// new reader would put words in their mouth. A reload keeps it; a restore asks again.
+import type { ArtworkRights } from "@/lib/order/artwork-rights";
 import { repairSections, sectionSupportsText, sectionSupportsTiles } from "@/lib/utils/sections";
 import { repairDanglingTopLine } from "@/lib/utils/school-banner";
 import { dropRelocatedSlots } from "@/lib/utils/school-migration";
@@ -297,6 +304,17 @@ interface DesignState {
    * tile, so nothing downstream of placement changes. See `lib/utils/uploads`.
    */
   uploads: UploadedArt[];
+  /**
+   * The uploader's statement that they hold the rights to the art they add.
+   *
+   * It belongs to THE DESIGN, not to the device: one design becomes one order,
+   * and the order is the artifact that exists later when a school asks who
+   * authorised its mascot. `version` is `UPLOAD_RIGHTS_VERSION` — the words
+   * agreed to, not merely the fact of a tick — and rides into Stripe metadata at
+   * checkout. `null` until the first upload on this design, which is what makes
+   * the gate fire exactly once.
+   */
+  artworkRights: ArtworkRights | null;
   slots: Record<string, PlacedTile>;
   bottomBar: BottomBarConfig; // draft for the NEXT text bar to be placed
   qrCode: QRCodeConfig;
@@ -335,6 +353,14 @@ interface DesignState {
    *  they carry their own copy of the image, and removing art from the tray must
    *  not silently edit the frame. */
   removeUpload: (id: string) => void;
+  /**
+   * Record that the customer accepted the uploaded-artwork terms for this design.
+   *
+   * Idempotent for the CURRENT version: re-accepting does not move `acceptedAt`,
+   * so a hydrate or a second upload cannot quietly rewrite the record. A version
+   * bump does replace it, because that is a different set of words.
+   */
+  acceptArtworkRights: () => void;
   /** Remove a tile by its ANCHOR id or by any cell its snappet covers. */
   removeTile: (slotId: string) => void;
   /**
@@ -713,6 +739,7 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
         tileFieldColor: initialBrand?.tileFieldColor ?? null,
         rimColor: initialBrand?.rimColor ?? null,
         uploads: [],
+        artworkRights: null,
         slots: initialSlots ? structuredClone(initialSlots) : {},
         bottomBar: { ...DEFAULT_BOTTOM_BAR },
         qrCode: { ...DEFAULT_QR_CODE },
@@ -797,6 +824,19 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
             const uploads = state.uploads.filter((u) => u.id !== id);
             if (uploads.length === state.uploads.length) return state;
             return { uploads, updatedAt: Date.now() };
+          });
+        },
+
+        acceptArtworkRights: () => {
+          set((state) => {
+            // Already on record for THESE words — return the same state object so a
+            // second upload does not churn renders or move the timestamp. The record
+            // is of one moment; re-ticking the same box is not a new moment.
+            if (state.artworkRights?.version === UPLOAD_RIGHTS_VERSION) return state;
+            return {
+              artworkRights: { version: UPLOAD_RIGHTS_VERSION, acceptedAt: Date.now() },
+              updatedAt: Date.now(),
+            };
           });
         },
 
@@ -1527,6 +1567,13 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
                 : { ...DEFAULT_FRAME_CONFIG },
             dieCut: design.dieCut ?? false,
             sections: design.sections ? { ...design.sections } : {},
+            // A RESTORE asks again. `artworkRights` is not part of `LoadableDesign`,
+            // so without this line zustand's shallow `set` would leave the CURRENT
+            // visitor's acceptance sitting on top of a design they have never seen —
+            // and the second gate in SchoolDesigner would wave it through. The
+            // comment on the field says a restore re-asks; this is the line that
+            // makes that true, because a comment describing a guard is not a guard.
+            artworkRights: null,
             selectedBarId: null,
             selectedSectionId: null,
             history: [],
@@ -1717,6 +1764,7 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
         tileFieldColor: state.tileFieldColor,
         rimColor: state.rimColor,
         uploads: state.uploads,
+        artworkRights: state.artworkRights,
         plateState: state.plateState,
         slots: state.slots,
         textBars: state.textBars,
@@ -1761,6 +1809,21 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
         // array, so a hydrate with nothing to fix does not churn renders.
         if (!Array.isArray(merged.uploads)) merged.uploads = [];
         else if (merged.uploads.length > MAX_UPLOADS) merged.uploads = merged.uploads.slice(0, MAX_UPLOADS);
+        // A blob saved before the artwork-rights gate existed carries no record, and
+        // a blob hand-edited in devtools can carry anything. Anything that is not a
+        // well-formed record means "not accepted", which fires the gate — the safe
+        // direction. In MERGE and not `migrate` for the usual reason: those blobs are
+        // already at the current version, so migrate would never see them. Left
+        // untouched when it is already valid, so a clean hydrate does not churn.
+        const ar = merged.artworkRights as unknown;
+        if (
+          ar !== null &&
+          (typeof ar !== "object" ||
+            typeof (ar as ArtworkRights).version !== "string" ||
+            typeof (ar as ArtworkRights).acceptedAt !== "number")
+        ) {
+          merged.artworkRights = null;
+        }
         // Text belongs to the top/bottom banners only. A design saved while the side
         // panels still allowed text keeps a wing in text mode, and the Tiles/Text
         // toggle no longer renders there — so the panel reads as locked to text with

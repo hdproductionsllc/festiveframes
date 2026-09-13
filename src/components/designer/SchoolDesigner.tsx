@@ -39,6 +39,8 @@ import { kitMarkPieces } from "@/data/sets/school-marks";
 import { FrameColorPicker } from "./FrameColorPicker";
 import { SectionEditor } from "./SectionEditor";
 import { UploadPhotoButton } from "./UploadPhotoButton";
+import { UploadRightsGate } from "./UploadRightsGate";
+import { designHasUploadedArt, isCurrentAttestation } from "@/lib/order/artwork-rights";
 import { SchoolBrandImport } from "./SchoolBrandImport";
 import { SnappetRecropModal } from "./SnappetRecropModal";
 import { SnappetSizeControl } from "./SnappetSizeControl";
@@ -263,6 +265,28 @@ export function SchoolDesigner({
   const exportUrlRef = useRef<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [buying, setBuying] = useState(false);
+  // A submit held at the rights gate. The gate normally fires at UPLOAD time, so
+  // this is the second door: a design that already carried uploaded art before the
+  // gate existed, or one whose accepted wording is no longer current, must not
+  // reach production unattested just because it predates the rule.
+  const [rightsFor, setRightsFor] = useState<null | "submit" | "buy">(null);
+  const acceptArtworkRights = useDesignStore((s) => s.acceptArtworkRights);
+
+  /**
+   * True when this design may be sent. False means the gate is now open and the
+   * caller should return — accepting it re-runs the action it interrupted.
+   *
+   * Reads the store FRESH rather than subscribing: `acceptArtworkRights` is a
+   * synchronous zustand set, so the re-run below sees the acceptance immediately,
+   * and a subscription here would re-render the whole builder for a value only
+   * ever read on a click.
+   */
+  const artworkRightsSettled = (what: "submit" | "buy"): boolean => {
+    const s = storeApi.getState();
+    if (!designHasUploadedArt(s.slots) || isCurrentAttestation(s.artworkRights)) return true;
+    setRightsFor(what);
+    return false;
+  };
   // null = idle; otherwise the outcome of the last "Send to production" attempt.
   const [submitState, setSubmitState] = useState<
     { kind: "ok" | "not-configured" | "error"; msg: string } | null
@@ -352,6 +376,7 @@ export function SchoolDesigner({
   // the recipient; this only reports back which of the three outcomes happened
   // (sent / email-not-configured-yet / error) so the button never lies.
   const handleSubmit = async () => {
+    if (!artworkRightsSettled("submit")) return;
     if (submitting || exporting) return;
     setSubmitting(true);
     setSubmitState(null);
@@ -391,7 +416,17 @@ export function SchoolDesigner({
       const res = await fetch("/api/school/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ printPng, panels, designName: s.designName, partsList, school: kit?.slug }),
+        // The artwork's provenance travels WITH the order, not in a separate
+        // ledger: the production inbox is where somebody decides to print this.
+        body: JSON.stringify({
+          printPng,
+          panels,
+          designName: s.designName,
+          partsList,
+          school: kit?.slug,
+          artUploaded: designHasUploadedArt(s.slots),
+          artworkRights: s.artworkRights,
+        }),
       });
       const data = (await res.json().catch(() => ({}))) as { ok?: boolean; reason?: string };
       if (res.ok && data.ok) {
@@ -573,6 +608,7 @@ export function SchoolDesigner({
   }, [expressOpen, kidName, kidYear, buyer, storeApi]);
 
   const handleBuy = async () => {
+    if (!artworkRightsSettled("buy")) return;
     if (buying || submitting || exporting) return;
     setBuying(true);
     setSubmitState(null);
@@ -635,6 +671,8 @@ export function SchoolDesigner({
           orderId,
           designName: s.designName,
           school: kit?.slug,
+          artUploaded: designHasUploadedArt(s.slots),
+          artworkRights: s.artworkRights,
         }),
       });
       const data = (await res.json().catch(() => ({}))) as { url?: string; error?: string };
@@ -1243,6 +1281,21 @@ export function SchoolDesigner({
       {/* Floating size control for the selected tile/snappet — grow/shrink any placed
           tile (photos re-crop on aspect change). Portaled to <body> internally. */}
       <SnappetSizeControl />
+
+      {/* The second rights door — see `artworkRightsSettled`. Accepting resumes the
+          submit it interrupted, so the parent taps once and the order goes. */}
+      {rightsFor && (
+        <UploadRightsGate
+          onAccept={() => {
+            const what = rightsFor;
+            acceptArtworkRights();
+            setRightsFor(null);
+            if (what === "submit") void handleSubmit();
+            else void handleBuy();
+          }}
+          onCancel={() => setRightsFor(null)}
+        />
+      )}
     </div>
   );
 }

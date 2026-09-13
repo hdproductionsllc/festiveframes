@@ -20,6 +20,7 @@
 
 import { NextResponse } from "next/server";
 import { sendSchoolOrderEmail } from "@/lib/email-production";
+import { artworkRightsLine, coerceArtworkRights } from "@/lib/order/artwork-rights";
 import type { PartsList, PartsRow, PartsBar } from "@/lib/order/parts-list";
 import type { TileSpan } from "@/lib/types";
 
@@ -118,7 +119,8 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json({ ok: false, error: "Invalid request." }, { status: 400 });
   }
 
-  const { printPng, panels, designName, partsList, school } = (body ?? {}) as Record<string, unknown>;
+  const { printPng, panels, designName, partsList, school, artUploaded, artworkRights } =
+    (body ?? {}) as Record<string, unknown>;
 
   // ── Validate the print image (type + size). ──
   if (typeof printPng !== "string" || !DATA_URL_RE.test(printPng)) {
@@ -159,11 +161,18 @@ export async function POST(request: Request): Promise<NextResponse> {
   }
 
   // ── Send (recipient is server-fixed inside sendSchoolOrderEmail). ──
+  // ── The artwork's provenance. The builder asks before it submits, so a design
+  //    that arrives with uploaded art and no attestation came from somewhere else
+  //    — the email says so in as many words rather than staying silent, because an
+  //    operator who cannot tell is an operator who prints it. ──
+  const artworkNote = artworkRightsLine(artUploaded === true, coerceArtworkRights(artworkRights));
+
   const result = await sendSchoolOrderEmail({
     designName: name,
     printPng: { name: `${safeName(name)}-OVERVIEW`, dataUrl: printPng },
     panels: panelImages,
     partsList: coercePartsList(partsList),
+    artworkNote,
   });
 
   if (result.ok) return NextResponse.json({ ok: true }, { status: 200 });

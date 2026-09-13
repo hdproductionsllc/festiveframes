@@ -535,6 +535,15 @@ export interface SchoolOrderInput {
   panels?: NamedImage[];
   /** Optional parts list for an at-a-glance production summary in the body. */
   partsList?: PartsList | PanelPartsList | null;
+  /**
+   * One line about where the artwork came from (`order/artwork-rights`).
+   *
+   * It is on the ORDER EMAIL because that is the desk where somebody decides to
+   * print. An order carrying a customer's uploaded mascot with no attestation on
+   * record is the one an operator must stop and look at, and a note that only
+   * exists in a database is a note nobody reads at the moment it matters.
+   */
+  artworkNote?: string;
 }
 
 export type SchoolOrderResult =
@@ -559,6 +568,7 @@ function schoolOrderHtml(
   designName: string,
   parts: PartsList | PanelPartsList | null,
   panelCount = 0,
+  artworkNote = "",
 ): string {
   const partsBlock = parts
     ? `<div style="margin:18px 0 0;">${partsListHtml(parts)}</div>`
@@ -566,6 +576,12 @@ function schoolOrderHtml(
   const filesNote = panelCount
     ? `<strong>${panelCount} panel print files</strong> are attached — print and position each one separately on the bed. The <strong>OVERVIEW</strong> attachment shows the assembled layout (do not print it).`
     : `The print-ready file is attached to this email.`;
+  // Flagged when there is uploaded art with nothing on record — the one case an
+  // operator must not skim past. Escaped like every other body string.
+  const artworkAlarm = artworkNote.includes("NO RIGHTS ATTESTATION");
+  const artworkBlock = artworkNote
+    ? `<p style="margin:0 0 12px;padding:8px 12px;border:3px solid ${INK};border-radius:12px;background:${artworkAlarm ? "#ffe2e2" : PAGE};color:${INK};font-size:13px;font-weight:${artworkAlarm ? "bold" : "normal"};">${esc(artworkNote)}</p>`
+    : "";
   return shell(
     `New school frame order — ${esc(designName || "Untitled")}`,
     `
@@ -574,15 +590,17 @@ function schoolOrderHtml(
       <strong>Design:</strong> ${esc(designName || "Untitled")}
     </p>
     <p style="margin:0 0 12px;color:${INK};font-size:13px;">${filesNote}</p>
+    ${artworkBlock}
     ${partsBlock}`,
   );
 }
 
-function schoolOrderText(designName: string, panelCount = 0): string {
+function schoolOrderText(designName: string, panelCount = 0, artworkNote = ""): string {
   return [
     `NEW SCHOOL FRAME ORDER`,
     ``,
     `Design: ${designName || "Untitled"}`,
+    ...(artworkNote ? [``, artworkNote] : []),
     ``,
     panelCount
       ? `${panelCount} panel print files are attached — print and position each one separately. The OVERVIEW attachment shows the assembled layout (do not print it).`
@@ -628,8 +646,8 @@ export async function sendSchoolOrderEmail(o: SchoolOrderInput): Promise<SchoolO
       from,
       to,
       subject: `SCHOOL ORDER — ${subjectName}`,
-      html: schoolOrderHtml(o.designName, o.partsList ?? null, panelAttachments.length),
-      text: schoolOrderText(o.designName, panelAttachments.length),
+      html: schoolOrderHtml(o.designName, o.partsList ?? null, panelAttachments.length, o.artworkNote ?? ""),
+      text: schoolOrderText(o.designName, panelAttachments.length, o.artworkNote ?? ""),
       attachments,
     });
     return { ok: true };

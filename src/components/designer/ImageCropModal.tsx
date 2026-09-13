@@ -52,6 +52,9 @@ interface ImageCropModalProps {
   targetInches: { width: number; height: number };
   /** Panel name, shown in the header. */
   panelLabel?: string;
+  /** One quiet line under the actions. Used for the uploaded-artwork reminder, so
+   *  the promise made at the gate is still on screen at the moment art is added. */
+  note?: string;
   onCancel: () => void;
   onConfirm: (result: ImageCropResult) => void;
 }
@@ -118,7 +121,7 @@ async function keyToImage(
   return { image, url, report };
 }
 
-export function ImageCropModal({ file, targetInches, panelLabel, onCancel, onConfirm }: ImageCropModalProps) {
+export function ImageCropModal({ file, targetInches, panelLabel, note, onCancel, onConfirm }: ImageCropModalProps) {
   const aspect = targetInches.width / targetInches.height;
 
   // Viewport (the crop window) — the LARGEST rectangle of the panel's EXACT aspect
@@ -646,6 +649,9 @@ export function ImageCropModal({ file, targetInches, panelLabel, onCancel, onCon
                       : "Use this crop"}
               </button>
             </div>
+            {/* LEFT-aligned: right-aligning it under the buttons orphaned the last word
+                onto a line of its own at phone width (seen in a 390px render). */}
+            {note && <p className="ff-help mt-2 text-pretty text-[11px]">{note}</p>}
           </>
         )}
       </div>

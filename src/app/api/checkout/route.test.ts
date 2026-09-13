@@ -59,6 +59,59 @@ describe("POST /api/checkout — school-frame", () => {
     });
   });
 
+  it("records the artwork attestation on the payment, so the order carries its own evidence", async () => {
+    // The payment record is the artifact most certain to still exist when a school
+    // asks who authorised its mascot, so the attestation rides on it rather than
+    // only in a database we might migrate.
+    vi.doMock("@/config/offers", async (importOriginal) => ({
+      ...(await importOriginal<typeof import("@/config/offers")>()),
+      SCHOOL_CHECKOUT_OPEN: true,
+    }));
+    const { POST } = await import("./route");
+    const acceptedAt = Date.UTC(2026, 8, 13, 14, 30);
+    await POST(
+      req({
+        kind: "school-frame",
+        orderId: "o1",
+        school: "sluh-jr-bills",
+        artUploaded: true,
+        artworkRights: { version: "2026-09-13", acceptedAt },
+      }),
+    );
+    expect(create.mock.calls[0][0].metadata).toMatchObject({
+      artUploaded: "yes",
+      artRights: `2026-09-13@${new Date(acceptedAt).toISOString()}`,
+    });
+  });
+
+  it("marks a library-only order rather than saying nothing about its artwork", async () => {
+    vi.doMock("@/config/offers", async (importOriginal) => ({
+      ...(await importOriginal<typeof import("@/config/offers")>()),
+      SCHOOL_CHECKOUT_OPEN: true,
+    }));
+    const { POST } = await import("./route");
+    await POST(req({ kind: "school-frame", orderId: "o1", school: "sluh-jr-bills" }));
+    expect(create.mock.calls[0][0].metadata).toMatchObject({ artUploaded: "no", artRights: "n/a" });
+  });
+
+  it("does not accept a hand-made attestation that is missing its timestamp", async () => {
+    vi.doMock("@/config/offers", async (importOriginal) => ({
+      ...(await importOriginal<typeof import("@/config/offers")>()),
+      SCHOOL_CHECKOUT_OPEN: true,
+    }));
+    const { POST } = await import("./route");
+    await POST(
+      req({
+        kind: "school-frame",
+        orderId: "o1",
+        school: "sluh-jr-bills",
+        artUploaded: true,
+        artworkRights: { version: "2026-09-13" },
+      }),
+    );
+    expect(create.mock.calls[0][0].metadata.artRights).toBe("none");
+  });
+
   it("drops a school slug that is not a plain slug rather than trusting the client", async () => {
     vi.doMock("@/config/offers", async (importOriginal) => ({
       ...(await importOriginal<typeof import("@/config/offers")>()),

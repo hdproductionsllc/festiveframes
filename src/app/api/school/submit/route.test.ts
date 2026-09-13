@@ -217,3 +217,48 @@ describe("POST /api/school/submit — security", () => {
     expect(arg.html).not.toContain("5<script>");
   });
 });
+
+// ─── What the production inbox is told about the artwork ─────────────────────
+//
+// The builder asks for the rights attestation before it submits. This route is
+// where that answer becomes part of the order, so the email says where the art
+// came from — including, loudly, when it came with nothing on record.
+
+describe("POST /api/school/submit — uploaded artwork provenance", () => {
+  const send = async (extra: Record<string, unknown>) => {
+    process.env.RESEND_API_KEY = "test-key";
+    process.env.EMAIL_FROM = "Festive Frames <orders@example.com>";
+    const res = await POST(req({ printPng: TINY_PNG, designName: "Lincoln HS", ...extra }));
+    expect(res.status).toBe(200);
+    return sendMock.mock.calls[0]?.[0] as { html: string; text: string };
+  };
+
+  it("says plainly when the frame uses only our own library", async () => {
+    const mail = await send({});
+    expect(mail.html).toMatch(/No customer-uploaded artwork/);
+    expect(mail.text).toMatch(/No customer-uploaded artwork/);
+  });
+
+  it("names the terms version when the customer attested", async () => {
+    const mail = await send({
+      artUploaded: true,
+      artworkRights: { version: "2026-09-13", acceptedAt: Date.UTC(2026, 8, 13, 14, 30) },
+    });
+    expect(mail.html).toContain("rights attested");
+    expect(mail.html).toContain("2026-09-13");
+    expect(mail.html).not.toContain("NO RIGHTS ATTESTATION");
+  });
+
+  it("FLAGS uploaded art that arrives with no attestation", async () => {
+    // Unreachable through the builder, which is exactly why it must be visible
+    // when it happens: a direct POST is the only way to get here.
+    const mail = await send({ artUploaded: true });
+    expect(mail.html).toContain("NO RIGHTS ATTESTATION");
+    expect(mail.text).toContain("NO RIGHTS ATTESTATION");
+  });
+
+  it("treats a malformed attestation as no attestation at all", async () => {
+    const mail = await send({ artUploaded: true, artworkRights: { version: "2026-09-13" } });
+    expect(mail.html).toContain("NO RIGHTS ATTESTATION");
+  });
+});

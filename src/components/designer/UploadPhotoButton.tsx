@@ -65,7 +65,7 @@ export function UploadPhotoButton() {
   const sections = useDesignStore((s) => s.sections);
   const textBars = useDesignStore((s) => s.textBars);
   const selectSection = useDesignStore((s) => s.selectSection);
-  const { begin, cropModal } = useSnappetUpload();
+  const { begin, uploadOverlays } = useSnappetUpload();
   const [phase, setPhase] = useState<Phase>({ kind: "idle" });
 
   const onPick = async (file?: File) => {
@@ -172,7 +172,7 @@ export function UploadPhotoButton() {
         </p>
       )}
 
-      {cropModal}
+      {uploadOverlays}
     </div>
   );
 }

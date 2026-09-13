@@ -196,7 +196,7 @@ export function SchoolBrandImport({
   // The EXISTING upload flow, untouched. `begin` opens the aspect-locked crop modal
   // with its live print-resolution gate and commits through `placeImageSnappet` at the
   // 2x2 floor. Nothing about a scanned logo is special once it is a File.
-  const { begin, cropModal } = useSnappetUpload();
+  const { begin, uploadOverlays } = useSnappetUpload();
 
   const [url, setUrl] = useState("");
   const [phase, setPhase] = useState<Phase>({ kind: "idle" });
@@ -729,7 +729,7 @@ export function SchoolBrandImport({
         </p>
       )}
 
-      {cropModal}
+      {uploadOverlays}
     </div>
   );
 }

@@ -28,7 +28,7 @@ export function SectionEditor() {
   const setSectionText = useDesignStore((s) => s.setSectionText);
   const setSectionMode = useDesignStore((s) => s.setSectionMode);
   // Upload → crop → snappet flow (shared with the prominent Upload button).
-  const { begin, cropModal } = useSnappetUpload();
+  const { begin, uploadOverlays } = useSnappetUpload();
 
   const sec = selectedSectionId ? sections[selectedSectionId] : undefined;
 
@@ -229,7 +229,7 @@ export function SectionEditor() {
         </div>
       )}
 
-      {cropModal}
+      {uploadOverlays}
     </div>
   );
 }

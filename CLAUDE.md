@@ -484,6 +484,52 @@ error of 49/255 where the real figure was under 1/255.
   assets — `scripts/` and `tasks/` are intact; each deletion was grep-verified
   against all three before it went.
 
+## Uploaded artwork: who holds the rights (2026-09-13)
+
+- **The problem it solves**: a parent uploads their school's mascot and we print it
+  on a physical part. Before this, NOTHING said who held that right — no attestation
+  at upload, no user-content clause in the terms (they only claimed OUR content is
+  ours), no address for a school that objects.
+- **One statement of the rule**: `src/content/upload-rights.ts`. The upload gate, the
+  terms page and the order record all read it, and `UPLOAD_RIGHTS_VERSION` rides on
+  every record so a stored attestation says WHICH words were agreed to. Bump the
+  version only when the meaning changes; every design then re-asks, by design.
+  `upload-rights.test.ts` fails if the terms page ever re-types the promise as prose.
+- **One chokepoint**: `useSnappetUpload.begin()`. All three upload entry points
+  already funnel through it (`UploadPhotoButton`, `SectionEditor`, `SchoolBrandImport`),
+  so that is where the gate fires. A gate attached to a button is a gate the fourth
+  button forgets. The hook's returned field is `uploadOverlays`, not `cropModal` — it
+  renders a legal gate now, and a name that says otherwise is how this codebase has
+  been burned before.
+- **The attestation belongs to the DESIGN, not the device.** One design becomes one
+  order, and the order is the artifact that exists when a school asks who authorised
+  its mascot. It is persisted and partialized with the design, guarded in `merge`
+  (malformed = never accepted, the safe direction), and deliberately NOT in
+  `LoadableDesign`: a design restored from a save link may be opened by someone who
+  accepted nothing, and copying an attestation onto a new reader puts words in their
+  mouth.
+- **There is a SECOND door**, `artworkRightsSettled` in SchoolDesigner: a design that
+  already carried uploaded art before the gate existed, or whose accepted wording is
+  stale, is asked before it can be sent or bought. Accepting resumes the action it
+  interrupted.
+- **The order carries it both ways**: Stripe metadata (`artUploaded` / `artRights`)
+  and the production email's own line. An order with uploaded art and nothing on
+  record is reachable only by a direct POST, and the email SHOUTS it in red — that is
+  the one an operator must not print without looking. `artworkRightsLine` owns that
+  string and `email-production.ts` styles on it.
+- **The rule that keeps the attestation meaningful**: an upload stays on the
+  uploader's OWN frame. The moment one parent's upload is served to another parent it
+  becomes our use of the mark and the attestation stops covering it. Colours are
+  different and are shared through `school_brand_cache` — a colour is not a mark.
+- **Honest limit, told to the owner**: this matches what every print-on-demand shop
+  does and puts responsibility where the knowledge is, but it does not make us
+  untouchable. A school still writes to the company that printed the frame, which is
+  why the takedown address is published on the gate itself and in the terms. Worth ten
+  minutes with counsel before `SCHOOL_CHECKOUT_OPEN` flips.
+- **Open**: the takedown address is `copy.thanks.supportEmail` (`hello@festiveframes.co`)
+  and that domain no longer resolves as a website; the school product lives at
+  myschoolframe.com. Henry's call — the code reads one constant.
+
 ## Geometry facts worth not re-deriving
 
 - eufyMake E1 bed: 16.5" × 13". School frame tile pitch 0.991".

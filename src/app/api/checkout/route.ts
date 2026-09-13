@@ -18,6 +18,7 @@ import type Stripe from "stripe";
 
 import { getStripe } from "@/lib/stripe";
 import { offer, priceForFramesCents, MAX_CART_FRAMES, schoolOffer, SCHOOL_CHECKOUT_OPEN } from "@/config/offers";
+import { artworkOrderMetadata, coerceArtworkRights } from "@/lib/order/artwork-rights";
 import { SITE_URL, season } from "@/config/season";
 import { getDraft, saveCartDraft, type CartLineRef } from "@/lib/order/store";
 
@@ -176,6 +177,12 @@ export async function POST(request: Request): Promise<NextResponse> {
           designName,
           school,
           donationCents: String(schoolOffer.schoolDonationCents),
+          // Who said they had the right to print this. The payment record is the
+          // one artifact that certainly survives, so the attestation rides on it.
+          ...artworkOrderMetadata(
+            (rawBody as Record<string, unknown>).artUploaded === true,
+            coerceArtworkRights((rawBody as Record<string, unknown>).artworkRights),
+          ),
         },
       });
       if (!session.url) {

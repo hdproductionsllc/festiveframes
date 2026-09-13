@@ -13,12 +13,19 @@ import { reviewUploadedImage } from "@/lib/utils/image-moderation";
 import type { FrameConfig, PlacedTile, PlacedTextBar, SectionId, SectionState, TileSpan } from "@/lib/types";
 import { thumbnailDataUrl } from "@/lib/utils/uploads";
 import { ImageCropModal, type ImageCropResult } from "./ImageCropModal";
+import { UploadRightsGate } from "./UploadRightsGate";
+import { UPLOAD_RIGHTS, UPLOAD_RIGHTS_VERSION } from "@/content/upload-rights";
 
 // The one upload → crop → snappet flow, shared by the per-section "Add art" button
 // (SectionEditor) and the prominent "Upload a photo" button (UploadPhotoButton), so
 // the two can never disagree on crop-aspect math or placement. Given a target panel
 // and a file, it sizes the crop to where a native-aspect snappet would land, opens
 // the crop modal, and on confirm stores the full-res original and drops the art in.
+//
+// IT IS ALSO WHERE THE RIGHTS GATE LIVES. Every upload entry point in the product
+// funnels through `begin`, so the one place a parent can be asked whether they
+// hold the rights to what they are about to print is here. Putting it on a button
+// would mean the next button added quietly skips it.
 
 /** Decode a file just far enough to read its aspect (width / height). Falls back to
  *  1 (square) on any error, matching suggestSnappetSize's own bad-aspect guard. */
@@ -81,8 +88,15 @@ export interface SnappetUpload {
   /** Kick off the flow: size the crop for `sectionId` and open the crop modal. Pass
    *  `knownAspect` to skip re-decoding when the caller already read it (mobile flow). */
   begin: (file: File, sectionId: SectionId, knownAspect?: number) => Promise<void>;
-  /** The crop modal, or null when idle. Render this wherever the button lives. */
-  cropModal: ReactNode;
+  /**
+   * The flow's overlays — the rights gate, then the crop modal — or null when
+   * idle. Render wherever the button lives.
+   *
+   * Named for what it IS rather than for the crop modal it used to be: a field
+   * called `cropModal` that can render a legal gate is the kind of name this
+   * codebase has been burned by.
+   */
+  uploadOverlays: ReactNode;
 }
 
 export function useSnappetUpload(): SnappetUpload {
@@ -92,6 +106,8 @@ export function useSnappetUpload(): SnappetUpload {
   const textBars = useDesignStore((s) => s.textBars);
   const placeImageSnappet = useDesignStore((s) => s.placeImageSnappet);
   const addUpload = useDesignStore((s) => s.addUpload);
+  const artworkRights = useDesignStore((s) => s.artworkRights);
+  const acceptArtworkRights = useDesignStore((s) => s.acceptArtworkRights);
 
   // The file waiting to be cropped, plus the crop's aspect target (the SUGGESTED
   // snappet's physical size) and the panel it lands in. The aspect target makes the
@@ -105,6 +121,11 @@ export function useSnappetUpload(): SnappetUpload {
   // approved instead of guessing a new one from the aspect.
   const pendingSpan = useRef<TileSpan>({ cols: 1, rows: 1 });
   const pendingName = useRef<string>("Upload");
+  // An upload held at the rights gate: everything the crop step needs, waiting on
+  // one tap. Held rather than re-derived so accepting does not redo the decode.
+  const [gated, setGated] = useState<
+    { file: File; section: SectionId; cropTarget: { width: number; height: number } } | null
+  >(null);
 
   const begin = async (file: File, sectionId: SectionId, knownAspect?: number) => {
     const aspect = knownAspect ?? (await readImageAspect(file));
@@ -127,11 +148,21 @@ export function useSnappetUpload(): SnappetUpload {
     // that formula locked the crop to 2 x 1, then reported 300 DPI on a print
     // that resolves at 133 — below the hard block, which could therefore never
     // fire. No placement means no anchor yet: fall back to the panel's own cell.
-    setCropTarget(
-      placement
-        ? snappetInches(frameConfig, placement.anchorSlotId, span)
-        : { width: span.cols * frameConfig.tileSizeInches, height: span.rows * frameConfig.tileSizeInches },
-    );
+    const cropInches = placement
+      ? snappetInches(frameConfig, placement.anchorSlotId, span)
+      : { width: span.cols * frameConfig.tileSizeInches, height: span.rows * frameConfig.tileSizeInches };
+
+    // THE GATE. Once per design, before the first upload reaches the crop step —
+    // the moment the parent has chosen a file is the moment the question is real,
+    // and it is still early enough that nobody has spent effort on a crop. A
+    // record made under older wording does not count: `UPLOAD_RIGHTS_VERSION` is
+    // compared, not mere presence.
+    if (artworkRights?.version !== UPLOAD_RIGHTS_VERSION) {
+      setGated({ file, section: sectionId, cropTarget: cropInches });
+      return;
+    }
+
+    setCropTarget(cropInches);
     setTarget(sectionId);
     setCropFile(file);
   };
@@ -209,13 +240,34 @@ export function useSnappetUpload(): SnappetUpload {
 
   // Portaled to <body> so no transformed/clipping ancestor can trap the fixed
   // overlay (a real iOS failure mode). Guarded for SSR (document is undefined).
+  const ssr = typeof document === "undefined";
+
+  const gate =
+    gated && !ssr
+      ? createPortal(
+          <UploadRightsGate
+            onAccept={() => {
+              acceptArtworkRights();
+              // Straight on to the crop step with the work `begin` already did.
+              setCropTarget(gated.cropTarget);
+              setTarget(gated.section);
+              setCropFile(gated.file);
+              setGated(null);
+            }}
+            onCancel={() => setGated(null)}
+          />,
+          document.body,
+        )
+      : null;
+
   const cropModal =
-    cropFile && cropTarget && target && typeof document !== "undefined"
+    cropFile && cropTarget && target && !ssr
       ? createPortal(
           <ImageCropModal
             file={cropFile}
             targetInches={cropTarget}
             panelLabel={SECTION_LABELS[target]}
+            note={UPLOAD_RIGHTS.reminder}
             onCancel={() => {
               setCropFile(null);
               setCropTarget(null);
@@ -227,5 +279,5 @@ export function useSnappetUpload(): SnappetUpload {
         )
       : null;
 
-  return { begin, cropModal };
+  return { begin, uploadOverlays: gate ?? cropModal };
 }

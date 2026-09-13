@@ -6,6 +6,8 @@ import type { FrameConfig, PlacedTile } from "@/lib/types";
 import { DEFAULT_FRAME_CONFIG, SCHOOL_FRAME_CONFIG, MAX_HISTORY_DEPTH } from "@/lib/constants/frame";
 import { getAllSlotIds, buildGrid } from "@/lib/utils/slot-generator";
 import { MAX_UPLOADS } from "@/lib/utils/uploads";
+import { UPLOAD_RIGHTS_VERSION } from "@/content/upload-rights";
+import { isCurrentAttestation } from "@/lib/order/artwork-rights";
 import { migrateSchoolDesign } from "@/lib/utils/school-migration";
 import {
   DEFAULT_BOTTOM_BAR,
@@ -951,5 +953,95 @@ describe("a returning visitor survives a persist version bump, on the frame we s
     }
     expect(after.frameConfig).toEqual(config);
     expect(after.designName).toBe("Miller");
+  });
+});
+
+// ─── The uploaded-artwork attestation ────────────────────────────────────────
+//
+// It is design state because one design becomes one order, and the order is what
+// somebody asks about later. These tests pin the three things that make it a
+// record rather than a checkbox: it names the WORDING agreed to, it does not move
+// once made, and anything malformed reads as "never accepted".
+
+describe("artworkRights", () => {
+  it("is empty on a fresh design, so the gate fires on the first upload", () => {
+    expect(makeStore().getState().artworkRights).toBeNull();
+  });
+
+  it("records the wording that was agreed to, not just that something was", () => {
+    const store = makeStore();
+    store.getState().acceptArtworkRights();
+    expect(store.getState().artworkRights).toEqual({
+      version: UPLOAD_RIGHTS_VERSION,
+      acceptedAt: expect.any(Number),
+    });
+  });
+
+  it("does not move the timestamp when the same terms are accepted again", () => {
+    // A second upload, or a hydrate, must not quietly rewrite when the customer
+    // said yes. The action returns the SAME state object in that case, so it also
+    // costs no render.
+    const store = makeStore();
+    store.getState().acceptArtworkRights();
+    const first = store.getState().artworkRights;
+    store.getState().acceptArtworkRights();
+    expect(store.getState().artworkRights).toBe(first);
+  });
+
+  it("survives a reload of the same design", () => {
+    const KEY = "festive-frames-rights-persist-test";
+    const store = createDesignStore(KEY, {});
+    store.getState().acceptArtworkRights();
+    const accepted = store.getState().artworkRights;
+
+    const reopened = createDesignStore(KEY, {});
+    expect(reopened.getState().artworkRights).toEqual(accepted);
+  });
+
+  it.each([
+    ["a bare true", true],
+    ["a version with no timestamp", { version: "2026-09-13" }],
+    ["a timestamp with no version", { acceptedAt: 123 }],
+    ["a string", "accepted"],
+  ])("treats %s in a stored blob as NOT accepted", (_label, stored) => {
+    // The safe direction: a blob that has been hand-edited, truncated or written
+    // by an older shape asks again rather than being trusted. In `merge`, so it
+    // reaches blobs already at the current version — the ones `migrate` never sees.
+    const KEY = `festive-frames-rights-junk-${String(_label).replace(/\W+/g, "-")}`;
+    memoryStorage.setItem(
+      KEY,
+      JSON.stringify({ state: { artworkRights: stored, designName: "Miller" }, version: 7 }),
+    );
+    const store = createDesignStore(KEY, {});
+    expect(store.getState().artworkRights).toBeNull();
+    expect(store.getState().designName).toBe("Miller"); // the rest of the blob is untouched
+  });
+
+  it("keeps a well-formed record of OLDER wording, and does not call it current", () => {
+    // The record is evidence and stays; whether to ask again is a separate
+    // question, answered by `isCurrentAttestation` at the gate.
+    const KEY = "festive-frames-rights-old-wording";
+    const old = { version: "2020-01-01", acceptedAt: 1577836800000 };
+    memoryStorage.setItem(KEY, JSON.stringify({ state: { artworkRights: old }, version: 7 }));
+    const store = createDesignStore(KEY, {});
+    expect(store.getState().artworkRights).toEqual(old);
+    expect(isCurrentAttestation(store.getState().artworkRights)).toBe(false);
+  });
+});
+
+describe("artworkRights and loadDesign", () => {
+  it("CLEARS the attestation when a different design is restored", () => {
+    // The field is deliberately not part of `LoadableDesign`, so a restored design
+    // brings none — and zustand's `set` is a shallow merge, which would otherwise
+    // leave the current visitor's acceptance sitting on artwork they have never
+    // seen. Dormant while only /build restores by token, fatal the day the school
+    // builder gets the same save-design-by-email flow.
+    const store = makeStore();
+    store.getState().acceptArtworkRights();
+    expect(store.getState().artworkRights).not.toBeNull();
+
+    store.getState().loadDesign({ designName: "Somebody else's frame", slots: {} });
+    expect(store.getState().artworkRights).toBeNull();
+    expect(store.getState().designName).toBe("Somebody else's frame");
   });
 });
