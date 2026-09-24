@@ -180,7 +180,8 @@ describe("a Frame color tap reaches PRINT: badge fields and both banners", () =>
     for (const [name, fx, fy] of [
       ["left side badge field", 0.02, 0.35],
       ["top runner", 0.2, 0.05],
-      ["bottom bar", 0.2, 0.93],
+      // Clear of the corner crest (2.5-3.17" from the left) and of the centred name.
+      ["bottom bar", 0.3, 0.93],
     ] as const) {
       const got = at(fx, fy);
       for (let c = 0; c < 3; c++) expect(Math.abs(got[c] - want[c]), `${name}: ${got}`).toBeLessThanOrEqual(3);

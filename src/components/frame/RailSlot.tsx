@@ -16,7 +16,7 @@ import {
 import { buildGrid } from "@/lib/utils/slot-generator";
 import { getPiece } from "@/data/sets";
 import { findUpload } from "@/lib/utils/uploads";
-import { NO_CORNERS, type CornerFlags } from "@/lib/utils/tile-theme";
+import { NO_CORNERS, cornerRadii, radiusCss, type CornerFlags } from "@/lib/utils/tile-theme";
 import { PlacedTileView } from "./PlacedTileView";
 import { SparkleBurst } from "./SparkleBurst";
 import { useDesignStore } from "@/stores/design-store";
@@ -415,10 +415,13 @@ function PlacedTileCell({
           is the design-surface cream — never the black frame base (#111111). This
           is the same surface the empty cell paints, so removal lands cleanly on
           cream with no black flash. */}
+      {/* It wears the TILE's own corners: a flat 2px radius under a frame-corner
+          badge (whose outward corner opens wide) showed as a white wedge past
+          the rounded corner — worst at the school frame's bottom right. */}
       <div
         aria-hidden
-        className="absolute inset-0 rounded-[2px]"
-        style={{ background: "#ffffff" }}
+        className="absolute inset-0"
+        style={{ background: "#ffffff", borderRadius: radiusCss(cornerRadii(unit, corners)) }}
       />
 
       <div

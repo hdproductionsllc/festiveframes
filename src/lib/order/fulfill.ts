@@ -8,7 +8,8 @@
 import type Stripe from "stripe";
 
 import { getDraft, getCartDraft, markFulfilled, unmarkFulfilled, type OrderArtifacts } from "@/lib/order/store";
-import { sendProductionEmails, sendCartCustomerEmail, sendFulfillmentFailureAlert, type ProductionOrderInput, type NamedImage } from "@/lib/email-production";
+import { sendProductionEmails, sendCartCustomerEmail, sendFulfillmentFailureAlert, type ProductionOrderInput, type NamedImage, type OrderFacts } from "@/lib/email-production";
+import { artworkRightsLineFromMetadata } from "@/lib/order/artwork-rights";
 import { composeEufyPrintSheetsServer } from "@/lib/utils/eufy-print-server";
 import { EUFY_JIG_3X12, jigGeometryTag } from "@/config/eufy-jig";
 import type { PartsList } from "@/lib/order/parts-list";
@@ -78,6 +79,25 @@ export function shippingLines(session: Stripe.Checkout.Session): string[] {
 }
 
 /**
+ * What the production email must say about the MONEY and the SCHOOL, read off the
+ * session — the one record that certainly exists. Bill prints from that email, so
+ * a 100%-off coupon order has to say "no money collected, school not credited"
+ * there rather than "New paid order · $0.00", and the artwork-rights record the
+ * checkout wrote into the metadata has to reach him too.
+ */
+export function orderFacts(session: Stripe.Checkout.Session): OrderFacts {
+  const meta = session.metadata ?? {};
+  const donation = Number(meta.donationCents ?? 0);
+  return {
+    paymentStatus: session.payment_status ?? null,
+    discountCents: session.total_details?.amount_discount ?? 0,
+    school: meta.school || null,
+    donationCents: Number.isFinite(donation) && donation > 0 ? donation : 0,
+    artwork: artworkRightsLineFromMetadata(meta),
+  };
+}
+
+/**
  * Idempotently fulfill a paid custom order. `payload` (parts + artifacts) comes
  * from the success-page relay; if absent, we fall back to the in-memory draft.
  * If neither has a payload, we do NOT consume the idempotency claim — a later
@@ -92,12 +112,17 @@ export async function fulfillOrder(
   // we have the SAVED design JSON to render the eufy print sheet from (the client
   // payload carries parts + artifacts, but not the design).
   const draft = await getDraft(orderId);
-  const data = payload ?? (draft ? { parts: draft.parts, artifacts: draft.artifacts } : undefined);
-
-  const customerEmail = session.customer_details?.email ?? null;
   // A school frame is a MySchoolFrame order: its header, subject, sender and inbox
   // (lib/email-msf) — including the alert when something goes wrong with it.
-  const brand = session.metadata?.kind === "school-frame" ? "myschoolframe" : undefined;
+  const isSchool = session.metadata?.kind === "school-frame";
+  const brand = isSchool ? "myschoolframe" : undefined;
+  // A school order is produced from the SERVER draft only. Its builder never
+  // sends a payload here, and accepting one would let anybody holding a valid
+  // session (a 100%-off coupon session included) swap in their own print files.
+  const trusted = isSchool ? undefined : payload;
+  const data = trusted ?? (draft ? { parts: draft.parts, artifacts: draft.artifacts } : undefined);
+
+  const customerEmail = session.customer_details?.email ?? null;
 
   if (!data) {
     // No design/artifacts available yet. Don't burn the idempotency claim.
@@ -112,7 +137,13 @@ export async function fulfillOrder(
   // Auto-render the consolidated eufy sheet (tiles + banners) from the saved
   // design. When the banners all land on the sheet, drop the now-redundant
   // separate banner attachments so the founders get ONE file to print.
-  const eufy = await renderEufyPrintSheets(draft?.design, data.artifacts.banners, data.parts.designName ?? "");
+  //
+  // Not for a school frame: its panels ARE the print files (rendered by the
+  // builder's own composer), and its saved design is the school shape, kept as a
+  // record for a reprint — the /build sheet renderer would misread it.
+  const eufy = isSchool
+    ? { sheets: [], bannersIncluded: false }
+    : await renderEufyPrintSheets(draft?.design, data.artifacts.banners, data.parts.designName ?? "");
 
   const input: ProductionOrderInput = {
     orderId,
@@ -126,6 +157,7 @@ export async function fulfillOrder(
     printSheets: eufy.sheets.length ? eufy.sheets : data.artifacts.printSheets,
     banners: eufy.bannersIncluded ? [] : data.artifacts.banners,
     brand,
+    order: orderFacts(session),
   };
 
   try {

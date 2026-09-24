@@ -10,6 +10,7 @@ import { buildGrid } from "@/lib/utils/slot-generator";
 import { SECTION_LABELS } from "@/lib/utils/sections";
 import { ImageCropModal, type ImageCropResult } from "./ImageCropModal";
 import { placedPreviewPx, thumbnailDataUrl } from "@/lib/utils/uploads";
+import { badgeArtInsetInches } from "@/lib/utils/tile-theme";
 
 // ─── Re-crop an image-snappet resized to a non-matching aspect ────────────────
 //
@@ -130,6 +131,7 @@ export function SnappetRecropModal() {
       targetInches={targetInches}
       panelLabel={panelLabel}
       fieldColor={tile?.field ?? tileFieldColor ?? undefined}
+      safeInsetInches={badgeArtInsetInches(targetInches, frameConfig.tileSizeInches, tileFieldColor ?? undefined)}
       onCancel={close}
       onConfirm={onConfirm}
     />

@@ -3,7 +3,9 @@
 //
 // Verifies the Stripe signature against the RAW request body and the
 // STRIPE_WEBHOOK_SECRET. On checkout.session.completed it logs a
-// structured order record so David can prep and ship orders.
+// structured order record so Henry can prep and ship orders. On
+// charge.refunded it takes a fully refunded school order out of the
+// fundraiser ledger (see handleRefund).
 //
 // IMPORTANT: signature verification requires the unparsed body. We read
 // request.text() and never request.json() here.
@@ -13,8 +15,8 @@ import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 
 import { getStripe } from "@/lib/stripe";
-import { fulfillOrder, fulfillCart } from "@/lib/order/fulfill";
-import { recordSchoolOrder } from "@/lib/order/school-ledger";
+import { fulfillOrder, fulfillCart, type FulfillResult } from "@/lib/order/fulfill";
+import { markSchoolOrderRefunded, recordSchoolOrder } from "@/lib/order/school-ledger";
 
 export const runtime = "nodejs";
 
@@ -52,6 +54,10 @@ export async function POST(request: Request): Promise<NextResponse> {
     const message = err instanceof Error ? err.message : "Invalid signature";
     console.error("[stripe-webhook] Signature verification failed:", message);
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
+  }
+
+  if (event.type === "charge.refunded") {
+    return handleRefund(stripe, event.data.object as Stripe.Charge);
   }
 
   if (event.type === "checkout.session.completed") {
@@ -116,8 +122,10 @@ export async function POST(request: Request): Promise<NextResponse> {
         });
         const result = await fulfillOrder(metadata.orderId, full);
         console.log(`[stripe-webhook] custom order ${metadata.orderId} fulfill via webhook: ${result}`);
+        if (!fulfilled(result)) return redeliver();
       } catch (err) {
         console.error("[stripe-webhook] custom order fulfillment failed:", err);
+        return redeliver();
       }
       return NextResponse.json({ received: true }, { status: 200 });
     }
@@ -132,8 +140,10 @@ export async function POST(request: Request): Promise<NextResponse> {
         });
         const result = await fulfillCart(metadata.cartId, full);
         console.log(`[stripe-webhook] cart ${metadata.cartId} fulfill via webhook: ${result}`);
+        if (!fulfilled(result)) return redeliver();
       } catch (err) {
         console.error("[stripe-webhook] cart fulfillment failed:", err);
+        return redeliver();
       }
       return NextResponse.json({ received: true }, { status: 200 });
     }
@@ -146,4 +156,67 @@ export async function POST(request: Request): Promise<NextResponse> {
   }
 
   return NextResponse.json({ received: true }, { status: 200 });
+}
+
+/**
+ * Did this trigger leave the order produced? "sent" and "already" (another
+ * trigger won) are done. "failed" and "no-payload" are NOT — the claim has been
+ * released and a human alerted, and a 200 here would tell Stripe to stop
+ * retrying, leaving the parent's reload of the thanks page as the only other
+ * way the order ever reaches the printer. A redelivery is safe: the claim is
+ * idempotent and so is the school ledger.
+ */
+function fulfilled(result: FulfillResult): boolean {
+  return result === "sent" || result === "already";
+}
+
+/** Ask Stripe to deliver this event again (it retries non-2xx for up to 3 days). */
+function redeliver(): NextResponse {
+  return NextResponse.json({ received: true, retry: true }, { status: 500 });
+}
+
+/**
+ * A refund takes the order back out of what the school raised.
+ *
+ * Without this, a refunded frame stayed in the ledger and the club was still told
+ * it earned that order's donation. Only a FULL refund counts: a partial one (a
+ * shipping credit, a damaged-part discount) is still a frame that sold, so it
+ * keeps its donation and is only logged for a human to judge.
+ *
+ * A charge does not carry our metadata; the Checkout Session that took the
+ * payment does, so the session is looked up by its payment intent. The account
+ * is shared with Still Beside Me, so anything that is not a school frame is
+ * ignored exactly as the completed branch ignores it. A lookup that fails asks
+ * Stripe to redeliver; the ledger mark is idempotent, so a retry is safe.
+ *
+ * Needs `charge.refunded` ticked on the webhook endpoint in the Stripe dashboard.
+ */
+async function handleRefund(stripe: Stripe, charge: Stripe.Charge): Promise<NextResponse> {
+  const ok = NextResponse.json({ received: true }, { status: 200 });
+  if (!charge.refunded) {
+    console.log(`[stripe-webhook] charge ${charge.id} partly refunded; the school ledger is unchanged.`);
+    return ok;
+  }
+  const paymentIntent =
+    typeof charge.payment_intent === "string" ? charge.payment_intent : charge.payment_intent?.id;
+  if (!paymentIntent) return ok;
+
+  let session: Stripe.Checkout.Session | undefined;
+  try {
+    const found = await stripe.checkout.sessions.list({ payment_intent: paymentIntent, limit: 1 });
+    session = found.data[0];
+  } catch (err) {
+    console.error("[stripe-webhook] refund: session lookup failed:", err instanceof Error ? err.message : err);
+    return redeliver();
+  }
+  const metadata = session?.metadata ?? {};
+  if (metadata.kind !== "school-frame" || !metadata.orderId) return ok;
+
+  const marked = await markSchoolOrderRefunded(metadata.orderId);
+  console.log(
+    marked
+      ? `[stripe-webhook] school order ${metadata.orderId} (${metadata.school ?? "?"}) refunded; removed from the school's total.`
+      : `[stripe-webhook] school order ${metadata.orderId} refunded but was not in the ledger (a $0 order, or its write was lost).`,
+  );
+  return ok;
 }

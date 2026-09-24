@@ -13,7 +13,7 @@ import {
   type BadgeSpot,
 } from "@/lib/utils/snappet";
 import { putFullRes } from "@/lib/utils/image-store";
-import { fieldForArtPixels } from "@/lib/utils/tile-theme";
+import { badgeArtInsetInches, fieldForArtPixels } from "@/lib/utils/tile-theme";
 import { reviewUploadedImage } from "@/lib/utils/image-moderation";
 import type { FrameConfig, PlacedTile, PlacedTextBar, SectionId, SectionState, TileSpan } from "@/lib/types";
 import { placedPreviewPx, thumbnailDataUrl } from "@/lib/utils/uploads";
@@ -383,6 +383,13 @@ export function useSnappetUpload(): SnappetUpload {
             panelLabel={targetLabel || SECTION_LABELS[target]}
             fieldColor={
               (destination === "logo" ? sections[target]?.text?.backgroundColor : tileFieldColor) ?? undefined
+            }
+            // A badge's rim and bevel are drawn over the photo's edge; a fitted
+            // image is kept inside them. The banner crest has no badge chrome.
+            safeInsetInches={
+              destination === "logo"
+                ? 0
+                : badgeArtInsetInches(cropTarget, frameConfig.tileSizeInches, tileFieldColor ?? undefined)
             }
             note={UPLOAD_RIGHTS.reminder}
             onCancel={() => {

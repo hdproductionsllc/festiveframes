@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
+import { sendOrThrow } from "@/lib/resend-send";
 import { recordSubscriber } from "@/lib/order/store";
 
 // Email capture endpoint for the homepage / thanks-page capture form.
@@ -34,7 +35,7 @@ async function notifyTeam(email: string): Promise<boolean> {
   if (!apiKey || !to) return false;
   const from = process.env.EMAIL_FROM || "Festive Frames <onboarding@resend.dev>";
   try {
-    await new Resend(apiKey).emails.send({
+    await sendOrThrow(new Resend(apiKey), {
       from,
       to,
       replyTo: email,

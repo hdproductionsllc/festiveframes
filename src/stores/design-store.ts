@@ -426,6 +426,16 @@ interface DesignState {
    */
   kitMarksApplied?: boolean;
   /**
+   * The school intake's answers — who it is for, the banner line, year, number,
+   * own words, name, activity and the design card last laid. Persisted WITH the
+   * design because they describe it: they used to be component state, so a reload
+   * or a return visit restored the frame ("SAM · CLASS OF 2027") beside an empty
+   * form, and the next tap wrote from the form's stale defaults. Null on /build and
+   * on a school design nobody has answered for yet. Not in undo history: undo
+   * moves the frame, and the form follows the parent, not the frame.
+   */
+  intake: SchoolIntake | null;
+  /**
    * Art the customer uploaded, kept as REUSABLE palette pieces.
    *
    * Uploading used to place the art once and forget it, so a crest on both wings
@@ -610,6 +620,8 @@ interface DesignState {
 
   // Actions — meta
   setDesignName: (name: string) => void;
+  /** Merge answers into the school intake (see `intake`). */
+  setIntake: (patch: Partial<SchoolIntake>) => void;
   setPlateState: (abbr: string) => void;
   /**
    * THE frame colour, `#rrggbb`: the body, every badge's field and both banners'
@@ -637,12 +649,52 @@ interface DesignState {
   // Actions — history
   undo: () => void;
   redo: () => void;
+  /** Make the CURRENT frame the first one undo can return to — for a frame laid
+   *  on arrival, which the visitor never saw anything before. */
+  resetHistory: () => void;
   canUndo: () => boolean;
   canRedo: () => boolean;
 }
 
 /** The serializable design payload — the fields that fully define a design (the
  *  same set `partialize` persists). Used to save a design and to restore one. */
+/** The school intake's answers, as persisted. Every field optional: a blob only
+ *  carries what the parent has answered. */
+export interface SchoolIntake {
+  buyerId?: string;
+  /** A `BannerLineId`, or null for the buyer's default line. */
+  line?: string | null;
+  lineText?: string;
+  year?: string;
+  number?: string;
+  name?: string;
+  activity?: string;
+  /** The design card last laid; null once the frame has moved off it. */
+  preset?: string | null;
+}
+
+const INTAKE_STRING_KEYS = ["buyerId", "lineText", "year", "number", "name", "activity"] as const;
+
+/** A persisted intake, or null when it is anything but a well-formed one (a blob
+ *  from before it existed, or hand-edited). Same object when already clean. */
+function cleanIntake(raw: unknown): SchoolIntake | null {
+  if (!raw || typeof raw !== "object") return null;
+  const r = raw as Record<string, unknown>;
+  let dirty = false;
+  const out: SchoolIntake = {};
+  for (const k of INTAKE_STRING_KEYS) {
+    if (r[k] === undefined) continue;
+    if (typeof r[k] === "string") out[k] = (r[k] as string).slice(0, 80);
+    else dirty = true;
+  }
+  for (const k of ["line", "preset"] as const) {
+    if (r[k] === undefined) continue;
+    if (r[k] === null || typeof r[k] === "string") out[k] = r[k] as string | null;
+    else dirty = true;
+  }
+  return dirty || Object.keys(out).length !== Object.keys(r).length ? out : (raw as SchoolIntake);
+}
+
 export type LoadableDesign = Partial<
   Pick<
     DesignState,
@@ -904,8 +956,11 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
         uploads: [],
         artworkRights: null,
         slots: initialSlots ? structuredClone(initialSlots) : {},
-        // Born with the kit's marks already in the seed.
-        kitMarksApplied: true,
+        // Born with the kit's marks already in the seed — but only when the kit HAS
+        // marks. A design born on a markless kit has had nothing applied, and
+        // saying otherwise is what would stop that school's logos ever reaching it.
+        kitMarksApplied: markUpgrade ? true : undefined,
+        intake: null,
         bottomBar: { ...DEFAULT_BOTTOM_BAR },
         qrCode: { ...DEFAULT_QR_CODE, url: initialQrUrl ?? DEFAULT_QR_CODE.url },
         frameConfig: { ...baseFrameConfig },
@@ -1324,6 +1379,8 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
               textBars: [],
               selectedBarId: null,
               sections,
+              // The answers described the frame being thrown away.
+              intake: null,
               updatedAt: Date.now(),
             });
           });
@@ -1630,6 +1687,10 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
           set({ designName: name, updatedAt: Date.now() });
         },
 
+        setIntake: (patch) => {
+          set((state) => ({ intake: { ...(state.intake ?? {}), ...patch }, updatedAt: Date.now() }));
+        },
+
         setFrameColor: (hex) => {
           // ONE colour, every surface. The frame used to have three: the body
           // (`frameColor`), the badge fields (`tileFieldColor`) and each banner's own
@@ -1717,6 +1778,8 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
             // comment on the field says a restore re-asks; this is the line that
             // makes that true, because a comment describing a guard is not a guard.
             artworkRights: null,
+            // The answers belong to the design they were given for, not this one.
+            intake: null,
             selectedBarId: null,
             selectedSectionId: null,
             history: [],
@@ -1861,6 +1924,9 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
               textBars,
               selectedBarId: reconcileSelectedBar(get().selectedBarId, textBars),
               historyIndex: newIndex,
+              // Undo moves the frame off whichever design card was laid, so the
+              // card stops claiming it (the answers themselves stay).
+              intake: state.intake?.preset ? { ...state.intake, preset: null } : state.intake,
               updatedAt: Date.now(),
             };
           });
@@ -1879,9 +1945,16 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
               textBars,
               selectedBarId: reconcileSelectedBar(get().selectedBarId, textBars),
               historyIndex: newIndex,
+              // Undo moves the frame off whichever design card was laid, so the
+              // card stops claiming it (the answers themselves stay).
+              intake: state.intake?.preset ? { ...state.intake, preset: null } : state.intake,
               updatedAt: Date.now(),
             };
           });
+        },
+
+        resetHistory: () => {
+          set({ history: [], historyIndex: -1 });
         },
 
         canUndo: () => get().historyIndex > 0,
@@ -1923,6 +1996,7 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
         dieCut: state.dieCut,
         sections: state.sections,
         kitMarksApplied: state.kitMarksApplied,
+        intake: state.intake,
         updatedAt: state.updatedAt,
       }),
       // v6 is the first version to persist slots/textBars/qrCode/bottomBar. Any
@@ -1956,6 +2030,8 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
         // and not `migrate`, because those blobs are already at the current version
         // and migrate would never run for them. Same object when it is already an
         // array, so a hydrate with nothing to fix does not churn renders.
+        // The intake: anything malformed (or a blob from before it) is no answers.
+        merged.intake = cleanIntake(merged.intake);
         if (!Array.isArray(merged.uploads)) merged.uploads = [];
         else if (merged.uploads.length > MAX_UPLOADS) merged.uploads = merged.uploads.slice(0, MAX_UPLOADS);
         // A blob saved before the artwork-rights gate existed carries no record, and
@@ -2037,7 +2113,14 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
           // A design saved before its school had marks gets them ONCE — the
           // crest on the bottom banner and the school's badges in place of the
           // generic stand-ins. The flag keeps a later deliberate removal removed.
-          if (markUpgrade) {
+          //
+          // A kit with no marks has applied nothing, so its designs never carry
+          // the flag — including a blob that picked up the fresh store's `true`
+          // before this rule existed. Otherwise the day that school's logos
+          // arrive, its returning parents would be told they already had them.
+          if (!markUpgrade) {
+            merged.kitMarksApplied = undefined;
+          } else {
             const up = upgradeKitMarks(
               // Read off the SAVED blob, not `merged`: a blob from before the flag
               // has no key, and the spread would hand it the fresh store's `true`.

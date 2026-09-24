@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { recordSchoolOrder, schoolTotals, __memOrdersForTest } from "./school-ledger";
+import { markSchoolOrderRefunded, recordSchoolOrder, schoolTotals, __memOrdersForTest } from "./school-ledger";
 
 /**
  * This is the money record a school is owed against, so the properties that
@@ -84,5 +84,38 @@ describe("the fundraiser ledger", () => {
     expect(t.frames).toBe(1);
     expect(t.raisedCents).toBe(0);
     expect(Number.isNaN(t.raisedCents)).toBe(false);
+  });
+});
+
+describe("a refunded order", () => {
+  it("stops counting toward what the school raised", async () => {
+    await recordSchoolOrder({ orderId: "kept", school: "ladue-rams", donationCents: 500 });
+    await recordSchoolOrder({ orderId: "refunded", school: "ladue-rams", donationCents: 500 });
+    expect(await markSchoolOrderRefunded("refunded")).toBe(true);
+    const t = await schoolTotals("ladue-rams");
+    expect(t.frames).toBe(1);
+    expect(t.raisedCents).toBe(500);
+  });
+
+  it("STAYS out when the paid event is redelivered after the refund", async () => {
+    // Why the row is marked rather than deleted: the insert is ON CONFLICT DO
+    // NOTHING, so a deleted row would be re-created by the next redelivery.
+    await recordSchoolOrder({ orderId: "r", school: "ladue-rams", donationCents: 500 });
+    await markSchoolOrderRefunded("r");
+    await recordSchoolOrder({ orderId: "r", school: "ladue-rams", donationCents: 500 });
+    expect((await schoolTotals("ladue-rams")).frames).toBe(0);
+  });
+
+  it("keeps the FIRST refund time when the refund event is redelivered", async () => {
+    await recordSchoolOrder({ orderId: "r", school: "ladue-rams", donationCents: 500 });
+    await markSchoolOrderRefunded("r");
+    const first = __memOrdersForTest.get("r")?.refundedAt;
+    await markSchoolOrderRefunded("r");
+    expect(__memOrdersForTest.get("r")?.refundedAt).toBe(first);
+  });
+
+  it("reports an order the ledger never had (a $0 order records nothing)", async () => {
+    expect(await markSchoolOrderRefunded("never-recorded")).toBe(false);
+    expect(await markSchoolOrderRefunded("")).toBe(false);
   });
 });

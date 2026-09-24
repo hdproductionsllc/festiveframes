@@ -437,6 +437,8 @@ export const KEY_REFUSAL_COPY: Record<KeyRefusal, string> = {
   "no-flat-backdrop":
     "This picture has a busy background, so there's nothing clean to remove. Crop in tighter, or use a version of the logo on a plain white background.",
   "already-cut-out": "This one already has its background removed.",
+  // Shown without being asked for (the probe runs on every upload), so it talks
+  // about THEIR picture and what will happen, not about a logo they may not have.
   "would-erase-art":
-    "Removing the background would have taken the logo with it - the artwork is too close in colour to what's behind it.",
+    "There's no separate background to cut out here - the picture and what's behind it are too close in colour. It goes on the badge just as it is.",
 };

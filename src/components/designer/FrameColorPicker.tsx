@@ -31,6 +31,17 @@ const STOCK: ReadonlyArray<[string, string]> = [
 const same = (a: string | null | undefined, b: string | null | undefined) =>
   (a ?? "").toLowerCase() === (b ?? "").toLowerCase();
 
+/** Close enough that two swatches read as the same colour (RGB distance, 0–441).
+ *  Parkway Central's #AB1E38 and the stock crimson #9E1B32 are 15 apart, and the
+ *  grid offered them as two choices that look identical. */
+const NEAR_DISTANCE = 32;
+function near(a: string, b: string | null | undefined): boolean {
+  if (!b || !/^#[0-9a-f]{6}$/i.test(a) || !/^#[0-9a-f]{6}$/i.test(b)) return same(a, b);
+  const ch = (h: string, i: number) => parseInt(h.slice(1 + i * 2, 3 + i * 2), 16);
+  const d = Math.hypot(ch(a, 0) - ch(b, 0), ch(a, 1) - ch(b, 1), ch(a, 2) - ch(b, 2));
+  return d < NEAR_DISTANCE;
+}
+
 export function FrameColorPicker() {
   const frameColor = useDesignStore((s) => s.frameColor);
   const tileFieldColor = useDesignStore((s) => s.tileFieldColor);
@@ -51,7 +62,7 @@ export function FrameColorPicker() {
   const schoolSurface = brandDefaults.tileFieldColor ?? null;
   const surfaces: Array<[string, string]> = [
     ...(schoolSurface ? [[schoolSurface, "School color"] as [string, string]] : []),
-    ...STOCK.filter(([hex]) => !same(hex, schoolSurface)),
+    ...STOCK.filter(([hex]) => !near(hex, schoolSurface)),
   ];
 
   const surfaceAtDefault = same(current, brandDefaults.tileFieldColor ?? brandDefaults.frameColor);
@@ -62,14 +73,15 @@ export function FrameColorPicker() {
     <div className="ff-panel p-4">
       <div className="mb-1 flex items-center justify-between gap-2">
         <h3 className="ff-h2">Frame color</h3>
-        <button
+        {/* Shown only when there is something to reset. Disabled, it was light grey
+            on light grey and read as broken rather than "nothing to undo". */}
+        {!atDefaults && <button
           type="button"
           onClick={resetColors}
-          disabled={atDefaults}
-          className="ff-btn ff-btn-secondary shrink-0 px-2 py-1 text-[11px] max-lg:min-h-11 disabled:opacity-40"
+          className="ff-btn ff-btn-secondary shrink-0 px-2 py-1 text-[11px] max-lg:min-h-11"
         >
           {schoolSurface ? "Reset to school colors" : "Reset colors"}
-        </button>
+        </button>}
       </div>
       <p className="ff-help mb-3">Behind every badge and both banners.</p>
 
@@ -100,10 +112,7 @@ export function FrameColorPicker() {
             label="Rim color"
             background={rimColor ? undefined : brassGradientCss()}
           />
-          <div className="min-w-0 flex-1">
-            <p className="text-[12px] font-semibold leading-tight text-[var(--ff-ink,#1e1b17)]">Rim</p>
-            <p className="ff-help leading-tight">The edge around every badge and banner</p>
-          </div>
+          <p className="min-w-0 flex-1 text-[12px] font-semibold leading-tight text-[var(--ff-ink,#1e1b17)]">Rim</p>
           <div className="flex shrink-0 gap-1.5">
             {brandDefaults.rimColor && (
               <PresetChip
@@ -123,6 +132,9 @@ export function FrameColorPicker() {
             />
           </div>
         </div>
+        {/* Its own line: squeezed beside the swatches it wrapped to two lines in
+            the desktop column. */}
+        <p className="ff-help mt-1 leading-tight">The edge around every badge and banner.</p>
       </div>
     </div>
   );

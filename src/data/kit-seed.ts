@@ -47,16 +47,26 @@ export interface SeedTile {
 export const GENERIC_MARKS: readonly string[] = PRESET_GENERIC_MARKS;
 
 /**
- * The two marks a kit leads with.
+ * The two marks a kit leads with — THE rule, exported so the one-time logo
+ * upgrade for saved designs (school-store.ts) lands exactly the frame a new
+ * visitor is seeded with. It once re-derived the pair from `kitMarkIds`, whose
+ * one-mark fallback is an ACTIVITY (for presets), and gave every returning pilot
+ * parent the same sport badge twice and the logo once.
  *
  * The fallbacks must dodge the kit's OWN signature. A school we could only partly
  * research carries deliberately non-claiming badges (honor roll, service) in its
  * signature, and the generic mark used to be `hs:honor-star` unconditionally —
  * which stacked an honor star directly on top of an honor star, the one thing the
  * badge rules forbid. The seeding test caught it on four kits at once.
+ *
+ * `ownMarks: false` answers "what would this kit have been seeded with before it
+ * had marks of its own" — the generic stand-ins the upgrade swaps out.
  */
-function kitMarks(kit: SchoolKit): [string, string] {
-  const own = (kit.marks?.badges ?? []).map((b) => markPieceId(kit.slug, b.key));
+export function kitMarkPair(
+  kit: Pick<SchoolKit, "slug" | "marks" | "signature">,
+  { ownMarks = true }: { ownMarks?: boolean } = {},
+): [string, string] {
+  const own = ownMarks ? (kit.marks?.badges ?? []).map((b) => markPieceId(kit.slug, b.key)) : [];
   const signature = new Set(kit.signature ?? []);
   const generic = GENERIC_MARKS.filter((id) => !signature.has(id));
   // A signature that used up the whole generic list would leave nothing to pick
@@ -121,7 +131,7 @@ function columnPieces(n: number, marks: [string, string], signature: string[], s
  * `badgeStack` too) is how a seed came to name a span the frame would refuse.
  */
 export function kitSeedTiles(kit: SchoolKit, config: FrameConfig): Record<string, SeedTile> {
-  const marks = kitMarks(kit);
+  const marks = kitMarkPair(kit);
   const out: Record<string, SeedTile> = {};
   for (const [i, side] of (["wing-left", "wing-right"] as const).entries()) {
     const column = sideColumn(config, side);

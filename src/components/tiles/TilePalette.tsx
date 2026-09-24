@@ -25,16 +25,18 @@ interface TilePaletteProps {
   /** The active school kit's own crest/mascot badges, shown ahead of the set.
    *  Kit-scoped by design — see TileGrid's extraPieces. */
   extraPieces?: readonly TilePiece[];
-  /** The phone tray's one-line instruction. /build keeps its own wording; the
-   *  school builder calls them badges. */
-  mobileHint?: string;
+  /** The phone tray's one-line instruction. /build keeps its own wording; `null`
+   *  shows none (the school builder's pinned status line already gives it). */
+  mobileHint?: string | null;
+  /** The desktop palette's instruction. /build keeps its own wording. */
+  desktopHint?: string;
   /** Whether the phone tray opens with Fill / Random / Mirror / Clear / Undo
    *  showing. /build keeps them open; the school builder, whose parents mostly
    *  place a badge or two, starts with just the badges. */
   mobileToolsOpen?: boolean;
 }
 
-export function TilePalette({ surfacedSetIds, extraPieces, mobileHint, mobileToolsOpen }: TilePaletteProps = {}) {
+export function TilePalette({ surfacedSetIds, extraPieces, mobileHint, desktopHint, mobileToolsOpen }: TilePaletteProps = {}) {
   return (
     <>
       {/* Desktop / Tablet — palette panel (left side of the tools row) */}
@@ -42,7 +44,7 @@ export function TilePalette({ surfacedSetIds, extraPieces, mobileHint, mobileToo
         data-tour="tiles"
         className="bsk-panel-blue hidden md:flex flex-col w-full lg:basis-0 lg:grow-[50] min-w-0 p-3 bg-surface-800/50 rounded-xl border border-surface-700/50"
       >
-        <DesktopPaletteContent surfacedSetIds={surfacedSetIds} extraPieces={extraPieces} />
+        <DesktopPaletteContent surfacedSetIds={surfacedSetIds} extraPieces={extraPieces} desktopHint={desktopHint} />
       </aside>
 
       {/* Mobile — stacked tile tray (tiles always visible, no hunting) */}
@@ -58,14 +60,18 @@ export function TilePalette({ surfacedSetIds, extraPieces, mobileHint, mobileToo
 
 /* ────────────────────────────── Desktop ────────────────────────────── */
 
-function DesktopPaletteContent({ surfacedSetIds, extraPieces }: TilePaletteProps) {
+function DesktopPaletteContent({
+  surfacedSetIds,
+  extraPieces,
+  desktopHint = "Tap a tile then tap the frame, or drag it on. Drag a tile off to remove.",
+}: TilePaletteProps) {
   return (
     <div className="flex min-h-0 flex-col gap-2">
       {/* Tools + a COMPACT one-line hint sit ABOVE the tiles. ("Start from a Look"
           now lives in the header, freeing the rail for tiles.) */}
       <QuickActions surfacedSetIds={surfacedSetIds} />
       <p className="text-center text-xs font-semibold leading-snug text-surface-300">
-        Tap a tile then tap the frame, or drag it on. Drag a tile off to remove.
+        {desktopHint}
       </p>
       {/* Tile grid at natural height — no overflow clip here. (An overflow-y scroll
           would clip the "● Placing" badge that pops ABOVE the top row of tiles when
@@ -101,11 +107,13 @@ function MobileTileTray({
       {/* Instruction + Tools toggle — ABOVE the picker so the actions are the
           first thing in the tray. */}
       <div className="px-3 pb-1.5 pt-3">
-        <div className="flex items-center gap-2">
-          <p className="flex-1 rounded-full border-2 border-brand-gold/60 bg-brand-gold/15 px-3 py-1.5
-            text-center text-[13px] font-extrabold leading-snug text-[#1e1b17]">
-            {mobileHint}
-          </p>
+        <div className="flex items-center justify-end gap-2">
+          {mobileHint && (
+            <p className="flex-1 rounded-full border-2 border-brand-gold/60 bg-brand-gold/15 px-3 py-1.5
+              text-center text-[13px] font-extrabold leading-snug text-[#1e1b17]">
+              {mobileHint}
+            </p>
+          )}
           <button
             onClick={() => setOptionsOpen((v) => !v)}
             aria-expanded={optionsOpen}

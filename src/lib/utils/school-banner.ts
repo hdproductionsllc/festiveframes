@@ -63,6 +63,32 @@ export function normalizeLine(text: string | null | undefined): string {
   return (text ?? "").trim().replace(/\s+/g, " ").toUpperCase();
 }
 
+/**
+ * What a parent's typing can put on a banner: the banner faces are type, not
+ * emoji, so a pasted "GO STANG🐎 🏒" drew full-colour emoji on the frame that the
+ * print cannot reproduce — and each one spent two of the line's characters.
+ * Pictographs (with their joiners, skin tones and presentation selectors) are
+ * dropped and line breaks become spaces.
+ */
+export function bannerTypeable(raw: string): string {
+  return raw
+    .replace(/[\p{Extended_Pictographic}\u{FE0F}\u{FE0E}\u{200D}\u{20E3}\u{1F3FB}-\u{1F3FF}]/gu, "")
+    .replace(/[\r\n\t]+/g, " ");
+}
+
+/**
+ * `text` in at most `max` characters, cut at a WORD boundary when it has to be
+ * cut. A pasted long name was sliced mid-word ("MARY ANNE SMITH-JONES LO").
+ * A single word longer than `max` is the one case that still has to be sliced.
+ */
+export function fitAtWord(text: string, max: number): string {
+  const t = text.replace(/\s+/g, " ").trim();
+  if (t.length <= max) return t;
+  if (max <= 0) return "";
+  const cut = t.slice(0, max + 1).lastIndexOf(" ");
+  return (cut > 0 ? t.slice(0, cut) : t.slice(0, max)).trim();
+}
+
 export interface TopLineInput {
   /** The kit's banner seeds, when this builder is a school's own page. */
   kit?: { banners?: { bottom?: string; tagline?: string } } | null;

@@ -155,7 +155,9 @@ const memSubscribers = new Set<string>();
 
 function memSweep(): void {
   const cutoff = Date.now() - TTL_MS;
-  for (const [id, d] of memDrafts) if (d.savedAt < cutoff) memDrafts.delete(id);
+  // A FULFILLED order's draft is its only durable copy of the print files — see
+  // the Postgres sweep in saveDraft.
+  for (const [id, d] of memDrafts) if (d.savedAt < cutoff && !memFulfilled.has(id)) memDrafts.delete(id);
   for (const [id, c] of memCarts) if (c.savedAt < cutoff) memCarts.delete(id);
 }
 
@@ -191,9 +193,16 @@ export async function saveDraft(draft: Omit<OrderDraft, "savedAt">): Promise<voi
     throw err;
   }
 
-  // Opportunistic TTL cleanup — best-effort, never break a save.
+  // Opportunistic TTL cleanup — best-effort, never break a save. It sweeps
+  // ABANDONED drafts only: once an order is fulfilled its draft is the one server
+  // copy of what was printed (the panels, the proof, the design), which a remake,
+  // a warranty claim or a lost production email all need long after 24 hours.
   try {
-    await p.query(`DELETE FROM order_drafts WHERE saved_at < now() - interval '${TTL_SQL}'`);
+    await p.query(
+      `DELETE FROM order_drafts d
+        WHERE d.saved_at < now() - interval '${TTL_SQL}'
+          AND NOT EXISTS (SELECT 1 FROM order_fulfilled f WHERE f.order_id = d.order_id)`,
+    );
   } catch (err) {
     console.error("[order/store] TTL cleanup failed:", err instanceof Error ? err.message : err);
   }

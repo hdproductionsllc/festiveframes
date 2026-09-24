@@ -8,6 +8,7 @@ import { schoolTotals, __memOrdersForTest } from "@/lib/order/school-ledger";
 // collected that could be sent to the club.
 
 let event: unknown;
+let sessionsByIntent: Record<string, unknown> = {};
 vi.mock("@/lib/stripe", () => ({
   getStripe: () => ({
     webhooks: { constructEvent: () => event },
@@ -15,6 +16,10 @@ vi.mock("@/lib/stripe", () => ({
     checkout: {
       sessions: {
         retrieve: async () => (event as { data: { object: unknown } }).data.object,
+        // A refund names only the payment intent; the route finds our session by it.
+        list: async ({ payment_intent }: { payment_intent: string }) => ({
+          data: sessionsByIntent[payment_intent] ? [sessionsByIntent[payment_intent]] : [],
+        }),
       },
     },
   }),
@@ -45,6 +50,7 @@ beforeEach(() => {
   process.env.STRIPE_WEBHOOK_SECRET = "whsec_test";
   __memOrdersForTest.clear();
   fulfillOrder.mockClear();
+  sessionsByIntent = {};
 });
 afterEach(() => {
   delete process.env.STRIPE_WEBHOOK_SECRET;
@@ -76,5 +82,70 @@ describe("POST /api/stripe/webhook — the fundraiser ledger", () => {
     await POST(req());
     expect(fulfillOrder).not.toHaveBeenCalled();
     expect((await schoolTotals("sluh-jr-bills")).frames).toBe(0);
+  });
+});
+
+describe("POST /api/stripe/webhook — an order that did not reach the printer is redelivered", () => {
+  it.each(["failed", "no-payload"])("answers 500 when fulfilment returns %s, so Stripe retries", async (result) => {
+    fulfillOrder.mockResolvedValueOnce(result);
+    event = completed(schoolSession("paid"));
+    const res = await POST(req());
+    expect(res.status).toBe(500);
+    // The ledger write is idempotent, so the redelivery cannot double-count.
+    await POST(req());
+    expect((await schoolTotals("sluh-jr-bills")).frames).toBe(1);
+  });
+
+  it.each(["sent", "already"])("answers 200 when fulfilment returns %s", async (result) => {
+    fulfillOrder.mockResolvedValueOnce(result);
+    event = completed(schoolSession("paid"));
+    expect((await POST(req())).status).toBe(200);
+  });
+
+  it("answers 500 when fulfilment throws", async () => {
+    fulfillOrder.mockRejectedValueOnce(new Error("db down"));
+    event = completed(schoolSession("paid"));
+    expect((await POST(req())).status).toBe(500);
+  });
+});
+
+describe("POST /api/stripe/webhook — a refund comes out of the school's total", () => {
+  const refunded = (refunded: boolean) => ({
+    type: "charge.refunded",
+    data: { object: { id: "ch_1", payment_intent: "pi_1", refunded } },
+  });
+
+  async function paidOrder() {
+    event = completed(schoolSession("paid"));
+    await POST(req());
+    expect((await schoolTotals("sluh-jr-bills")).frames).toBe(1);
+  }
+
+  it("removes a FULLY refunded school order, and a redelivered paid event does not bring it back", async () => {
+    await paidOrder();
+    sessionsByIntent = { pi_1: schoolSession("paid") };
+    event = refunded(true);
+    expect((await POST(req())).status).toBe(200);
+    expect((await schoolTotals("sluh-jr-bills")).raisedCents).toBe(0);
+
+    event = completed(schoolSession("paid"));
+    await POST(req());
+    expect((await schoolTotals("sluh-jr-bills")).frames).toBe(0);
+  });
+
+  it("keeps a PARTLY refunded order: the frame still sold", async () => {
+    await paidOrder();
+    sessionsByIntent = { pi_1: schoolSession("paid") };
+    event = refunded(false);
+    await POST(req());
+    expect((await schoolTotals("sluh-jr-bills")).frames).toBe(1);
+  });
+
+  it("ignores a refund on another site's sale (the Stripe account is shared)", async () => {
+    await paidOrder();
+    sessionsByIntent = { pi_1: { id: "cs_other", metadata: { orderId: "o-1" } } };
+    event = refunded(true);
+    expect((await POST(req())).status).toBe(200);
+    expect((await schoolTotals("sluh-jr-bills")).frames).toBe(1);
   });
 });

@@ -221,6 +221,20 @@ describe("the school presets", () => {
     for (let i = 1; i < leftK.length; i++) expect(leftK[i]).not.toBe(leftK[i - 1]);
   });
 
+  it("replaces only a STAND-IN with the chosen activity, never the school's own second mark", () => {
+    const school = getPreset("school")!;
+    const mascot = "mark:sluh-jr-bills:billiken";
+    const own = presetTiles(school, "hs:soccer-patch", mascot, "mark:sluh-jr-bills:shield").map(([, p]) => p);
+    expect(own).toContain("mark:sluh-jr-bills:shield");
+    expect(own).not.toContain("hs:soccer-patch");
+    // One-mark school: the signature stand-in gives way to what the parent chose...
+    const standIn = presetTiles(school, "hs:soccer-patch", mascot, "hs:track").map(([, p]) => p);
+    expect(standIn).not.toContain("hs:track");
+    expect(standIn).toContain("hs:soccer-patch");
+    // ...and stays when nothing was chosen (the owner's 2026-09-24 call).
+    expect(presetTiles(school, null, mascot, "hs:track").map(([, p]) => p)).toContain("hs:track");
+  });
+
   it("asks the school design for NOTHING — no sport, no year, no name", () => {
     // It is the only one an alum, a teacher or a grandparent can use with an
     // empty intake, which is the gap the other two leave.
@@ -406,6 +420,19 @@ describe("the shipping presets, resolved for every pilot school", () => {
       for (let i = 1; i < run.length; i++) {
         expect(run[i][1], `${preset.id} repeats ${run[i][1]} on ${kit.slug}`).not.toBe(run[i - 1][1]);
       }
+    }
+  });
+
+  it.each(cases)("$label never shows a different activity from the one the parent chose", ({ kit, preset }) => {
+    // A one-mark school's second position is its signature activity until the
+    // parent picks one. After that, a Soccer parent tapping "Just the school" on
+    // Ladue got four TRACK badges while the menu still read Soccer.
+    const marks = kitMarkIds(kit);
+    const chosen = ["hs:drama", "hs:orchestra", "hs:chess"].find((id) => !kit.signature?.includes(id))!;
+    const tiles = presetTiles(preset, chosen, marks.mascot, marks.alt);
+    for (const [, piece] of tiles) {
+      if (piece.startsWith("mark:")) continue;
+      expect(kit.signature ?? [], `${preset.id} lays ${piece} on ${kit.slug} for a ${chosen} student`).not.toContain(piece);
     }
   });
 

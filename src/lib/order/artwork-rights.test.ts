@@ -22,15 +22,29 @@ const uploaded: PlacedTile = {
 
 describe("designHasUploadedArt", () => {
   it("is false for a frame built only from the library", () => {
-    expect(designHasUploadedArt({ a: setPiece, b: setPiece })).toBe(false);
+    expect(designHasUploadedArt({ slots: { a: setPiece, b: setPiece } })).toBe(false);
   });
 
   it("is true as soon as ONE tile carries the customer's own art", () => {
-    expect(designHasUploadedArt({ a: setPiece, b: uploaded })).toBe(true);
+    expect(designHasUploadedArt({ slots: { a: setPiece, b: uploaded } })).toBe(true);
   });
 
   it("is false for an empty frame", () => {
-    expect(designHasUploadedArt({})).toBe(false);
+    expect(designHasUploadedArt({ slots: {} })).toBe(false);
+  });
+
+  // The banner crest upload prints too (compose-school-frame loads its fullResId).
+  // A frame whose ONLY upload was a crest once went to production as "our library only".
+  it("counts a crest the customer uploaded onto a banner", () => {
+    const text = { content: "RAMS", logo: { url: "data:image/png;base64,AA", fullResId: "fr1", placement: "both" as const } };
+    const sections = { bottom: { text } } as unknown as Parameters<typeof designHasUploadedArt>[0]["sections"];
+    expect(designHasUploadedArt({ slots: { a: setPiece }, sections })).toBe(true);
+  });
+
+  it("does not count the school's own kit crest", () => {
+    const text = { content: "RAMS", logo: { url: "/kits/ladue-rams/crest.png", placement: "both" as const } };
+    const sections = { bottom: { text } } as unknown as Parameters<typeof designHasUploadedArt>[0]["sections"];
+    expect(designHasUploadedArt({ slots: { a: setPiece }, sections })).toBe(false);
   });
 });
 

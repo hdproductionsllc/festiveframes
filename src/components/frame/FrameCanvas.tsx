@@ -23,6 +23,10 @@ import { frameTab } from "@/lib/utils/bottom-tab";
 import { bannerRowBox, baseBottomRow, rowTopInches, topBarHeightInches } from "@/lib/utils/rows";
 import { isBannerOnlyCell } from "@/lib/utils/panels";
 import { screwNotches } from "@/lib/utils/screw-slots";
+import { cornerRadii } from "@/lib/utils/tile-theme";
+
+/** The frame's whole outline: its outside curve is the one its corner badges open up. */
+const ALL_CORNERS = { tl: true, tr: true, br: true, bl: true } as const;
 
 interface FrameCanvasProps {
   frameConfig: FrameConfig;
@@ -437,7 +441,7 @@ export const FrameCanvas = forwardRef<FrameCanvasHandle, FrameCanvasProps>(
           // frame supports snappets (has wings) OR already has one — so a selected 1x1
           // clears too. Inert and unattached on /build (no wings, never any span).
           onClick={anySpan || frameConfig.wings ? () => selectSnappet(null) : undefined}
-          className="relative w-full rounded-md overflow-hidden"
+          className={`relative w-full overflow-hidden ${hasWings ? "" : "rounded-md"}`}
           style={{
             height: containerHeight || "auto",
             aspectRatio: containerHeight ? undefined : `${totalWidthInches} / ${getRenderHeightInches(frameConfig)}`,
@@ -446,9 +450,16 @@ export const FrameCanvas = forwardRef<FrameCanvasHandle, FrameCanvasProps>(
             // the largest single area of the product and therefore most of what makes
             // it read as one school's rather than another's.
             background: frameColor,
-            // Signature sticker drop shadow at 50% opacity so the whole design
-            // lifts off the workbench without being as heavy as a solid offset.
-            boxShadow: "8px 8px 0 rgba(30,27,23,0.5)",
+            // A school frame (the one with side panels) is clipped to its OWN outside
+            // curve — the wide radius its corner badges open up — so nothing of the
+            // body shows past a rounded corner badge (a light wedge did, at the
+            // bottom right). Its lift comes from the stage's soft drop shadow
+            // (school-skin.css). /build keeps its sticker look: a small radius and
+            // the hard offset slab, whose square corner read as a misregistered
+            // second plate under the school frame's big curve.
+            ...(hasWings
+              ? { borderRadius: cornerRadii(tileSize, ALL_CORNERS).tl }
+              : { boxShadow: "8px 8px 0 rgba(30,27,23,0.5)" }),
           }}
         >
           {/* Matte black frame texture */}

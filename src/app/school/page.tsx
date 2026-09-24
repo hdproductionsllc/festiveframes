@@ -290,7 +290,9 @@ export default function MySchoolFramePage() {
             style={{ width: "min(280px, 62vw)", height: "auto" }}
           />
         </p>
-        <p className="msf-eyebrow">Class of 2027 · #12 · Orchestra · Proud Parent</p>
+        {/* Each separator is bound to the item AFTER it, so a wrapped line never
+            ends on a dangling dot; "Proud Parent" never splits. */}
+        <p className="msf-eyebrow">Class of 2027 ·&nbsp;#12 ·&nbsp;Orchestra ·&nbsp;Proud&nbsp;Parent</p>
         {/* The v2 headline (owner-approved 2026-09-24). It used to be the tagline
             at the foot of the anatomy section; it says what the object IS, which
             the old "Your school. Your story. Your frame." never did. */}
@@ -518,16 +520,19 @@ export default function MySchoolFramePage() {
         </p>
         <div className="msf-ctas">
           <a href="#find-my-school" className="msf-btn msf-btn-primary">
-            Find your school and start designing
+            {/* One line on a phone: the long form wrapped to two. */}
+            Find your school<span className="msf-cta-more"> and start designing</span>
           </a>
         </div>
         <p className="msf-trust">
           Free to design, with a{" "}
-          <a href={MSF_WARRANTY_PATH}>one-year warranty</a> on every frame.
+          <a href={MSF_WARRANTY_PATH} className="msf-nowrap">one-year warranty</a> on every frame.
         </p>
         <p className="msf-fineprint">
-          MySchoolFrame is made in St.&nbsp;Louis ·{" "}
-          <a href={`mailto:${SCHOOL_CONTACT_EMAIL}`}>{SCHOOL_CONTACT_EMAIL}</a>
+          MySchoolFrame is made in St.&nbsp;Louis{" "}
+          <span className="msf-nowrap">
+            ·&nbsp;<a href={`mailto:${SCHOOL_CONTACT_EMAIL}`}>{SCHOOL_CONTACT_EMAIL}</a>
+          </span>
         </p>
         <p className="msf-fineprint msf-fineprint-links">
           <a href={MSF_WARRANTY_PATH}>Warranty</a> ·{" "}

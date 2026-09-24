@@ -25,7 +25,11 @@ describe("bannerLogoLayout", () => {
 
   it("centres the crest vertically", () => {
     const l = bannerLogoLayout(logo("left"), BAR.width, BAR.height, BAR.inset)!;
-    expect(l.y + l.size / 2).toBeCloseTo(BAR.height / 2, 0);
+    // Whole pixels: an odd-sized crest can only sit half a pixel off true centre.
+    expect(Math.abs(l.y + l.size / 2 - BAR.height / 2)).toBeLessThanOrEqual(0.5);
+    // ...and never into the chrome it is sized inside of.
+    expect(l.y).toBeGreaterThanOrEqual(BAR.inset);
+    expect(l.y + l.size).toBeLessThanOrEqual(BAR.height - BAR.inset);
   });
 
   it("takes width from the side the crest is on, and only that side", () => {

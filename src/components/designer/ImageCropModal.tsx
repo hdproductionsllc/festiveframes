@@ -78,6 +78,12 @@ interface ImageCropModalProps {
    * colour if it is changed later instead of freezing today's.
    */
   fieldColor?: string;
+  /**
+   * How far in from each edge the badge's rim and bevel reach, in inches. When
+   * set, "Fit the whole image" fits INSIDE it, so the chrome never draws over a
+   * contained image (`badgeArtInsetInches`). Omitted for a banner crest.
+   */
+  safeInsetInches?: number;
   onCancel: () => void;
   onConfirm: (result: ImageCropResult) => void;
 }
@@ -150,6 +156,7 @@ export function ImageCropModal({
   panelLabel,
   note,
   fieldColor,
+  safeInsetInches = 0,
   onCancel,
   onConfirm,
 }: ImageCropModalProps) {
@@ -232,12 +239,27 @@ export function ImageCropModal({
   // image shrinks until, at `minZoom`, all of it is inside the window — a wordmark
   // or a wide logo keeps its ends instead of being amputated to a square. The
   // strip it leaves is the badge's own field (see `fieldColor`).
+  //
+  // "All of it" means all of it VISIBLE: the fit lands inside the badge's rim and
+  // bevel (`safeInsetInches`), because both renderers draw that chrome over the
+  // photo's edge. Fitting to the outer edge put a tight wordmark's first letter
+  // under the rim on screen and against the inner bevel in print.
+  const safePx = (safeInsetInches / targetInches.width) * viewport.w;
   const minZoom = useMemo(() => {
     if (!img) return 1;
-    const contain = Math.min(viewport.w / img.naturalWidth, viewport.h / img.naturalHeight);
+    const contain = Math.min(
+      Math.max(1, viewport.w - 2 * safePx) / img.naturalWidth,
+      Math.max(1, viewport.h - 2 * safePx) / img.naturalHeight,
+    );
     return Math.min(1, contain / baseScale);
+  }, [img, viewport, baseScale, safePx]);
+  // Offered when the image's SHAPE differs from the badge's — a square photo on a
+  // square badge has nothing to fit (the inset alone is not a reason to offer it).
+  const canFit = useMemo(() => {
+    if (!img) return false;
+    const contain = Math.min(viewport.w / img.naturalWidth, viewport.h / img.naturalHeight);
+    return contain / baseScale < 0.99;
   }, [img, viewport, baseScale]);
-  const canFit = minZoom < 0.99;
 
   // Keep the image covering the viewport while it is bigger than it, and inside
   // the viewport once it is smaller (a fitted image may be placed, never lost off

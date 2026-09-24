@@ -1,4 +1,4 @@
-import type { PlacedTile } from "@/lib/types";
+import type { PlacedTile, SectionId, SectionState } from "@/lib/types";
 import { UPLOAD_RIGHTS_VERSION } from "@/content/upload-rights";
 
 // ─── Uploaded artwork on an ORDER ────────────────────────────────────────────
@@ -27,12 +27,27 @@ export interface ArtworkRights {
 /**
  * Does this design carry art the CUSTOMER supplied?
  *
- * `tile.image` is the one marker for uploaded art — a set piece never carries it
- * (see `PlacedTile.image`), so this is exact rather than a heuristic. /build has
- * no upload path at all, which is why nothing there needs an attestation.
+ * Two places hold it, and both print:
+ *   • a badge: `tile.image` is the one marker for uploaded art — a set piece never
+ *     carries it (see `PlacedTile.image`);
+ *   • a banner crest: an upload is stored with a `fullResId` (the print path
+ *     loads it by that id), which a kit's own crest — a public `/kits/` url —
+ *     never has.
+ * Exact rather than a heuristic. It once looked at slots alone, so a frame whose
+ * only upload was the banner crest went to production marked "our library only".
+ * /build has no upload path at all, which is why nothing there needs an attestation.
  */
-export function designHasUploadedArt(slots: Record<string, PlacedTile>): boolean {
-  return Object.values(slots).some((t) => Boolean(t?.image));
+export function designHasUploadedArt(design: {
+  slots: Record<string, PlacedTile>;
+  sections?: Partial<Record<SectionId, SectionState>>;
+}): boolean {
+  if (Object.values(design.slots ?? {}).some((t) => Boolean(t?.image))) return true;
+  return Object.values(design.sections ?? {}).some((sec) => {
+    const logo = sec?.text?.logo;
+    // A data: url is also only ever an upload (kit crests are served files) —
+    // counted too, because the safe direction is to ask.
+    return Boolean(logo && (logo.fullResId || logo.url.startsWith("data:")));
+  });
 }
 
 /**
@@ -106,4 +121,24 @@ export function artworkOrderMetadata(
         : "none"
       : "n/a",
   };
+}
+
+/**
+ * Read the record back OFF the order: the line `artworkRightsLine` would write,
+ * rebuilt from the two metadata keys `artworkOrderMetadata` put on the Stripe
+ * session. The production email Bill prints from is built from the session, so
+ * this is how the checkout's record reaches him. Null for a session that never
+ * carried the keys (a Festive Frames order, or one from before them), so the
+ * email says nothing rather than something untrue.
+ */
+export function artworkRightsLineFromMetadata(
+  meta: Record<string, string> | null | undefined,
+): { line: string; unattested: boolean } | null {
+  const uploaded = meta?.artUploaded;
+  if (uploaded !== "yes" && uploaded !== "no") return null;
+  if (uploaded === "no") return { line: artworkRightsLine(false, null), unattested: false };
+  const m = /^(.{1,40})@(.+)$/.exec(meta?.artRights ?? "");
+  const acceptedAt = m ? Date.parse(m[2]) : NaN;
+  const rights = m && Number.isFinite(acceptedAt) ? { version: m[1], acceptedAt } : null;
+  return { line: artworkRightsLine(true, rights), unattested: !rights };
 }

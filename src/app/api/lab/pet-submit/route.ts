@@ -7,6 +7,7 @@
 
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
+import { sendOrThrow } from "@/lib/resend-send";
 
 export const runtime = "nodejs";
 
@@ -54,7 +55,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     ? `\nThought line: "${body.caption}"${body.voice ? ` (voice: ${body.voice})` : ""}`
     : "";
   try {
-    await new Resend(apiKey).emails.send({
+    await sendOrThrow(new Resend(apiKey), {
       from,
       to,
       subject: `LAB — Pet frame order (${body.mode}): ${names}`,

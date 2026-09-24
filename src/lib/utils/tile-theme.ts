@@ -662,6 +662,23 @@ export function artInset(
   return base + Math.ceil(Math.max(0, widest - base) * (1 - Math.SQRT1_2));
 }
 
+/**
+ * `artInset` in INCHES, for a badge of `inches` on a frame whose cell is
+ * `cellInches` — what the crop screen needs to keep a FITTED image clear of the
+ * rim and bevel. An uploaded photo covers the whole badge and the chrome is drawn
+ * over its edge, so "Fit the whole image" once fitted a tight wordmark to the
+ * badge's outer edge and the rim cut its first letter off. Measured at print
+ * scale, where `artInset`'s whole-pixel rounding is negligible.
+ */
+export function badgeArtInsetInches(
+  inches: { width: number; height: number },
+  cellInches: number,
+  background: string = TILE_BG.navy,
+): number {
+  const dpi = 300;
+  return artInset(inches.width * dpi, inches.height * dpi, background, cellInches * dpi) / dpi;
+}
+
 /** The brass run as a CSS gradient, on the same upper-left light axis as the canvas. */
 /**
  * The rim's three-stop ramp — brass by default, or a school colour standing in for it.

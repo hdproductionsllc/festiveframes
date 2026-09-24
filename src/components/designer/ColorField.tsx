@@ -125,10 +125,21 @@ export function HexInput({
       }}
       onChange={(e) => {
         setText(e.target.value);
-        const hex = parseHex(e.target.value);
+        // Only a COMPLETE value is committed while typing. Every commit is a real
+        // colour change, and the banner-lettering legibility rule reacts to each
+        // one: typing "#C8102E" passed through "#C81" (= #CC1111), which flipped a
+        // parent's gold lettering to white for good. #RGB shorthand still counts —
+        // on blur, once the parent has stopped typing.
+        const v = e.target.value.trim().replace(/^#/, "");
+        const hex = v.length === 6 ? parseHex(v) : null;
         if (hex) onChange(hex);
       }}
-      onBlur={() => setFocused(false)}
+      onBlur={() => {
+        const v = text.trim().replace(/^#/, "");
+        const hex = v.length === 3 ? parseHex(v) : null;
+        if (hex && hex !== value.toUpperCase()) onChange(hex);
+        setFocused(false);
+      }}
       className={
         "h-7 w-[92px] rounded-[var(--ff-radius-sm,6px)] border border-[var(--ff-line-strong,#d3d1cb)] max-lg:h-11 max-lg:w-[104px] max-lg:text-[16px] " +
         "bg-white px-2 font-mono text-[12px] uppercase tracking-tight text-[var(--ff-ink,#16181c)] " +

@@ -2,7 +2,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 // Capture what the email stack is asked to send WITHOUT hitting Resend. The route
 // instantiates `new Resend(key)` at call time, so this mock intercepts every send.
-const sendMock = vi.fn().mockResolvedValue({ id: "mock-id" });
+// The REAL Resend v6 result shape: `{ data, error }`. `sendOrThrow` reads it.
+const sendMock = vi.fn().mockResolvedValue({ data: { id: "mock-id" }, error: null });
 vi.mock("resend", () => ({
   Resend: vi.fn().mockImplementation(() => ({ emails: { send: sendMock } })),
 }));

@@ -1,12 +1,11 @@
 import { kitSections, kitPlateState, type SchoolKit } from "@/data/school-kits";
-import { kitSeedTiles } from "@/data/kit-seed";
+import { kitMarkPair, kitSeedTiles } from "@/data/kit-seed";
 import { schoolVariant, type SchoolVariantId } from "@/data/school-variants";
 import { SCHOOL_DEFAULT_SECTIONS } from "@/lib/constants/defaults";
 import { migrateSchoolDesign } from "@/lib/utils/school-migration";
 import type { DesignStoreOptions } from "@/stores/design-store";
 import type { FrameConfig } from "@/lib/types";
 import { SITE_URL } from "@/config/season";
-import { kitMarkIds } from "@/data/sets/school-marks";
 import { getPiece } from "@/data/sets";
 import type { KitMarkUpgrade } from "@/lib/utils/kit-marks-upgrade";
 
@@ -67,17 +66,19 @@ export function schoolStoreOptions({
 /**
  * What a saved design needs to catch up with this school's own marks: the
  * banner crest a fresh design seeds, and the school's pieces in place of the
- * generic stand-ins a mark-less kit used to lay (crest → the mascot, star → the
- * school's second mark, which kitMarkIds resolves). Undefined when the kit has
- * no marks: there is nothing to bring in.
+ * generic stand-ins the same kit was seeded with before it had marks. Both pairs
+ * come from `kitMarkPair`, the rule the seed itself uses, so an upgraded design
+ * is the frame a new visitor gets rather than a second opinion of it. Undefined
+ * when the kit has no marks: there is nothing to bring in.
  */
 function kitMarkUpgrade(kit: SchoolKit): KitMarkUpgrade | undefined {
-  const { mascot, alt } = kitMarkIds(kit);
-  if (!mascot) return undefined;
-  const tile = (id: string) => ({ pieceId: id, setId: getPiece(id)?.setId ?? "" });
-  const second = alt ?? mascot;
-  return {
-    crestLogo: kitSections(kit).bottom?.text?.logo,
-    replace: { "hs:crest": tile(mascot), "hs:star": tile(second) },
-  };
+  if (!kit.marks?.badges?.length) return undefined;
+  const tile = (id: string) => ({ pieceId: id, setId: getPiece(id)?.setId ?? id.split(":")[0] });
+  const own = kitMarkPair(kit);
+  const standIns = kitMarkPair(kit, { ownMarks: false });
+  const replace: KitMarkUpgrade["replace"] = {};
+  standIns.forEach((id, i) => {
+    replace[id] = tile(own[i]);
+  });
+  return { crestLogo: kitSections(kit).bottom?.text?.logo, replace };
 }

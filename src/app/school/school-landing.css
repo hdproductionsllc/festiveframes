@@ -60,6 +60,7 @@
   text-transform: uppercase;
   color: #aab3c9;
   margin: 0 0 14px;
+  text-wrap: balance;
 }
 .msf-hero .msf-name-moment {
   max-width: 560px;
@@ -133,6 +134,8 @@
   font-size: 15px;
   color: var(--dim);
   margin: 18px 0 0;
+  /* No one-word widow ("frame.") on a phone. */
+  text-wrap: balance;
 }
 .msf-hero .msf-trust {
   color: #aab3c9;
@@ -330,6 +333,21 @@
 }
 .msf-fineprint a {
   color: var(--brass);
+}
+/* The close sits on cream, where the bright brass read at ~2.8:1. Links there
+   take a deep bronze of the same hue; the bright brass stays for buttons and
+   for links on navy. */
+.msf-close .msf-fineprint a,
+.msf-close .msf-trust a {
+  color: #7a5610;
+}
+.msf-nowrap {
+  white-space: nowrap;
+}
+@media (max-width: 560px) {
+  .msf-cta-more {
+    display: none;
+  }
 }
 
 @media (max-width: 560px) {

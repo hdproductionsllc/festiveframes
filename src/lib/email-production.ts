@@ -21,6 +21,7 @@
 // ─────────────────────────────────────────────────────────────
 
 import { Resend } from "resend";
+import { sendOrThrow } from "@/lib/resend-send";
 import { partsListCsv, partsListHtml, type PartsList, type PanelPartsList } from "@/lib/order/parts-list";
 import { SITE_URL } from "@/config/season";
 import { copy } from "@/content/copy";
@@ -115,6 +116,54 @@ export interface ProductionOrderInput {
   cartContext?: { index: number; total: number; cartId: string } | null;
   /** Whose order this is. School-frame orders are MySchoolFrame's; default Festive Frames. */
   brand?: EmailBrand;
+  /** The money, the school and the artwork record, off the Stripe session
+   *  (`orderFacts` in lib/order/fulfill). Absent on a cart line. */
+  order?: OrderFacts;
+}
+
+/** What the checkout recorded about an order, for the people who make it. */
+export interface OrderFacts {
+  /** Stripe's `payment_status`: "paid", or "no_payment_required" for a 100%-off code. */
+  paymentStatus: string | null;
+  /** Discount Stripe applied (a promotion code), in cents. */
+  discountCents: number;
+  /** The school slug the frame is for, when it is a school frame. */
+  school: string | null;
+  /** The per-frame donation promised to that school, in cents. */
+  donationCents: number;
+  /** The artwork-rights line, and whether uploaded art has NO attestation. */
+  artwork: { line: string; unattested: boolean } | null;
+}
+
+/**
+ * A 100%-off promotion code completes as `no_payment_required`: the frame ships,
+ * nothing was collected, and the school ledger (which insists on "paid") credits
+ * the club nothing. That order must never reach the printer labelled "paid".
+ */
+function isNoChargeOrder(o: ProductionOrderInput): boolean {
+  if (!o.order) return false;
+  return o.order.paymentStatus === "no_payment_required" || o.amountTotalCents === 0;
+}
+
+/** The one-line money headline, shared by the HTML pill, the text and the subject. */
+function moneyHeadline(o: ProductionOrderInput): string {
+  if (isNoChargeOrder(o)) {
+    return `$0 COUPON ORDER · no money collected${o.order?.school ? " · school NOT credited" : ""}`;
+  }
+  const paid = `New paid order · ${usd(o.amountTotalCents)}`;
+  const f = o.order;
+  return f?.school && f.donationCents > 0 ? `${paid} · ${usd(f.donationCents)} to ${f.school}` : paid;
+}
+
+/** The order-record lines under the headline (school, discount, artwork). */
+function orderFactLines(o: ProductionOrderInput): Array<{ label: string; value: string; alarm?: boolean }> {
+  const f = o.order;
+  if (!f) return [];
+  const out: Array<{ label: string; value: string; alarm?: boolean }> = [];
+  if (f.school) out.push({ label: "School", value: f.school });
+  if (f.discountCents > 0) out.push({ label: "Discount", value: `${usd(f.discountCents)} (promotion code)` });
+  if (f.artwork) out.push({ label: "Artwork", value: f.artwork.line, alarm: f.artwork.unattested });
+  return out;
 }
 
 function esc(s: unknown): string {
@@ -231,17 +280,22 @@ function productionHtml(o: ProductionOrderInput, droppedNote?: string | null): s
        </div>`
     : "";
 
+  const noCharge = isNoChargeOrder(o);
+  const factLines = orderFactLines(o);
+
   return shell(
     `Production order — ${esc(o.parts.designName || "Custom frame")}`,
     `
     ${multiBanner}
-    <p style="margin:0 0 14px;display:inline-block;padding:6px 14px;background:${RED};color:${PAGE};font-size:13px;font-weight:bold;text-transform:uppercase;border:3px solid ${INK};border-radius:99px;">New paid order · ${usd(o.amountTotalCents)}</p>
+    <p style="margin:0 0 14px;display:inline-block;padding:6px 14px;background:${noCharge ? GOLD : RED};color:${noCharge ? INK : PAGE};font-size:13px;font-weight:bold;text-transform:uppercase;border:3px solid ${INK};border-radius:99px;">${esc(moneyHeadline(o))}</p>
     ${qty > 1 || (c && c.total > 1) ? makeBadge : ""}
     <p style="margin:0 0 8px;color:${INK};font-size:13px;">
       ${c && c.total > 1 ? `<strong>Order ref:</strong> ${esc(c.cartId)} (frame ${c.index} of ${c.total})<br/>` : ""}<strong>This design:</strong> ${esc(o.orderId)}<br/>
       <strong>Stripe:</strong> ${esc(o.sessionId)}<br/>
       <strong>Customer:</strong> ${esc(o.customerName ?? "—")} &lt;${esc(o.customerEmail ?? "—")}&gt;<br/>
-      <strong>Plate:</strong> ${esc(o.parts.plateState)}${o.parts.qr.enabled ? ` · <strong>QR:</strong> ${esc(o.parts.qr.url)}` : ""}
+      <strong>Plate:</strong> ${esc(o.parts.plateState)}${o.parts.qr.enabled ? ` · <strong>QR:</strong> ${esc(o.parts.qr.url)}` : ""}${factLines
+        .map((l) => `<br/>${l.alarm ? `<span style="color:${RED};font-weight:bold;">` : ""}<strong>${esc(l.label)}:</strong> ${esc(l.value)}${l.alarm ? "</span>" : ""}`)
+        .join("")}
     </p>
     <p style="margin:0 0 12px;color:${INK};font-size:13px;"><strong>Bill — attached for the eufy:</strong> ${esc(fileList)}.</p>
     ${droppedBlock}
@@ -264,7 +318,7 @@ function productionText(o: ProductionOrderInput, droppedNote?: string | null): s
   const c = o.cartContext;
   return [
     `PRODUCTION ORDER — ${o.parts.designName || "Custom frame"}`,
-    `New paid order · ${usd(o.amountTotalCents)}`,
+    moneyHeadline(o),
     `MAKE x${qty}`,
     c && c.total > 1
       ? `*** FRAME ${c.index} OF ${c.total} — SAME ORDER (ref ${c.cartId}). Make all ${c.total} and SHIP TOGETHER to ${o.customerName ?? o.customerEmail ?? "this customer"}. ***`
@@ -274,6 +328,7 @@ function productionText(o: ProductionOrderInput, droppedNote?: string | null): s
     `Stripe: ${o.sessionId}`,
     `Customer: ${o.customerName ?? "—"} <${o.customerEmail ?? "—"}>`,
     `Plate: ${o.parts.plateState}${o.parts.qr.enabled ? ` · QR: ${o.parts.qr.url}` : ""}`,
+    ...orderFactLines(o).map((l) => `${l.alarm ? "*** " : ""}${l.label}: ${l.value}${l.alarm ? " ***" : ""}`),
     ``,
     `Bill — attached for the eufy: ${fileList}.`,
     droppedNote ? `\n** ${droppedNote} **\n` : `Files attached to this email.`,
@@ -389,8 +444,12 @@ export async function sendProductionEmails(
   const keep: Attachment[] = [csv, ...bannerAttachments, ...(proofAttachment ? [proofAttachment] : [])];
   const total = (atts: Attachment[]) => atts.reduce((sum, a) => sum + attachmentBytes(a), 0);
 
-  const droppedMessage =
-    "Print sheet(s) too large to attach — regenerate on desktop from the order's design (it's saved).";
+  // Where the files can be had again. A school order's draft (panels, proof and
+  // design) is kept once it is fulfilled; a /build order is re-rendered from its
+  // design in the builder.
+  const droppedMessage = brand === "myschoolframe"
+    ? `Print files too large to attach — they are kept with order ${o.orderId} on the server; ask Henry to pull them.`
+    : "Print sheet(s) too large to attach — regenerate on desktop from the order's design (it's saved).";
 
   // Proactive size guard: if everything would blow the cap, drop the sheets up front.
   let includeSheets = total([...keep, ...sheetAttachments]) <= MAX_ATTACHMENT_BYTES;
@@ -406,9 +465,9 @@ export async function sendProductionEmails(
   const subject =
     c && c.total > 1
       ? `PRODUCTION [${c.index}/${c.total}] — ${o.customerName ?? o.customerEmail ?? o.orderId} — ${o.parts.designName || "Custom frame"} (order ${c.cartId})`
-      : `PRODUCTION — ${o.parts.designName || "Custom frame"} — ${o.customerName ?? o.customerEmail ?? o.orderId}`;
+      : `${isNoChargeOrder(o) ? "PRODUCTION ($0 COUPON)" : "PRODUCTION"} — ${o.parts.designName || "Custom frame"} — ${o.customerName ?? o.customerEmail ?? o.orderId}`;
   const sendFounders = () =>
-    resend.emails.send({
+    sendOrThrow(resend, {
       from,
       to: founderList,
       replyTo: o.customerEmail ?? undefined,
@@ -453,7 +512,7 @@ export async function sendProductionEmails(
       ? [{ ...proofAttachment, contentId: "proof" }]
       : [];
     try {
-      await resend.emails.send({
+      await sendOrThrow(resend, {
         from,
         to: o.customerEmail,
         bcc: founderList,
@@ -581,7 +640,7 @@ export async function sendCartCustomerEmail(o: CartCustomerInput): Promise<void>
     .filter(Boolean) as Attachment[];
 
   try {
-    await resend.emails.send({
+    await sendOrThrow(resend, {
       from,
       to: o.customerEmail,
       bcc: founderList.length ? founderList : undefined,
@@ -744,7 +803,7 @@ export async function sendSchoolOrderEmail(o: SchoolOrderInput): Promise<SchoolO
   const subjectName = (o.designName || "Untitled").replace(/[\r\n\t]+/g, " ").slice(0, 120);
 
   try {
-    await new Resend(apiKey).emails.send({
+    await sendOrThrow(new Resend(apiKey), {
       from,
       to,
       subject: `SCHOOL ORDER — ${subjectName}`,
@@ -790,7 +849,7 @@ export async function sendSchoolRequestAlert(
   // header line — the same guard the school-order subject carries.
   const subjectName = req.schoolName.replace(/[\r\n\t]+/g, " ").slice(0, 120);
   try {
-    await new Resend(apiKey).emails.send({
+    await sendOrThrow(new Resend(apiKey), {
       from,
       to,
       subject: `SCHOOL REQUESTED — ${subjectName}`,
@@ -816,7 +875,7 @@ export async function sendFulfillmentFailureAlert(
   const to = teamRecipientsFor(brand);
   if (!to.length) return;
   try {
-    await new Resend(apiKey).emails.send({
+    await sendOrThrow(new Resend(apiKey), {
       from,
       to,
       subject: `ORDER PAID but fulfillment FAILED — ${orderId}`,

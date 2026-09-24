@@ -5,6 +5,7 @@ import type { SchoolVariantId } from "@/data/school-variants";
 import { BuilderFontsDeferred } from "@/app/BuilderFontsDeferred";
 import { SchoolBuilder } from "@/components/designer/SchoolDesigner";
 import { chipPiece, type SchoolKit } from "@/data/school-kits";
+import { schoolChromeVars } from "@/lib/utils/school-chrome";
 
 // ─── A school's own builder page ─────────────────────────────────────────────
 //
@@ -55,7 +56,9 @@ export function SchoolKitPage({
     // builder wears the school instead of sitting in neutral grey beside it.
     <div
       className="build-skin school-skin"
-      style={{ "--ff-school": kit.colors.frame } as React.CSSProperties}
+      // Plus the derived action colour and, where it is needed, its ring — the
+      // contrast is worked out once for every kit (lib/utils/school-chrome).
+      style={schoolChromeVars(kit.colors) as React.CSSProperties}
     >
       {banner}
       {/* The font picker's optional faces, loaded after paint so they cannot

@@ -27,6 +27,10 @@ export interface SchoolOrderRow {
   school: string;
   donationCents: number;
   paidAt: number;
+  /** When the payment was refunded in full, epoch ms. A refunded order stays in
+   *  the table (so a redelivered `completed` event cannot re-insert it) and is
+   *  left out of every total. */
+  refundedAt?: number | null;
 }
 
 export interface SchoolTotals {
@@ -93,6 +97,9 @@ function ensureSchema(): Promise<void> {
       await p.query(
         `CREATE INDEX IF NOT EXISTS school_orders_school_idx ON school_orders (school, paid_at)`,
       );
+      // Added after the table shipped, so it is an ALTER rather than part of the
+      // CREATE: an existing production table gains the column in place.
+      await p.query(`ALTER TABLE school_orders ADD COLUMN IF NOT EXISTS refunded_at timestamptz`);
     })().catch((err) => {
       initPromise = null; // let a later call retry rather than caching the failure
       throw err;
@@ -146,18 +153,55 @@ export async function recordSchoolOrder(row: {
   }
 }
 
+/**
+ * A school order's payment was refunded in full: it stops counting toward what
+ * the school raised.
+ *
+ * MARKED, not deleted. Stripe redelivers `checkout.session.completed` freely, and
+ * the insert above is `ON CONFLICT DO NOTHING` — a deleted row would come straight
+ * back on the next redelivery and the club would be credited for a frame whose
+ * money went back to the parent. A marked row stays put and stays excluded.
+ *
+ * Idempotent (the first refund time is kept) and, like `recordSchoolOrder`, never
+ * throws: it runs inside the webhook. Returns whether a row was marked, so the
+ * caller can log an order the ledger never had (a $0 order, or a lost write).
+ */
+export async function markSchoolOrderRefunded(orderId: string): Promise<boolean> {
+  if (!orderId) return false;
+  try {
+    if (!USE_DB) {
+      const row = memOrders.get(orderId);
+      if (!row) return false;
+      if (!row.refundedAt) memOrders.set(orderId, { ...row, refundedAt: Date.now() });
+      return true;
+    }
+    await ensureSchema();
+    const { rowCount } = await getPool().query(
+      `UPDATE school_orders SET refunded_at = COALESCE(refunded_at, now()) WHERE order_id = $1`,
+      [orderId],
+    );
+    return (rowCount ?? 0) > 0;
+  } catch (err) {
+    console.error(
+      "[school-ledger] markSchoolOrderRefunded failed:",
+      err instanceof Error ? err.message : err,
+    );
+    return false;
+  }
+}
+
 /** Everything one school has raised. Returns zeroes rather than throwing. */
 export async function schoolTotals(school: string): Promise<SchoolTotals> {
   if (!school) return EMPTY(school);
   try {
     if (!USE_DB) {
-      const rows = [...memOrders.values()].filter((r) => r.school === school);
+      const rows = [...memOrders.values()].filter((r) => r.school === school && !r.refundedAt);
       return fold(school, rows);
     }
     await ensureSchema();
     const { rows } = await getPool().query(
       `SELECT order_id, school, donation_cents, paid_at
-         FROM school_orders WHERE school = $1`,
+         FROM school_orders WHERE school = $1 AND refunded_at IS NULL`,
       [school],
     );
     return fold(

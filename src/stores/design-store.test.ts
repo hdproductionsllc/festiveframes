@@ -3,6 +3,7 @@ import { SCHOOL_SHIPPING_VARIANT, schoolVariant } from "@/data/school-variants";
 import { getSchoolKit, kitSections } from "@/data/school-kits";
 import { kitSeedTiles } from "@/data/kit-seed";
 import { schoolStoreOptions } from "@/data/school-store";
+import { PILOT_SCHOOL_SLUGS } from "@/data/school-pilot";
 import { TILE_BG, tileField } from "@/lib/utils/tile-theme";
 import { schoolDesignOf } from "@/lib/utils/compose-school-frame";
 import type { FrameConfig, PlacedTile } from "@/lib/types";
@@ -1396,6 +1397,48 @@ describe("a design saved before its school had marks gets them once (owner, 2026
     expect(s.kitMarksApplied).toBe(true);
   });
 
+  // The upgrade once took the school's "second mark" from kitMarkIds, whose
+  // one-mark fallback is an ACTIVITY: every returning pilot parent got the same
+  // sport twice and the logo once. The upgraded frame must BE the seeded frame.
+  it.each([...PILOT_SCHOOL_SLUGS])("%s: the upgraded frame is exactly the one a new visitor gets", (slug) => {
+    const k = getSchoolKit(slug)!;
+    const seeds = kitSeedTiles(k, config);
+    const slots: Record<string, PlacedTile> = {};
+    let n = 0;
+    for (const [id, t] of Object.entries(seeds)) {
+      slots[id] = t.pieceId.startsWith("mark:")
+        ? { ...t, pieceId: n++ % 2 ? "hs:star" : "hs:crest", setId: "high-school" }
+        : t;
+    }
+    const KEY = `marks-upgrade-exact-${slug}`;
+    memoryStorage.setItem(KEY, JSON.stringify({ state: { slots, sections: kitSections(k), frameConfig: { ...config } }, version: 7 }));
+    const s = createDesignStore(KEY, schoolStoreOptions({ kit: k, variant: SCHOOL_SHIPPING_VARIANT })).getState();
+    const pick = (r: Record<string, { pieceId: string; span?: unknown }>) =>
+      Object.fromEntries(Object.entries(r).map(([id, t]) => [id, { pieceId: t.pieceId, span: t.span }]));
+    expect(pick(s.slots)).toEqual(pick(seeds));
+    memoryStorage.removeItem(KEY);
+  });
+
+  it("a design on a kit with no marks is never flagged, so the school's logos can still reach it later", () => {
+    const KEY = "marks-upgrade-later";
+    const { markUpgrade: _dropped, ...withoutMarks } = opts();
+    void _dropped;
+    // Before the logos: a new design and an edited one both stay unflagged.
+    const before = createDesignStore(KEY, withoutMarks);
+    expect(before.getState().kitMarksApplied).toBeUndefined();
+    before.getState().setDesignName("edited");
+    expect(JSON.parse(memoryStorage.getItem(KEY)!).state.kitMarksApplied).toBeUndefined();
+    // A blob that picked up `true` from the old rule is cleared on hydrate.
+    memoryStorage.setItem(KEY, JSON.stringify(oldBlob({ kitMarksApplied: true })));
+    expect(createDesignStore(KEY, withoutMarks).getState().kitMarksApplied).toBeUndefined();
+    // The logos arrive: the saved design finally gets them.
+    memoryStorage.setItem(KEY, JSON.stringify(oldBlob()));
+    const after = createDesignStore(KEY, opts()).getState();
+    expect(after.sections.bottom?.text?.logo?.url).toBe(kit.marks!.crest);
+    expect(Object.values(after.slots).map((t) => t.pieceId)).not.toContain("hs:crest");
+    memoryStorage.removeItem(KEY);
+  });
+
   it("runs ONCE: a crest the parent removed afterwards stays removed", () => {
     const KEY = "marks-upgrade-b";
     memoryStorage.setItem(KEY, JSON.stringify(oldBlob({ kitMarksApplied: true })));
@@ -1408,5 +1451,56 @@ describe("a design saved before its school had marks gets them once (owner, 2026
     const s = createDesignStore("marks-upgrade-c", opts()).getState();
     expect(s.kitMarksApplied).toBe(true);
     expect(s.sections.bottom?.text?.logo?.url).toBe(kit.marks!.crest);
+  });
+});
+
+// The intake's answers used to be component state: a reload restored the frame
+// ("SAM · CLASS OF 2027") beside an empty form, and the next tap wrote from the
+// form's defaults. They are part of the design now.
+describe("the school intake lives with the design", () => {
+  const kit = getSchoolKit("ladue-rams")!;
+  const opts = () => schoolStoreOptions({ kit, variant: SCHOOL_SHIPPING_VARIANT });
+
+  it("survives a reload", () => {
+    const KEY = "intake-reload";
+    const a = createDesignStore(KEY, opts());
+    a.getState().setIntake({ buyerId: "parent", line: "class", year: "2027", name: "Sam", preset: "graduate" });
+    const b = createDesignStore(KEY, opts()).getState();
+    expect(b.intake).toEqual({ buyerId: "parent", line: "class", year: "2027", name: "Sam", preset: "graduate" });
+    memoryStorage.removeItem(KEY);
+  });
+
+  it("a malformed intake hydrates as no answers, never as garbage", () => {
+    const KEY = "intake-bad";
+    memoryStorage.setItem(KEY, JSON.stringify({ state: { intake: { year: 2027, name: "Sam" } }, version: 7 }));
+    expect(createDesignStore(KEY, opts()).getState().intake).toEqual({ name: "Sam" });
+    memoryStorage.setItem(KEY, JSON.stringify({ state: { intake: "nope" }, version: 7 }));
+    expect(createDesignStore(KEY, opts()).getState().intake).toBeNull();
+    memoryStorage.removeItem(KEY);
+  });
+
+  it("Start fresh forgets the answers along with the frame", () => {
+    const s = createDesignStore("intake-fresh", opts());
+    s.getState().setIntake({ name: "Sam" });
+    s.getState().clearAll({ reseed: true });
+    expect(s.getState().intake).toBeNull();
+  });
+
+  it("undo moves the frame off the design card that was laid, and keeps the answers", () => {
+    const s = createDesignStore("intake-undo", opts());
+    const slot = Object.keys(s.getState().slots)[0];
+    s.getState().removeTile(slot);
+    s.getState().setIntake({ name: "Sam", preset: "school" });
+    s.getState().undo();
+    expect(s.getState().intake).toEqual({ name: "Sam", preset: null });
+  });
+
+  it("resetHistory makes the current frame the first one undo returns to", () => {
+    const s = createDesignStore("intake-history", opts());
+    const slot = Object.keys(s.getState().slots)[0];
+    s.getState().removeTile(slot);
+    expect(s.getState().canUndo()).toBe(true);
+    s.getState().resetHistory();
+    expect(s.getState().canUndo()).toBe(false);
   });
 });

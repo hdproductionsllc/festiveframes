@@ -944,10 +944,12 @@
   color: var(--ff-on-dark-2);
 }
 
-/* The builder's header spans the dark page: glass, not a white slab. */
+/* The builder's header spans the dark page, in the room's own colour. OPAQUE: it
+   was 70% glass, and on a desktop the white tool panel scrolled up under it and
+   showed through as a grey smudge behind the logo while the other half stayed
+   dark — a two-tone bar that looked unfinished. */
 .build-skin.school-skin .ff-app-header {
-  background: color-mix(in srgb, var(--ff-room) 70%, transparent) !important;
-  backdrop-filter: blur(14px);
+  background: var(--ff-room) !important;
   border-bottom: 1px solid color-mix(in srgb, var(--ff-glow) 38%, transparent);
 }
 /* The wordmark and the school name are the only TEXT directly on the glass, and
@@ -970,6 +972,15 @@
 .build-skin.school-skin .ff-app-header .ff-btn-primary span {
   color: var(--ff-on-school) !important;
 }
+/* A school colour that vanishes into the header (Lafayette's near-black,
+   Marquette's navy) is ringed in the school's second colour, so the page's main
+   action never reads as a label. `--ff-action-ring` is set only for those schools
+   (lib/utils/school-chrome); everyone else keeps a plain edge. */
+.build-skin.school-skin .ff-app-header .ff-btn-primary {
+  box-shadow:
+    0 0 0 2px var(--ff-action-ring, transparent),
+    0 2px 0 color-mix(in srgb, var(--ff-action, var(--ff-glow)) 70%, #000000);
+}
 
 /* ── Panels: bright objects in a lit room ────────────────────────────────────
    The single school-coloured rule along the top edge is what ties the white
@@ -991,17 +1002,20 @@
 }
 
 /* ── The primary action wears the school ─────────────────────────────────── */
+/* `--ff-action` is the school colour taken only as dark as white type needs to
+   clear AA (lib/utils/school-chrome) — Parkway West's light blue measured 3.09:1
+   as a raw fill. Navy and crimson schools get their exact colour back. */
 .school-skin .ff-btn-primary {
-  background: var(--ff-glow);
-  border-color: color-mix(in srgb, var(--ff-glow) 76%, #000000);
+  background: var(--ff-action, var(--ff-glow));
+  border-color: color-mix(in srgb, var(--ff-action, var(--ff-glow)) 76%, #000000);
   color: var(--ff-on-school);
   font-weight: 700;
-  box-shadow: 0 2px 0 color-mix(in srgb, var(--ff-glow) 70%, #000000);
+  box-shadow: 0 2px 0 color-mix(in srgb, var(--ff-action, var(--ff-glow)) 70%, #000000);
 }
 @media (hover: hover) {
   .school-skin .ff-btn-primary:hover:not(:disabled) {
-    background: color-mix(in srgb, var(--ff-glow) 86%, #000000);
-    border-color: color-mix(in srgb, var(--ff-glow) 64%, #000000);
+    background: color-mix(in srgb, var(--ff-action, var(--ff-glow)) 86%, #000000);
+    border-color: color-mix(in srgb, var(--ff-action, var(--ff-glow)) 64%, #000000);
   }
 }
 
@@ -1022,7 +1036,10 @@
   font-weight: 700;
   letter-spacing: 0.09em;
   text-transform: uppercase;
-  color: color-mix(in srgb, var(--ff-lit) 80%, #ffffff);
+  /* Near-white with a tint of the school. It was 80% of the lit colour, which on
+     a near-black or navy school (Lafayette, Marquette) came out a muddy grey at
+     3.8-4.0:1 on the band. */
+  color: color-mix(in srgb, var(--ff-lit) 30%, #ffffff);
 }
 .school-skin .msf-kit-chips {
   margin-top: 14px;
@@ -1174,10 +1191,45 @@
     margin: 8px -16px 0;
     padding: 2px 16px 6px;
     scroll-padding-inline: 16px;
+    /* A soft fade at the right edge: a chip cut hard at the glass read as
+       clipped, not as a row that scrolls. */
+    -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 36px), transparent);
+    mask-image: linear-gradient(90deg, #000 calc(100% - 36px), transparent);
   }
   .school-skin .msf-kit-chip {
     font-size: 14.5px;
     padding: 0 16px;
+  }
+}
+
+/* ── THE FIRST SCREEN ON A DESKTOP ───────────────────────────────────────────
+   At 1440 x 900 the welcome band was ~500px — mark, headline, two story
+   paragraphs, the chips and the ordering sentence — and the FRAME started below
+   the fold for every school. The band keeps what makes the page THEIR school (the
+   mark, the headline, the one-tap chips); the story and the ordering sentence move
+   to the foot of the tools column (SchoolDesigner), as they already do on a phone. */
+@media (min-width: 1024px) {
+  .school-skin .msf-kit-hero {
+    padding: 22px 20px 18px;
+  }
+  .school-skin .msf-kit-roomy {
+    display: none;
+  }
+  .school-skin .msf-kit-lockup {
+    width: min(300px, 40vw);
+    margin-bottom: 12px;
+  }
+  .school-skin .msf-kit-crest {
+    width: 64px;
+  }
+  .school-skin .msf-kit-headline {
+    font-size: clamp(28px, 2.8vw, 40px);
+  }
+  .school-skin .msf-kit-chips-label {
+    margin-top: 14px;
+  }
+  .school-skin .msf-kit-chips {
+    margin-top: 8px;
   }
 }
 

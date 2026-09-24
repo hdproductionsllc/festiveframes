@@ -14,13 +14,18 @@ import { rowHeightInchesIn } from "@/lib/utils/rows";
 // exactly how the on-screen banner and the printed one drift apart.
 
 /**
- * The crest's height as a fraction of the banner's.
+ * The crest's height as a fraction of the banner's CONTENT height — what is left
+ * inside the chrome inset (rim + bevel + air), which the crest never enters.
  *
- * Not 1.0: a mark that touches both edges reads as a background image rather than a
- * lockup, and on a two-row bottom panel it would collide with the bevel. 0.72 leaves
- * the banner's own chrome visible above and below it.
+ * Was 0.72, and on the shipping frame's 1" bottom bar that printed the corner marks
+ * about half an inch across: a wordmark-in-a-circle crest (Parkway Central's
+ * lettered ring) came out with lettering 0.03" tall, and on a phone the marks were
+ * 12 px specks at each end of the name. The inset already keeps the mark off the
+ * bevel, so a second margin inside it was only shrinking the crest. 0.95 leaves a
+ * sliver of field above and below, so it still reads as a lockup rather than a
+ * background image, and prints the mark about two thirds of an inch.
  */
-export const LOGO_HEIGHT_RATIO = 0.72;
+export const LOGO_HEIGHT_RATIO = 0.95;
 
 /** Gap between the crest and the text, as a fraction of the banner's height. */
 export const LOGO_GAP_RATIO = 0.08;

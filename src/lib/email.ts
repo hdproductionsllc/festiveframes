@@ -16,6 +16,7 @@
 // ─────────────────────────────────────────────────────────────
 
 import { Resend } from "resend";
+import { sendOrThrow } from "@/lib/resend-send";
 
 export interface OrderItem {
   name: string;
@@ -173,7 +174,7 @@ export async function sendOrderEmails(o: OrderEmailData): Promise<void> {
 
   if (o.customerEmail) {
     try {
-      await resend.emails.send({
+      await sendOrThrow(resend, {
         from,
         to: o.customerEmail,
         subject: "Your Festive Frames order is confirmed",
@@ -186,7 +187,7 @@ export async function sendOrderEmails(o: OrderEmailData): Promise<void> {
 
   if (adminTo) {
     try {
-      await resend.emails.send({
+      await sendOrThrow(resend, {
         from,
         to: adminTo,
         replyTo: o.customerEmail ?? undefined,
@@ -219,7 +220,7 @@ export async function sendRestoreLinkEmail(p: {
   const resend = new Resend(apiKey);
   const hi = p.name ? `, ${escapeHtml(p.name.split(" ")[0])}` : "";
   try {
-    await resend.emails.send({
+    await sendOrThrow(resend, {
       from,
       to: p.to,
       subject: "Your Festive Frames design — pick up where you left off",
@@ -260,7 +261,7 @@ export async function sendReviewEmail(r: ReviewSubmission): Promise<void> {
   const stars = "★".repeat(r.rating) + "☆".repeat(Math.max(0, 5 - r.rating));
   const resend = new Resend(apiKey);
   try {
-    await resend.emails.send({
+    await sendOrThrow(resend, {
       from,
       to: adminTo,
       subject: `New review (${r.rating}/5) from ${r.name}`,
@@ -299,7 +300,7 @@ export async function sendContactEmail(c: ContactSubmission): Promise<boolean> {
   const from = process.env.EMAIL_FROM || "Festive Frames <onboarding@resend.dev>";
   const resend = new Resend(apiKey);
   try {
-    await resend.emails.send({
+    await sendOrThrow(resend, {
       from,
       to: adminTo,
       replyTo: c.email,

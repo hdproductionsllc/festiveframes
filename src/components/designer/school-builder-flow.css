@@ -187,8 +187,8 @@
 /* Selected wears the school, darkened enough that white type clears AA on every
    pilot colour (Parkway West's light blue included). */
 .msf-pill[aria-checked="true"] {
-  border-color: color-mix(in srgb, var(--ff-school, #1b2a4a) 72%, #000000);
-  background: color-mix(in srgb, var(--ff-school, #1b2a4a) 72%, #000000);
+  border-color: var(--ff-action, color-mix(in srgb, var(--ff-school, #1b2a4a) 72%, #000000));
+  background: var(--ff-action, color-mix(in srgb, var(--ff-school, #1b2a4a) 72%, #000000));
   color: #ffffff;
 }
 .msf-pill:focus-visible,
@@ -208,10 +208,12 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  /* Top-aligned, so the icons share a line whether a label takes one line or two
+     (centred, "Graduate"'s cap sat 8px below the star and shield). */
+  justify-content: flex-start;
   gap: 4px;
   min-height: 72px;
-  padding: 8px 6px;
+  padding: 10px 6px 8px;
   border: 1.5px solid #cfd3dc;
   border-radius: 12px;
   background: #ffffff;
@@ -262,6 +264,18 @@
   line-height: 1.55;
   text-align: center;
   color: var(--ff-on-dark-2, rgba(255, 255, 255, 0.74));
+}
+.msf-about p {
+  margin: 0;
+}
+.msf-about p + p {
+  margin-top: 10px;
+}
+@media (min-width: 1024px) {
+  .msf-about {
+    margin: 8px 4px 0;
+    text-align: left;
+  }
 }
 
 /* ── Desktop: the intake folds back into one compact panel over the stage ─── */
@@ -362,5 +376,18 @@
   }
   .msf-intake-step + .msf-intake-step .msf-year {
     flex-basis: 100px;
+  }
+}
+
+/* ── A phone on its side ──────────────────────────────────────────────────────
+   At 844 x 390 the pinned header, frame and how-to line took ~260 of 390px and
+   left the open editor ~118px. The how-to is the line that can go: the armed
+   callout (the one that matters mid-placement) still shows. */
+@media (max-width: 1023px) and (max-height: 500px) {
+  .msf-dock-status:has(.msf-dock-hint) {
+    min-height: 0;
+  }
+  .msf-dock-hint {
+    display: none;
   }
 }

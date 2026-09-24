@@ -167,3 +167,20 @@ describe("writePersonOnBanner — the builder's one banner write", () => {
     expect(api.sections.bottom.text.tagline).toBe("HOME OF THE");
   });
 });
+
+describe("banner field text", () => {
+  it("drops emoji the banner faces cannot draw, and line breaks", async () => {
+    const { bannerTypeable } = await import("./school-banner");
+    expect(bannerTypeable("GO STANG🐎 GO 🏒🔥")).toBe("GO STANG GO ");
+    expect(bannerTypeable("👍🏽 #12")).toBe(" #12");
+    expect(bannerTypeable("Mary\nAnne")).toBe("Mary Anne");
+  });
+
+  it("fits pasted text at a word boundary, never mid-word", async () => {
+    const { fitAtWord } = await import("./school-banner");
+    expect(fitAtWord("Mary Anne Smith-Jones Longname", 24)).toBe("Mary Anne Smith-Jones");
+    expect(fitAtWord("Sam", 24)).toBe("Sam");
+    expect(fitAtWord("Supercalifragilistic", 5)).toBe("Super");
+    expect(fitAtWord("anything", 0)).toBe("");
+  });
+});

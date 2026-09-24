@@ -405,9 +405,18 @@ export function presetTiles(
   // A school with one mark, or none, alternates against a generic school shape.
   // It must never resolve to the mascot itself: that would put the same badge in
   // adjacent positions, which is the defect this preset pattern exists to avoid.
-  const alt = altMarkPieceId && altMarkPieceId !== mascot
-    ? altMarkPieceId
-    : GENERIC_MARKS.slice(0, 2).find((id) => id !== mascot)!;
+  //
+  // A one-mark school's second position is a STAND-IN — its first signature
+  // activity (kitMarkIds), not a mark: any id outside the `mark:` namespace. Once
+  // the parent has said what their student does, the stand-in is that activity
+  // instead. Otherwise "Just the school" laid four track badges for a soccer
+  // player while the menu still read Soccer, a claim about the student the frame
+  // had no business making. The school's own second mark is never replaced.
+  const ownAlt = altMarkPieceId && altMarkPieceId !== mascot ? altMarkPieceId : null;
+  const standIn = ownAlt !== null && !ownAlt.startsWith("mark:");
+  const alt = standIn && chosenActivity
+    ? chosenActivity
+    : ownAlt ?? GENERIC_MARKS.slice(0, 2).find((id) => id !== mascot)!;
   return preset.layout.map(([slot, piece, span]) => [
     slot,
     piece === ACTIVITY ? activity : piece === MASCOT ? mascot : piece === MASCOT_ALT ? alt : piece,
