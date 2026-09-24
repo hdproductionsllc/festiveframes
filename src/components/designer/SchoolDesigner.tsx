@@ -19,6 +19,7 @@ import {
   BUYERS,
   DEFAULT_BUYER,
   bannerTagline,
+  BANNER_NAME_MAX_CHARS,
   getBuyer,
   yearsFor,
   type BannerLineId,
@@ -1472,7 +1473,7 @@ export function SchoolDesigner({
                         }}
                         onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
                         placeholder={buyer.namePlaceholder}
-                        maxLength={14}
+                        maxLength={BANNER_NAME_MAX_CHARS}
                         autoComplete="off"
                         className="msf-input msf-caps"
                       />

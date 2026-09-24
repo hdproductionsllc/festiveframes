@@ -126,6 +126,15 @@ export interface Buyer {
 
 export const BANNER_NAME_LABEL = "Banner text (optional)";
 
+/**
+ * How long the optional big banner line may be. The banner shrinks its lettering
+ * to fit (fitTextBarFont in both renderers), so this is a READABILITY limit, not
+ * a space one: 24 fits a full name like SCARLETT HAMILTON (17) or
+ * MARY-KATHERINE O'CONNOR (23) while staying legible from the car behind. It was
+ * a hard 14, which cut SCARLETT HAMILTON off at SCARLETT HAMIL (owner, 2026-09-24).
+ */
+export const BANNER_NAME_MAX_CHARS = 24;
+
 /** A buyer whose default tagline is read off its own first line. */
 function buyer(b: Omit<Buyer, "taglineFor">): Buyer {
   return {
