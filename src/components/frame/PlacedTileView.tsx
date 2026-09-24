@@ -3,7 +3,7 @@
 import { getPiece } from "@/data/sets";
 import { TileArtImg } from "@/components/tiles/TileArtImg";
 import {
-  artInset,
+  artRect,
   badgeArtworkUrl,
   artShadowCss,
   cornerRadii,
@@ -131,17 +131,18 @@ export function PlacedTileView({
   const field = fieldOverride ?? tileField(piece, tileFieldColor);
   const edge = tileEdgeCss(size, field, width, height, unit ?? size, rimOverride ?? rimColor);
   const radii = cornerRadii(unit ?? size, corners ?? NO_CORNERS);
-  // The gap between the bevel and the art, taken from the SAME helper the print path
-  // uses so the two agree by construction: what artInset reserves in total, less the
-  // three rings the nested boxes above already account for.
-  const artAir = Math.max(
-    0,
-    artInset(width, height, field, unit ?? size, radii) - edge.rimInset - edge.rimWidth - edge.bevelWidth,
-  );
+  const artUrl = piece.artworkUrl ? badgeArtworkUrl(piece, field) : undefined;
+  // WHERE the art goes, from the SAME helper the print path uses, so the two agree
+  // by construction: per artwork, as large as its own ink allows inside the chrome
+  // and the rounded corners (utils/art-fit). The rect is measured from the tile's
+  // outer edge; the art is positioned inside the bevel box, whose content starts
+  // past the three rings nested below.
+  const rect = artRect(width, height, field, unit ?? size, radii, artUrl);
+  const rings = edge.rimInset + edge.rimWidth + edge.bevelWidth;
   const rimRadii = insetRadii(radii, edge.rimInset);
   const bevelRadii = insetRadii(rimRadii, edge.rimWidth);
 
-  const art = piece.artworkUrl ? (
+  const art = artUrl ? (
     // Served at the size the frame actually draws it. These are print masters —
     // the badges on a seeded kit frame were ~2MB of PNG for eight tiles the size
     // of a postage stamp. NOT `priority`: that emits a <link rel=preload> per
@@ -152,10 +153,12 @@ export function PlacedTileView({
     <TileArtImg
       // The twin this field calls for (ivory enamel on a field navy would vanish
       // into) — the same decision the print path makes.
-      src={badgeArtworkUrl(piece, field)}
+      src={artUrl}
       alt={piece.name}
-      width={width}
-      height={height}
+      // The optimizer's size hint: never less than the tile (what it always was),
+      // more when an art fitted by its ink draws its canvas past the tile.
+      width={Math.max(width, rect.width)}
+      height={Math.max(height, rect.height)}
       // Cast shadow from the ART onto the field — the same two-layer read the
       // print path draws. Only works because the art is cut out to transparency.
       style={{
@@ -214,15 +217,23 @@ export function PlacedTileView({
             border: `${edge.bevelWidth}px solid transparent`,
             borderRadius: radiusCss(bevelRadii),
             background: ringCss(solidFill(field), edge.bevelGradient),
-            // AIR between the bevel and the art, the same gap the print path leaves.
-            // Without it the art's box ended exactly at the bevel's inner edge, so
-            // anything drawn out to its own bounds met the shaded band with nothing
-            // in between and read as cut into. Derived from `artInset` rather than
-            // restated, so the two renderers cannot drift.
-            padding: artAir,
+            position: "relative",
           }}
         >
-          {art}
+          {/* The art at `artRect`, which already leaves the AIR between it and the
+              bevel (art that met the shaded band read as cut into) and keeps its
+              ink clear of the rounded corners. */}
+          <div
+            style={{
+              position: "absolute",
+              left: rect.x - rings,
+              top: rect.y - rings,
+              width: rect.width,
+              height: rect.height,
+            }}
+          >
+            {art}
+          </div>
         </div>
       </div>
     </div>

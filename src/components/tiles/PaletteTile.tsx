@@ -7,7 +7,7 @@ import { usePaletteStore } from "@/stores/palette-store";
 import { useUIStore } from "@/stores/ui-store";
 import { useDesignStore } from "@/stores/design-store";
 import { TileArtwork, hasCustomArtwork, canDieCut } from "./TileArtwork";
-import { badgeArtworkUrl, tileField } from "@/lib/utils/tile-theme";
+import { SWATCH_RADIUS_PX, badgeArtworkUrl, swatchArtRect, tileField } from "@/lib/utils/tile-theme";
 import { playSound } from "@/lib/utils/sound";
 import type { UploadedArt } from "@/lib/utils/uploads";
 
@@ -56,6 +56,12 @@ export function PaletteTile({ piece, size = "md", demo = false, upload, onRemove
   const longSide = Math.max(1, span.cols, span.rows);
   const artW = Math.round((box * Math.max(1, span.cols)) / longSide);
   const artH = Math.round((box * Math.max(1, span.rows)) / longSide);
+  const artUrl = piece.artworkUrl ? badgeArtworkUrl(piece, field) : undefined;
+  // Each art as big as its own ink allows inside the swatch's rounded corners —
+  // the same per-art fit the frame's badges get (tile-theme `swatchArtRect`). A flat
+  // 9% margin for everything left compact art small to spare the palette's brush
+  // tips; unmeasured art (the holiday palettes) keeps exactly that margin.
+  const artRect = swatchArtRect(artW, artH, artUrl);
 
   // Tapping a palette tile ARMS it (selects it for placement) — it does NOT
   // auto-place. Placement happens when the user then taps a cell on the frame
@@ -173,10 +179,13 @@ export function PaletteTile({ piece, size = "md", demo = false, upload, onRemove
           footprint, so a portrait badge is a tall chip in a square slot. */}
       <div className="flex items-center justify-center" style={{ width: box, height: box }}>
       <div
-        className={`flex items-center justify-center overflow-hidden ${isDieCut ? "" : "rounded-md tile-3d"}`}
+        className={`relative flex items-center justify-center overflow-hidden ${isDieCut ? "" : "tile-3d"}`}
         style={{
           width: artW,
           height: artH,
+          // The radius the art is fitted against, stated once (it was `rounded-md`,
+          // the same 6px).
+          borderRadius: isDieCut ? undefined : SWATCH_RADIUS_PX,
           // The palette must show the SAME field the frame will paint, or picking a
           // tile is a guess: with a school colour applied, a swatch still showing its
           // designed navy is advertising a tile that no longer exists.
@@ -184,20 +193,25 @@ export function PaletteTile({ piece, size = "md", demo = false, upload, onRemove
           filter: isDieCut ? "drop-shadow(0 1px 2px rgba(0,0,0,0.5))" : undefined,
         }}
       >
-        {piece.artworkUrl ? (
+        {artUrl ? (
           // Resized and lazy — the swatch is ~56px and the file behind it is a
           // print master. See TileArtImg.
-          <TileArtImg
-            src={badgeArtworkUrl(piece, field)}
-            alt={piece.name}
-            width={artW}
-            height={artH}
-            // CONTAIN inside a margin, like the frame's badges: the art is cut
-            // square and runs to its corners (a palette's brushes, crossed
-            // sticks), so filling the rounded swatch edge to edge clipped exactly
-            // those tips (owner, 2026-09-24).
-            style={{ objectFit: "contain", padding: "9%" }}
-          />
+          //
+          // CONTAIN in the fitted rect, like the frame's badges: art cut square
+          // that runs to its corners (a palette's brushes, crossed sticks) loses
+          // its tips to a rounded swatch drawn edge to edge (owner, 2026-09-24).
+          <div
+            className="absolute"
+            style={{ left: artRect.x, top: artRect.y, width: artRect.width, height: artRect.height }}
+          >
+            <TileArtImg
+              src={artUrl}
+              alt={piece.name}
+              width={Math.max(artW, artRect.width)}
+              height={Math.max(artH, artRect.height)}
+              style={{ objectFit: "contain" }}
+            />
+          </div>
         ) : hasArt ? (
           <TileArtwork pieceId={piece.id} size={Math.min(artW, artH) - 4} />
         ) : null}

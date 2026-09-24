@@ -78,7 +78,7 @@ import { bannerConfigFor, bannerLogoLayout, sectionSupportsLogo } from "@/lib/ut
 import { getPiece } from "@/data/sets";
 import {
   rimRamp,
-  artInset,
+  artRect,
   tileField,
   artShadow,
   badgeArtworkUrl,
@@ -999,7 +999,8 @@ export function drawSchoolFrame(
         const img = images.snappets.get(slot.id);
         if (img) drawFit(ctx, img, slot.x, slot.y, w, h, "cover", 1);
       } else {
-        const art = piece?.artworkUrl ? images.pieces.get(badgeArtworkUrl(piece, field)) : undefined;
+        const artUrl = piece?.artworkUrl ? badgeArtworkUrl(piece, field) : undefined;
+        const art = artUrl ? images.pieces.get(artUrl) : undefined;
         // Art sits ON the field at its own aspect; the field fills the rest. Where
         // the art has alpha (Becky's die-cut snappets) the field shows through,
         // which is exactly what makes the set read as one scheme.
@@ -1036,9 +1037,11 @@ export function drawSchoolFrame(
           // Plus AIR. Inset to exactly the bevel's inner edge, art that runs out to
           // its own bounding box — a rounded-square patch, a crest with a border —
           // met the shaded band with nothing between them and read as cut into.
-          // `artInset` is the one answer both renderers ask for, so they cannot drift.
-          const chrome = artInset(w, h, field, m.tileSize, radii);
-          drawFit(ctx, art, slot.x + chrome, slot.y + chrome, w - chrome * 2, h - chrome * 2, "contain", 1);
+          // `artRect` is the one answer both renderers ask for, so they cannot drift —
+          // and it is PER ARTWORK: each art as large as its own measured ink allows
+          // before a pixel meets a rounded corner (utils/art-fit).
+          const r = artRect(w, h, field, m.tileSize, radii, artUrl);
+          drawFit(ctx, art, slot.x + r.x, slot.y + r.y, r.width, r.height, "contain", 1);
           ctx.restore();
         }
       }

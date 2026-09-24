@@ -1,5 +1,7 @@
 import type { TilePiece } from "@/lib/types";
 import { IVORY_ENAMEL, NAVY_ENAMEL } from "@/data/sets/high-school-light.generated";
+import { fitArtInBox, hasArtFit, type ArtBox } from "@/lib/utils/art-fit";
+export type { ArtBox } from "@/lib/utils/art-fit";
 
 // ─── Snap-in badge look ─────────────────────────────────────────────────────
 //
@@ -660,6 +662,71 @@ export function artInset(
   if (!radii) return base;
   const widest = Math.max(radii.tl, radii.tr, radii.br, radii.bl);
   return base + Math.ceil(Math.max(0, widest - base) * (1 - Math.SQRT1_2));
+}
+
+/**
+ * WHERE a badge's artwork is drawn, in px from the tile's top-left — the one answer
+ * both renderers ask for, now per ARTWORK.
+ *
+ * The rule: the art's INK must stay inside the chrome plus air (`artInset` without
+ * corners) AND inside that region's rounded corners, which run concentric with the
+ * badge's own (`radii` less the inset — an ordinary corner is tighter than the
+ * chrome, so only the wide frame-corner radius survives). Within that, each art is
+ * as big as its own measured ink allows (utils/art-fit): a softball or a mascot that
+ * never reaches a corner keeps its full size on a frame corner, the palette's brushes
+ * give up exactly what they must, and art with transparent margins is fitted by its
+ * ink, so a wide band on a 2x1 badge fills it rather than floating at half size.
+ *
+ * Art that was never measured (the holiday sets, a remote mark) keeps the uniform
+ * corner-safe rule — the rect is the inset box and the art is drawn `contain` in it,
+ * which is exactly what it always was. Callers draw `contain` into the returned rect
+ * either way; for measured art the rect already has the image's aspect.
+ */
+export function artRect(
+  w: number,
+  h: number,
+  background: string = TILE_BG.navy,
+  unit: number = Math.min(w, h),
+  radii?: CornerRadii,
+  url?: string | null,
+): ArtBox {
+  const base = artInset(w, h, background, unit);
+  if (url && hasArtFit(url)) {
+    const r = radii ?? { tl: 0, tr: 0, br: 0, bl: 0 };
+    const fitted = fitArtInBox(
+      url,
+      { x: base, y: base, width: w - base * 2, height: h - base * 2 },
+      { tl: r.tl - base, tr: r.tr - base, br: r.br - base, bl: r.bl - base },
+    );
+    if (fitted) return fitted;
+  }
+  const i = artInset(w, h, background, unit, radii);
+  return { x: i, y: i, width: Math.max(0, w - i * 2), height: Math.max(0, h - i * 2) };
+}
+
+/** The tray swatch's corner radius, px. Drawn by PaletteTile and fitted against here. */
+export const SWATCH_RADIUS_PX = 6;
+/** Air between a tray swatch's edge and its art, as a fraction of its short side. */
+export const SWATCH_AIR_RATIO = 0.04;
+/** The flat margin unmeasured art keeps in a swatch (what every swatch used to get). */
+export const SWATCH_FALLBACK_PAD_RATIO = 0.09;
+
+/**
+ * Where a TRAY SWATCH draws its art: the same per-art fit as `artRect`, against the
+ * swatch's own rounded corners. The swatch has no rim or bevel, only a small radius,
+ * so measured art runs almost to its edge; unmeasured art (the /build palettes) keeps
+ * the flat 9% margin it has always had.
+ */
+export function swatchArtRect(w: number, h: number, url?: string | null): ArtBox {
+  if (url && hasArtFit(url)) {
+    const air = Math.max(1, Math.round(Math.min(w, h) * SWATCH_AIR_RATIO));
+    const r = SWATCH_RADIUS_PX - air;
+    const fitted = fitArtInBox(url, { x: air, y: air, width: w - air * 2, height: h - air * 2 }, { tl: r, tr: r, br: r, bl: r });
+    if (fitted) return fitted;
+  }
+  // CSS percentage padding resolves against the WIDTH on all four sides.
+  const pad = w * SWATCH_FALLBACK_PAD_RATIO;
+  return { x: pad, y: pad, width: Math.max(0, w - pad * 2), height: Math.max(0, h - pad * 2) };
 }
 
 /**

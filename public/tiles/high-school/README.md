@@ -10,6 +10,12 @@ Embroidered-patch badges for high-school activities. Produced in house:
    carry no matte and survive on any field colour.
 3. **Print-quality intake gate** — art lands here only after it clears the
    resolution floor for a 2×2 tile (1.982" at 300 DPI = 595px).
+4. **Fit measurement** — `npm run art:fit` (scripts/art-fit.mjs) measures every
+   PNG here, in `light/` and under `public/kits/`, into
+   `src/data/sets/art-fit.generated.ts`, so each badge draws its art as large as
+   its own ink allows without clipping a rounded corner. `art-fit.test.ts` fails
+   if a PNG has no entry or has changed since it was measured — re-run the script
+   after adding or editing any art.
 
 Piece data is in `src/data/sets/high-school.ts`; a file here is only reachable if
 a piece names it. There is no manifest to keep in sync — an earlier one drifted
