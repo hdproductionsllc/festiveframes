@@ -3,6 +3,7 @@ import type { FrameConfig, SectionId } from "@/lib/types";
 import { SCHOOL_FLUSH_FRAME_CONFIG, SCHOOL_FRAME_CONFIG, SCHOOL_SLIM_FRAME_CONFIG } from "@/lib/constants/frame";
 import { buildGrid } from "@/lib/utils/slot-generator";
 import { panelRects } from "@/lib/utils/panels";
+import { badgeRule, badgeSpanAt } from "@/lib/utils/snappet";
 
 // ─── Start-from-a-preset ─────────────────────────────────────────────────────
 //
@@ -41,13 +42,19 @@ export interface SchoolPreset {
    * in the intake, falling back to the preset's own default when they chose
    * nothing — so the preset is a finished frame either way.
    */
-  layout: Array<[slot: string, piece: string, span?: { cols: number; rows: number }]>;
+  layout: Array<[slot: string, piece: string, span: { cols: number; rows: number }]>;
+  /**
+   * Words DERIVED from what this preset resolves to for the school at hand
+   * (`presetBlurb`), given the badge names down the left side, top to bottom.
+   * Use it whenever the blurb names the badges: a typed list goes stale per kit.
+   */
+  describe?: (names: string[]) => string;
   /** Used wherever `ACTIVITY` appears and the intake is empty. */
   fallbackActivity: string;
   /**
    * This design is ABOUT the activity, so applying it without one produces a
-   * frame that is not what the card promised. "Their sport" placed a stock
-   * trophy when nobody had picked a sport, which is exactly the generic result
+   * frame that is not what the card promised. "What they do" (once "Their
+   * sport") placed a stock trophy when nobody had picked an activity, which is exactly the generic result
    * the preset exists to avoid — the builder now sends them to the sport picker
    * instead of guessing.
    */
@@ -88,9 +95,29 @@ export const MASCOT = "__MASCOT__";
  * claim nobody earned. A school's own crest is neither filler nor a repeat, so
  * it is what the pattern alternates with when there is nothing else true to say.
  *
- * Falls back to the generic crest, which is still a school shape.
+ * Falls back to a GENERIC SCHOOL SHAPE (`GENERIC_MARKS`) that is not the mascot.
  */
 export const MASCOT_ALT = "__MASCOT_ALT__";
+
+/**
+ * The shapes that stand in for a school's own marks when we have not been given
+ * any, which is every pilot school (their mascot art stays out of `public/` until
+ * the school says yes in writing). Kit seeding (data/kit-seed.ts) and the presets
+ * both read THIS list, so the landing frame and a preset tap cannot disagree about
+ * what "the school" looks like on a markless kit.
+ *
+ * Every entry must claim nothing about the student. `hs:honor-star` was the
+ * fallback, and its badge is named "Honor Roll": on all six pilot schools "Just the
+ * school" laid four honor-roll badges and "Graduate" put one in both top corners,
+ * an academic claim about a student nobody told us about. The plain spirit star is
+ * the school's colours in a shape and says nothing about anyone's grades.
+ * `school-presets.test.ts` runs the no-filler rule on the RESOLVED shipping presets
+ * for every pilot kit, which is where that defect lived.
+ *
+ * A preset alternates between the first two; the cap is a third the kit seed can
+ * fall back on when a signature has spent one of the others.
+ */
+export const GENERIC_MARKS = ["hs:crest", "hs:star", "hs:grad-cap"] as const;
 
 // ─── The rules these three obey ──────────────────────────────────────────────
 //
@@ -124,55 +151,76 @@ export const MASCOT_ALT = "__MASCOT_ALT__";
 // rightward from onto the rail. Mirrored by construction, because the frame is
 // symmetrical and an asymmetric layout reads as unfinished.
 
-/** Anchor slot ids for a stack of badges `rowSpans` tall, down one side panel.
- *  Exported because kit seeding (data/kit-seed.ts) walks the same column: a kit
- *  lands its school's own badges on the very anchors a preset would use, so the
- *  two can never disagree about where a side badge goes. */
-export function sideAnchors(config: FrameConfig, side: SectionId, rowSpans: number[]): string[] {
+/** One badge position down a side column: its anchor and the square the frame
+ *  declares there. */
+export interface ColumnBadge {
+  slot: string;
+  span: { cols: number; rows: number };
+}
+
+/**
+ * The badge positions down one side panel, top to bottom — ASKED OF THE FRAME.
+ *
+ * Walks the panel from its top row at its own left-hand column (the cantilever
+ * column a side badge grows rightward from) and, at each row, takes the square the
+ * square rule declares there (`badgeSpanAt`). A row where no square anchors is
+ * stepped over rather than filled with a rectangle: on the live frame's nine-row
+ * column that is the bottom corner, which used to be absorbed into a 2x3 — a
+ * rectangle, and exactly what the rule forbids.
+ *
+ * Exported because kit seeding (data/kit-seed.ts) walks the same column: a kit
+ * lands its school's own badges on the very anchors and spans a preset would use,
+ * so the two can never disagree about where — or how big — a side badge is.
+ */
+export function sideColumn(config: FrameConfig, side: SectionId): ColumnBadge[] {
   const grid = buildGrid(config);
   const rect = panelRects(config)[side];
-  const out: string[] = [];
-  let row = rect.row0;
-  for (const rows of rowSpans) {
+  const ctx = { grid, slots: {}, sections: {}, barCovered: new Set<string>(), badges: badgeRule(config) };
+  const out: ColumnBadge[] = [];
+  for (let row = rect.row0; row <= rect.row1; ) {
     const cell = grid.cellAt(row, rect.col0);
-    if (!cell) break; // the panel ran out — a shorter stack is better than a wrong one
-    out.push(cell.id);
-    row += rows;
+    const span = cell ? badgeSpanAt(ctx, { row, col: rect.col0 }) : null;
+    if (!cell || !span) {
+      row += 1;
+      continue;
+    }
+    out.push({ slot: cell.id, span });
+    row += span.rows;
   }
   return out;
 }
 
+/** Anchor slot ids down one side panel — `sideColumn` without the spans. */
+export function sideAnchors(config: FrameConfig, side: SectionId): string[] {
+  return sideColumn(config, side).map((b) => b.slot);
+}
+
 /**
- * A full mirrored layout from a run of [piece, height] down one side.
- *
- * The heights must sum to the side panel's row count or the bottom corner is left
- * bare, which is why they are stated per frame rather than assumed: the live frame
- * is 9 rows (2+2+2+3) and the slim fork is 8 (2+4+2).
+ * A full mirrored layout from a run of pieces down one side, on the positions the
+ * frame declares. The run must be exactly as long as the column: a shorter run
+ * leaves a badge position bare, and `school-presets.test.ts` says so.
  */
-function mirrored(
-  config: FrameConfig,
-  run: Array<[piece: string, rows: number]>,
-): SchoolPreset["layout"] {
-  const heights = run.map(([, rows]) => rows);
+function mirrored(config: FrameConfig, run: string[]): SchoolPreset["layout"] {
   const out: SchoolPreset["layout"] = [];
   for (const side of ["wing-left", "wing-right"] as const) {
-    const anchors = sideAnchors(config, side, heights);
-    anchors.forEach((slot, i) => out.push([slot, run[i][0], { cols: 2, rows: heights[i] }]));
+    sideColumn(config, side).forEach(({ slot, span }, i) => {
+      if (i < run.length) out.push([slot, run[i], span]);
+    });
   }
   return out;
 }
 
+/** How many badges a side column holds, top to bottom, in grid rows — derived. */
+function stackOf(config: FrameConfig): number[] {
+  return sideColumn(config, "wing-left").map((b) => b.span.rows);
+}
+
 /**
- * The live frame's column: three squares and a taller badge in the bottom corner.
- *
- * 9 rows does not divide by 2, and the odd row is at the BOTTOM — beside the
- * banner's cantilevered second row. Left empty it is a notch in both bottom
- * corners; absorbed into the last badge it is part of the frame. Square art drawn
- * into a 2x3 fits to its long axis and leaves a strip of field below it, which is
- * exactly what the empty notch would have looked like anyway, except it belongs to
- * the badge instead of being a hole in the design.
+ * The live frame's column: four 2x2 squares down its nine rows. The odd row at the
+ * bottom corner — once absorbed into a 2x3 — is frame body now: a badge is a
+ * square, and the only square that fits there is below the floor.
  */
-export const FULL_STACK = [2, 2, 2, 3];
+export const FULL_STACK = stackOf(SCHOOL_FRAME_CONFIG);
 
 export const SCHOOL_PRESETS: SchoolPreset[] = [
   {
@@ -184,31 +232,21 @@ export const SCHOOL_PRESETS: SchoolPreset[] = [
     // draws both objects in one badge, so pairing it with `hs:grad-cap` put the
     // mortarboard on the frame twice. One cap, one diploma, and the school at
     // both ends of the run.
-    layout: mirrored(SCHOOL_FRAME_CONFIG, [
-      [MASCOT, FULL_STACK[0]],
-      ["hs:grad-cap", FULL_STACK[1]],
-      ["hs:diploma-tall", FULL_STACK[2]],
-      [MASCOT, FULL_STACK[3]],
-    ]),
+    layout: mirrored(SCHOOL_FRAME_CONFIG, [MASCOT, "hs:grad-cap", "hs:diploma-tall", MASCOT]),
     fallbackActivity: "hs:honor-star",
     favouredBy: ["parent", "grandparent", "self"],
   },
   {
     id: "athlete",
-    name: "Their sport",
-    blurb: "Their sport and the mascot, alternating down both sides.",
-    icon: "\u{1F3C5}",
+    name: "What they do",
+    blurb: "Their activity and the mascot, alternating down both sides.",
+    icon: "⭐",
     // ALTERNATING, which is the whole fix. This used to run the sport in the
     // corners and the mascot in the middle — sport, mascot, mascot, sport — so
     // the two mascots sat directly on top of each other and read as the same
     // badge placed twice by accident. Alternating gives the same two ideas the
     // same amount of room and never repeats itself.
-    layout: mirrored(SCHOOL_FRAME_CONFIG, [
-      [ACTIVITY, FULL_STACK[0]],
-      [MASCOT, FULL_STACK[1]],
-      [ACTIVITY, FULL_STACK[2]],
-      [MASCOT, FULL_STACK[3]],
-    ]),
+    layout: mirrored(SCHOOL_FRAME_CONFIG, [ACTIVITY, MASCOT, ACTIVITY, MASCOT]),
     fallbackActivity: "hs:trophy",
     needsActivity: true,
     wantsNumber: true,
@@ -231,57 +269,37 @@ export const SCHOOL_PRESETS: SchoolPreset[] = [
     // put a crest badge in the bottom corner right beside it — four of the same
     // fleur in a row across the bottom of the frame. Same defect as the stacked
     // mascots, one step further down, and only visible in a render.
-    layout: mirrored(SCHOOL_FRAME_CONFIG, [
-      [MASCOT_ALT, FULL_STACK[0]],
-      [MASCOT, FULL_STACK[1]],
-      [MASCOT_ALT, FULL_STACK[2]],
-      [MASCOT, FULL_STACK[3]],
-    ]),
+    layout: mirrored(SCHOOL_FRAME_CONFIG, [MASCOT_ALT, MASCOT, MASCOT_ALT, MASCOT]),
     fallbackActivity: "hs:crest",
     favouredBy: ["alum", "staff"],
   },
 ];
 
-// ─── The FORK's presets: 2x2 / 2x4 / 2x2 ─────────────────────────────────────
+// ─── The FORK's presets: four squares ────────────────────────────────────────
 //
-// The slim frame has no bottom cantilever, so its side panel is 8 rows — three
-// badges with a taller feature in the middle, instead of four equal squares. That
-// hierarchy is the point: four equal slots is where every repetitive layout came
-// from, because nothing could lead.
-//
-// The middle badge is 2x4, i.e. exactly 1:2 — which is the aspect the TALL pieces
-// in the high-school set are already drawn at (`hs:diploma-tall`, `hs:medal`,
-// `hs:grad-tassel`), so they fill it edge to edge with no letterboxing at all. It
-// is also the natural home for a school's mascot redrawn upright, a jersey
-// carrying their number, or the student's own photo.
+// The slim frame has no bottom cantilever, so its side panel is 8 rows. It used to
+// run 2x2 / 2x4 / 2x2 — a tall feature in the middle — and a 2x4 is a rectangle,
+// which the square rule forbids. Eight rows is four 2x2 squares exactly, so the
+// fork runs the live frame's four-badge patterns.
 
-export const SLIM_STACK = [2, 4, 2];
-
-/** Mirror a three-badge column onto both sides, with the middle one 2x4. */
-function slimLayout(top: string, middle: string, bottom: string): SchoolPreset["layout"] {
-  return mirrored(SCHOOL_SLIM_FRAME_CONFIG, [
-    [top, SLIM_STACK[0]],
-    [middle, SLIM_STACK[1]],
-    [bottom, SLIM_STACK[2]],
-  ]);
-}
+export const SLIM_STACK = stackOf(SCHOOL_SLIM_FRAME_CONFIG);
 
 export const SLIM_PRESETS: SchoolPreset[] = [
   {
     id: "graduate",
     name: "Graduate",
-    blurb: "Their cap, their diploma, and the school between them.",
+    blurb: "Their cap, their diploma, their school.",
     icon: "\u{1F393}",
-    layout: slimLayout("hs:grad-cap", MASCOT, "hs:diploma-tall"),
+    layout: mirrored(SCHOOL_SLIM_FRAME_CONFIG, [MASCOT, "hs:grad-cap", "hs:diploma-tall", MASCOT]),
     fallbackActivity: "hs:honor-star",
     favouredBy: ["parent", "grandparent", "self"],
   },
   {
     id: "athlete",
-    name: "Their sport",
-    blurb: "Their sport top and bottom, the mascot leading in the middle.",
-    icon: "\u{1F3C5}",
-    layout: slimLayout(ACTIVITY, MASCOT, ACTIVITY),
+    name: "What they do",
+    blurb: "Their activity and the mascot, alternating down both sides.",
+    icon: "⭐",
+    layout: mirrored(SCHOOL_SLIM_FRAME_CONFIG, [ACTIVITY, MASCOT, ACTIVITY, MASCOT]),
     fallbackActivity: "hs:trophy",
     needsActivity: true,
     wantsNumber: true,
@@ -290,48 +308,53 @@ export const SLIM_PRESETS: SchoolPreset[] = [
   {
     id: "school",
     name: "Just the school",
-    blurb: "The crest, the mascot, the crest. Nothing to fill in.",
+    blurb: "The mascot and the crest. Nothing to fill in.",
     icon: "\u{1F6E1}\uFE0F",
-    layout: slimLayout(MASCOT_ALT, MASCOT, MASCOT_ALT),
+    layout: mirrored(SCHOOL_SLIM_FRAME_CONFIG, [MASCOT_ALT, MASCOT, MASCOT_ALT, MASCOT]),
     fallbackActivity: "hs:crest",
     favouredBy: ["alum", "staff"],
   },
 ];
 
-// ─── The FLUSH fork's presets: three EQUAL badges, 2 x 2.25 each ─────────────
+// ─── The FLUSH fork's presets: three SQUARE badges, 2.25 x 2.25 each ─────────
 //
-// The flush frame's side column is 2" wide and 6.75" tall and, on the owner's
-// call, cut into three equal rectangles. Those are not on the 1" pitch, so the
-// side panels sit on their own lattice of three rows (FrameConfig.wingRows) and a
-// badge there is two cells wide and ONE side-row tall. Square art draws into the
-// 2 x 2.25 contained, with a hair of field above and below.
+// The flush frame's side column is 2.25" wide and 6.75" tall: three squares. They
+// are not on the 1" pitch, so the side panels sit on their own lattice of three
+// rows (FrameConfig.wingRows) and a badge there is two cells (wing + rail) wide
+// and ONE side-row tall — which `sideColumn` reads off the square rule rather
+// than this file stating it.
 
-export const FLUSH_STACK = [1, 1, 1];
+export const FLUSH_STACK = stackOf(SCHOOL_FLUSH_FRAME_CONFIG);
 
-/** Mirror a three-badge column onto both sides, one side-row each. */
+/** Mirror a three-badge column onto both sides. */
 function flushLayout(top: string, middle: string, bottom: string): SchoolPreset["layout"] {
-  return mirrored(SCHOOL_FLUSH_FRAME_CONFIG, [
-    [top, FLUSH_STACK[0]],
-    [middle, FLUSH_STACK[1]],
-    [bottom, FLUSH_STACK[2]],
-  ]);
+  return mirrored(SCHOOL_FLUSH_FRAME_CONFIG, [top, middle, bottom]);
 }
 
 export const FLUSH_PRESETS: SchoolPreset[] = [
   {
     id: "graduate",
     name: "Graduate",
-    blurb: "Their cap, their diploma, and the school between them.",
+    blurb: "Their cap and diploma, with the school above and below.",
     icon: "\u{1F393}",
-    layout: flushLayout("hs:grad-cap", MASCOT, "hs:diploma-tall"),
+    // SQUARE ART for a square badge. `hs:diploma-tall` is a 0.38 upright scroll
+    // (a sliver in a 2.25" square) and `hs:diploma` a 1.92 landscape one;
+    // `hs:diploma-cap` (1.15) is the near-square graduation piece, and it already
+    // draws the cap, so pairing it with `hs:grad-cap` would put the mortarboard on
+    // the frame twice. The school takes both ends of the run instead, ending on
+    // the mascot so the bottom corner does not repeat the banner's crest.
+    layout: flushLayout(MASCOT_ALT, "hs:diploma-cap", MASCOT),
     fallbackActivity: "hs:honor-star",
     favouredBy: ["parent", "grandparent", "self"],
   },
   {
     id: "athlete",
-    name: "Their sport",
-    blurb: "Their sport top and bottom, the mascot in the middle.",
-    icon: "\u{1F3C5}",
+    // "What they do", not "Their sport", and a star rather than a medal: this is
+    // the design an orchestra or theater family needs too, and a sports-only
+    // label told them it was not for them.
+    name: "What they do",
+    blurb: "Their activity top and bottom, the mascot in the middle.",
+    icon: "⭐",
     layout: flushLayout(ACTIVITY, MASCOT, ACTIVITY),
     fallbackActivity: "hs:trophy",
     needsActivity: true,
@@ -341,7 +364,8 @@ export const FLUSH_PRESETS: SchoolPreset[] = [
   {
     id: "school",
     name: "Just the school",
-    blurb: "The crest, the mascot, the crest. Nothing to fill in.",
+    blurb: "The school's own badges down both sides. Nothing to fill in.",
+    describe: (names) => `${names.join(", ")}, down both sides. Nothing to fill in.`,
     icon: "\u{1F6E1}️",
     layout: flushLayout(MASCOT_ALT, MASCOT, MASCOT_ALT),
     fallbackActivity: "hs:crest",
@@ -375,19 +399,85 @@ export function presetTiles(
   chosenActivity: string | null,
   mascotPieceId?: string | null,
   altMarkPieceId?: string | null,
-): Array<[string, string, { cols: number; rows: number } | undefined]> {
+): Array<[string, string, { cols: number; rows: number }]> {
   const activity = chosenActivity || preset.fallbackActivity;
-  const mascot = mascotPieceId || "hs:crest";
-  // A school with only one mark alternates against the generic crest, which is
-  // still a school shape. It must never resolve to the mascot itself: that would
-  // put the same badge in adjacent positions, which is the defect this preset
-  // pattern exists to avoid.
+  const mascot = mascotPieceId || GENERIC_MARKS[0];
+  // A school with one mark, or none, alternates against a generic school shape.
+  // It must never resolve to the mascot itself: that would put the same badge in
+  // adjacent positions, which is the defect this preset pattern exists to avoid.
   const alt = altMarkPieceId && altMarkPieceId !== mascot
     ? altMarkPieceId
-    : mascot === "hs:crest" ? "hs:honor-star" : "hs:crest";
+    : GENERIC_MARKS.slice(0, 2).find((id) => id !== mascot)!;
   return preset.layout.map(([slot, piece, span]) => [
     slot,
     piece === ACTIVITY ? activity : piece === MASCOT ? mascot : piece === MASCOT_ALT ? alt : piece,
     span,
   ]);
+}
+
+/**
+ * The line under a preset, in terms of what it will ACTUALLY lay for this school.
+ *
+ * "The crest, the mascot, the crest" was typed once and read on every kit; on a
+ * school with no marks of its own it described badges that were not there. A
+ * preset with `describe` gets its words from the resolved left column (top to
+ * bottom, by badge NAME), so the sentence and the frame cannot disagree.
+ */
+export function presetBlurb(
+  preset: SchoolPreset,
+  chosenActivity: string | null,
+  marks: { mascot: string | null; alt: string | null },
+  nameOf: (pieceId: string) => string | undefined,
+): string {
+  if (!preset.describe) return preset.blurb;
+  // `mirrored` lays the left column first, top to bottom, then the right.
+  const names = presetTiles(preset, chosenActivity, marks.mascot, marks.alt)
+    .slice(0, preset.layout.length / 2)
+    .map(([, piece]) => nameOf(piece) ?? piece);
+  return preset.describe(names);
+}
+
+/** The store action laying a preset needs — the design store satisfies it. */
+export interface PresetTarget {
+  layBadges: (tiles: ReadonlyArray<{ slot: string; pieceId: string; setId: string; span?: { cols: number; rows: number } }>) => void;
+}
+
+/**
+ * LAY A PRESET: replace every badge on the frame with the preset's, in ONE step.
+ *
+ * A preset is a whole set of badges, not a sprinkle, so nothing the frame held
+ * before survives it — an uploaded photo included. It is NOT a new design: the
+ * banners, the colours and the tray are the parent's and stay as they are. It used
+ * to `clearAll()` first, which also reset both banners to the kit's seed, so after
+ * a reload (when the intake fields are empty again) every chip and preset tap
+ * silently wiped the parent's own line. And it was seven history steps, so one
+ * Undo took back one badge of a preset instead of the preset.
+ *
+ * Spans are the preset's own, which `sideColumn` read off the square rule for this
+ * variant, and `layBadges` seats each through the same gate as a tap — so there is
+ * no fallback span to invent.
+ *
+ * EVERY one-tap path goes through here: the preset buttons, the "See it on the
+ * frame" intake, the welcome chips' `#preset=` links and the graduate express. The
+ * intake and the chips used to place their own hard-coded slot ids from the
+ * retired 14 x 8 grid at a hard-coded 2x2; on the flush frame most of those ids
+ * did not exist and were dropped without a word, leaving a lopsided frame with
+ * the parent's chosen activity nowhere on it.
+ */
+export function layPreset(
+  api: PresetTarget,
+  preset: SchoolPreset,
+  activity: string | null,
+  marks: { mascot: string | null; alt: string | null },
+): void {
+  api.layBadges(
+    presetTiles(preset, activity, marks.mascot, marks.alt).map(([slot, pieceId, span]) => ({
+      slot,
+      pieceId,
+      // The piece id's own namespace IS its set: `hs:` pieces are the high-school
+      // set, `mark:` pieces the school's marks.
+      setId: pieceId.split(":")[0],
+      span,
+    })),
+  );
 }

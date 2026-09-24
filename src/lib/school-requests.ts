@@ -11,10 +11,10 @@
 // what to research next, and a better one than a map of St. Louis.
 //
 // WE DO NOT EMAIL THE REQUESTER. Ever. The only mail this sends is an internal
-// alert to us, and only when SCHOOL_REQUEST_EMAIL is set (see the route). The
-// standing rule in CLAUDE.md is that nothing emails anybody without the owner's
-// explicit say-so, and a stranger who typed their school's name into a box has
-// not asked to hear from us.
+// alert to MySchoolFrame's inbox (MSF_ORDER_EMAIL, default bill@myschoolframe.com)
+// — see lib/email-msf. The standing rule in CLAUDE.md is that nothing emails
+// anybody without the owner's explicit say-so, and a stranger who typed their
+// school's name into a box has not asked to hear from us.
 //
 // Mirrors order/school-ledger.ts exactly: Postgres when DATABASE_URL is set, an
 // in-memory Map otherwise, every DB error logged (never the connection string).

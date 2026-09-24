@@ -16,7 +16,7 @@ import { usePaletteStore } from "@/stores/palette-store";
  * arm→tap-frame flow wordlessly. It's marked "seen" right after so it never
  * nags again.
  */
-export function ArmedBanner({ placement = "frame" }: { placement?: "frame" | "tray" }) {
+export function ArmedBanner({ placement = "frame" }: { placement?: "frame" | "tray" | "dock" }) {
   const selectedPieceId = usePaletteStore((s) => s.selectedPieceId);
   const clearSelection = usePaletteStore((s) => s.clearSelection);
   const armHintSeen = usePaletteStore((s) => s.armHintSeen);
@@ -52,23 +52,30 @@ export function ArmedBanner({ placement = "frame" }: { placement?: "frame" | "tr
 
   // The frame-side cue OVERLAYS the center of the plate (absolute, floating) so it
   // never pushes the canvas/editor down when it appears. The tray cue stays inline.
+  // `dock` is the school builder's phone slot UNDER the pinned frame: inline, one
+  // compact line, because over the frame it hid the middle side badges — the exact
+  // targets the parent is being told to tap.
   const overlay = placement === "frame";
+  const dock = placement === "dock";
 
   return (
     <div
       ref={bannerRef}
       role="status"
       aria-live="polite"
+      data-placement={placement}
       // `ff-armed` is an inert marker for the /lab/school re-skin — same reasoning
       // as PaletteTile's `ff-ptile`: this banner sits directly on top of the frame,
       // whose own controls use neighbouring arbitrary-value classes, so the school
       // stylesheet anchors on a marker instead of doing selector archaeology next
       // to the hero. It matches no rule outside school-skin.css.
       className={`ff-armed flex items-center gap-2 rounded-xl border-2 border-[#1e1b17] bg-brand-gold
-        px-3 py-2 text-center shadow-[3px_3px_0_#1e1b17] motion-safe:animate-tile-snap ${
+        text-center shadow-[3px_3px_0_#1e1b17] motion-safe:animate-tile-snap ${
           overlay
-            ? "pointer-events-auto absolute left-1/2 top-1/2 z-20 w-[86%] max-w-md -translate-x-1/2 -translate-y-1/2"
-            : "relative"
+            ? "pointer-events-auto absolute left-1/2 top-1/2 z-20 w-[86%] max-w-md -translate-x-1/2 -translate-y-1/2 px-3 py-2"
+            : dock
+              ? "relative w-full py-0.5 pl-3 pr-1"
+              : "relative px-3 py-2"
         }`}
     >
       {showFinger && (
@@ -87,13 +94,24 @@ export function ArmedBanner({ placement = "frame" }: { placement?: "frame" | "tr
       <span className="flex-1 text-[13px] font-extrabold leading-snug text-[#1e1b17]">
         {/* Leading glyph in a sentence that reads fine without it. The trailing
             space is inside the hidden span so nothing is left dangling. */}
-        <span className="ff-glyph">👆 </span>Now tap any spot on your frame to drop it — or drag a tile on.
+        {dock ? (
+          "Now tap a badge on the frame."
+        ) : (
+          <>
+            <span className="ff-glyph">👆 </span>Now tap the frame to drop it — or drag it on.
+          </>
+        )}
       </span>
+      {/* The ::after is the THUMB target: 8px of invisible hit area on every side
+          takes the pill (28px, or 40px in the dock) past 44px without making the
+          callout taller, so arming a tile still never moves the tray. */}
       <button
         type="button"
         onClick={clearSelection}
-        className="shrink-0 rounded-full border-2 border-[#1e1b17] bg-white px-2.5 py-1 text-[11px]
-          font-bold text-[#1e1b17] active:scale-95"
+        className={`relative shrink-0 rounded-full border-2 border-[#1e1b17] bg-white px-2.5 py-1 text-[11px]
+          font-bold text-[#1e1b17] active:scale-95 after:absolute after:-inset-2 after:content-[''] ${
+            dock ? "min-h-10 px-3.5" : ""
+          }`}
       >
         Done
       </button>

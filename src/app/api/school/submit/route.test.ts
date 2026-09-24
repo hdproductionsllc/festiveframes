@@ -12,15 +12,20 @@ import { POST } from "./route";
 // A tiny but VALID png data URL (matches the route's data:image/(png|jpeg) rule).
 const TINY_PNG = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M8AAAMBAQDJ/pLvAAAAAElFTkSuQmCC";
 
+/** A parent's contact, required on every send. Added to any body that does not
+ *  say otherwise, so each test below exercises the rule it is about. */
+const CONTACT = { email: "pat.parent@example.org", phone: "314-555-0199", forWhom: "My student" };
+
 function req(body: unknown): Request {
+  const b = body && typeof body === "object" && !("contact" in body) ? { ...body, contact: CONTACT } : body;
   return new Request("http://localhost:3000/api/school/submit", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
+    body: JSON.stringify(b),
   });
 }
 
-const ENV_KEYS = ["RESEND_API_KEY", "SCHOOL_ORDERS_EMAIL", "EMAIL_FROM"] as const;
+const ENV_KEYS = ["RESEND_API_KEY", "MSF_ORDER_EMAIL", "MSF_EMAIL_FROM", "EMAIL_FROM"] as const;
 let saved: Record<string, string | undefined>;
 
 beforeEach(() => {
@@ -138,7 +143,7 @@ describe("POST /api/school/submit — panels", () => {
 describe("POST /api/school/submit — security", () => {
   it("sends to the SERVER-FIXED recipient, ignoring any recipient in the body", async () => {
     process.env.RESEND_API_KEY = "test-key";
-    delete process.env.SCHOOL_ORDERS_EMAIL; // default recipient
+    delete process.env.MSF_ORDER_EMAIL; // default recipient
     const res = await POST(
       req({
         printPng: TINY_PNG,
@@ -146,23 +151,23 @@ describe("POST /api/school/submit — security", () => {
         // Adversarial fields — none may influence the recipient.
         to: "attacker@evil.example",
         recipient: "attacker@evil.example",
-        SCHOOL_ORDERS_EMAIL: "attacker@evil.example",
+        MSF_ORDER_EMAIL: "attacker@evil.example",
       }),
     );
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ ok: true });
     expect(sendMock).toHaveBeenCalledTimes(1);
     const arg = sendMock.mock.calls[0][0];
-    expect(arg.to).toBe("orders@festiveframes.co");
+    expect(arg.to).toEqual(["bill@myschoolframe.com"]);
   });
 
-  it("honors SCHOOL_ORDERS_EMAIL from the SERVER env (not the body)", async () => {
+  it("honors MSF_ORDER_EMAIL from the SERVER env (not the body)", async () => {
     process.env.RESEND_API_KEY = "test-key";
-    process.env.SCHOOL_ORDERS_EMAIL = "prod-inbox@festiveframes.co";
+    process.env.MSF_ORDER_EMAIL = "prod-inbox@myschoolframe.com";
     const res = await POST(req({ printPng: TINY_PNG, designName: "X", to: "attacker@evil.example" }));
     expect(res.status).toBe(200);
     const arg = sendMock.mock.calls[0][0];
-    expect(arg.to).toBe("prod-inbox@festiveframes.co");
+    expect(arg.to).toEqual(["prod-inbox@myschoolframe.com"]);
   });
 
   it("escapes the design name in the email HTML (no HTML injection)", async () => {
@@ -211,7 +216,9 @@ describe("POST /api/school/submit — security", () => {
     const arg = sendMock.mock.calls[0][0];
     expect(arg.html).not.toContain("<script>");
     // No live tag forms — the payload survives only as inert, escaped text.
-    expect(arg.html).not.toContain("<img");
+    // (The branded header carries our own logo <img>; the PAYLOAD's tag must not
+    // survive live anywhere.)
+    expect(arg.html).not.toContain("<img src=x");
     expect(arg.html).toContain("&lt;img");
     // A non-numeric qty string is coerced to a number (0), never interpolated raw.
     expect(arg.html).not.toContain("5<script>");
@@ -227,7 +234,7 @@ describe("POST /api/school/submit — security", () => {
 describe("POST /api/school/submit — uploaded artwork provenance", () => {
   const send = async (extra: Record<string, unknown>) => {
     process.env.RESEND_API_KEY = "test-key";
-    process.env.EMAIL_FROM = "Festive Frames <orders@example.com>";
+    process.env.EMAIL_FROM = "Shared <orders@example.com>";
     const res = await POST(req({ printPng: TINY_PNG, designName: "Lincoln HS", ...extra }));
     expect(res.status).toBe(200);
     return sendMock.mock.calls[0]?.[0] as { html: string; text: string };
@@ -260,5 +267,128 @@ describe("POST /api/school/submit — uploaded artwork provenance", () => {
   it("treats a malformed attestation as no attestation at all", async () => {
     const mail = await send({ artUploaded: true, artworkRights: { version: "2026-09-13" } });
     expect(mail.html).toContain("NO RIGHTS ATTESTATION");
+  });
+});
+
+// ─── THE SQUARE RULE at the order boundary ────────────────────────────────────
+//
+// The builder cannot seat a non-square badge, so a parts list carrying one came
+// from a builder older than the rule or from a hand-made POST. The route refuses
+// it before anything reaches the production inbox.
+
+describe("POST /api/school/submit — every badge is square", () => {
+  const parts = (rows: Array<{ pieceId: string; size: string }>) => ({
+    designName: "X",
+    plateState: "MO",
+    tileSizeInches: 1,
+    qr: { enabled: false, url: "" },
+    rows: rows.map((r) => ({
+      sku: "HS-X",
+      name: r.pieceId,
+      pieceId: r.pieceId,
+      color: "#fff",
+      qty: 1,
+      span: { cols: 2, rows: 1 },
+      size: r.size,
+      dieCut: false,
+    })),
+    totalTiles: rows.length,
+    totalCells: rows.length * 2,
+    bars: [],
+  });
+
+  it("refuses a 2.25 x 4.50 side slab with a clear 400, and sends nothing", async () => {
+    process.env.RESEND_API_KEY = "test-key";
+    const res = await POST(
+      req({
+        printPng: TINY_PNG,
+        designName: "X",
+        partsList: parts([
+          { pieceId: "hs:soccer-patch", size: "2.25 x 2.25" },
+          { pieceId: "hs:crest", size: "2.25 x 4.50" },
+        ]),
+      }),
+    );
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.ok).toBe(false);
+    expect(json.error).toMatch(/square/i);
+    expect(json.nonSquare).toEqual(["hs:crest (2.25 x 4.50)"]);
+    expect(sendMock).not.toHaveBeenCalled();
+  });
+
+  it("refuses a badge whose size it cannot read", async () => {
+    process.env.RESEND_API_KEY = "test-key";
+    const res = await POST(
+      req({ printPng: TINY_PNG, designName: "X", partsList: parts([{ pieceId: "upload", size: "" }]) }),
+    );
+    expect(res.status).toBe(400);
+    expect(sendMock).not.toHaveBeenCalled();
+  });
+
+  it("accepts square badges alongside the runners' direct-print panel parts", async () => {
+    process.env.RESEND_API_KEY = "test-key";
+    const res = await POST(
+      req({
+        printPng: TINY_PNG,
+        designName: "X",
+        partsList: parts([
+          { pieceId: "hs:soccer-patch", size: "2.25 x 2.25" },
+          { pieceId: "upload", size: "2.25 x 2.25" },
+          // An 11 x 0.75 runner is the panel's own rectangle, not a badge.
+          { pieceId: "panel:top", size: "11.00 x 0.75" },
+          { pieceId: "panel:bottom", size: "11.00 x 1.80" },
+        ]),
+      }),
+    );
+    expect(res.status).toBe(200);
+    expect(sendMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("POST /api/school/submit — the sender's contact", () => {
+  it("refuses a send with no email (400), and sends nothing", async () => {
+    process.env.RESEND_API_KEY = "test-key";
+    const res = await POST(req({ printPng: TINY_PNG, designName: "X", contact: { phone: "314 555 0199" } }));
+    expect(res.status).toBe(400);
+    expect((await res.json()).field).toBe("email");
+    expect(sendMock).not.toHaveBeenCalled();
+  });
+
+  it("refuses a malformed email (400), and sends nothing", async () => {
+    process.env.RESEND_API_KEY = "test-key";
+    const res = await POST(req({ printPng: TINY_PNG, designName: "X", contact: { email: "pat@home" } }));
+    expect(res.status).toBe(400);
+    expect(sendMock).not.toHaveBeenCalled();
+  });
+
+  it("refuses a malformed phone rather than dropping it silently (400)", async () => {
+    process.env.RESEND_API_KEY = "test-key";
+    const res = await POST(req({ printPng: TINY_PNG, designName: "X", contact: { email: "p@example.com", phone: "ring me" } }));
+    expect(res.status).toBe(400);
+    expect((await res.json()).field).toBe("phone");
+  });
+
+  it("never makes the sender a recipient of anything", async () => {
+    process.env.RESEND_API_KEY = "test-key";
+    delete process.env.MSF_ORDER_EMAIL;
+    const res = await POST(req({ printPng: TINY_PNG, designName: "X" }));
+    expect(res.status).toBe(200);
+    expect(sendMock).toHaveBeenCalledTimes(1);
+    const sent = sendMock.mock.calls[0][0];
+    for (const field of ["to", "cc", "bcc", "replyTo", "reply_to"]) {
+      expect(JSON.stringify(sent[field] ?? "")).not.toContain(CONTACT.email);
+    }
+  });
+
+  it("prints the contact in the production email, so a person can reply", async () => {
+    process.env.RESEND_API_KEY = "test-key";
+    const res = await POST(req({ printPng: TINY_PNG, designName: "X" }));
+    expect(res.status).toBe(200);
+    const sent = sendMock.mock.calls[0][0];
+    expect(sent.html).toContain(CONTACT.email);
+    expect(sent.html).toContain("Reply to:");
+    expect(sent.text).toContain(`Reply to: `);
+    expect(sent.text).toContain(CONTACT.email);
   });
 });

@@ -4,6 +4,7 @@ import { getPiece } from "@/data/sets";
 import { TileArtImg } from "@/components/tiles/TileArtImg";
 import {
   artInset,
+  badgeArtworkUrl,
   artShadowCss,
   cornerRadii,
   insetRadii,
@@ -143,14 +144,18 @@ export function PlacedTileView({
   const art = piece.artworkUrl ? (
     // Served at the size the frame actually draws it. These are print masters —
     // the badges on a seeded kit frame were ~2MB of PNG for eight tiles the size
-    // of a postage stamp. `priority` because this IS the product and it is the
-    // first thing on the page; the palette below it lazy-loads instead.
+    // of a postage stamp. NOT `priority`: that emits a <link rel=preload> per
+    // badge, and a badge placed from the tray after load (or re-rendered at a new
+    // size) produced a preload for a srcset candidate the <img> then did not use
+    // — "preloaded but not used" in the console on every tray tap. The frame is
+    // in view whenever its badges render, so lazy loading fetches them at once.
     <TileArtImg
-      src={piece.artworkUrl}
+      // The twin this field calls for (ivory enamel on a field navy would vanish
+      // into) — the same decision the print path makes.
+      src={badgeArtworkUrl(piece, field)}
       alt={piece.name}
       width={width}
       height={height}
-      priority
       // Cast shadow from the ART onto the field — the same two-layer read the
       // print path draws. Only works because the art is cut out to transparency.
       style={{

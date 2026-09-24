@@ -54,13 +54,21 @@ const NEUTRAL_COLORS = { frame: "#1B2A4A", tileField: "#1B2A4A", rim: "#FFFFFF" 
  * imports `GENERIC_MARKS` and asserts this list spends at most one of them, so
  * the rule is checked against the real list rather than restated here.
  */
-const GENERIC_SIGNATURE = ["hs:honor-star", "hs:service", "hs:diploma", "hs:torch"];
+//
+// SQUARE ART, because every badge is a square. The first cut carried a 1.53 wide
+// service ribbon, a 1.92 landscape diploma and a 0.33 upright torch — slivers in
+// a 2.25" square. These four are the near-square non-claiming pieces (honor roll
+// 1.04, cap & diploma 1.15, star 1.03, tassel 0.58 — the one concession, since
+// the only other neutral near-squares are a stock trophy nobody earned and the
+// crest, which `kitMarks` needs). Ordered so the cap & diploma lands on the LEFT
+// column, away from the generic grad-cap mark the right column centres on.
+const GENERIC_SIGNATURE = ["hs:honor-star", "hs:diploma-cap", "hs:star", "hs:grad-tassel"];
 
 /**
  * Activity chips for the welcome band.
  *
  * These are NOT a claim that the school offers them: the band's own label is
- * "One tap builds the frame. Pick what they do", so a chip is a picker for the
+ * "Tap an activity and we'll build the frame around it", so a chip is a picker for the
  * STUDENT's activity, not a fact about the school. Every one maps to a real
  * badge through `CHIP_PRESET_PIECE`, and the list stays short and ordinary —
  * naming a school's actual programmes is research, and research is what a thin
@@ -107,7 +115,8 @@ const HIGH_SCHOOL_SUFFIX =
 export const MAX_BANNER_CHARS = 26;
 
 /**
- * The tagline's own cap, larger because the tagline is the SMALLER tier.
+ * The cap for the long one-line school name — the top runner's full name now,
+ * and the tagline tier before that. Larger because that line is set smaller.
  *
  * `bannerBands` gives the headline roughly two-thirds of the bottom banner's
  * height and the tagline the rest, so the tagline is drawn at about 60% of the
@@ -184,21 +193,25 @@ function cityLabel(entry: RosterEntry): string {
  */
 export function thinKitFromRoster(entry: RosterEntry): SchoolKit {
   const shortName = stripHighSchool(entry.name);
-  const bottom = fitBanner(shortName.toUpperCase());
-  // The tagline says the whole thing: "KIRKWOOD" over "KIRKWOOD HIGH SCHOOL".
-  // When the directory's name does not end in a school suffix — an academy, a
-  // magnet centre — the full name is the tagline, because appending HIGH SCHOOL
-  // to a name that is not one is a small lie on the product.
+  // Same layout rule as the authored kits: the SCHOOL rides the top runner in
+  // full — "KIRKWOOD HIGH SCHOOL". When the directory's name does not end in a
+  // school suffix — an academy, a magnet centre — the full name is used as is,
+  // because appending HIGH SCHOOL to a name that is not one is a small lie on the
+  // product. The runner is one long condensed line, so it takes the wider cap.
   const isHighSchool = HIGH_SCHOOL_SUFFIX.test(entry.name);
-  const full = fitBanner(
+  const top = fitBanner(
     (isHighSchool ? `${shortName} High School` : entry.name).toUpperCase(),
     MAX_TAGLINE_CHARS,
   );
-  // Two tiers that say the same words are one tier and a mistake. When even the
-  // wider cap cannot separate them, the banner drops to a single line — which is
-  // what `drawTextBlock` does with an empty tagline, and is what the name wanted
-  // in the first place.
-  const tagline = full === bottom ? "" : full;
+  // An authored kit's bottom banner reads HOME OF THE / <MASCOT>. A thin kit has
+  // no mascot, and "HOME OF THE ALBERTVILLE" is wrong on the first frame a parent
+  // sees, so the bottom carries the name people actually say — "KIRKWOOD" — with
+  // no tagline over it. The intake writes the student's line there anyway.
+  // Two banners that say the same words are one banner and a mistake: when the
+  // short name IS the full name (an academy), the bottom falls back to the town,
+  // which is the only other fact on the address label.
+  const short = fitBanner(shortName.toUpperCase());
+  const bottom = short === top ? fitBanner(entry.city.toUpperCase()) : short;
 
   return {
     slug: entry.slug,
@@ -210,21 +223,20 @@ export function thinKitFromRoster(entry: RosterEntry): SchoolKit {
     mascot: "",
     city: cityLabel(entry),
     colors: { ...NEUTRAL_COLORS },
-    // "HOME OF THE" is the authored kits' rule because their bottom banner is a
-    // nickname. With no mascot the bottom banner is the school's NAME, and
-    // "HOME OF THE ALBERTVILLE" is wrong on the first frame a parent sees.
-    // "HOME OF" reads correctly over a name and over the nickname they may
-    // type in its place.
-    banners: { top: "HOME OF", bottom, tagline, text: "#FFFFFF" },
+    // An EMPTY tagline, not an absent one: absent means "the kit default",
+    // which is HOME OF THE over a mascot we do not have.
+    banners: { top, bottom, tagline: "", text: "#FFFFFF" },
     signature: [...GENERIC_SIGNATURE],
     welcome: {
       headline: `${shortName}, on the back of the car.`,
       message: [
-        `We have not built ${entry.name} out yet — no colours taken from ${shortName}'s own artwork, no badges for what ${shortName} is known for. What is here is the frame itself, in neutral navy, waiting for a name.`,
-        `Put your student's last name across the bottom banner, pick badges for what they actually do, and set the class year. If you know ${shortName}'s website, paste it into the builder and we will pull the school's colours in — for you and for every ${entry.city} family after you.`,
+        `We have not built ${entry.name} out yet — no colors taken from ${shortName}'s own artwork, no badges for what ${shortName} is known for. What is here is the frame itself, in neutral navy.`,
+        `You can add their class year and the things they do as badges, and choose a line for the bottom banner like SENIOR, #12 or PROUD PARENT. If you know ${shortName}'s website, paste it in and we'll bring in its colors.`,
       ],
       chips: [...GENERIC_CHIPS],
-      ordering: `${shortName} families: design your frame and send it in, and we will follow up with ordering details. A set donation from every frame goes back to the school.`,
+      // No donation line: that promise is made to a school we have an arrangement
+      // with, and a thin kit is by definition a school we have never spoken to.
+      ordering: `${shortName} families: design your frame and send it in, and we will follow up with ordering details.`,
     },
     status: "demo",
     colorSource:

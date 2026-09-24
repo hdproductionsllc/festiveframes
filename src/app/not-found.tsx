@@ -4,8 +4,12 @@ import Link from "next/link";
 // the (site) sticker chrome. It carries its own self-contained sticker theme
 // (cream canvas, thick ink outlines, hard offset shadows, gold/pink accents)
 // to match the redesigned storefront. Server Component.
+//
+// The title is ABSOLUTE, not run through the root template: festiveframes.co now
+// redirects to myschoolframe.com, so every 404 is served on the MySchoolFrame
+// host, and "| Festive Frames" in its tab would name the wrong product.
 export const metadata = {
-  title: "Page not found",
+  title: { absolute: "Page not found" },
 };
 
 export default function NotFound() {

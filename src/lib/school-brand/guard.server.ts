@@ -30,6 +30,7 @@
 import dns from "node:dns/promises";
 import net from "node:net";
 
+import { SITE_URL } from "@/config/season";
 import { sniffImageFormat, type SniffResult } from "./raster-safety";
 import type { PageOutcome } from "./types";
 
@@ -45,12 +46,14 @@ import type { PageOutcome } from "./types";
  * them, and it means the block we get is one they never chose to apply to us. A
  * site that turns this UA away produces `blocked-by-site`, which the taxonomy
  * already has honest copy for.
+ *
+ * It names MySchoolFrame, because that is who a school's webmaster should find
+ * when they look us up: the scan only ever runs from a MySchoolFrame builder.
  */
-export const USER_AGENT =
-  "FestiveFramesBrandScan/1.0 (+https://festiveframes.co/bot; one-off school logo lookup on a parent's request)";
+export const USER_AGENT = `MySchoolFrameBrandScan/1.0 (+${SITE_URL}/; one-off school logo lookup on a parent's request)`;
 
 /** The token a robots.txt would name us by, lowercased for matching. */
-export const ROBOTS_TOKEN = "festiveframesbrandscan";
+export const ROBOTS_TOKEN = "myschoolframebrandscan";
 
 // ─── limits ──────────────────────────────────────────────────────────────────
 

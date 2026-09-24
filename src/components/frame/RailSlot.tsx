@@ -7,14 +7,13 @@ import {
   frameCorners,
   grabOffsetIn,
   isMultiCell,
-  minSpanFor,
-  resolveSnappetDrop,
+  placementContext,
+  resolveTapDrop,
   tileSpan,
   footprintCellsInches,
   type GrabOffset,
 } from "@/lib/utils/snappet";
 import { buildGrid } from "@/lib/utils/slot-generator";
-import { coveredSlotIds } from "@/lib/utils/text-bar";
 import { getPiece } from "@/data/sets";
 import { findUpload } from "@/lib/utils/uploads";
 import { NO_CORNERS, type CornerFlags } from "@/lib/utils/tile-theme";
@@ -99,21 +98,19 @@ function RailSlotInner({ slot, placedTile, covered, spanWidth, spanHeight }: Rai
     const piece = art
       ? ({ defaultSpan: art.span, spanRequired: false } as Pick<TilePiece, "defaultSpan" | "spanRequired">)
       : getPiece(selectedPieceId);
-    const drop = resolveSnappetDrop(
-      {
-        grid: buildGrid(frameConfig),
-        slots,
-        sections,
-        barCovered: new Set(coveredSlotIds(textBars)),
-      },
-      {
-        overSlotId: slot.id,
-        span: piece?.defaultSpan ?? { cols: 1, rows: 1 },
-        shrinkToFit: !piece?.spanRequired,
-        growToPanel: !piece?.spanRequired,
-        minSpan: minSpanFor(piece, frameConfig.minTileSpan),
-      },
+    // On a square-rule frame the frame, not the piece, sizes the badge: the
+    // resolver walks the panel's legal squares, so one tap on a side badge
+    // replaces exactly that badge (the piece's span is ignored there).
+    const square = frameConfig.badgeShape === "square";
+    const drop = resolveTapDrop(
+      placementContext(frameConfig, { slots, sections, textBars }),
+      slot.id,
+      piece,
+      frameConfig.minTileSpan,
     );
+    // A tap no badge can land on (the top bar, the plate edge) does nothing and
+    // keeps the tile armed, rather than playing the landing cue over nothing.
+    if (square && (!drop || !drop.valid)) return;
     // Commit the RESOLVED footprint, not the requested one.
     const span = drop ? { cols: drop.cols, rows: drop.rows } : undefined;
     placeTile(
@@ -228,7 +225,9 @@ function RailSlotInner({ slot, placedTile, covered, spanWidth, spanHeight }: Rai
           landing={landing}
         />
       ) : (
-        <div className="w-full h-full flex items-center justify-center">
+        // A badge-sized pocket hangs from this cell's top-left like a placed
+        // badge does; centring it in the one cell would shift it up and left.
+        <div className={isSnappet ? "" : "w-full h-full flex items-center justify-center"}>
           {/* Empty cell — gold hover ring when a tap would place the armed tile
               here, so empty slots read as clickable drop targets. Gapless (no
               black gaps on tile removal), but each empty reads as its OWN tile
@@ -238,9 +237,11 @@ function RailSlotInner({ slot, placedTile, covered, spanWidth, spanHeight }: Rai
             className={`ff-empty-cell rounded-[2px] transition-shadow ${
               selectedPieceId != null ? "group-hover:ring-2 group-hover:ring-brand-gold/70" : ""
             }`}
+            // An empty BADGE POSITION (square-badge frames) is one pocket the
+            // size of the badge it will hold; a plain cell is its own size.
             style={{
-              width: slot.width,
-              height: slot.height,
+              width: tileWidth,
+              height: tileHeight,
             }}
           />
         </div>
@@ -457,9 +458,12 @@ function PlacedTileCell({
           aria-label="Remove tile"
           onPointerDown={(e) => e.stopPropagation()}
           onClick={handleRemove}
-          className="absolute right-0.5 top-0.5 z-[4] grid h-5 w-5 place-items-center rounded-full
+          // Not on a school frame's phone layout: a 20px target on a 44px badge
+          // is a mis-tap that deletes the badge, and tapping the badge there
+          // already opens its editor sheet, whose Remove is a full-size button.
+          className={`absolute right-0.5 top-0.5 z-[4] grid h-5 w-5 place-items-center rounded-full
             border-2 border-[#1e1b17] bg-brand-red text-[11px] font-black leading-none text-white
-            shadow-[1px_1px_0_#1e1b17] active:scale-90"
+            shadow-[1px_1px_0_#1e1b17] active:scale-90 ${wings ? "max-lg:hidden" : ""}`}
           style={{ touchAction: "manipulation" }}
         >
           ✕

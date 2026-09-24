@@ -27,6 +27,34 @@ export function markPieceId(slug: string, key: string): string {
   return `${M}:${slug}:${key}`;
 }
 
+/**
+ * THE SCHOOL'S TWO MARKS, as piece ids: the mascot (its character) and the crest
+ * (its shield).
+ *
+ * Presets alternate between them rather than repeating one, so a school with real
+ * artwork gets a frame made entirely of its own marks. The mascot is whichever
+ * badge is NOT a crest — SLUH has both a Billiken and a shield, and the Billiken
+ * is the one a parent recognises across a car park. Either may be null;
+ * `presetTiles` falls back to the generic crest.
+ *
+ * Lived inside SchoolDesigner as a memo, and the pilot sample sheets copied it
+ * "verbatim" because it was not exported — two copies of which badge is the
+ * school's. Now there is one.
+ */
+export function kitMarkIds(
+  kit: Pick<SchoolKit, "slug" | "marks"> | null | undefined,
+): { mascot: string | null; alt: string | null } {
+  const badges = kit?.marks?.badges;
+  if (!kit || !badges?.length) return { mascot: null, alt: null };
+  const isCrest = (b: { key: string; name: string }) => /crest|shield|seal/i.test(`${b.key} ${b.name}`);
+  const mascot = badges.find((b) => !isCrest(b)) ?? badges[0];
+  const alt = badges.find((b) => b !== mascot && isCrest(b)) ?? badges.find((b) => b !== mascot);
+  return {
+    mascot: markPieceId(kit.slug, mascot.key),
+    alt: alt ? markPieceId(kit.slug, alt.key) : null,
+  };
+}
+
 /** The badge pieces a single kit contributes. Empty for kits without marks. */
 export function kitMarkPieces(kit: SchoolKit | undefined): TilePiece[] {
   if (!kit?.marks?.badges?.length) return EMPTY;

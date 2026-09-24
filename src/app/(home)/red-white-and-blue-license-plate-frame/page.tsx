@@ -3,7 +3,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { copy } from "@/content/copy";
 import { offer } from "@/config/offers";
-import { OG_IMAGE_ALT, SITE_URL } from "@/config/season";
+import { SITE_URL } from "@/config/season";
+import { OG_IMAGE_ALT } from "@/content/copy";
 import { Header } from "../_components/Header";
 import { Footer } from "../_components/Footer";
 

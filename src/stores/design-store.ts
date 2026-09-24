@@ -35,6 +35,8 @@ import {
   maxWidthAt,
 } from "@/lib/utils/text-bar";
 import {
+  badgeRule,
+  badgeSpanAt,
   canPlace,
   coveredBySnappets,
   blockFill,
@@ -44,6 +46,8 @@ import {
   isMultiCell,
   minSpanFor,
   panelSnappetPlacement,
+  placementContext,
+  squareUpSlots,
   tileSpan,
   visibleAnchorSlots,
   UPLOAD_PIECE_ID,
@@ -129,6 +133,71 @@ function snappetCoverage(state: {
   return coveredBySnappets(visibleAnchorSlots(state.slots, grid, state.sections), grid);
 }
 
+/**
+ * THE placement gate: `slots` with one tile seated at `slotId`, or null when the
+ * frame refuses it. `placeTile` runs it once against the design's own slots;
+ * `layBadges` runs it down a whole preset against the badges laid so far — one
+ * rule for a tap and for a preset, so the two cannot disagree about what fits.
+ */
+function seatTile(
+  state: Pick<DesignState, "frameConfig" | "sections" | "textBars" | "uploads">,
+  slots: Record<string, PlacedTile>,
+  slotId: string,
+  pieceId: string,
+  setId: string,
+  span: TileSpan | undefined,
+): Record<string, PlacedTile> | null {
+  // Slots under a text bar are blocked. The SAME set is handed to canPlace
+  // below, so the anchor rule and the footprint rule can never drift apart.
+  const barCovered = new Set(coveredSlotIds(state.textBars));
+  if (barCovered.has(slotId)) return null;
+  // An UPLOAD placed from the palette resolves to the same record
+  // `placeImageSnappet` writes — the reserved piece identity plus the art
+  // itself. Done HERE rather than at the call sites so drag, tap-to-place,
+  // Fill All, Random and Mirror cannot disagree about what an upload is.
+  const art = findUpload(state.uploads, pieceId);
+  const placed: PlacedTile = art
+    ? {
+        pieceId: UPLOAD_PIECE_ID,
+        setId: UPLOAD_SET_ID,
+        image: { url: art.url, fullResId: art.fullResId, field: art.field },
+      }
+    : { pieceId, setId };
+  // Only a genuine multi-cell footprint carries a span — a 1x1 stays the
+  // exact two-field record it has always been, so nothing about /build's
+  // stored shape changes.
+  let footprint = tileSpan({ span });
+  const newSlots = { ...slots };
+  const rule = badgeRule(state.frameConfig);
+  // A square-rule frame routes EVERY placement through the gate, 1x1
+  // included, and sizes the badge from the frame when the caller's span
+  // is not a legal square here (a preset, a seed or a stale caller that
+  // still speaks in piece spans).
+  if (rule.square || isMultiCell(footprint)) {
+    const ctx = placementContext(state.frameConfig, { slots, sections: state.sections, textBars: state.textBars });
+    const anchor = ctx.grid.coordOf(slotId);
+    if (!anchor) return null;
+    if (rule.square && !canPlace(ctx, anchor, footprint).ok) {
+      const own = badgeSpanAt(ctx, anchor);
+      if (!own) return null; // no badge can anchor here
+      footprint = own;
+    }
+    const verdict = canPlace(ctx, anchor, footprint);
+    if (!verdict.ok) return null; // plate / suppressed / bar / off-grid / shape
+    // Overlap evicts: the displaced anchors go, footprint and all.
+    for (const id of verdict.evicts) delete newSlots[id];
+    if (isMultiCell(footprint)) placed.span = footprint;
+  } else {
+    // Dropping a 1x1 onto a cell hidden under a snappet displaces that
+    // snappet — the cell can't hold two tiles, and leaving the snappet
+    // would paint over the tile the user just placed.
+    const owner = snappetCoverage({ slots, frameConfig: state.frameConfig, sections: state.sections }).get(slotId);
+    if (owner) delete newSlots[owner];
+  }
+  newSlots[slotId] = placed;
+  return newSlots;
+}
+
 function makeTextBarId(existing: PlacedTextBar[]): string {
   return `tb-${Date.now().toString(36)}-${existing.length}`;
 }
@@ -181,22 +250,21 @@ function fillSlots(
   pick: () => { pieceId: string; setId: string },
   span: TileSpan | undefined,
 ): Record<string, PlacedTile> {
-  if (!span || (span.cols === 1 && span.rows === 1)) {
+  // A square-rule frame never takes the cell-by-cell path: one record per cell is
+  // a 1.25 x 2.25 sliver on the flush side column. `blockFill` lays the frame's
+  // own squares there and ignores `span`.
+  const square = badgeRule(state.frameConfig).square;
+  if (!square && (!span || (span.cols === 1 && span.rows === 1))) {
     const out: Record<string, PlacedTile> = {};
     for (const id of getAllSlotIds(state.frameConfig)) out[id] = pick();
     return out;
   }
   return blockFill(
-    {
-      grid: buildGrid(state.frameConfig),
-      // A fresh design: existing tiles must NOT make blocks look blocked, or a
-      // second Fill All would lay fewer badges than the first.
-      slots: {},
-      sections: state.sections,
-      barCovered: new Set(coveredSlotIds(state.textBars)),
-    },
+    // A fresh design: existing tiles must NOT make blocks look blocked, or a
+    // second Fill All would lay fewer badges than the first.
+    placementContext(state.frameConfig, { slots: {}, sections: state.sections, textBars: state.textBars }),
     pick,
-    span,
+    span ?? { cols: 1, rows: 1 },
   );
 }
 
@@ -342,6 +410,13 @@ interface DesignState {
    */
   placeTile: (slotId: string, pieceId: string, setId: string, span?: TileSpan) => void;
   /**
+   * REPLACE every badge on the frame with `tiles`, as one undoable step — the
+   * one-tap designs (presets, the kit chips, "See it on the frame"). Each tile
+   * goes through the same gate as `placeTile`. Banners, colours and uploads in the
+   * tray are left as they are: a preset is a set of badges, not a new design.
+   */
+  layBadges: (tiles: ReadonlyArray<{ slot: string; pieceId: string; setId: string; span?: TileSpan }>) => void;
+  /**
    * Remember an upload so it can be placed again later, and return its palette id.
    *
    * Capped at `MAX_UPLOADS`, oldest first — every preview is a data URL inside the
@@ -406,7 +481,14 @@ interface DesignState {
     image: { imageUrl: string; fullResId?: string; sourceAspect: number; field?: string },
     /** The builder's smallest footprint. A photo shrunk to one 0.991in cell is a
      *  thumbnail, not a print. Omitted (/build) = the previous 1x1 floor. */
-    minSpan?: TileSpan
+    minSpan?: TileSpan,
+    /**
+     * EXACTLY where it goes: the one badge the parent tapped or picked. The crop
+     * was cut to this footprint, so the commit seats this footprint and nothing
+     * else — re-validated by canPlace, and refused (no change) if the frame moved
+     * under it. Omitted = the panel's first badge position, as before.
+     */
+    at?: { anchorSlotId: string; span: TileSpan }
   ) => void;
   /** `span` is the block footprint to lay (default 1x1 — /build's behaviour). */
   fillAll: (pieceId: string, setId: string, span?: TileSpan) => void;
@@ -689,13 +771,20 @@ export interface DesignStoreOptions {
    * entry — see `kitPlateState`.
    */
   initialPlateState?: string;
+  /**
+   * Where the design's QR code points, if a banner ever carries one. Initial
+   * state only. /build keeps DEFAULT_QR_CODE's holiday address; a school builder
+   * passes its own page, so a school frame's QR can never send a parent to the
+   * other product.
+   */
+  initialQrUrl?: string;
 }
 
 // The store is a FACTORY so more than one builder can each own an isolated design
 // (own state + own localStorage key). /build uses `defaultDesignStore`; the school
 // builder creates its own instance and provides it via `DesignStoreProvider`.
 function createDesignStore(persistName: string, options: DesignStoreOptions = {}) {
-  const { migrateExtra, frameConfig: ownedFrameConfig, sections: initialSections, initialBrand, initialSlots, initialPlateState } = options;
+  const { migrateExtra, frameConfig: ownedFrameConfig, sections: initialSections, initialBrand, initialSlots, initialPlateState, initialQrUrl } = options;
   const baseFrameConfig = ownedFrameConfig ?? DEFAULT_FRAME_CONFIG;
   return createStore<DesignState>()(
   persist(
@@ -742,7 +831,7 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
         artworkRights: null,
         slots: initialSlots ? structuredClone(initialSlots) : {},
         bottomBar: { ...DEFAULT_BOTTOM_BAR },
-        qrCode: { ...DEFAULT_QR_CODE },
+        qrCode: { ...DEFAULT_QR_CODE, url: initialQrUrl ?? DEFAULT_QR_CODE.url },
         frameConfig: { ...baseFrameConfig },
         textBars: [],
         selectedBarId: null,
@@ -755,53 +844,21 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
 
         placeTile: (slotId, pieceId, setId, span) => {
           set((state) => {
-            // Slots under a text bar are blocked. The SAME set is handed to
-            // canPlace below, so the anchor rule and the footprint rule can never
-            // drift apart.
-            const barCovered = new Set(coveredSlotIds(state.textBars));
-            if (barCovered.has(slotId)) return state;
-            // An UPLOAD placed from the palette resolves to the same record
-            // `placeImageSnappet` writes — the reserved piece identity plus the art
-            // itself. Done HERE rather than at the call sites so drag, tap-to-place,
-            // Fill All, Random and Mirror cannot disagree about what an upload is.
-            const art = findUpload(state.uploads, pieceId);
-            const placed: PlacedTile = art
-              ? {
-                  pieceId: UPLOAD_PIECE_ID,
-                  setId: UPLOAD_SET_ID,
-                  image: { url: art.url, fullResId: art.fullResId, field: art.field },
-                }
-              : { pieceId, setId };
-            // Only a genuine multi-cell footprint carries a span — a 1x1 stays the
-            // exact two-field record it has always been, so nothing about /build's
-            // stored shape changes.
-            const footprint = tileSpan({ span });
-            const newSlots = { ...state.slots };
-            if (isMultiCell(footprint)) {
-              const grid = buildGrid(state.frameConfig);
-              const anchor = grid.coordOf(slotId);
-              if (!anchor) return state;
-              const verdict = canPlace(
-                { grid, slots: state.slots, sections: state.sections, barCovered },
-                anchor,
-                footprint,
-              );
-              if (!verdict.ok) return state; // plate / suppressed / bar / off-grid
-              // Overlap evicts: the displaced anchors go, footprint and all.
-              for (const id of verdict.evicts) delete newSlots[id];
-              placed.span = footprint;
-            } else {
-              // Dropping a 1x1 onto a cell hidden under a snappet displaces that
-              // snappet — the cell can't hold two tiles, and leaving the snappet
-              // would paint over the tile the user just placed.
-              const owner = snappetCoverage(state).get(slotId);
-              if (owner) delete newSlots[owner];
-            }
-            newSlots[slotId] = placed;
-            return withHistory(state, {
-              slots: newSlots,
-              updatedAt: Date.now(),
-            });
+            const slots = seatTile(state, state.slots, slotId, pieceId, setId, span);
+            return slots ? withHistory(state, { slots, updatedAt: Date.now() }) : state;
+          });
+        },
+
+        layBadges: (tiles) => {
+          set((state) => {
+            // ONE step, from an EMPTY frame: every badge the parent had — a photo
+            // included — goes, and each new one is seated by the same gate a tap
+            // uses (`seatTile`), against the badges laid before it. The banners are
+            // not touched: a preset is a set of badges, and the parent's line is
+            // theirs (the caller writes the intake's line afterwards when it has one).
+            let slots: Record<string, PlacedTile> = {};
+            for (const t of tiles) slots = seatTile(state, slots, t.slot, t.pieceId, t.setId, t.span) ?? slots;
+            return withHistory(state, { slots, updatedAt: Date.now() });
           });
         },
 
@@ -873,18 +930,14 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
             if (barCovered.has(toSlotId)) return state;
             const newSlots = { ...state.slots };
             const footprint = tileSpan(tile);
-            if (isMultiCell(footprint)) {
+            // Square-rule frames gate every move, 1x1 included (see placeTile).
+            if (badgeRule(state.frameConfig).square || isMultiCell(footprint)) {
               // The whole footprint travels with the tile. Exclude the tile itself
               // from the collision test so it never blocks its own move.
-              const grid = buildGrid(state.frameConfig);
-              const anchor = grid.coordOf(toSlotId);
+              const ctx = placementContext(state.frameConfig, state);
+              const anchor = ctx.grid.coordOf(toSlotId);
               if (!anchor) return state;
-              const verdict = canPlace(
-                { grid, slots: state.slots, sections: state.sections, barCovered },
-                anchor,
-                footprint,
-                fromSlotId,
-              );
+              const verdict = canPlace(ctx, anchor, footprint, fromSlotId);
               if (!verdict.ok) return state;
               for (const id of verdict.evicts) delete newSlots[id];
             } else {
@@ -930,15 +983,18 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
             // we never record a snapshot identical to the current top — otherwise the
             // first undo would restore a visually identical state and appear to do
             // nothing, silently swallowing the user's undo of the prior real edit.
+            //
+            // A RE-CROP at the same footprint is not a no-op: it carries new art.
+            // That is how a photo reseated by the square rule (`needsRecrop`) is
+            // re-framed without its footprint changing at all.
             const current = tileSpan(tile);
-            if (footprint.cols === current.cols && footprint.rows === current.rows) {
+            if (!image && footprint.cols === current.cols && footprint.rows === current.rows) {
               return state;
             }
             // Same gate as placeTile/moveTile — the snappet is excluded so growing
             // over its own currently-covered cells never counts as a self-collision.
-            const barCovered = new Set(coveredSlotIds(state.textBars));
             const verdict = canPlace(
-              { grid, slots: state.slots, sections: state.sections, barCovered },
+              placementContext(state.frameConfig, state, grid),
               anchor,
               footprint,
               slotId,
@@ -965,19 +1021,21 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
           });
         },
 
-        placeImageSnappet: (panelId, image, minSpan) => {
+        placeImageSnappet: (panelId, image, minSpan, at) => {
           set((state) => {
-            const grid = buildGrid(state.frameConfig);
-            const barCovered = new Set(coveredSlotIds(state.textBars));
-            const ctx = { grid, slots: state.slots, sections: state.sections, barCovered };
+            const ctx = placementContext(state.frameConfig, state);
+            const { grid } = ctx;
             // ONE decision, shared with the crop modal's aspect target: where a
             // native-aspect snappet of this image lands, and how big. allowEvict so a
             // deliberate photo upload still seats on a FULL panel (evicting tiles) —
-            // otherwise a fully-tiled frame silently refuses the photo.
-            const placement = panelSnappetPlacement(ctx, panelId, image.sourceAspect, {
-              allowEvict: true,
-              minSpan: minSpan ?? state.frameConfig.minTileSpan,
-            });
+            // otherwise a fully-tiled frame silently refuses the photo. A named
+            // badge (`at`) IS that decision, already made by the caller.
+            const placement =
+              at ??
+              panelSnappetPlacement(ctx, panelId, image.sourceAspect, {
+                allowEvict: true,
+                minSpan: minSpan ?? state.frameConfig.minTileSpan,
+              });
             if (!placement) return state; // no cells in panel at all (shouldn't happen)
             const anchor = grid.coordOf(placement.anchorSlotId);
             if (!anchor) return state;
@@ -1083,15 +1141,9 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
         mirrorTopSlots: () => {
           set((state) => {
             const newSlots = { ...state.slots };
-            const grid = buildGrid(state.frameConfig);
+            const ctx = placementContext(state.frameConfig, state);
+            const { grid } = ctx;
             const coverage = snappetCoverage(state);
-            const barCovered = new Set(coveredSlotIds(state.textBars));
-            const ctx = {
-              grid,
-              slots: state.slots,
-              sections: state.sections,
-              barCovered,
-            };
 
             // Collected, then applied in two passes, so the outcome cannot depend
             // on the order `grid.slots` happens to come in.
@@ -1172,6 +1224,18 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
             const sections = initialSections
               ? (structuredClone(initialSections) as typeof state.sections)
               : {};
+            // ...wearing the colour the badges wear. The banners come back as
+            // SEEDED, and the seed carries the kit's colour, but the school colour
+            // the user picked (`tileFieldColor`) is still on every badge — so each
+            // preset tap after a colour change left the banners in one colour and
+            // the badges in another. The owner's rule is that the badge background
+            // IS the banner colour; `setTileFieldColor` writes it through, and so
+            // does this.
+            if (state.tileFieldColor) {
+              for (const sec of Object.values(sections)) {
+                if (sec?.text) sec.text.backgroundColor = state.tileFieldColor;
+              }
+            }
             return withHistory(state, {
               // START FRESH returns a kit page to its dressed frame; CLEAR empties
               // it. The banners come back either way (see `sections` above) — a
@@ -1545,6 +1609,14 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
           // Full replace (restoring a saved design). Deep-copy nested objects so
           // the restored design can't share references with the saved payload, and
           // reset history so undo/redo starts fresh from the loaded design.
+          //
+          // A store that OWNS its geometry keeps it: a payload saved before a
+          // geometry change must not resurrect an unprintable frame.
+          const frameConfig: FrameConfig = ownedFrameConfig
+            ? { ...ownedFrameConfig }
+            : design.frameConfig
+              ? { ...design.frameConfig }
+              : { ...DEFAULT_FRAME_CONFIG };
           set({
             designName: design.designName ?? "My Frame Design",
             plateState: design.plateState ?? "MO",
@@ -1558,15 +1630,11 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
               : [],
             bottomBar: design.bottomBar ? { ...design.bottomBar } : { ...DEFAULT_BOTTOM_BAR },
             qrCode: design.qrCode ? { ...design.qrCode } : { ...DEFAULT_QR_CODE },
-            // A store that OWNS its geometry keeps it: a payload saved before a
-            // geometry change must not resurrect an unprintable frame.
-            frameConfig: ownedFrameConfig
-              ? { ...ownedFrameConfig }
-              : design.frameConfig
-                ? { ...design.frameConfig }
-                : { ...DEFAULT_FRAME_CONFIG },
+            frameConfig,
             dieCut: design.dieCut ?? false,
-            sections: design.sections ? { ...design.sections } : {},
+            // The same panel repair hydrate runs: a restored design can predate a
+            // rule (a wing saved in text mode), or carry no `sections` at all.
+            sections: repairSections(design.sections ? { ...design.sections } : {}, frameConfig),
             // A RESTORE asks again. `artworkRights` is not part of `LoadableDesign`,
             // so without this line zustand's shallow `set` would leave the CURRENT
             // visitor's acceptance sitting on top of a design they have never seen —
@@ -1593,7 +1661,7 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
             const effMode: SectionMode =
               mode === "text" && !sectionSupportsText(id)
                 ? "tiles"
-                : mode === "tiles" && !sectionSupportsTiles(id)
+                : mode === "tiles" && !sectionSupportsTiles(id, state.frameConfig)
                   ? "text"
                   : mode;
             const cur = state.sections[id] ?? { mode: "tiles" };
@@ -1858,29 +1926,11 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
           }
           merged.frameConfig = { ...ownedFrameConfig };
         }
-        // Grow any badge saved below its floor. The 2x2 minimum governs the DROP
-        // and the RESIZE, so tiles already in a design — and anything Fill All or
-        // Random wrote cell-by-cell — stayed 1x1 and the rule never reached them.
-        // Conservative by construction: nothing grows if it would evict a neighbour.
-        if (merged.slots) {
-          // Retired pieces first: a tile pointing at a piece that no longer exists
-          // renders as nothing but still blocks its cell and still bills for print.
-          merged.slots = dropUnknownPieces(merged.slots, (id) => getPiece(id) != null);
-        }
-        if (merged.slots && merged.frameConfig) {
-          const grid = buildGrid(merged.frameConfig);
-          merged.slots = growUndersizedBadges(
-            {
-              grid,
-              slots: merged.slots,
-              sections: merged.sections ?? {},
-              barCovered: new Set(coveredSlotIds(merged.textBars ?? [])),
-            },
-            (pieceId) => minSpanFor(getPiece(pieceId)),
-          );
-        }
         if (merged.sections) {
-          merged.sections = repairSections(merged.sections);
+          // Sections BEFORE slots: the slot repairs below ask canPlace, which refuses
+          // every badge in a panel still marked text. Repairing the panel first is
+          // what lets a legacy wing-in-text design keep its badges.
+          merged.sections = repairSections(merged.sections, merged.frameConfig);
           // "HOME OF THE" over a student's surname — see school-banner.ts. Every
           // design saved before the intake was fixed still reads that way, and
           // hydrate is the only place they can be reached.
@@ -1902,6 +1952,30 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
             }
             if (next !== sec.text) sec.text = next;
           }
+        }
+        // Grow any badge saved below its floor. The 2x2 minimum governs the DROP
+        // and the RESIZE, so tiles already in a design — and anything Fill All or
+        // Random wrote cell-by-cell — stayed 1x1 and the rule never reached them.
+        // Conservative by construction: nothing grows if it would evict a neighbour.
+        if (merged.slots) {
+          // Retired pieces first: a tile pointing at a piece that no longer exists
+          // renders as nothing but still blocks its cell and still bills for print.
+          merged.slots = dropUnknownPieces(merged.slots, (id) => getPiece(id) != null);
+        }
+        if (merged.slots && merged.frameConfig) {
+          const ctx = () =>
+            placementContext(merged.frameConfig, {
+              slots: merged.slots,
+              sections: merged.sections ?? {},
+              textBars: merged.textBars ?? [],
+            });
+          // A no-op on a square-rule frame, where the frame sizes every badge.
+          merged.slots = growUndersizedBadges(ctx(), (pieceId) => minSpanFor(getPiece(pieceId)));
+          // THE SQUARE RULE reaches saved designs here, not in `migrate`: a blob
+          // already at the current version holding a {2,2} side slab, a tall {1,2}
+          // or a {2,3} is reseated as the square at its own anchor. Same object
+          // back when every badge is already legal.
+          merged.slots = squareUpSlots(ctx());
         }
         const fc = merged.frameConfig;
         if (fc) {

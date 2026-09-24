@@ -52,6 +52,17 @@ describe("every MySchoolFrame surface carries its own brand", () => {
     expect(coveredBy(dir, "apple-icon.png"), `${label} falls back to the root touch icon`).toBeTruthy();
   });
 
+  it.each(["icon.svg", "apple-icon.png"])("every surface's %s is the SAME file as the landing's", (file) => {
+    // Next resolves icons per route folder, so the mark exists as copies. A copy
+    // is a thing that drifts: /s kept the old plate icon after /school got the new
+    // mark. The landing's file is the source; every other surface matches it.
+    const source = readFileSync(path.join(APP, "school", file));
+    for (const { dir, label } of SCHOOL_SURFACES) {
+      const own = coveredBy(dir, file)!;
+      expect(readFileSync(path.join(APP, own)).equals(source), `${label} (${own}) differs from school/${file}`).toBe(true);
+    }
+  });
+
   it.each(SCHOOL_SURFACES)("$label names MySchoolFrame as the site, not Festive Frames", ({ page, label }) => {
     // og:site_name is the line UNDER the card in every unfurl. The root layout
     // sets the Festive Frames brand entity, which is right for festiveframes.co

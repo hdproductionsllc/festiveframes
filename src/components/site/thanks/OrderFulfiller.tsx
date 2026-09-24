@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useCartStore } from "@/stores/cart-store";
-import { copy } from "@/content/copy";
 
 // Client relay for a paid builder order. After Stripe redirects back to /thanks,
 // this POSTs to /api/order/fulfill, which verifies the session is paid before
@@ -22,14 +21,34 @@ interface PendingOrder {
   artifacts?: unknown;
 }
 
+/** What the relay says in each state — the ORDER's brand's words. */
+export interface FulfillMessages {
+  working: string;
+  done: string;
+  /** Completed by the support address, as a mailto. */
+  failed: string;
+}
+
 export function OrderFulfiller({
   orderId,
   cartId,
   sessionId,
+  supportEmail,
+  messages,
+  className = "mt-6 rounded-[18px] border-[3px] border-[#1e1b17] bg-[#fff9ec] px-6 py-5",
+  style = { boxShadow: "5px 5px 0 #1e1b17" },
 }: {
   orderId?: string;
   cartId?: string;
   sessionId: string;
+  /** Where a buyer writes if the relay fails — the brand the ORDER belongs to
+   *  (a school frame is MySchoolFrame's to answer, not the holiday inbox's). */
+  supportEmail: string;
+  /** Passed in rather than imported, so a MySchoolFrame page never bundles the
+   *  holiday product's copy module to render three sentences. */
+  messages: FulfillMessages;
+  className?: string;
+  style?: React.CSSProperties;
 }) {
   const [status, setStatus] = useState<"working" | "done" | "error">("working");
   const ran = useRef(false);
@@ -73,15 +92,12 @@ export function OrderFulfiller({
   }, [orderId, cartId, sessionId, clearCart]);
 
   return (
-    <div
-      className="mt-6 rounded-[18px] border-[3px] border-[#1e1b17] bg-[#fff9ec] px-6 py-5"
-      style={{ boxShadow: "5px 5px 0 #1e1b17" }}
-    >
+    <div className={className} style={style}>
       {status === "working" && (
-        <p className="text-base font-semibold text-[#3a352c]">{copy.thanks.fulfill.working}</p>
+        <p className="text-base font-semibold text-[#3a352c]">{messages.working}</p>
       )}
       {status === "done" && (
-        <p className="text-base font-bold text-[#1e1b17]">{copy.thanks.fulfill.done}</p>
+        <p className="text-base font-bold text-[#1e1b17]">{messages.done}</p>
       )}
       {/* The call failed, so the ONE thing we know is that Stripe took the money
           (this island only renders on a session the page confirmed as paid). Say
@@ -89,9 +105,9 @@ export function OrderFulfiller({
           just failed to do. */}
       {status === "error" && (
         <p className="text-base font-semibold text-[#3a352c]">
-          {copy.thanks.fulfill.failed}{" "}
-          <a className="font-bold underline" href={`mailto:${copy.thanks.supportEmail}`}>
-            {copy.thanks.supportEmail}
+          {messages.failed}{" "}
+          <a className="font-bold underline" href={`mailto:${supportEmail}`}>
+            {supportEmail}
           </a>
           .
         </p>

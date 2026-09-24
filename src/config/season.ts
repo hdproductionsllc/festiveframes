@@ -3,9 +3,12 @@
 // promo lives here so future seasons are a config-only change.
 //
 // Current season: July 4, 2026.
+//
+// A LEAF MODULE: it imports nothing. Every /s/<slug> bundle reads SITE_URL from
+// here, and when this file also imported content/copy.ts (for the OG alt text,
+// now in copy.ts itself) every school page shipped the holiday product's
+// marketing copy and inbox address to the browser.
 // ─────────────────────────────────────────────────────────────
-
-import { copy } from "@/content/copy";
 
 export interface Season {
   /** Stable theme key for this season's styling/content. */
@@ -40,12 +43,3 @@ export const season: Season = {
 // festiveframes.co 301s here at the Cloudflare edge. Stripe return URLs,
 // canonicals, sitemap, and og URLs all build from this.
 export const SITE_URL = "https://www.myschoolframe.com";
-
-/**
- * Alt text for the site-wide Open Graph card rendered at /opengraph-image.
- * Derived from the brand copy (never written longhand) and declared HERE rather
- * than in the route module, so a page can describe the image in its own
- * `openGraph.images` without importing `next/og`; the route re-exports this as
- * its required `alt`. One string, twelve pages.
- */
-export const OG_IMAGE_ALT = `${copy.site.brandName} — ${copy.site.tagline}`;

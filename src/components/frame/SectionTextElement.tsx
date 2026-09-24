@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { BottomBarConfig } from "@/lib/types";
-import { bannerBands, trackingPx, widthLimitedFont } from "@/lib/utils/banner-tiers";
+import { bannerBands, CAP_SEAT_CSS, trackingAt, trackingPx, widthLimitedFont } from "@/lib/utils/banner-tiers";
 import { chromeInset, ringCss, textChenilleCss, tileEdgeCss } from "@/lib/utils/tile-theme";
 import { useDesignStore } from "@/stores/design-store";
 import { bannerLogoLayout } from "@/lib/utils/banner-logo";
@@ -78,11 +78,15 @@ export function SectionTextElement({
   height,
   config,
   unit,
+  pxPerInch,
   bare = false,
 }: {
   width: number;
   height: number;
   config: BottomBarConfig;
+  /** The frame's on-screen scale. Stored tracking is in print px, and this is how
+   *  it becomes the same physical spacing here as on the sheet. */
+  pxPerInch: number;
   /** ONE grid cell in px, so the one-row top bar and the two-row bottom panel wear
    *  the SAME edge instead of the taller one getting a band twice as thick. */
   unit?: number;
@@ -100,7 +104,7 @@ export function SectionTextElement({
   const rimColor = useDesignStore((s) => s.rimColor);
   const text = config.text ?? "";
   const fontFamily = config.fontFamily;
-  const letterSpacing = config.letterSpacing ?? 0;
+  const letterSpacing = trackingAt(config.letterSpacing ?? 0, pxPerInch);
   const fill = config.fontSize ?? 1;
 
   // The bar wears the SAME chrome as a badge — brass rim, bevel — because on
@@ -124,7 +128,7 @@ export function SectionTextElement({
   // interrupted, so take whichever is larger.
   const pad = Math.max(
     short * PAD_RATIO,
-    chromeInset(width, height, config.backgroundColor, cell),
+    chromeInset(cell),
   );
   // A crest set into the banner takes width from the text BEFORE the font is fitted.
   // Fitting to the full bar and then drawing a crest over one end is how you get
@@ -178,8 +182,8 @@ export function SectionTextElement({
     // the first place, so this also closes a screen-vs-print divergence.
     fontSynthesis: "none",
     lineHeight: LINE_HEIGHT,
-    // Capped against the FITTED size, so a stored spacing tuned for a desktop
-    // preview cannot swallow a phone's banner. See banner-tiers.ts.
+    // Already converted to this scale by `trackingAt`; the cap is a guard only.
+    // See banner-tiers.ts.
     letterSpacing: trackingPx(letterSpacing, fontPx),
     whiteSpace: "pre", // honor \n only — never soft-wrap (keeps the fit exact)
     textAlign: config.textAlign,
@@ -187,7 +191,28 @@ export function SectionTextElement({
     // renderers must carry this or the builder and the print sheet drift, which is the
     // whole reason tile-theme exists.
     ...textChenilleCss(fontPx, config.textColor, rimColor, config.backgroundColor),
+    // Seated on its capitals, as the print composer seats it (capSeatBaseline).
+    ...CAP_SEAT_CSS,
   });
+
+  /** One tier centred in its own band — the print's drawTier(bandTop, bandH). */
+  const band = (top: number, h: number, child: React.ReactNode) => (
+    <div
+      style={{
+        position: "absolute",
+        left: 0,
+        right: 0,
+        top,
+        height: h,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: align,
+        justifyContent: "center",
+      }}
+    >
+      {child}
+    </div>
+  );
 
   return (
     <div
@@ -232,15 +257,23 @@ export function SectionTextElement({
               flexDirection: "column",
               alignItems: align,
               justifyContent: "center",
-              gap: tagline ? contentH * 0.06 : 0,
               overflow: "hidden",
               // The rim and bevel borders already ate part of the inset; pad by the
               // remainder so the total clearance matches `pad` exactly.
               padding: Math.max(0, pad - edge.rimInset - edge.rimWidth - edge.bevelWidth),
             }}
           >
-            <div style={lineStyle(headlineFont)}>{text}</div>
-            {tagline && <div style={lineStyle(taglineFont, taglineFamily)}>{tagline}</div>}
+            {tagline ? (
+              // TWO TIERS on the print's own bands (`bannerBands`), each centred in
+              // its band. It used to be a flex column with a 6% gap, which put both
+              // lines somewhere other than where the print draws them.
+              <div style={{ position: "relative", width: "100%", height: contentH }}>
+                {band(bands.headlineTop, bands.headlineH, <div style={lineStyle(headlineFont)}>{text}</div>)}
+                {band(bands.taglineTop, bands.taglineH, <div style={lineStyle(taglineFont, taglineFamily)}>{tagline}</div>)}
+              </div>
+            ) : (
+              <div style={lineStyle(headlineFont)}>{text}</div>
+            )}
           </div>
         </div>
       </div>

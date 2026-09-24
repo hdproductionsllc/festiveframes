@@ -39,7 +39,7 @@ export default function SchoolFrameLabPage() {
     <div className="build-skin school-skin">
       {/* The picker's optional faces, after paint — see the component. */}
       <BuilderFontsDeferred />
-      <SchoolBuilder />
+      <SchoolBuilder operatorTools />
     </div>
   );
 }

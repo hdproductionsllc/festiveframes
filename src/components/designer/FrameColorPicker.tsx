@@ -39,17 +39,17 @@ export function FrameColorPicker() {
 
   return (
     <div className="ff-panel p-4">
-      <h3 className="ff-h2 mb-1">Frame colour</h3>
+      <h3 className="ff-h2 mb-1">Frame color</h3>
       <p className="ff-help mb-3">
-        The body every badge sits on. Set it to your school&apos;s colour, or pick your
+        The body every badge sits on. Set it to your school&apos;s color, or pick your
         own.
       </p>
 
       <div className="flex items-center gap-2">
         {/* The swatch IS the input. A separate preview would be one more thing that
             can disagree with the truth. */}
-        <ColorSwatch value={current} onChange={setFrameColor} label="Frame colour" size={36} />
-        <HexInput value={current} onChange={setFrameColor} label="Frame colour" />
+        <ColorSwatch value={current} onChange={setFrameColor} label="Frame color" size={36} />
+        <HexInput value={current} onChange={setFrameColor} label="Frame color" />
 
         <div className="flex min-w-0 flex-1 flex-wrap gap-1.5">
           {PRESETS.map(([hex, label]) => {
@@ -62,7 +62,7 @@ export function FrameColorPicker() {
                 aria-label={label}
                 aria-pressed={active}
                 title={label}
-                className="h-7 w-7 rounded-[var(--ff-radius-sm,6px)] border transition-transform active:translate-y-0.5"
+                className="h-11 w-11 rounded-[var(--ff-radius-sm,6px)] border transition-transform active:translate-y-0.5 lg:h-7 lg:w-7"
                 style={{
                   background: hex,
                   // The ACTIVE ring has to be legible on both a near-black and a
@@ -95,7 +95,7 @@ export function FrameColorPicker() {
         />
         <SwatchRow
           label="Rim"
-          hint="The edge round every badge and banner"
+          hint="The edge around every badge and banner"
           value={rimColor}
           onChange={setRimColor}
           fallback={brassGradientCss()}
@@ -138,13 +138,13 @@ function SwatchRow({
       <ColorSwatch
         value={value ?? "#1B2A4A"}
         onChange={onChange}
-        label={`${label} colour`}
+        label={`${label} color`}
         background={value ? undefined : fallback}
       />
       <HexInput
         value={value ?? "#1B2A4A"}
         onChange={onChange}
-        label={`${label} colour`}
+        label={`${label} color`}
         className="hidden sm:block"
       />
       <div className="min-w-0 flex-1">
@@ -156,7 +156,7 @@ function SwatchRow({
           type="button"
           onClick={() => onChange(null)}
           title={`Back to ${fallbackLabel.toLowerCase()}`}
-          className="ff-btn ff-btn-secondary shrink-0 px-2 py-1 text-[11px]"
+          className="ff-btn ff-btn-secondary shrink-0 px-2 py-1 text-[11px] max-lg:min-h-11"
         >
           Reset
         </button>

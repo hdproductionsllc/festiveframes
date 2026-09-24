@@ -191,12 +191,14 @@ describe("the resolution gate (constraint 5)", () => {
     // 300px logo usable, the picker offered it, and the crop modal then refused it
     // with no way forward.
     expect(MIN_DPI).toBe(BLOCK_DPI);
-    expect(MIN_BADGE_INCHES).toBeCloseTo(1.982, 3); // 2 tiles at the 0.991" pitch
+    // The shipping frame's own square badge, not the retired 2 x 0.991" pitch.
+    expect(MIN_BADGE_INCHES).toBeCloseTo(2.25, 6);
+    expect(MIN_BADGE_PIXELS).toBe(450);
     expect(MIN_BADGE_PIXELS).toBe(Math.ceil(BLOCK_DPI * MIN_BADGE_INCHES));
   });
 
   it("blocks exactly what evaluateResolution blocks", () => {
-    for (const side of [32, 180, 250, 396, 397, 600, 1200]) {
+    for (const side of [32, 180, 250, 396, 397, 449, 450, 600, 1200]) {
       const px = { width: side, height: side };
       const gate = gateByResolution(px);
       const direct = evaluateResolution(px, { width: MIN_BADGE_INCHES, height: MIN_BADGE_INCHES });
@@ -214,7 +216,7 @@ describe("the resolution gate (constraint 5)", () => {
   it("passes a real 512px crest and says so in print terms", () => {
     const v = gateByResolution({ width: 512, height: 512 });
     expect(v.usable).toBe(true);
-    expect(Math.round(v.verdict.dpi)).toBe(258);
+    expect(Math.round(v.verdict.dpi)).toBe(228); // 512px on the 2.25" badge
   });
 
   it("never blocks vector art, which has no resolution to block", () => {

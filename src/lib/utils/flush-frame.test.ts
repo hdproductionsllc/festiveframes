@@ -18,7 +18,7 @@ import {
 import { buildGrid, gridInvariantHolds, generateSlots } from "@/lib/utils/slot-generator";
 import { panelRects, panelSizeInches, panelOverhangTiles } from "@/lib/utils/panels";
 import { pitchPxFromCell } from "@/lib/utils/cols";
-import { canPlace, snappetRect, type PlacementContext } from "@/lib/utils/snappet";
+import { badgeRule, canPlace, snappetRect, type PlacementContext } from "@/lib/utils/snappet";
 import { sectionBounds } from "@/lib/utils/sections";
 import { panelBleedBox, panelColsPx, panelRowsPx, schoolBannerRect, schoolRenderMetrics } from "@/lib/utils/compose-school-frame";
 import { getPlateArea } from "@/lib/utils/layout";
@@ -135,7 +135,7 @@ describe("flush frame: Bill's parts", () => {
 
 describe("flush frame: placement", () => {
   const grid = buildGrid(C);
-  const ctx: PlacementContext = { grid, slots: {}, sections: {}, barCovered: new Set() };
+  const ctx: PlacementContext = { grid, slots: {}, sections: {}, barCovered: new Set(), badges: badgeRule(C) };
   const leftWing = panelRects(C)["wing-left"];
 
   it("refuses a tile that is ONLY the inner short top row, with the banner reason", () => {

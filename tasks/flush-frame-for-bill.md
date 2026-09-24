@@ -1,4 +1,4 @@
-# Flush-top frame — parts note for Bill (rev. 2026-09-12)
+# Flush-top frame — parts note for Bill (rev. 2026-09-23)
 
 The fitment data (31 measured cars, memo of 2026-08-24) says the TOP edge is the
 choke point: backup cameras and garnish strips leave 0.26–0.4" above the plate on a
@@ -41,9 +41,25 @@ Width: 2.25 + 11 + 2.25 = 15.5.
 3. **The bottom runner and keystone are one part with one edge.** The print draws the
    bar and the tab as a single outline with the same rim and bevel the badges wear,
    continuous around the shoulders. No line where the tab meets the bar.
-4. **Keystone deeper: rise 0.8** (base 6, top 5; was 0.55). The bar top is only 0.25"
-   up the plate, so the keystone reaches 1.05", still under Missouri's 1.08" date line,
-   and the class-year line gets air above it. Bottom part is 11 × 1.80 all in.
+4. **Keystone deeper: rise 0.8** (was 0.55). The bar top is only 0.25" up the plate,
+   so the keystone reaches 1.05", still under Missouri's 1.08" date line, and the
+   class-year line gets air above it. Bottom part is 11 × 1.80 all in.
+5. **Keystone a touch wider, with rounder top corners (Henry, 2026-09-23).** The
+   raised centre section of the bottom runner is now **6.25" wide where it meets the
+   bar** (was 6") and **5.25" wide across its top** (was 5"). That is 1/8" more on
+   each side, 1/4" overall, and the slanted sides keep the same angle as before
+   (each one steps in 0.5" over the 0.8" rise). The two top corners are rounded at
+   **0.375" radius** (was 0.25"). Nothing else on the part moves: it is still
+   11 × 1.80 all in, and the rise is still 0.8". **The two inside corners where
+   the slants meet the bar are SHARP on the part**: the export is cut along that
+   outline with no rounding there. Only the painted rim looks rounded at those
+   corners (the stroke is drawn with round joins). If you want a fillet there,
+   add it on the part, or tell us the radius and we'll put it in the file. The
+   wider base stands 2.875" in from each side of the plate, so it stays clear of
+   the registration-sticker corners, and it clears the bottom screw heads by
+   **about 0.2" (0.22")**, down from about 0.3" with the old 6" base. (Screw
+   centre 2.5" in and 0.625" up the plate, head about 0.6" across; the nearest
+   point of the tab is its slanted edge, 0.517" from the screw centre.)
 
 ## The print files, as exported (300 DPI, no bleed)
 
@@ -55,7 +71,7 @@ landscape, which is how they go on the bed.
 | Assembled sheet | 4650 × 2025 | 15.5 × 6.75 (fits the 16.5 × 13 bed unrotated, 1" to spare) |
 | Side column (each) | 2025 × 675 | 6.75 × 2.25 (rotated; the part stands 2.25 wide × 6.75 tall) |
 | Top runner | 3300 × 225 | 11 × 0.75, plain rectangle |
-| Bottom runner | 3300 × 540 | 11 × 1.80 = 1.00 bar + 0.80 keystone, shoulders transparent |
+| Bottom runner | 3300 × 540 | 11 × 1.80 = 1.00 bar + 0.80 keystone (6.25 base, 5.25 top, 0.375 corners), shoulders transparent |
 
 ## Known and accepted
 
@@ -65,8 +81,24 @@ landscape, which is how they go on the bed.
 
 ## Still to settle
 
-- **State name.** 0.75" of top cover reaches the state-name band on most plates. Some
-  states prohibit covering it. Missouri's rule is unchecked. Legal question, not fitment.
+- **State name: Missouri's rule, checked 2026-09-23. It does NOT look allowed as
+  built.** The flush top runner covers the top 0.75" of the plate. On a Missouri
+  plate that is the lower half of "MISSOURI" and part of the month (FEB) and tab
+  corner. RSMo 301.130.5 (effective 2018-08-28) says each plate "shall be securely
+  fastened to the motor vehicle or trailer in a manner so that all parts thereof
+  shall be plainly visible and reasonably clean so that the reflective qualities
+  thereof are not impaired". It also says tabs go "in the designated area of the
+  license plate". The statute has no carve-out for frames. The only cover it
+  allows is a transparent one, "so long as the plate is plainly visible".
+  Source: https://revisor.mo.gov/main/OneSection.aspx?section=301.130
+  **One line for Bill:** "Missouri law wants every part of the plate plainly visible.
+  Our top runner covers half of MISSOURI and the corner of the month and tab area,
+  so as drawn it is a ticketable obstruction risk. Don't tell a PTO it's fine.
+  Henry is deciding." This is a reading of the statute text, not legal advice.
+  Enforcement varies, and plenty of dealer frames cover the same band. But a
+  frame we sell to a school should not rest on that. **Owner decision (Henry):**
+  thin the top runner, or move it up so it clears the state name; either way,
+  confirm with counsel before outreach. Geometry is unchanged until he decides.
 
 Standing rule unchanged: nothing gets stretched in eufyMake. A file that does not fit
 is wrong and comes back to the code.

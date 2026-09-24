@@ -21,7 +21,7 @@
 // exists and is published — a door that is easy to find is the other half of
 // this, and the half that resolves complaints without lawyers.
 
-import { copy } from "./copy";
+import { SCHOOL_CONTACT_EMAIL } from "./school-contact";
 
 /**
  * The version of the attestation text below.
@@ -37,11 +37,12 @@ export const UPLOAD_RIGHTS_VERSION = "2026-09-13";
 /**
  * Where a school, club or rights holder asks us to take artwork down.
  *
- * Derived from the site's own support address rather than typed here, so there is
- * one mailbox to keep alive instead of two. If takedown ever needs its own
- * address, change it HERE and every surface follows.
+ * Uploads are a MySchoolFrame feature, so this is MySchoolFrame's contact address
+ * (bill@myschoolframe.com), read rather than typed so there is one mailbox to keep
+ * alive instead of two. If takedown ever needs its own address, change it HERE and
+ * every surface follows.
  */
-export const ARTWORK_TAKEDOWN_EMAIL = copy.thanks.supportEmail;
+export const ARTWORK_TAKEDOWN_EMAIL = SCHOOL_CONTACT_EMAIL;
 
 /**
  * The attestation, as a parent reads it.

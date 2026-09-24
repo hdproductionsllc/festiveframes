@@ -1,4 +1,5 @@
 import type { TilePiece } from "@/lib/types";
+import { IVORY_ENAMEL, NAVY_ENAMEL } from "@/data/sets/high-school-light.generated";
 
 // ─── Snap-in badge look ─────────────────────────────────────────────────────
 //
@@ -75,6 +76,56 @@ export function fieldForArtPixels(data: Uint8ClampedArray): string {
   return sum / n > 0.62 ? TILE_BG.navy : TILE_BG.white;
 }
 
+/**
+ * How much of an artwork DISAPPEARS into a given field: the share (0–1) of its
+ * opaque pixels that sit too close to the field to be told apart.
+ *
+ * The measured answer to "the mascot reads as a hollow outline". A school's mark
+ * is often filled with the school's own colour, and the badge field IS that colour
+ * (the owner's rule), so the fill vanishes and only the outline survives — Eureka's
+ * wildcat measured 0.83 on its own purple, the Colts wordmark 0.63 on its red.
+ * The fix belongs in the artwork (see `tileField`, and scripts/card-mark.mjs);
+ * this is the gate that says when it is needed, the way `merrowThread` gates the
+ * lettering thread, so a new school's mark cannot ship hollow unnoticed.
+ *
+ * "Too close" = WCAG contrast under 1.5 AND within 90 RGB units, so a dark navy
+ * next to a dark purple still counts, but a same-luminance hue change does not.
+ *
+ * The ceiling is CALIBRATED on the six pilot mascots, looked at on their own
+ * fields (2026-09-23), measured at 128 px as the tests do. A same-colour fill is
+ * fine when a thick contrasting outline carries the silhouette: Parkway West's W
+ * 0.50, Marquette's M 0.51, Ladue's ram 0.56 all read clearly. The hollow ones had
+ * only a hairline: Colts 0.59, Lafayette 0.68, Eureka 0.84. Carded on white
+ * (scripts/card-mark.mjs) those three measure 0.16–0.27.
+ *
+ * It is a TRIP-WIRE, not a verdict: the margin either side of the line is about
+ * 0.02, because share-of-pixels cannot see outline THICKNESS, which is what really
+ * separates the two groups. A mark within ~0.05 of the line needs looking at.
+ */
+export const ART_FIELD_COLLISION_MAX = 0.575;
+
+export function artFieldCollision(data: Uint8ClampedArray, field: string): number {
+  const lin = (c: number) => {
+    const v = c / 255;
+    return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+  };
+  const rel = (r: number, g: number, b: number) => 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+  const h = field.replace("#", "");
+  const [fr, fg, fb] = [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16));
+  const lf = rel(fr, fg, fb);
+  let n = 0;
+  let lost = 0;
+  for (let i = 0; i < data.length; i += 4) {
+    if (data[i + 3] < 200) continue;
+    n++;
+    const lp = rel(data[i], data[i + 1], data[i + 2]);
+    const contrast = (Math.max(lp, lf) + 0.05) / (Math.min(lp, lf) + 0.05);
+    const dist = Math.hypot(data[i] - fr, data[i + 1] - fg, data[i + 2] - fb);
+    if (contrast < 1.5 && dist < 90) lost++;
+  }
+  return n === 0 ? 0 : lost / n;
+}
+
 export function tileBackground(piece: Pick<TilePiece, "backgroundColor">): string {
   const own = piece.backgroundColor?.toUpperCase();
   const standard = Object.values(TILE_BG).map((c) => c.toUpperCase());
@@ -129,6 +180,59 @@ export function tileField(
   return override || own;
 }
 
+
+/** WCAG contrast ratio between two #rrggbb colours (1–21). */
+export function contrastRatio(a: string, b: string): number {
+  const lin = (c: number) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+  const rel = (hex: string) => {
+    const h = hex.replace("#", "");
+    const [r, g, bl] = [0, 2, 4].map((i) => lin(parseInt(h.slice(i, i + 2), 16) / 255));
+    return 0.2126 * r + 0.7152 * g + 0.0722 * bl;
+  };
+  const [la, lb] = [rel(a), rel(b)];
+  return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+}
+
+/**
+ * Does the library's navy enamel lose to its ivory twin on this field?
+ *
+ * The enamel a badge wears is whichever of the two reads better against the
+ * field — no threshold to calibrate, so no school sits "just under the line".
+ * The first rule was a minimum contrast for navy (1.6), which fixed navy on navy,
+ * black and purple but kept navy on Parkway Central red (2.1): a colour Central
+ * does not use, drawn as a dark blob on its red, so the crest, the laurel star and
+ * the podium read off-brand. On every dark field ivory is the clearer enamel and
+ * the one closer to the school's own light colour (white, grey, gold); navy stays
+ * only where the field is light enough for it to be the stronger mark (Parkway
+ * West's light blue, Webster's orange, white).
+ */
+export function enamelVanishes(field: string): boolean {
+  return contrastRatio(NAVY_ENAMEL, field) < contrastRatio(IVORY_ENAMEL, field);
+}
+
+/**
+ * The artwork a badge DRAWS on a given field — the one answer both renderers,
+ * the tray and every image loader ask, so the screen and the print cannot pick
+ * different twins.
+ *
+ * A badge whose navy enamel reads worse than ivory on the field draws its IVORY twin
+ * (scripts/light-enamel.mjs), which is the fix `tileField` asks for: legibility
+ * carried by the artwork, not by editing the school's colour. Everything else,
+ * and every piece without a twin, draws its own art.
+ */
+export function badgeArtworkUrl(
+  piece: Pick<TilePiece, "artworkUrl" | "darkFieldArtworkUrl">,
+  field: string,
+): string {
+  return piece.darkFieldArtworkUrl && enamelVanishes(field) ? piece.darkFieldArtworkUrl : piece.artworkUrl;
+}
+
+/** Every artwork a piece MAY draw — what an image loader fetches, so the draw
+ *  finds its twin whichever field it resolves to. */
+export function badgeArtworkUrls(piece: Pick<TilePiece, "artworkUrl" | "darkFieldArtworkUrl">): string[] {
+  return [piece.artworkUrl, piece.darkFieldArtworkUrl].filter((u): u is string => !!u);
+}
+
 // ─── Faux bevel ─────────────────────────────────────────────────────────────
 
 /**
@@ -140,6 +244,13 @@ export function tileField(
  * back so the rim carries the edge and the bevel only supplies the lift.
  */
 export const BEVEL_RATIO = 0.055;
+
+/** The brass rim's set-back from the tile edge, and its width, as fractions of one
+ *  cell — see `rimMetrics`, which draws them, and `chromeInset`, which clears them. */
+export const RIM_INSET_RATIO = 0.032;
+export const RIM_WIDTH_RATIO = 0.028;
+/** Air between the chrome and banner TEXT, as a fraction of one cell. */
+export const TEXT_AIR_RATIO = 0.035;
 
 /**
  * Outer corner radius as a fraction of the short side.
@@ -438,13 +549,13 @@ export function rimMetrics(w: number, h: number, unit: number = Math.min(w, h)) 
   // to be 0.012, which rounds to a pixel or two) it looks like the tile was simply
   // printed with a gold outline. Set back far enough to leave a visible margin of
   // field OUTSIDE it, the eye reads a metal ring sitting on a surface.
-  const inset = Math.max(1, Math.round(unit * 0.032));
+  const inset = Math.max(1, Math.round(unit * RIM_INSET_RATIO));
   // 0.028 of a cell, up from 0.018. At the old weight the operator's verdict on a
   // printed part was that it registered as a hairline in the hand — on screen it
   // reads fine, but a premium edge you can actually see is the point of having one.
   // Still comfortably under the 3% ceiling the tests hold it to, which is what keeps
   // it a machined edge rather than a gold frame.
-  const width = Math.max(1, Math.round(unit * 0.028));
+  const width = Math.max(1, Math.round(unit * RIM_WIDTH_RATIO));
   return {
     width,
     inset,
@@ -464,15 +575,17 @@ export function rimMetrics(w: number, h: number, unit: number = Math.min(w, h)) 
  * from the chrome instead of guessing alongside it makes that impossible.
  */
 export function chromeInset(
-  w: number,
-  h: number,
-  background: string = TILE_BG.navy,
-  unit: number = Math.min(w, h),
+  /** ONE grid cell in px — the same reference the rim and bevel are sized by. */
+  unit: number,
 ): number {
-  const rim = rimMetrics(w, h, unit);
-  const bevel = bevelMetrics(w, h, background, unit);
-  const air = Math.round(unit * 0.035);
-  return rim.inset + rim.width + bevel.thickness + air;
+  // The PHYSICAL proportions, not the rounded pixels the rings are drawn at. The
+  // rings need whole pixels (and a 1px floor) to render; the text column does not,
+  // and summing four rounded, floored rings made the phone's 0.75" top runner give
+  // up 8 of its 15 px to padding where the print gives up 5.3 — so the builder
+  // showed the school name about a quarter smaller than it prints. At print scale
+  // this is within a pixel of the rounded sum; at phone scale it is what keeps the
+  // lettering the same size in inches as the sheet.
+  return unit * (RIM_INSET_RATIO + RIM_WIDTH_RATIO + BEVEL_RATIO + TEXT_AIR_RATIO);
 }
 
 /**
@@ -524,10 +637,30 @@ export function artInset(
 export function rimRamp(override?: string | null): { light: string; mid: string; dark: string } {
   if (!override) return BRASS;
   return {
-    light: shift(override, 0.42),
+    light: shift(override, rimLift(override)),
     mid: override,
     dark: shift(override, -0.42),
   };
+}
+
+/**
+ * How far toward white a rim's lit stop moves.
+ *
+ * 0.42 for every colour a school actually calls a trim colour — gold, silver,
+ * red, green. But a near-BLACK rim lifted 0.42 toward white comes out as a flat
+ * mid-grey (#111111 -> #757575), and across the short run of a rim the grey is
+ * what the eye reads: Parkway Central's black trim looked like unpainted primer.
+ * Black trim catches light as a dark sheen, not as grey, so below
+ * RIM_LIFT_DARK the lift drops to a sheen and ramps back up to the full lift by
+ * RIM_LIFT_FULL. Every other kit's rim sits above RIM_LIFT_FULL and is unchanged.
+ */
+const RIM_LIFT = 0.42;
+const RIM_SHEEN = 0.12;
+const RIM_LIFT_DARK = 0.07;
+const RIM_LIFT_FULL = 0.12;
+function rimLift(hex: string): number {
+  const t = (luminance(hex) - RIM_LIFT_DARK) / (RIM_LIFT_FULL - RIM_LIFT_DARK);
+  return RIM_SHEEN + (RIM_LIFT - RIM_SHEEN) * Math.min(1, Math.max(0, t));
 }
 
 /**
@@ -582,6 +715,22 @@ export function merrowThread(
 
   const override = stop(rimRamp(rimColor));
   if (reads(override)) return override;
+  // THE SCHOOL'S OWN COLOUR before the brass. A school frame whose rim fails
+  // falling straight to gold put gold lettering outlines on Ladue (blue and white)
+  // and Parkway Central (red, black and white), neither of which has any gold —
+  // it read as deliberate, and off-brand. The banner colour, taken deep (away from
+  // the type), is still that school's colour and reads as a dark keyline: the
+  // shallowest shade that clears both gaps wins, so as much of the hue survives as
+  // the rule allows. Only when the school supplied a rim: a frame with none keeps
+  // the brass it was designed with. Where no shade can clear both (SLUH's navy is
+  // too dark to go darker by 0.25) the brass is still the answer.
+  if (rimColor && fieldColour) {
+    const away = lumText > 0.5 ? -1 : 1;
+    for (let t = 0.4; t <= 0.95; t += 0.05) {
+      const shade = shift(fieldColour, away * t);
+      if (reads(shade)) return shade;
+    }
+  }
   const brass = stop(BRASS);
   if (reads(brass)) return brass;
   return shift(textColour, lumText > 0.5 ? -0.55 : 0.55);

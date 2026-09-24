@@ -25,6 +25,8 @@
 // The whole list is an educated call, not a rule handed down; a sport that turns
 // out to want a number is a one-word edit here.
 
+import { WITHHELD_ART } from "@/data/sets/high-school";
+
 export type ActivityGroup = "Sports" | "Arts" | "Academics & clubs";
 
 export interface Activity {
@@ -36,7 +38,9 @@ export interface Activity {
   numbered?: boolean;
 }
 
-export const ACTIVITIES: Activity[] = [
+/** Every activity we have a label for, offered or not — `getActivity` reads this
+ *  so a saved design naming a withheld badge still gets its label. */
+const ALL_ACTIVITIES: Activity[] = [
   // ── Sports ────────────────────────────────────────────────────────────────
   { id: "hs:football-patch", label: "Football", group: "Sports", numbered: true },
   { id: "hs:soccer-patch", label: "Soccer", group: "Sports", numbered: true },
@@ -86,13 +90,47 @@ export const ACTIVITIES: Activity[] = [
   { id: "hs:honor-star", label: "Honor Roll", group: "Academics & clubs" },
 ];
 
-export const ACTIVITY_GROUPS: ActivityGroup[] = ["Sports", "Arts", "Academics & clubs"];
+/** What the intake OFFERS: every activity whose badge art is not withheld (see
+ *  WITHHELD_ART — Quiz Bowl's art reads as a desk bell and Model UN's as the UN
+ *  emblem until each is redrawn). */
+export const ACTIVITIES: Activity[] = ALL_ACTIVITIES.filter((a) => !WITHHELD_ART.has(a.id));
+
+// Arts first, then academics, then sports: the intake dropdown opens on orchestra,
+// band and drama, not football (owner: strong non-sports examples).
+export const ACTIVITY_GROUPS: ActivityGroup[] = ["Arts", "Academics & clubs", "Sports"];
 
 export function getActivity(id: string | null | undefined): Activity | undefined {
-  return ACTIVITIES.find((a) => a.id === id);
+  return ALL_ACTIVITIES.find((a) => a.id === id);
 }
 
 /** Does this activity wear a number? Unknown or unset means no. */
 export function hasJerseyNumber(id: string | null | undefined): boolean {
   return getActivity(id)?.numbered === true;
+}
+
+/**
+ * The activity a frame is already ABOUT, read back off its badges — or null.
+ *
+ * The intake's activity lives in component state, so after a reload the frame
+ * still showed orchestra four times while the activity menu was empty and "What
+ * they do" asked for an activity the frame plainly had. Reading it back from the
+ * design needs no second store: an activity the parent chose is laid on at least
+ * two positions by every one-tap path, while a kit's seeded frame shows each of
+ * its signature badges once — so "twice or more" is the parent's choice and a
+ * single seeded badge is not mistaken for one.
+ */
+export function activityOnFrame(pieceIds: Iterable<string | null | undefined>): string | null {
+  const counts = new Map<string, number>();
+  for (const id of pieceIds) {
+    if (id && getActivity(id)) counts.set(id, (counts.get(id) ?? 0) + 1);
+  }
+  let best: string | null = null;
+  let n = 1;
+  for (const [id, c] of counts) {
+    if (c > n) {
+      best = id;
+      n = c;
+    }
+  }
+  return best;
 }

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { OG_IMAGE_ALT, SITE_URL } from "@/config/season";
+import { SITE_URL } from "@/config/season";
+import { OG_IMAGE_ALT } from "@/content/copy";
 import { copy } from "@/content/copy";
 import { Designer } from "@/components/designer/Designer";
 import { BuildChrome } from "@/components/build/BuildChrome";

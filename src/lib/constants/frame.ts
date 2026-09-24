@@ -12,6 +12,12 @@ import { extraBottomRows } from "@/lib/utils/rows";
 export const EUFY_BED_LONG_INCHES = 16.5;
 export const EUFY_BED_SHORT_INCHES = 13;
 
+/** The school print sheet's resolution. 300 DPI is the eufyMake sheet standard.
+ *  Lives here, not in the (node-only) print composer, because it is also the scale
+ *  a banner's stored `letterSpacing` is authored at — see banner-tiers.ts — and
+ *  the on-screen renderer has to read the same number. */
+export const SCHOOL_PRINT_DPI = 300;
+
 // Gapless unit grid: 1 unit = the tile edge (0.982"). Per Bill's spec the
 // perimeter is a 13 x 7 ring = 36 tiles: top & bottom rows of 13 (incl. the
 // corners) plus 5 tiles down each side between them. Each side is an exact
@@ -109,6 +115,7 @@ export const SCHOOL_CLASSIC_FRAME_CONFIG: FrameConfig = getWingFrameConfig(
     bottomSlots: 12,
     widthInches: 12 * DEFAULT_FRAME_CONFIG.tileSizeInches, // 11.892"
     minTileSpan: { cols: 2, rows: 2 },
+    badgeShape: "square", // THE SQUARE RULE — see FrameConfig.badgeShape
     fullWidthTopBar: true,
     bottomRows: 2,
     overhangTiles: 1,
@@ -168,6 +175,7 @@ export const SCHOOL_FRAME_CONFIG: FrameConfig = getWingFrameConfig(
     // Every badge on this frame is at least 2x2. One 0.991in cell is unreadable for
     // artwork and a thumbnail for a photo.
     minTileSpan: { cols: 2, rows: 2 },
+    badgeShape: "square", // THE SQUARE RULE — see FrameConfig.badgeShape
     // Top rail spans the full width (over the wings), and the bottom banner is two
     // rows: the bottom rail plus one row of cantilever hanging below it.
     fullWidthTopBar: true,
@@ -213,6 +221,7 @@ export const SCHOOL_SLIM_FRAME_CONFIG: FrameConfig = getWingFrameConfig(
     rightSlots: 6,
     heightInches: 8 * DEFAULT_FRAME_CONFIG.tileSizeInches, // 7.928"
     minTileSpan: { cols: 2, rows: 2 },
+    badgeShape: "square", // THE SQUARE RULE — see FrameConfig.badgeShape
     fullWidthTopBar: true,
     // THE CHANGE. No bottom cantilever, and the tagline moves into the tab.
     bottomRows: 1,
@@ -285,6 +294,7 @@ export const SCHOOL_JULY_SLIM_FRAME_CONFIG: FrameConfig = getWingFrameConfig(
     widthInches: 13,
     heightInches: 7,
     minTileSpan: { cols: 2, rows: 2 },
+    badgeShape: "square", // THE SQUARE RULE — see FrameConfig.badgeShape
     fullWidthTopBar: true,
     bottomRows: 1,
     overhangTiles: 1,
@@ -308,6 +318,7 @@ export const SCHOOL_JULY_FULL_FRAME_CONFIG: FrameConfig = getWingFrameConfig(
     widthInches: 13,
     heightInches: 7,
     minTileSpan: { cols: 2, rows: 2 },
+    badgeShape: "square", // THE SQUARE RULE — see FrameConfig.badgeShape
     fullWidthTopBar: true,
     bottomRows: 2, // Bill's current build: the 11 x 2 bottom runner
     overhangTiles: 1,
@@ -383,6 +394,7 @@ export const SCHOOL_FLUSH_FRAME_CONFIG: FrameConfig = getWingFrameConfig(
     // only division of 6.75 that lands on a square worth printing.
     wingRows: 3,
     minTileSpan: { cols: 2, rows: 1 },
+    badgeShape: "square", // THE SQUARE RULE — see FrameConfig.badgeShape
     fullWidthTopBar: true,
     bottomRows: 1,
     overhangTiles: 1,
@@ -393,9 +405,14 @@ export const SCHOOL_FLUSH_FRAME_CONFIG: FrameConfig = getWingFrameConfig(
       // the owner read that as too close. Do not raise it further without
       // re-checking the date line.
       riseInches: 0.8,
-      baseInches: 6,
-      topInches: 5,
-      cornerRadiusInches: 0.25,
+      // 6.25 / 5.25 (owner, 2026-09-23): 1/8" wider on EACH side, 1/4" overall,
+      // top and base together so the side slope is unchanged (0.5" in over the
+      // 0.8" rise). Was 6 / 5. The base still stands 2.875" in from each plate
+      // side, clear of the 1.75" sticker corners and of the bottom bolt heads.
+      baseInches: 6.25,
+      topInches: 5.25,
+      // Rounder top corners (owner, 2026-09-23). Was 0.25.
+      cornerRadiusInches: 0.375,
     },
   },
   // WING 1.25", ONE COLUMN — so the side panel is wing 1.25 + rail 1.000 = 2.250,

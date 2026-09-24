@@ -425,3 +425,12 @@ export const copy: Copy = {
     "Made by hand to order.",
   ],
 };
+
+/**
+ * Alt text for the site-wide Open Graph card rendered at /opengraph-image.
+ * Derived from the brand copy (never written longhand), so a page can describe
+ * the image in its own `openGraph.images` without importing `next/og`; the route
+ * re-exports this as its required `alt`. Lives here, not in config/season.ts, so
+ * that SITE_URL's module stays a leaf and school bundles never pull this file in.
+ */
+export const OG_IMAGE_ALT = `${copy.site.brandName} — ${copy.site.tagline}`;

@@ -5,33 +5,33 @@ import { SCHOOL_CHECKOUT_OPEN, schoolOffer } from "./offers";
 //
 // Not a behaviour test. A DELIBERATENESS test.
 //
-// The school builder's Buy button is off because $49 and the $10 donation are
-// engineering placeholders, not decisions the owner has made — and the cost of
-// getting that wrong is charging a real parent a made-up price, or promising a
-// booster club a number we did not agree to. That is not the kind of thing that
-// should be able to switch on as a side effect of somebody tidying up a flag.
+// The school builder's Buy button is off. The figures are owner-confirmed
+// (2026-09-23: $24.95, $5 to the school) — what is still owed is ONE end-to-end
+// test payment on the live site before a real parent's card goes through it.
+// That is not the kind of thing that should be able to switch on as a side
+// effect of somebody tidying up a flag.
 //
 // So flipping SCHOOL_CHECKOUT_OPEN deliberately breaks this file. Deleting the
 // assertion is a two-line edit; the point is that it cannot happen by accident,
 // and that whoever does it has to read why it was closed first.
 //
-// WHEN THE DECISION IS MADE: confirm both numbers with the owner, flip the
-// constant, and replace the first assertion below with the confirmed figures.
+// WHEN THE TEST PAYMENT HAS RUN: flip the constant and change the first
+// assertion below to record that it was done.
 
-describe("school checkout stays parked until pricing is owner-confirmed", () => {
+describe("school checkout stays parked until one test payment has run", () => {
   it("is CLOSED — see the note on SCHOOL_CHECKOUT_OPEN before changing this", () => {
     expect(
       SCHOOL_CHECKOUT_OPEN,
-      "Opening school checkout charges parents the placeholder price. Confirm " +
-        "schoolPrice and schoolDonationCents with the owner first, then update this test.",
+      "Opening school checkout charges real parents. Run one end-to-end test " +
+        "payment on the live site first, then update this test.",
     ).toBe(false);
   });
 
-  it("still carries the placeholder figures the lock exists for", () => {
-    // If these have changed, the prices may now be real — which is the moment to
-    // revisit the constant above rather than leaving it closed out of habit.
-    expect(schoolOffer.schoolPrice).toBe(4900);
-    expect(schoolOffer.schoolDonationCents).toBe(1000);
+  it("carries the owner-confirmed pilot figures ($24.95, $5 to the school)", () => {
+    // Confirmed 2026-09-23 and quoted verbatim in Bill's outreach email. The lock
+    // above now waits on one end-to-end test payment, not on the numbers.
+    expect(schoolOffer.schoolPrice).toBe(2495);
+    expect(schoolOffer.schoolDonationCents).toBe(500);
   });
 
   it("promises the school a donation that the frame's price can actually cover", () => {

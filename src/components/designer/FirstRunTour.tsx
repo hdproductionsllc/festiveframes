@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 
 import "./first-run-tour.css";
+import { NOTHING_PRINTS_UNTIL_YES } from "@/content/msf-pages";
 
 // ─── First-run tour ──────────────────────────────────────────────────────────
 //
@@ -48,23 +49,23 @@ export function FirstRunTour({ open, onClose }: { open: boolean; onClose: () => 
     >
       <div className="msf-tour" onClick={(e) => e.stopPropagation()}>
         <h2 className="msf-tour-title" id="msf-tour-title">
-          Make it theirs
+          Here&apos;s how it works
         </h2>
         <p className="msf-tour-lede">
-          Customize as much as you want, or just pick a preset and go.
+          Change as much or as little as you like. A ready-made design is a fine place to start.
         </p>
         <ol className="msf-tour-steps">
           <li>
             <span className="msf-tour-n">1</span>
-            <span>Type their name. It lands on the banner.</span>
+            <span>Choose their class year, then tap the things they do, like orchestra, soccer or theater. Adding a name is optional.</span>
           </li>
           <li>
             <span className="msf-tour-n">2</span>
-            <span>Tap a badge, then tap the frame. Or drag it on.</span>
+            <span>To place a badge, tap it and then tap the frame, or drag it where you&apos;d like it.</span>
           </li>
           <li>
             <span className="msf-tour-n">3</span>
-            <span>Love it? Send it. Nothing prints until you say so.</span>
+            <span>When you&apos;re happy with it, send it to us. {NOTHING_PRINTS_UNTIL_YES}</span>
           </li>
         </ol>
         <button type="button" ref={btnRef} className="msf-tour-btn" onClick={onClose}>

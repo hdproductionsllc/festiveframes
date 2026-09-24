@@ -14,6 +14,7 @@ import {
   panelBleedBox,
   SCHOOL_PRINT_DPI,
   SCHOOL_PANEL_BLEED_INCHES,
+  schoolDesignOf,
   type SchoolDesign,
   type DrawableImage,
   type SchoolImageBundle,
@@ -604,5 +605,55 @@ describe("the keystone and the bar are ONE piece of material", () => {
     const [r, , b] = onEdge.split(",").map(Number);
     expect(r, "the tab's top edge is not metal").toBeGreaterThan(150);
     expect(r, "a rim should be warm, not white").toBeGreaterThan(b);
+  });
+});
+
+// ─── PRINT PARITY: the print file is handed every colour the screen uses ─────
+//
+// The three print call sites (export, send, buy) each built the design longhand
+// and all three left out `tileFieldColor` and `rimColor`. The builder painted the
+// badges on the school colour, the print file on each piece's own field: Eureka's
+// banner read 79,38,131 and its printed badges 55,27,85.
+describe("schoolDesignOf — the one picker every export uses", () => {
+  const store = {
+    frameConfig: SCHOOL_FRAME_CONFIG,
+    frameColor: "#462E8D",
+    tileFieldColor: "#462E8D",
+    rimColor: "#FFCC00",
+    slots: { "frame:wing-left-0": { pieceId: "x:none", setId: "x" } as PlacedTile },
+    textBars: [] as PlacedTextBar[],
+    qrCode: { enabled: false, url: "", size: 0 },
+    plateState: "MO",
+    sections: {
+      bottom: { mode: "text", text: barConfig({ text: "WILDCATS", backgroundColor: "#462E8D" }) } as SectionState,
+    },
+    // What else a store carries; none of it belongs in a print design.
+    designName: "x",
+    selectedSectionId: null,
+  };
+
+  it("carries all three brand colours", () => {
+    const d = schoolDesignOf(store);
+    expect(d.frameColor).toBe("#462E8D");
+    expect(d.tileFieldColor).toBe("#462E8D");
+    expect(d.rimColor).toBe("#FFCC00");
+    expect(Object.keys(d).sort()).toEqual(
+      ["frameColor", "frameConfig", "plateState", "qrCode", "rimColor", "sections", "slots", "textBars", "tileFieldColor"],
+    );
+  });
+
+  it("prints the badge field in the BANNER's colour — the owner's rule, in print", () => {
+    const { width: W, height: H } = schoolCanvasSize(SCHOOL_FRAME_CONFIG, 100);
+    const canvas = createCanvas(W, H);
+    const ctx = canvas.getContext("2d") as unknown as CanvasRenderingContext2D;
+    drawSchoolFrame(ctx, schoolDesignOf(store), {
+      plate: null, pieces: new Map(), snappets: new Map(), sections: new Map(), qr: null, logos: new Map(),
+    }, W);
+    const m = schoolRenderMetrics(SCHOOL_FRAME_CONFIG, W);
+    const napi = ctx as unknown as SKRSContext2D;
+    const c = Math.round(m.tileSize * 0.5);
+    const badge = napi.getImageData(c, c, 1, 1).data;
+    // "#462E8D" = 70,46,141 — not the stock white/navy field the piece carries.
+    expect([badge[0], badge[1], badge[2]]).toEqual([70, 46, 141]);
   });
 });

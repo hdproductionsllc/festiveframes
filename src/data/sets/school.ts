@@ -1,5 +1,5 @@
 import type { TileSet, PlacedTile, DesignPreset } from "@/lib/types";
-import { highSchoolSet } from "./high-school";
+import { highSchoolSet, WITHHELD_ART } from "./high-school";
 
 // ─── School Spirit ──────────────────────────────────────────────────────────
 //
@@ -46,7 +46,8 @@ export const schoolSet: TileSet = {
     // tiles, and text presets below. Leading the palette puts the real art first.
     // These keep their own `hs:` piece ids, which resolve fine — getPiece() is a flat
     // map across every set, not scoped to the set a piece is listed under.
-    ...highSchoolSet.pieces,
+    // Minus art withheld until it is redrawn (see WITHHELD_ART).
+    ...highSchoolSet.pieces.filter((p) => !WITHHELD_ART.has(p.id)),
 
     // ─── Spirit icons: REMOVED ─────────────────────────────────
     // Twenty Twemoji cartoons (star, pennant, trophy, mascot balls…) stood in until

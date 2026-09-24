@@ -9,10 +9,17 @@ import {
   presetsFor,
   presetTiles,
   getPreset,
+  sideColumn,
+  layPreset,
+  presetBlurb,
 } from "./school-presets";
+import { pilotSchoolKits } from "@/data/school-pilot";
+import { kitMarkIds } from "@/data/sets/school-marks";
+import { SCHOOL_SHIPPING_VARIANT, schoolVariant } from "@/data/school-variants";
+import { createDesignStore } from "@/stores/design-store";
 import { getPiece } from "@/data/sets";
 import { buildGrid } from "@/lib/utils/slot-generator";
-import { occupiedCoords, tileSpan } from "@/lib/utils/snappet";
+import { badgeRule, canPlace, occupiedCoords, snappetInches, squareSpansAt, tileSpan } from "@/lib/utils/snappet";
 import { SCHOOL_FLUSH_FRAME_CONFIG, SCHOOL_FRAME_CONFIG, SCHOOL_SLIM_FRAME_CONFIG } from "@/lib/constants/frame";
 import type { FrameConfig } from "@/lib/types";
 import type { SchoolPreset } from "./school-presets";
@@ -82,26 +89,15 @@ describe("the school presets", () => {
     // the same idea. They are the first thing read in a car park and belong to
     // the school.
     //
-    // Derived from the grid rather than named by slot id: the ids the corners
-    // resolve to move whenever the frame's geometry does, and a test that spells
-    // them out just stops testing the corners at that point without failing.
+    // The corner BADGES are the first and last of each side column. Under the
+    // square rule the live frame's nine-row column holds four 2x2 squares and its
+    // bottom corner cell is frame body (it used to be absorbed into a 2x3), so
+    // the corner badge is asked of the column, not of a grid corner cell.
     const grad = getPreset("graduate")!;
-    const grid = buildGrid(SCHOOL_FRAME_CONFIG);
-    const corners: Array<[number, number]> = [
-      [0, 0],
-      [0, grid.cols - 1],
-      [grid.rows - 1, 0],
-      [grid.rows - 1, grid.cols - 1],
-    ];
-    for (const [row, col] of corners) {
-      const held = grad.layout.find(([slot, , span]) => {
-        const anchor = grid.coordOf(slot);
-        if (!anchor) return false;
-        return occupiedCoords(anchor, tileSpan({ span })).some(
-          (c) => c.row === row && c.col === col,
-        );
-      });
-      expect(held?.[1], `the badge on corner (${row},${col})`).toBe(MASCOT);
+    const cols = columnsOf(grad, SCHOOL_FRAME_CONFIG);
+    for (const run of [cols.left, cols.right]) {
+      expect(run[0], "the top corner badge").toBe(MASCOT);
+      expect(run[run.length - 1], "the bottom corner badge").toBe(MASCOT);
     }
   });
 
@@ -284,22 +280,51 @@ describe("every preset covers its side panels exactly", () => {
     }
   });
 
-  it.each(cases)("$label: fills BOTH side panels with no bare row", ({ presets, config }) => {
-    // A gap reads as a notch in the frame, and the bottom corner is the one that
-    // strands: the live frame's side panel is 9 rows, which 2x2 badges cannot tile.
+  it.each(cases)("$label: fills EVERY badge position the frame declares", ({ presets, config }) => {
+    // A missing badge reads as a notch in the frame. The positions are the
+    // frame's: the square rule's squares down each side column. A side cell no
+    // square can cover (the live frame's ninth row, once a 2x3's tail) is frame
+    // body, and the only cell allowed to stay bare.
     const grid = buildGrid(config);
+    const empty = { grid, slots: {}, sections: {}, barCovered: new Set<string>(), badges: badgeRule(config) };
     for (const preset of presets) {
       const covered = new Set<string>();
       for (const [slot, , span] of preset.layout) {
         const anchor = grid.coordOf(slot)!;
         for (const c of occupiedCoords(anchor, tileSpan({ span }))) covered.add(`${c.row}:${c.col}`);
       }
+      const coverable = new Set<string>();
+      for (const side of ["wing-left", "wing-right"] as const) {
+        const column = sideColumn(config, side);
+        expect(column.length, `${side} declares no badges`).toBeGreaterThan(0);
+        for (const { slot, span } of column) {
+          for (const c of occupiedCoords(grid.coordOf(slot)!, span)) coverable.add(`${c.row}:${c.col}`);
+        }
+      }
+      for (const key of coverable) {
+        expect(covered.has(key), `${preset.id}: badge position ${key} is bare`).toBe(true);
+      }
+      // ...and every side cell left bare really is one no badge can reach.
       for (const cell of grid.slots) {
         if (!grid.panelAt(cell.row, cell.col)?.startsWith("wing-")) continue;
-        expect(
-          covered.has(`${cell.row}:${cell.col}`),
-          `${preset.id}: (${cell.row},${cell.col}) is bare`,
-        ).toBe(true);
+        if (covered.has(`${cell.row}:${cell.col}`)) continue;
+        expect(squareSpansAt(empty, cell), `${preset.id}: (${cell.row},${cell.col}) could hold a badge`).toEqual([]);
+      }
+    }
+  });
+
+  it.each(cases)("$label: every badge is a SQUARE the frame accepts", ({ presets, config }) => {
+    // THE SQUARE RULE, on the one-tap path: a preset badge is 2.25 x 2.25 on the
+    // flush frame and 1.982 square on the live one — never the 2.25 x 4.5 slab a
+    // hand-written {2,2} made of the flush side column.
+    const grid = buildGrid(config);
+    const empty = { grid, slots: {}, sections: {}, barCovered: new Set<string>(), badges: badgeRule(config) };
+    for (const preset of presets) {
+      for (const [slot, , span] of preset.layout) {
+        const verdict = canPlace(empty, grid.coordOf(slot)!, span);
+        expect(verdict.ok, `${preset.id}: ${slot} ${JSON.stringify(span)} -> ${verdict.reason}`).toBe(true);
+        const inches = snappetInches(config, slot, span);
+        expect(inches.width).toBeCloseTo(inches.height, 6);
       }
     }
   });
@@ -317,5 +342,80 @@ describe("every preset covers its side panels exactly", () => {
       expect(bySide.left.length, `${preset.id} places nothing on the left`).toBeGreaterThan(0);
       expect(bySide.right, `${preset.id} is not mirrored`).toEqual(bySide.left);
     }
+  });
+});
+
+// ─── The one-tap paths lay the variant's OWN design (finding 62) ─────────────
+//
+// The intake's "See it on the frame", the welcome chips' #preset= links and the
+// preset buttons all go through `layPreset`. The first two used to place slot
+// ids from the retired 14 x 8 grid at a 2x2: on the flush frame most ids did not
+// exist, so the frame came out lopsided and the chosen activity was nowhere.
+describe("layPreset on the shipping frame (every one-tap path)", () => {
+  const { config, presets } = schoolVariant(SCHOOL_SHIPPING_VARIANT);
+  const grid = buildGrid(config);
+
+  for (const activity of ["hs:orchestra", "hs:soccer-patch", "hs:drama"]) {
+    it(`lays six squares with ${activity} on them, on slots the frame has`, () => {
+      const store = createDesignStore(`lay-preset-${activity}`, { frameConfig: config });
+      // Something already on the frame, so "a whole frame, not a sprinkle" is tested too.
+      store.getState().placeTile(sideColumn(config, "wing-left")[1].slot, "hs:golf", "hs");
+      layPreset(store.getState(), getPreset("athlete", presets)!, activity, { mascot: null, alt: null });
+
+      const slots = store.getState().slots;
+      const ids = Object.keys(slots);
+      expect(ids).toHaveLength(6);
+      for (const id of ids) {
+        expect(grid.coordOf(id), `${id} is not a slot on the shipping frame`).toBeTruthy();
+        const inches = snappetInches(config, id, tileSpan(slots[id]));
+        expect(inches.width, id).toBeCloseTo(inches.height, 6);
+      }
+      const pieces = Object.values(slots).map((t) => t.pieceId);
+      expect(pieces.filter((p) => p === activity)).toHaveLength(4);
+      expect(pieces).not.toContain("hs:golf");
+    });
+  }
+});
+
+// ─── The same two rules, on what the SHIPPING frame actually lays ────────────
+//
+// The tests above check the placeholders, and a placeholder cannot break rule 2 —
+// the FALLBACK it resolves to can. `MASCOT_ALT` on a markless kit resolved to
+// `hs:honor-star` ("Honor Roll"), so every pilot school's "Just the school" laid
+// four honor-roll badges and "Graduate" put one in both top corners, with every
+// test here green. These run the resolved tiles, kit by kit.
+
+describe("the shipping presets, resolved for every pilot school", () => {
+  const FILLER = ["hs:trophy", "hs:medal", "hs:laurel", "hs:torch", "hs:honor-star"];
+  const presets = schoolVariant(SCHOOL_SHIPPING_VARIANT).presets;
+  const cases = pilotSchoolKits().flatMap((kit) =>
+    presets.map((preset) => ({ label: `${kit.slug} / ${preset.id}`, kit, preset })),
+  );
+
+  it.each(cases)("$label claims nothing nobody earned and never repeats itself", ({ kit, preset }) => {
+    const marks = kitMarkIds(kit);
+    // With an activity where the preset asks for one, the way the builder lays it.
+    const activity = preset.needsActivity ? "hs:drama" : null;
+    const tiles = presetTiles(preset, activity, marks.mascot, marks.alt);
+    for (const [, piece] of tiles) {
+      expect(FILLER, `${preset.id} lays ${piece} on ${kit.slug}`).not.toContain(piece);
+      expect(getPiece(piece), `${piece} is not a badge`).toBeTruthy();
+    }
+    const half = tiles.length / 2;
+    for (const run of [tiles.slice(0, half), tiles.slice(half)]) {
+      for (let i = 1; i < run.length; i++) {
+        expect(run[i][1], `${preset.id} repeats ${run[i][1]} on ${kit.slug}`).not.toBe(run[i - 1][1]);
+      }
+    }
+  });
+
+  it.each(cases)("$label's blurb names only badges it lays", ({ kit, preset }) => {
+    const marks = kitMarkIds(kit);
+    const nameOf = (id: string) => getPiece(id)?.name;
+    const blurb = presetBlurb(preset, null, marks, nameOf);
+    if (!preset.describe) return;
+    const laid = new Set(presetTiles(preset, null, marks.mascot, marks.alt).map(([, p]) => nameOf(p)));
+    // The derived blurb is the names, joined; each must be on the frame.
+    for (const name of blurb.split(", down both sides")[0].split(", ")) expect(laid).toContain(name);
   });
 });

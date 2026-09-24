@@ -46,22 +46,12 @@
   padding-top: 76px;
 }
 .msf-brand {
-  /* Lockup: mark + wordmark. The span carries Graduate via next/font, so the
-     rules here are only size/spacing — Graduate is wide, so far less tracking
-     than the old Oswald eyebrow needed. */
+  /* Holds the logo image (public/brand/msf-logo-reverse.png): centring and
+     spacing only — the logo carries its own lettering and colour. */
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  font-size: 19px;
-  letter-spacing: 0.05em;
-  color: var(--brass-bright);
   margin: 0 0 24px;
-}
-.msf-brand-mark {
-  width: 30px;
-  height: 30px;
-  /* The frame body renders in currentColor = brass, matching the wordmark. */
 }
 .msf-eyebrow {
   font-family: var(--font-display-marketing), Oswald, sans-serif;
@@ -429,3 +419,101 @@
   line-height: 1.4;
 }
 
+
+/* ── Plain MySchoolFrame pages: warranty, terms, privacy, thanks, not-found ──
+   (components/school/MsfPageShell). The landing's palette on a reading column:
+   a short navy masthead with the reversed logo, then paper. */
+.msf-doc {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+.msf-doc-head {
+  background: radial-gradient(900px 360px at 50% -160px, #2a3c66 0%, var(--navy) 60%, var(--navy-deep) 100%);
+  color: #f6f3ec;
+  text-align: center;
+  padding: 36px 16px 40px;
+}
+.msf-doc-head .msf-brand {
+  margin-bottom: 18px;
+}
+.msf-doc-head h1 {
+  font-size: clamp(30px, 6vw, 44px);
+  color: #fff;
+}
+.msf-doc-updated {
+  margin: 10px 0 0;
+  font-size: 14px;
+  color: #c9d0e2;
+}
+.msf-doc-body {
+  flex: 1;
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 40px 16px 56px;
+  font-size: 17px;
+}
+.msf-doc-body h2 {
+  font-size: 22px;
+  color: var(--navy);
+  margin: 36px 0 10px;
+}
+.msf-doc-body h2:first-child {
+  margin-top: 0;
+}
+.msf-doc-body p,
+.msf-doc-body ul {
+  margin: 0 0 14px;
+}
+.msf-doc-body ul {
+  padding-left: 22px;
+}
+.msf-doc-body li {
+  margin-bottom: 8px;
+}
+.msf-doc-body a {
+  color: var(--navy);
+  font-weight: 600;
+  text-decoration-color: var(--brass);
+  text-underline-offset: 2px;
+  overflow-wrap: anywhere;
+}
+.msf-doc-body .msf-ctas {
+  justify-content: flex-start;
+  margin-top: 28px;
+}
+.msf-doc-body .msf-btn-primary {
+  color: var(--navy-deep);
+}
+.msf-doc-card {
+  background: #fff;
+  border: 1px solid #e4dccb;
+  border-radius: 14px;
+  padding: 18px 20px;
+  margin: 0 0 18px;
+}
+.msf-doc-card > :last-child {
+  margin-bottom: 0;
+}
+.msf-doc-foot {
+  background: var(--paper-2);
+  border-top: 1px solid #e4dccb;
+  padding: 24px 16px 32px;
+  text-align: center;
+  font-size: 14px;
+  color: var(--dim);
+}
+.msf-doc-foot nav {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 20px;
+  margin-bottom: 10px;
+}
+.msf-doc-foot a {
+  color: var(--navy);
+}
+.msf-fineprint-links {
+  margin-top: 8px;
+}

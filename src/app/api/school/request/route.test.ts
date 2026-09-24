@@ -21,7 +21,7 @@ function req(body: unknown): Request {
 
 const GOOD = { schoolName: "Cedar Ridge High School", city: "Cedar Ridge", state: "CA" };
 
-const ENV_KEYS = ["RESEND_API_KEY", "SCHOOL_REQUEST_EMAIL", "EMAIL_FROM"] as const;
+const ENV_KEYS = ["RESEND_API_KEY", "MSF_ORDER_EMAIL", "MSF_EMAIL_FROM", "EMAIL_FROM"] as const;
 let saved: Record<string, string | undefined>;
 
 beforeEach(() => {
@@ -110,17 +110,22 @@ describe("POST /api/school/request — validation", () => {
 });
 
 describe("POST /api/school/request — mail", () => {
-  it("sends NOTHING when SCHOOL_REQUEST_EMAIL is unset", async () => {
+  it("alerts MySchoolFrame's own inbox by default (bill@myschoolframe.com), from MySchoolFrame", async () => {
     process.env.RESEND_API_KEY = "test-key";
-    delete process.env.SCHOOL_REQUEST_EMAIL;
+    delete process.env.MSF_ORDER_EMAIL;
+    delete process.env.MSF_EMAIL_FROM;
+    process.env.EMAIL_FROM = "Shared <orders@verified.example>";
     const res = await POST(req({ ...GOOD, email: "parent@example.com" }));
     expect(res.status).toBe(200);
-    expect(sendMock).not.toHaveBeenCalled();
+    expect(sendMock).toHaveBeenCalledTimes(1);
+    const sent = sendMock.mock.calls[0][0] as { to: string[]; from: string };
+    expect(sent.to).toEqual(["bill@myschoolframe.com"]);
+    expect(sent.from).toBe("MySchoolFrame <orders@verified.example>");
   });
 
-  it("alerts US and only us when SCHOOL_REQUEST_EMAIL is set", async () => {
+  it("alerts US and only us when MSF_ORDER_EMAIL is set", async () => {
     process.env.RESEND_API_KEY = "test-key";
-    process.env.SCHOOL_REQUEST_EMAIL = "henry@example.com, bill@example.com";
+    process.env.MSF_ORDER_EMAIL = "henry@example.com, bill@example.com";
     await POST(req({ ...GOOD, email: "parent@example.com" }));
     expect(sendMock).toHaveBeenCalledTimes(1);
     const sent = sendMock.mock.calls[0][0] as { to: string[]; subject: string; text: string };
@@ -134,7 +139,7 @@ describe("POST /api/school/request — mail", () => {
 
   it("still records the request when there is no Resend key", async () => {
     delete process.env.RESEND_API_KEY;
-    process.env.SCHOOL_REQUEST_EMAIL = "henry@example.com";
+    process.env.MSF_ORDER_EMAIL = "henry@example.com";
     const res = await POST(req(GOOD));
     expect(res.status).toBe(200);
     expect(sendMock).not.toHaveBeenCalled();

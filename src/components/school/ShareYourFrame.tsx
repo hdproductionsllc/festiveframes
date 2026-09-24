@@ -27,12 +27,13 @@ export function ShareYourFrame({
 }) {
   const [state, setState] = useState<"idle" | "copied" | "shared">("idle");
 
-  // NO FIGURE. Pricing is parked until it is owner-confirmed, and this message is
-  // forwarded into a group chat where a wrong number would be repeated by people
-  // we cannot correct.
+  // NO FIGURE. Checkout is parked until one end-to-end test payment has run, and
+  // this message is forwarded into a group chat where a number would be repeated
+  // by people we cannot correct. NO NAME either: the owner's rule (2026-09-23) is
+  // that the frame leads with the year and what they do, not the kid's name.
   const message =
-    `I just made a ${schoolShortName} license plate frame with our kid's name on it. ` +
-    `Every one sends a donation back to the school. Yours takes about a minute:`;
+    `I just made a ${schoolShortName} license plate frame — their activities, their year. ` +
+    `Every one sends a donation back to the school. If you'd like to make one too, here's the link:`;
 
   async function share() {
     // Web Share on a phone puts the school's link straight into the group chat
@@ -58,10 +59,11 @@ export function ShareYourFrame({
 
   return (
     <div className="msf-share">
-      <h2 className="msf-share-title">Tell the other {schoolShortName} parents</h2>
+      <h2 className="msf-share-title">Would other {schoolShortName} parents like one?</h2>
       <p className="msf-share-body">
-        Every frame sends a donation to the school. The fastest way to make that
-        add up is the group chat you are already in.
+        Every frame sends a donation to the school, and if you&apos;d like to
+        help that add up, the group chat you&apos;re already in is the easiest
+        place to share it.
       </p>
       <button type="button" className="msf-share-btn" onClick={share}>
         {state === "copied"

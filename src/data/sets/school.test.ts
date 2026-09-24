@@ -10,6 +10,7 @@ import {
   resolveSurfacedSetId,
 } from "./index";
 import { schoolSet } from "./school";
+import { highSchoolSet, WITHHELD_ART } from "./high-school";
 import { TILE_BG, tileBackground } from "@/lib/utils/tile-theme";
 
 describe("school spirit set", () => {
@@ -52,6 +53,12 @@ describe("school spirit set", () => {
     // 1x2 is the only badge footprint that fits a one-column wing without
     // spilling into the rail beside it.
     //
+    // 64 -> 63 OFFERED: Model UN is withheld too — its globe-in-olive-wreath
+    // reads as the United Nations emblem (WITHHELD_ART).
+    //
+    // 65 -> 64 OFFERED: Quiz Bowl is withheld from the tray until its desk-bell
+    // art is redrawn (WITHHELD_ART). It stays in the set so saved designs resolve.
+    //
     // 61 -> 64: graduation. The class year is the hero of the graduate preset,
     // and a mortarboard is what makes a frame read as a graduation gift rather
     // than a spirit item at a glance.
@@ -62,7 +69,10 @@ describe("school spirit set", () => {
     // GENERIC on purpose — a sheaf of wheat and a compass rose — because the FFA
     // emblem and the Scouts' fleur-de-lis are registered marks, exactly like the
     // six above.
-    expect(hs.length).toBe(65);
+    expect(hs.length).toBe(63);
+    expect(hs.length + WITHHELD_ART.size).toBe(highSchoolSet.pieces.length);
+    expect(hs.map((p) => p.id)).not.toContain("hs:quiz-bowl");
+    expect(hs.map((p) => p.id)).not.toContain("hs:model-un");
     // Real art first, so the collection is what you see on open.
     expect(pieces.slice(0, hs.length).every((p) => p.setId === "hs")).toBe(true);
     // Every one points at a committed local PNG (not an emoji/CDN placeholder).

@@ -1,16 +1,16 @@
 import type { Metadata } from "next";
 import { FindMySchool } from "@/components/school/FindMySchool";
-import { allSchoolKits } from "@/data/school-kits";
+import { finderSchools, pilotSchoolKits, SCHOOL_FINDER_SCOPE } from "@/data/school-pilot";
+import { ACTIVITY_COUNT_LABEL } from "@/content/school-activity-count";
 import { SITE_URL } from "@/config/season";
+import { SCHOOL_SHIPPING_VARIANT, schoolVariant } from "@/data/school-variants";
+import { getRenderHeightInches, getTotalWidthInches } from "@/lib/constants/frame";
+import { badgeSpots } from "@/lib/utils/snappet";
+import { SCHOOL_CONTACT_EMAIL } from "@/content/school-contact";
+import { SCHOOL_CHECKOUT_OPEN } from "@/config/school-checkout";
+import { MSF_PRIVACY_PATH, MSF_TERMS_PATH, MSF_WARRANTY_PATH, NOTHING_PRINTS_UNTIL_YES } from "@/content/msf-pages";
 import Image from "next/image";
-import { Graduate } from "next/font/google";
 import "./school-landing.css";
-
-// The wordmark face. Graduate is the collegiate slab the school builder itself
-// leads with (and what most schools' own marks map to), so the company brand
-// speaks the product's language. Its lowercase renders as small caps, which is
-// what makes the CamelCase "MySchoolFrame" read as three words.
-const graduate = Graduate({ weight: "400", subsets: ["latin"] });
 
 // ─── MySchoolFrame landing page ───────────────────────────────────────────────
 //
@@ -47,8 +47,8 @@ export const metadata: Metadata = {
   // content and the one we want indexed. SITE_URL is also the root layout's
   // metadataBase, so the two agree.
   alternates: { canonical: SITE_URL },
-  // The root layout sets siteName to the Festive Frames brand entity, which is
-  // correct for festiveframes.co and wrong here: this page IS myschoolframe.com,
+  // The root layout sets siteName to the holiday storefront's brand entity, which
+  // is right for that product and wrong here: this page IS myschoolframe.com,
   // and every share of it carried the other brand's name under the card.
   openGraph: { siteName: "MySchoolFrame" },
 };
@@ -67,8 +67,7 @@ const STRUCTURED_DATA = {
       "@id": "https://www.myschoolframe.com/#org",
       name: "MySchoolFrame",
       url: "https://www.myschoolframe.com",
-      logo: "https://www.myschoolframe.com/brand/msf-mark.png",
-      parentOrganization: { "@type": "Organization", name: "Festive Frames" },
+      logo: "https://www.myschoolframe.com/brand/msf-logo.png",
     },
     {
       "@type": "WebSite",
@@ -79,10 +78,13 @@ const STRUCTURED_DATA = {
       "@type": "Product",
       name: "Custom School Spirit License Plate Frame",
       description:
-        "A personalized license plate frame in your school's colors with badge tiles for your student's sports, band, clubs, and achievements. Designed by you in an online builder, UV-printed and assembled in St. Louis, USA. A set donation from every frame goes to the school's booster club.",
+        "A personalized license plate frame in your school's colors with badge tiles for your student's sports, band, clubs, and achievements. Designed by you in an online builder, UV-printed and assembled in St. Louis, USA. A set donation from every frame goes back to the school.",
       image: "https://www.myschoolframe.com/school/opengraph-image",
       brand: { "@type": "Brand", name: "MySchoolFrame" },
-      // No Offer/price until pricing is owner-confirmed — ordering is
+      // No Offer/price on purpose. The price is owner-confirmed ($24.95, see
+      // config/offers.ts) but checkout stays parked until one end-to-end test
+      // payment has run, and school surfaces show no figure until it opens —
+      // schema price must match what the page displays. Ordering is
       // design-and-send, and we follow up with ordering info.
     },
   ],
@@ -95,139 +97,167 @@ const STRUCTURED_DATA = {
  *  images had been 404ing on the live marketing page since that commit, which
  *  `school-badges.test.ts` now makes impossible to repeat. */
 const BADGES = [
-  ["football", "Football"],
-  ["band", "Band"],
-  ["robotics", "Robotics"],
-  ["cheer", "Cheer"],
-  ["drama", "Drama"],
-  ["medal", "Achievements"],
-  ["soccer", "Soccer"],
+  ["orchestra", "Orchestra"],
   ["science", "Science"],
+  ["drama", "Theater"],
+  ["marching-band", "Marching band"],
+  ["yearbook", "Yearbook"],
+  ["soccer", "Soccer"],
+  ["robotics", "Robotics"],
+  ["football", "Football"],
 ] as const;
 
+// The frame every /s/<slug> builder ships, and what the page reads off it — its
+// size, how far it reaches over the plate, and how many square badges it seats —
+// so the copy cannot promise a frame we don't make.
+const SHIP_CONFIG = schoolVariant(SCHOOL_SHIPPING_VARIANT).config;
+const FRAME_SIZE = `${getTotalWidthInches(SHIP_CONFIG)} x ${getRenderHeightInches(SHIP_CONFIG)} inches`;
+const TOP_COVER = `${SHIP_CONFIG.plateTopCoverInches ?? 0} inch`;
+const BADGE_COUNT = badgeSpots(SHIP_CONFIG, { slots: {}, sections: {}, textBars: [] }).length;
+const COUNT_WORDS = ["no", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve"];
+const BADGE_COUNT_WORD = COUNT_WORDS[BADGE_COUNT] ?? String(BADGE_COUNT);
+
+// Class year, number and activity lead; a name is optional. Pilot feedback
+// (2026-09-23): a frame led by a student's full name is the one a parent hesitates
+// over, and "Class of 2027 · #12 · Orchestra" says as much about the kid without
+// putting their name on a car.
+//
+// Every promise here is read off the builder as it is (2026-09-23): the badge
+// count is the shipping frame's own square badge positions, the one-tap lines
+// are BANNER_LINES, and an uploaded photo is cropped square like every badge.
 const STEPS = [
   {
     n: "1",
-    title: "Type their last name",
-    body: "It comes up in varsity chenille on the bottom banner immediately. That's the frame, not a preview of a template.",
+    title: "Choose what they do",
+    body: `Orchestra, science, theater, marching band, yearbook, soccer — there are ${ACTIVITY_COUNT_LABEL} activities to choose from, or you can upload a photo of your own. Each one goes on the frame as a square badge, with room for ${BADGE_COUNT_WORD}.`,
   },
   {
     n: "2",
-    title: "Tap what they do",
-    body: "Football, soccer, band, robotics, cheer, drama, honors — 30+ activities, or upload your own photo. The badges land in place.",
+    title: "Add their class year or number",
+    body: "With one tap you can put CLASS OF 2027, SENIOR or PROUD PARENT on the bottom banner, and add their number if you'd like. What you see is the frame itself, not a template.",
   },
   {
     n: "3",
-    title: "Pick their class year",
-    body: "CLASS OF 2027 sets in brass and you're looking at a finished frame. Change anything from there — colors pull from your school's own website, and you can undo anything.",
+    title: "Change anything you like",
+    body: `A name on the banner is completely optional. If you leave it off, the school's mascot stays there. You can change or undo anything. ${NOTHING_PRINTS_UNTIL_YES}`,
   },
 ];
 
-// Anatomy of the frame, name-first: the school is the setting, the kid is the
-// star. (Replaced the four "kinds of kid" vignettes — this sells recognition,
-// not variety. Also fixed a real copy defect: the old Friday-night vignette
-// promised a "helmet badge up top", which the 1-row text-only top panel cannot
-// do.)
+// Anatomy of the frame, story-first: the school is the setting, what the student
+// does is the story. The banner used to be pitched as "their last name"; it now
+// defaults to the mascot and a name is the family's choice, not the pitch.
 const ANATOMY = [
   {
-    title: "The big bottom banner — their last name.",
-    body: "Varsity chenille, jersey-style, across the widest panel on the frame. It's the first thing anyone reads in a parking lot, and it says MILLER, not \"Go Wildcats.\"",
+    title: "The badges: the things they do",
+    body: `Orchestra, science, theater, marching band, yearbook, varsity soccer. There's room for ${BADGE_COUNT_WORD} square badges, so you can choose one favorite or bring in everything they're part of.`,
   },
   {
-    title: "The badges — what they actually did.",
-    body: "Football, marching band, robotics, cheer, drama, honor society, student council. Pick one or load the whole lineup. Nobody fits on one badge.",
+    title: "The details: their year and their number",
+    body: "CLASS OF 2027, #12, SENIOR, PROUD PARENT or PROUD GRANDPARENT, each only a tap or two away.",
   },
   {
-    title: "The details — their year, their number, their title.",
-    body: "CLASS OF 2027. CAPTAIN. SENIOR. #12. One tap each.",
+    title: "The banners: the school, then the mascot",
+    body: "The school's name runs across the top, with HOME OF THE and the mascot across the bottom in chenille-style lettering. One tap swaps HOME OF THE for their class year, SENIOR or PROUD PARENT. You can put a name in place of the mascot if you'd like to, but it's entirely up to you.",
   },
 ];
+
+// "Is my school on it?" names the pilot schools from the same list the finder
+// offers, so the answer cannot drift from what the finder actually shows.
+const PILOT_NAMES = (() => {
+  const names = pilotSchoolKits().map((k) => k.shortName);
+  return `${names.length === 6 ? "six" : names.length} St. Louis-area schools: ${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+})();
 
 const ANSWERS = [
   {
     q: "Will it look cheap?",
-    a: "It's built to letterman-jacket standards — chenille lettering, brass rims, bevelled badges — then UV-printed to live outdoors on a car.",
+    a: "We print it to look like a letterman jacket, with chenille-style lettering, brass-look rims and bevelled badges, and it's UV-printed so it holds up outdoors on a car.",
   },
+  // Size, not "standard". The shipping frame is bigger than a dealer frame and
+  // has been shown NOT to fit at least one tight recess (the Honda Pilot, taped
+  // 2026-09-02). How it mounts is still being settled on the part, so this makes
+  // no hardware promise until it is.
   {
     q: "Will it fit my car?",
-    a: "It's a standard US license-plate frame. It mounts with the hardware already on your car.",
+    a: `It fits a standard 12 x 6 inch US plate. It is bigger than a dealer frame, though, at ${FRAME_SIZE}, so if your plate sits in a tight recess it's worth measuring the space around it first.`,
   },
-  // Durability. These are the claims Festive Frames already makes and stands
-  // behind on the main site (see content/copy.ts) — carried over rather than
-  // re-invented, so the two products cannot end up promising different things.
-  // NOT carried over: "the tiles pop off in seconds". That is the modular
-  // snap-in product; a school frame is printed as one piece.
+  // Durability. The school frame is a different part from the holiday
+  // snap-tile kit and has not itself been through a winter, so this claims the
+  // PROCESS (the same UV print) and lets the warranty carry the promise, rather
+  // than "we've vetted these", which nobody has yet for this part.
   {
     q: "How long will it last outside?",
-    a: "It's built for the weather your car already lives in — highway speeds, automatic car washes, and the full swing from icy winters to summer heat, sun and rain. The artwork is UV printed, so the colors stay bright rather than fading out over a season.",
+    a: "The artwork is UV printed: the ink is cured hard by UV light the moment it's printed, so it stands up to sun, rain and road grit rather than fading out over a season. It's the same print process as the snap-on frame kits we've made before, which we've tested through car washes and at highway speeds.",
   },
   {
     q: "Will it fade, rust or peel in a car wash?",
-    a: "No. UV printing cures the ink into the surface instead of laying it on top, which is why it holds up to brushes, grit and sun. We've vetted these for everyday driving, and we stand behind every frame for 30 days — if something goes wrong, tell us and we'll make it right.",
+    a: (
+      <>
+        It shouldn&apos;t, and if it does, it&apos;s covered: every frame
+        carries a <a href={MSF_WARRANTY_PATH}>one-year warranty</a>.
+        If something goes wrong in that year, tell us and we&apos;ll make it
+        right.
+      </>
+    ),
   },
   {
-    q: "What if I mess up the design?",
-    a: "You can't. Undo, rearrange, or start over as many times as you like — nothing prints until you send us a finished design.",
+    q: "What if I change my mind while I'm designing?",
+    a: `That's no problem at all. You can undo, rearrange or start over as many times as you like. ${NOTHING_PRINTS_UNTIL_YES}`,
   },
   {
     q: "Is my school on it?",
-    a: "Every school is. The builder themes itself from your school's own website — no waiting for us to add you.",
+    a: `We're starting with ${PILOT_NAMES}. If you don't see yours, type it into the school finder and let us know which school. Requests help us decide which schools come next.`,
   },
   {
-    q: "What if our last name is long?",
-    a: "You'll see it on the banner as you type — the frame in front of you is the frame we print. If it doesn't sit right, shorten it, switch to their first name, or drop to their number. Nothing prints until you send it.",
+    q: "What if what I type is long?",
+    a: `You'll see it on the banner as you type, and the frame in front of you is the frame we print. If it doesn't sit quite right, you can shorten it or use their number or SENIOR instead. ${NOTHING_PRINTS_UNTIL_YES}`,
   },
   // The builder asks who the frame is for and rewords itself accordingly
   // (frame-buyers.ts). The page used to speak only to parents, which contradicted
   // it and quietly told four other buyers this was not for them.
   {
     q: "Can I get one for my grandchild?",
-    a: "Yes, and it's one of the most common ones we make. Tell the builder it's for your grandchild and the banner says PROUD GRANDPARENT under their name and year, so it reads as your car rather than a second copy of their parents'.",
+    a: "Yes. When you tell the builder it's for your grandchild, the banner says PROUD GRANDPARENT with their class year, so it reads as your car rather than a second copy of their parents'. If you'd rather it said PROUD GRANDMA or PROUD GRANDPA, you can type your own words instead.",
   },
   {
     q: "I graduated years ago. Can I get my own class year?",
-    a: "Yes. Say you went there and the year picker goes back sixty years instead of forward four, so you can put your actual class on it.",
+    a: "Yes. If you tell the builder you went there, the year picker goes back sixty years instead of forward four, so you can put your own class year on it.",
   },
   {
     q: "I teach there. Is this only for students?",
-    a: "No. Say you work there and the class-year field disappears — you get your name, the school's colors and a badge for whatever you coach or teach.",
+    a: "Not at all. If you tell the builder you work there, the class-year field steps aside and you get the school's colors, a badge for whatever you coach or teach, and your own words on the banner if you'd like some.",
   },
   {
-    q: "Can I put their first name instead? Or a nickname?",
-    a: "Anything you type. Most parents use the last name because that's how it reads jersey-style from a distance — but it's your frame.",
+    q: "Do I need to put a name on it?",
+    a: "No, a name is always optional. If you leave it off, the school's mascot stays on the banner. If you'd like something there, it can be their number, a nickname or a line of your own, whatever feels right to you.",
   },
   {
     q: "Are license plate frames legal in my state?",
-    a: "Frames are legal everywhere; what states regulate is covering the plate's numbers, stickers, or state name. The builder shows you exactly what your frame covers before anything prints, so you can keep your state's markings clear.",
+    a: `It depends on the state and on what a frame covers: states regulate hiding the plate's numbers, registration stickers or state name. This frame's top edge sits over the top ${TOP_COVER} of the plate, where many plates carry the state name, and some states restrict covering it, so it's worth checking your state's rule before you order.`,
   },
   {
     q: "How much does the school actually get?",
-    a: "A set dollar amount from every frame — not a percentage of profit after costs. Your booster club sees exactly what a season of frames earned it.",
+    a: "A set dollar amount from every frame, rather than a percentage of profit after costs, so your booster club can see exactly what a season of frames earned.",
   },
   {
     q: "Is there a minimum order for our school?",
-    a: "No. Every frame is printed after it's ordered, so there's no minimum order quantity, no case pack and no pre-buy. If one parent orders one frame all season, that works. Your club never fronts money and never has stock left over.",
+    a: "No. Every frame is printed after it's ordered, so there's no minimum order quantity, no case pack and no pre-buy. If one parent orders one frame all season, that works just fine. Your club never puts money up front and never has stock left over.",
   },
   {
     q: "What does our booster club have to do?",
-    a: "Approve the design and share a link. That's the whole job. We print, ship, and handle any problem with an order directly with the parent.",
+    a: "Just approve the design and share the link with your families. We take care of the printing and shipping, and if anything goes wrong with an order, we sort it out directly with the parent.",
   },
   {
     q: "Which activities have badges?",
-    a: "Football, soccer, basketball, volleyball, baseball, softball, track, tennis, golf, cheer, band, marching band, drama, robotics, debate, chess, science, honor society, student council, yearbook and more — plus your own photos.",
+    a: "Orchestra, marching band, choir, drama, science, robotics, debate, chess, yearbook, journalism, student government, honor roll, soccer, football, volleyball, track and more. You can also upload your own photos, which are cropped square to match the badges.",
   },
 ];
 
-// Derived from the kits so adding a school needs no edit here. Demo kits are
-// included: a demo page is exactly what a parent from that school should land on,
-// and `noindex` on the kit page is what keeps it out of search.
-const FIND_SCHOOLS = allSchoolKits().map((k) => ({
-  slug: k.slug,
-  schoolName: k.schoolName,
-  shortName: k.shortName,
-  mascot: k.mascot,
-  city: k.city,
-}));
+// The pilot six (data/school-pilot.ts), or every authored kit once the national
+// search reopens. Demo kits are included: a demo page is exactly what a parent
+// from that school should land on, and `noindex` keeps it out of search.
+const FIND_SCHOOLS = finderSchools();
+const FIND_NATIONAL = SCHOOL_FINDER_SCOPE === "national";
 
 export default function MySchoolFramePage() {
   return (
@@ -239,22 +269,21 @@ export default function MySchoolFramePage() {
       {/* ── Hero ── */}
       <section className="msf-hero">
         <p className="msf-brand">
-          {/* The mark: a plate frame in profile — thin rails, the product's
-              signature thick bottom banner, brass bar where the school name
-              goes. Body inherits currentColor so the same SVG works on any
-              ground; only the brass is fixed. Same geometry as icon.svg. */}
-          <svg className="msf-brand-mark" viewBox="0 0 64 64" aria-hidden="true">
-            <path
-              fill="currentColor"
-              fillRule="evenodd"
-              d="M10 13 h44 a7 7 0 0 1 7 7 v24 a7 7 0 0 1 -7 7 h-44 a7 7 0 0 1 -7 -7 v-24 a7 7 0 0 1 7 -7 Z
-                 M11 18 a3 3 0 0 0 -3 3 v14 a3 3 0 0 0 3 3 h42 a3 3 0 0 0 3 -3 v-14 a3 3 0 0 0 -3 -3 Z
-                 M24.5 42 h15 a2.5 2.5 0 0 1 0 5 h-15 a2.5 2.5 0 0 1 0 -5 Z"
-            />
-          </svg>
-          <span className={graduate.className}>MySchoolFrame</span>
+          {/* The owner's logo, REVERSED for this dark hero (navy ink -> paper,
+              brass kept): the navy original vanishes on navy. Every msf-logo*
+              file is built from the owner's two source PNGs (MySchoolFrame
+              Pilot Kit/brand-source, with the build script). */}
+          <Image
+            src="/brand/msf-logo-reverse.png"
+            alt="MySchoolFrame"
+            width={800}
+            height={410}
+            priority
+            sizes="(max-width: 480px) 62vw, 280px"
+            style={{ width: "min(280px, 62vw)", height: "auto" }}
+          />
         </p>
-        <p className="msf-eyebrow">Their name. Their sport. Their year.</p>
+        <p className="msf-eyebrow">Class of 2027 · #12 · Orchestra · Proud Parent</p>
         <h1>
           Your school. <span>Your story.</span> Your frame.
         </h1>
@@ -264,8 +293,9 @@ export default function MySchoolFramePage() {
           yours.
         </p>
         <p className="msf-name-moment">
-          Type your last name. Watch it come up in varsity chenille across the
-          bottom banner — jersey-style, in your school&apos;s colors.
+          Choose their class year and the things they do, like orchestra,
+          science, theater or varsity soccer, and you&apos;ll see the frame
+          come together in your school&apos;s colors.
         </p>
         {/* The first thing a parent arriving from a group chat can act on. They
             know one fact — the name of their school — and everything the page
@@ -274,19 +304,19 @@ export default function MySchoolFramePage() {
             national the finder IS the front door — a button that jumps past it
             into a blank builder skips the one step that makes the frame theirs. */}
         <div id="find-my-school">
-          <FindMySchool schools={FIND_SCHOOLS} tone="dark" />
+          <FindMySchool schools={FIND_SCHOOLS} tone="dark" national={FIND_NATIONAL} />
         </div>
 
+        {/* No "Find your school" button here: the finder is directly above,
+            so the button only scrolled to what the parent was already looking
+            at. The arrow is held to its last word so it never wraps alone. */}
         <div className="msf-ctas">
-          <a href="#find-my-school" className="msf-btn msf-btn-primary">
-            Find your school
-          </a>
           <a href="#fundraise" className="msf-btn msf-btn-ghost">
-            Fundraise for your school →
+            Raising money for your <span style={{ whiteSpace: "nowrap" }}>school? →</span>
           </a>
         </div>
         <p className="msf-trust">
-          Free to design. Nothing prints until you send it. UV-printed and
+          Free to design. {NOTHING_PRINTS_UNTIL_YES} UV-printed and
           assembled in St.&nbsp;Louis, USA.
         </p>
 
@@ -304,8 +334,8 @@ export default function MySchoolFramePage() {
           ))}
         </div>
         <p className="msf-badge-caption">
-          Football, soccer, band, robotics, cheer, drama, honors — 30+
-          activities.
+          Orchestra, science, theater, band, yearbook, soccer —{" "}
+          {ACTIVITY_COUNT_LABEL} activities.
         </p>
       </section>
 
@@ -317,44 +347,56 @@ export default function MySchoolFramePage() {
           simplification of the pitch — it is literally what the page it links to
           asks for. */}
       <section className="msf-band msf-band-navy">
+        {/* OWNER-APPROVED COPY (2026-09-23), ADAPTED in exactly two places for
+            the minor-name rule (a name is optional and never the pitch):
+              1. lede: "Start with their last name and class year" → "Start with
+                 their school and class year"
+              2. bullet 1: "Their name." dropped from "Their school. Their year.
+                 Their name. The things they spent four years doing."
+            Everything else is the owner's wording, verbatim. Change nothing here
+            without the owner. */}
         <p className="msf-eyebrow">Class of 2027 · 2028 · 2029</p>
-        <h2>The graduate plate takes two fields.</h2>
+        <h2>Made for their graduation year.</h2>
         <p className="msf-lede">
-          Their last name and their class year. That is the whole thing — the
-          frame builds itself in their school&apos;s colors, with the cap, the
-          diploma and the laurel already on it. Change anything you like, or
-          change nothing and send it.
+          Start with their school and class year, and their graduation frame is
+          already taking shape in their school colors.
+        </p>
+        <p className="msf-lede">
+          From there, you can keep it simple or make it completely theirs — add
+          the activities they were part of, their number, a favorite photo, or a
+          message from Mom, Dad, Grandma or Grandpa.
         </p>
         <ul className="msf-booster">
           <li>
-            <strong>For the graduate, and for everyone buying them one.</strong>{" "}
-            Parents, grandparents, and the graduate&apos;s own car. Tell us who
-            it&apos;s from and the banner says so.
+            <strong>A graduation gift that feels personal.</strong> Their
+            school. Their year. The things they spent four years doing. It
+            becomes something that could only belong to them.
           </li>
           <li>
-            <strong>It outlasts the day.</strong> The poster curls and the
-            blanket goes in a bin. A frame rides the back of the car through
-            graduation, through college, through the first job.
+            <strong>And one they&apos;ll actually use.</strong> Instead of
+            disappearing after graduation weekend, it goes with them — on their
+            car through senior year, college, and whatever comes next.
           </li>
           <li>
-            <strong>Order by the ceremony, not the week of it.</strong> Every
-            frame is printed to order, so give us a little room before the date
-            and tell us when it is.
+            <strong>Made one at a time for each graduate.</strong> Every frame
+            is printed to order, so if you&apos;re giving one for graduation,
+            ordering a little ahead of the ceremony gives us time to make it
+            right.
           </li>
         </ul>
         <div className="msf-ctas">
           <a href="#find-my-school" className="msf-btn msf-btn-brass">
-            Find your school, get the graduate plate
+            Find your school and make theirs →
           </a>
         </div>
       </section>
 
       <section className="msf-band">
-        <h2>Three taps. Then it&apos;s theirs.</h2>
+        <h2>Here&apos;s how it works</h2>
         <p className="msf-lede">
-          A custom school license plate frame you design yourself — from any
-          phone, in your high school&apos;s real colors. Nothing prints until
-          you send it to us.
+          You design your school license plate frame yourself, on your phone or
+          computer, in your high school&apos;s own colors.{" "}
+          {NOTHING_PRINTS_UNTIL_YES}
         </p>
         <div className="msf-steps">
           {STEPS.map((s) => (
@@ -367,10 +409,12 @@ export default function MySchoolFramePage() {
         </div>
       </section>
 
-      {/* ── Anatomy: name-first ── */}
+      {/* ── Anatomy: the school sets the scene, what they do tells the rest ── */}
       <section className="msf-band msf-band-paper">
-        <h2>Their name is the whole point.</h2>
-        <p className="msf-lede">The school is the setting. The person on it is the star.</p>
+        <h2>Their four years, all on one frame</h2>
+        <p className="msf-lede">
+          Their school sets the scene, and the things they do tell the rest.
+        </p>
         <div className="msf-vignettes">
           {ANATOMY.map((v) => (
             <article key={v.title}>
@@ -380,31 +424,31 @@ export default function MySchoolFramePage() {
           ))}
         </div>
         <p className="msf-lede">
-          Two kids at the same school never have the same four years. The
-          Friday-night kid and the 6 a.m. marimba kid and the
-          four-quiet-4.0s kid all get a different frame — because it&apos;s
-          built from their name out, not the school&apos;s logo down.
+          No two students spend their four years quite the same way, so no two
+          frames come out quite the same either. Whether it&apos;s Friday-night
+          football, early-morning band rehearsal or a steady run of good
+          grades, the frame is built from what they do, not just from the
+          school&apos;s logo.
         </p>
         <p className="msf-tagline">A letterman jacket for the car.</p>
       </section>
 
       {/* ── Senior night ── */}
       <section className="msf-band">
-        <h2>The senior night gift that doesn&apos;t end up in a shadow box</h2>
+        <h2>A senior night gift they can take with them</h2>
         <p className="msf-lede">
-          Senior night gifts for football players, band seniors, cheerleaders,
-          soccer players — the poster curls, the blanket goes in a bin, the
-          framed photo goes in a closet. A frame with their name, their number
-          and their year rides the back of the car through graduation, through
-          college, through the first job. This one is out where you see it,
-          every single time you park.
+          If you&apos;re putting together something for senior night, for a
+          football player, a band senior, a cheerleader or a soccer player, a
+          frame with their number, their activity and their class year is a
+          gift they can keep using long after the night itself. It goes on the
+          car and comes along through graduation, college and whatever comes
+          next.
         </p>
-        <p className="msf-tagline">This is the one they keep.</p>
       </section>
 
-      {/* ── Straight answers ── */}
+      {/* ── Questions ── */}
       <section className="msf-band msf-band-paper">
-        <h2>Straight answers</h2>
+        <h2>Questions families ask us</h2>
         <dl className="msf-qa">
           {ANSWERS.map((x) => (
             <div key={x.q}>
@@ -421,75 +465,84 @@ export default function MySchoolFramePage() {
           print-on-demand and no minimum order is the whole pitch, and it used to
           be a sub-clause in the middle of a bullet. */}
       <section id="fundraise" className="msf-band msf-band-navy">
-        <h2>No minimums. No inventory. Nothing to front.</h2>
+        <h2>A fundraiser with no minimums and nothing to buy up front</h2>
         <p className="msf-lede">
-          Every frame is printed one at a time, after a parent orders it. There
-          is no minimum order quantity, no case pack, no pre-buy and no leftover
-          stock — because nothing is made until somebody has already paid for it.
-          Your club never touches a box.
+          Every frame is printed one at a time, after a parent orders it. So
+          there&apos;s no minimum order quantity, no case pack, no pre-buy and
+          no leftover stock, because nothing is made until somebody has already
+          paid for it. Your club never has to handle a box.
         </p>
         <ul className="msf-booster">
           <li>
-            <strong>Printed on demand, one frame at a time.</strong> No minimum
-            order, no bulk buy, no size runs to guess at. Order one or order
-            three hundred; it works the same either way, and there is nothing
-            left over at the end of the season.
+            <strong>Printed on demand, one frame at a time.</strong>{" "}
+            There&apos;s no minimum order, no bulk buy and no size runs to guess
+            at. One frame or three hundred works the same way, and there&apos;s
+            nothing left over at the end of the season.
           </li>
           <li>
-            <strong>Nothing to front and nothing to run.</strong> No order
-            forms, no envelopes of cash, no sorting bags at practice. Parents
-            order direct, we print and ship direct to their door.
+            <strong>No money up front, and nothing for you to run.</strong>{" "}
+            There are no order forms, envelopes of cash or bags to sort at
+            practice. Parents deal with us directly, and we print and ship
+            straight to their door.
           </li>
           <li>
             <strong>A set dollar amount per frame, not a percentage after
             costs.</strong>{" "}
-            Fixed money back on every single frame, so the club can count what a
-            season earned it instead of waiting for a settlement.
+            The same fixed amount comes back on every frame, so the club can
+            count what a season earned instead of waiting for a settlement.
           </li>
           <li>
-            <strong>You can see what you&apos;ve earned, any time.</strong> Your
-            club gets its own page with a live running total: frames ordered,
-            dollars raised, and the last 30 days. We email you the same figure
-            at the start of every month, with the payout for the period.
+            <strong>You can see what you&apos;ve earned.</strong> We send
+            your club the total in writing with each payout
+            {SCHOOL_CHECKOUT_OPEN
+              ? ", and your club gets its own page with a running total: frames ordered, dollars raised, and the last 30 days."
+              : "."}
           </li>
           <li>
-            <strong>Your school controls its brand.</strong> Your official
-            colors and crest, used with your school&apos;s written permission.
-            You approve what carries your name before anything prints.
+            <strong>Your school&apos;s marks stay yours.</strong> We only put
+            your school&apos;s own logos and mascot art on frames with your
+            written permission, and we&apos;d love your help getting the
+            colors exactly right.
           </li>
         </ul>
         <div className="msf-ctas">
           <a
             className="msf-btn msf-btn-brass"
-            href="mailto:hello@festiveframes.co?subject=School%20fundraiser%20%E2%80%94%20MySchoolFrame"
+            href={`mailto:${SCHOOL_CONTACT_EMAIL}?subject=School%20fundraiser%20%E2%80%94%20MySchoolFrame`}
           >
-            Start a Fundraiser
+            Talk to us about a fundraiser
           </a>
         </div>
         <p className="msf-trust msf-trust-light">
-          Takes one conversation. No contract, no minimum, no upfront spend.
+          It starts with one conversation, and there&apos;s no contract, no
+          minimum and no upfront cost.
         </p>
       </section>
 
       {/* ── Close ── */}
       <section className="msf-band msf-close">
-        <h2>Every student has a story. Frame yours.</h2>
+        <h2>We&apos;d love to help you make one</h2>
         <p className="msf-lede">
-          Senior year goes fast. The seasons end, the trophies go in a box,
-          the driveway gets quiet. Their name on the back of the car
-          doesn&apos;t.
+          It only takes a few minutes to see what their frame could look like.
+          Find your school, add the things they do, and if you like how it
+          looks, send it to us and we&apos;ll take it from there.
         </p>
         <div className="msf-ctas">
           <a href="#find-my-school" className="msf-btn msf-btn-primary">
-            Find your school and build it
+            Find your school and start designing
           </a>
         </div>
         <p className="msf-trust">
-          Free to design. Nothing prints until you approve it.
+          Free to design. {NOTHING_PRINTS_UNTIL_YES}
         </p>
         <p className="msf-fineprint">
-          MySchoolFrame is a Festive Frames product, made in St.&nbsp;Louis ·{" "}
-          <a href="mailto:hello@festiveframes.co">hello@festiveframes.co</a>
+          MySchoolFrame is made in St.&nbsp;Louis ·{" "}
+          <a href={`mailto:${SCHOOL_CONTACT_EMAIL}`}>{SCHOOL_CONTACT_EMAIL}</a>
+        </p>
+        <p className="msf-fineprint msf-fineprint-links">
+          <a href={MSF_WARRANTY_PATH}>Warranty</a> ·{" "}
+          <a href={MSF_TERMS_PATH}>Terms</a> ·{" "}
+          <a href={MSF_PRIVACY_PATH}>Privacy</a>
         </p>
       </section>
     </main>

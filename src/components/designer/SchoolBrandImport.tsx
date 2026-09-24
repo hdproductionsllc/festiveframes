@@ -538,7 +538,7 @@ export function SchoolBrandImport({
               </button>
               <p className="ff-help mt-1">
                 One background behind the badges and both banners, the school&apos;s
-                lighter colour on the rim and the lettering. Change anything after.
+                lighter color on the rim and the lettering. You can change anything after.
               </p>
             </div>
           )}
@@ -930,7 +930,7 @@ function ColorStrip({ colors }: { colors: ColorCandidate[] }) {
             onClick={() => apply(shown.map((c) => c.hex), "auto")}
             className="ff-btn ff-btn-secondary ff-btn-sm"
           >
-            Use these colours
+            Use these colors
           </button>
           <span className="ff-help inline-flex items-center gap-1">
             <span
@@ -951,7 +951,7 @@ function ColorStrip({ colors }: { colors: ColorCandidate[] }) {
 
       {applied && (
         <p className="ff-help mt-1">
-          {applied === "auto" ? "Applied." : `Applied ${applied}.`} Change anything in Frame colour.
+          {applied === "auto" ? "Applied." : `Applied ${applied}.`} Change anything in Frame color.
         </p>
       )}
     </div>

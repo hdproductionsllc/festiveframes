@@ -12,14 +12,21 @@
 //
 // Env:
 //   RESEND_API_KEY     required to send anything
-//   EMAIL_FROM         "Festive Frames <orders@festiveframes.co>"
-//   PRODUCTION_EMAILS  comma-separated founder inboxes (Henry,Becky,Bill).
+//   EMAIL_FROM         the Festive Frames sender (holiday kit orders)
+//   PRODUCTION_EMAILS  comma-separated founder inboxes for Festive Frames orders.
 //                      Falls back to ADMIN_ORDER_EMAIL if unset.
 //   ADMIN_ORDER_EMAIL  fallback / always-copied admin inbox.
+//   MSF_ORDER_EMAIL,   MySchoolFrame's own inbox and sender — every email with
+//   MSF_EMAIL_FROM     brand "myschoolframe" uses these instead (lib/email-msf).
 // ─────────────────────────────────────────────────────────────
 
 import { Resend } from "resend";
 import { partsListCsv, partsListHtml, type PartsList, type PanelPartsList } from "@/lib/order/parts-list";
+import { SITE_URL } from "@/config/season";
+import { copy } from "@/content/copy";
+import { SCHOOL_CONTACT_EMAIL } from "@/content/school-contact";
+import { MSF_WARRANTY_PATH } from "@/content/msf-pages";
+import { msfFrom, msfOrderRecipients } from "@/lib/email-msf";
 
 // Cartoon sticker palette (matches the homepage).
 const PAGE = "#fff9ec"; // warm cream page background
@@ -32,6 +39,53 @@ const RED = "#C8102E"; // alert/attention accent
 const SHADOW = "5px 5px 0 #1e1b17"; // signature hard offset shadow
 const DISPLAY_FONT = "'Fredoka', 'Arial Black', Helvetica, Arial, sans-serif";
 const BODY_FONT = "Helvetica, Arial, sans-serif";
+
+// ─── Two brands, one deployment ──────────────────────────────────────────────
+// A school-frame order is a MySchoolFrame sale. It rides the same fulfilment as a
+// Festive Frames custom frame, and until this existed the parent's confirmation
+// arrived as "Your Festive Frames order is confirmed" under a gold Festive Frames
+// header — a different company's name on the receipt for the frame they bought.
+
+/** Which of the two brands sharing this deployment an email speaks for. */
+export type EmailBrand = "festive-frames" | "myschoolframe";
+
+const MSF_NAVY = "#1b2a4a";
+/** The owner's logo reversed for a navy ground (public/brand). Hosted, not
+ *  attached: an inline attachment shows up as a stray file in several clients. */
+const MSF_LOGO_URL = `${SITE_URL}/brand/msf-logo-reverse.png`;
+
+const BRAND_NAME: Record<EmailBrand, string> = {
+  "festive-frames": "Festive Frames",
+  myschoolframe: "MySchoolFrame",
+};
+
+/** The header band. Its alt text is styled so a client that blocks images still
+ *  shows the name, on the same navy. */
+function brandHeader(brand: EmailBrand): string {
+  if (brand === "myschoolframe") {
+    return `<tr><td style="background:${MSF_NAVY};border:3px solid ${INK};border-radius:18px 18px 0 0;padding:18px 24px;text-align:center;box-shadow:${SHADOW};">
+        <img src="${MSF_LOGO_URL}" width="220" height="113" alt="MySchoolFrame" style="display:inline-block;width:220px;max-width:100%;height:auto;border:0;color:#f6f3ec;font-size:26px;font-weight:bold;font-family:${DISPLAY_FONT};"/>
+      </td></tr>`;
+  }
+  return `<tr><td style="background:${GOLD};border:3px solid ${INK};border-radius:18px 18px 0 0;padding:20px 24px;text-align:center;box-shadow:${SHADOW};">
+        <span style="color:${INK};font-size:26px;font-weight:bold;letter-spacing:0.5px;font-family:${DISPLAY_FONT};">Festive Frames</span>
+      </td></tr>`;
+}
+
+/** Who an email of this brand is FROM. MySchoolFrame has its own sender
+ *  (MSF_EMAIL_FROM, falling back to the verified mailbox — see lib/email-msf). */
+export function senderFor(brand: EmailBrand = "festive-frames"): string {
+  if (brand === "myschoolframe") return msfFrom();
+  return process.env.EMAIL_FROM || "Festive Frames <onboarding@resend.dev>";
+}
+
+/** The team inbox(es) an order of this brand goes to. Server-fixed, always:
+ *  nothing a customer submits ever reaches this list. */
+export function teamRecipientsFor(brand: EmailBrand = "festive-frames"): string[] {
+  if (brand === "myschoolframe") return msfOrderRecipients();
+  return (process.env.PRODUCTION_EMAILS || process.env.ADMIN_ORDER_EMAIL || "")
+    .split(",").map((s) => s.trim()).filter(Boolean);
+}
 
 export interface NamedImage {
   /** Filename without extension, e.g. "eufy-sheet-1-of-2". */
@@ -59,6 +113,8 @@ export interface ProductionOrderInput {
   /** Position of this design within a multi-design cart order (1-based). When set,
    *  the email loudly flags it as one frame of a shared order to ship together. */
   cartContext?: { index: number; total: number; cartId: string } | null;
+  /** Whose order this is. School-frame orders are MySchoolFrame's; default Festive Frames. */
+  brand?: EmailBrand;
 }
 
 function esc(s: unknown): string {
@@ -69,17 +125,15 @@ function usd(cents: number): string {
   return `$${(cents / 100).toFixed(2)}`;
 }
 
-function shell(headline: string, inner: string): string {
+function shell(headline: string, inner: string, brand: EmailBrand = "festive-frames"): string {
   return `
   <div style="background:${PAGE};padding:28px 12px;font-family:${BODY_FONT};">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;margin:0 auto;">
-      <tr><td style="background:${GOLD};border:3px solid ${INK};border-radius:18px 18px 0 0;padding:20px 24px;text-align:center;box-shadow:${SHADOW};">
-        <span style="color:${INK};font-size:26px;font-weight:bold;letter-spacing:0.5px;font-family:${DISPLAY_FONT};">Festive Frames</span>
-      </td></tr>
+      ${brandHeader(brand)}
       <tr><td style="background:${CARD};border:3px solid ${INK};border-top:none;border-radius:0 0 18px 18px;padding:26px 24px;box-shadow:${SHADOW};">
         <h1 style="margin:0 0 14px;color:${INK};font-size:22px;font-weight:bold;font-family:${DISPLAY_FONT};">${esc(headline)}</h1>
         ${inner}
-        <p style="margin:22px 0 0;color:${INK};font-size:12px;line-height:1.5;">Made to order in the USA &middot; St. Louis, Missouri. Questions? Reach a real human at hello@festiveframes.co.</p>
+        <p style="margin:22px 0 0;color:${INK};font-size:12px;line-height:1.5;">Made to order in the USA &middot; St. Louis, Missouri. Questions? Reach a real human at ${esc(contactFor(brand))}.</p>
       </td></tr>
     </table>
   </div>`;
@@ -117,6 +171,30 @@ function shippingBlock(lines: string[]): string {
     <p style="margin:0 0 4px;color:${INK};font-size:14px;"><strong>Ship to:</strong></p>
     <p style="margin:0;color:${INK};font-size:13px;line-height:1.5;">${body || "Address on file"}</p>`;
 }
+
+/** Where a customer of this brand writes to. One source per brand, never typed. */
+function contactFor(brand: EmailBrand = "festive-frames"): string {
+  return brand === "myschoolframe" ? SCHOOL_CONTACT_EMAIL : copy.thanks.supportEmail;
+}
+
+/**
+ * The MySchoolFrame confirmation's own voice. It used to borrow Festive Frames'
+ * founders' note — signed by an illustrator who is no longer on the project, with
+ * the patriotic product's "flying your colors" — and it never mentioned the
+ * one-year warranty the school landing promises.
+ */
+const MSF_WARRANTY_URL = `${SITE_URL}${MSF_WARRANTY_PATH}`;
+const MSF_THANK_YOU_LINES = [
+  "Every frame is made to order in St. Louis, and yours is now in our shop.",
+  "Thank you for putting your school on your car.",
+];
+const MSF_SIGNOFF = "— The MySchoolFrame team";
+const MSF_THANK_YOU = `
+  <div style="margin:20px 0 0;padding:16px 18px;background:${PAGE};border:3px solid ${INK};border-radius:14px;box-shadow:${SHADOW};">
+    <p style="margin:0 0 8px;color:${INK};font-size:14px;line-height:1.6;">${MSF_THANK_YOU_LINES.join(" ")}</p>
+    <p style="margin:0;color:${INK};font-size:14px;line-height:1.6;">Your frame is covered by our <a href="${MSF_WARRANTY_URL}" style="color:${INK};">one-year warranty</a>. If anything goes wrong, tell us and we'll make it right.</p>
+    <p style="margin:10px 0 0;color:${INK};font-size:14px;font-style:italic;">${MSF_SIGNOFF}</p>
+  </div>`;
 
 const FOUNDERS_THANK_YOU = `
   <div style="margin:20px 0 0;padding:16px 18px;background:${PAGE};border:3px solid ${INK};border-radius:14px;box-shadow:${SHADOW};">
@@ -169,6 +247,7 @@ function productionHtml(o: ProductionOrderInput, droppedNote?: string | null): s
     ${droppedBlock}
     ${partsListHtml(o.parts)}
     <div style="margin:18px 0 0;padding:14px 16px;background:${PAGE};border:3px solid ${INK};border-radius:14px;box-shadow:${SHADOW};">${shippingBlock(o.shippingLines)}</div>`,
+    o.brand,
   );
 }
 
@@ -221,22 +300,32 @@ function customerText(o: ProductionOrderInput): string {
     `Ship to:`,
     ship,
     ``,
-    `A thank-you from the founders:`,
-    `Every frame is made to order, by hand, right here in the USA — and yours`,
-    `is now in our shop. Thank you for flying your colors with us. We can't`,
-    `wait for you to see it on your car.`,
-    `— Becky, Bill and Henry`,
+    ...(o.brand === "myschoolframe"
+      ? [
+          ...MSF_THANK_YOU_LINES,
+          `Your frame is covered by our one-year warranty: ${MSF_WARRANTY_URL}`,
+          MSF_SIGNOFF,
+        ]
+      : [
+          `A thank-you from the founders:`,
+          `Every frame is made to order, by hand, right here in the USA — and yours`,
+          `is now in our shop. Thank you for flying your colors with us. We can't`,
+          `wait for you to see it on your car.`,
+          `— Becky, Bill and Henry`,
+        ]),
     ``,
     `Made to order in the USA · St. Louis, Missouri.`,
-    `Questions? Reach a real human at hello@festiveframes.co.`,
+    `Questions? Reach a real human at ${contactFor(o.brand)}.`,
   ].join("\n");
 }
 
 function customerHtml(o: ProductionOrderInput): string {
   const first = o.customerName ? `, ${esc(o.customerName.split(" ")[0])}` : "";
   const proofImg = o.proof ? `<div style="margin:18px 0;text-align:center;"><img src="cid:proof" alt="Your frame proof" style="max-width:100%;border:3px solid ${INK};border-radius:14px;box-shadow:${SHADOW};"/></div>` : "";
+  const brand = o.brand ?? "festive-frames";
   return shell(
-    `You're in${first}! 🎆`,
+    // The fireworks are Festive Frames' Fourth-of-July voice, not a school's.
+    brand === "festive-frames" ? `You're in${first}! 🎆` : `You're in${first}!`,
     `
     <p style="margin:0 0 12px;color:${INK};font-size:14px;line-height:1.6;">
       Thanks for your order — it's confirmed and headed into production. Here's a proof of the exact
@@ -245,7 +334,8 @@ function customerHtml(o: ProductionOrderInput): string {
     ${proofImg}
     <p style="margin:0 0 4px;padding-left:12px;border-left:5px solid ${BLUE};color:${INK};font-size:14px;"><strong>Order:</strong> ${esc(o.orderId)} · <strong>Total:</strong> ${usd(o.amountTotalCents)}</p>
     <div style="margin:16px 0 0;padding:14px 16px;background:${PAGE};border:3px solid ${INK};border-radius:14px;box-shadow:${SHADOW};">${shippingBlock(o.shippingLines)}</div>
-    ${FOUNDERS_THANK_YOU}`,
+    ${brand === "myschoolframe" ? MSF_THANK_YOU : FOUNDERS_THANK_YOU}`,
+    brand,
   );
 }
 
@@ -273,10 +363,11 @@ export async function sendProductionEmails(
     console.error("[email-production] RESEND_API_KEY not set; cannot send production email for paid order.");
     throw new Error("RESEND_API_KEY not set — production email could not be sent.");
   }
-  const from = process.env.EMAIL_FROM || "Festive Frames <onboarding@resend.dev>";
-  const adminTo = process.env.ADMIN_ORDER_EMAIL;
-  const founderList = (process.env.PRODUCTION_EMAILS || adminTo || "")
-    .split(",").map((s) => s.trim()).filter(Boolean);
+  const brand = o.brand ?? "festive-frames";
+  // One sender and one team inbox per brand: a MySchoolFrame order goes from and
+  // to MySchoolFrame (lib/email-msf); a Festive Frames order is untouched.
+  const from = senderFor(brand);
+  const founderList = teamRecipientsFor(brand);
   if (!founderList.length) {
     // Hard failure: with no founder recipients, Bill never sees the order.
     console.error("[email-production] no PRODUCTION_EMAILS/ADMIN_ORDER_EMAIL set; cannot send production email for paid order.");
@@ -366,7 +457,7 @@ export async function sendProductionEmails(
         from,
         to: o.customerEmail,
         bcc: founderList,
-        subject: "Your Festive Frames order is confirmed",
+        subject: `Your ${BRAND_NAME[brand]} order is confirmed`,
         html: customerHtml(o),
         text: customerText(o),
         attachments: customerAttachments,
@@ -379,6 +470,7 @@ export async function sendProductionEmails(
         o.sessionId,
         o.customerEmail,
         `Production email SENT, but the CUSTOMER CONFIRMATION email FAILED (${reason}). Reach out to the customer manually — their order IS in production.`,
+        brand,
       );
     }
   }
@@ -462,7 +554,7 @@ function cartCustomerText(o: CartCustomerInput): string {
     `— Becky, Bill and Henry`,
     ``,
     `Made to order in the USA · St. Louis, Missouri.`,
-    `Questions? Reach a real human at hello@festiveframes.co.`,
+    `Questions? Reach a real human at ${contactFor()}.`,
   ].join("\n");
 }
 
@@ -474,9 +566,9 @@ function cartCustomerText(o: CartCustomerInput): string {
 export async function sendCartCustomerEmail(o: CartCustomerInput): Promise<void> {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) return;
-  const from = process.env.EMAIL_FROM || "Festive Frames <onboarding@resend.dev>";
-  const founderList = (process.env.PRODUCTION_EMAILS || process.env.ADMIN_ORDER_EMAIL || "")
-    .split(",").map((s) => s.trim()).filter(Boolean);
+  // Carts are Festive Frames only (a school checkout is one frame).
+  const from = senderFor("festive-frames");
+  const founderList = teamRecipientsFor("festive-frames");
   const resend = new Resend(apiKey);
 
   // Inline each design's proof as a cid attachment (proof-0, proof-1, …).
@@ -519,9 +611,10 @@ export async function sendCartCustomerEmail(o: CartCustomerInput): Promise<void>
 // it shares this module's brand shell + attachment helpers but has its OWN recipient
 // and NEVER touches the paid-order founders/customer sends above.
 //
-// Recipient is read from SCHOOL_ORDERS_EMAIL (defaulting to the literal
-// orders@festiveframes.co) — NEVER from the request body. Never throws: it returns a
-// typed result so the route can answer honestly ("sent" vs "email not configured").
+// Recipient is MySchoolFrame's inbox (MSF_ORDER_EMAIL, defaulting to
+// SCHOOL_CONTACT_EMAIL — lib/email-msf) — NEVER from the request body. Never throws:
+// it returns a typed result so the route can answer honestly ("sent" vs "email not
+// configured").
 // ─────────────────────────────────────────────────────────────
 
 export interface SchoolOrderInput {
@@ -544,16 +637,18 @@ export interface SchoolOrderInput {
    * exists in a database is a note nobody reads at the moment it matters.
    */
   artworkNote?: string;
+  /**
+   * Who sent the design, so a person can reply: `orderContactLine(contact)`, the
+   * one plain-text line the body prints. Only the LINE crosses into the email —
+   * the parsed address never sits on this input, so it is not one edit away from
+   * a to/cc/bcc/replyTo, which stay the production inbox and nothing else.
+   */
+  contactNote?: string;
 }
 
 export type SchoolOrderResult =
   | { ok: true }
   | { ok: false; reason: "email-not-configured" | "invalid-attachment" | "attachment-too-large" | "send-failed" };
-
-/** The fixed production inbox for school orders. Server-side only, env-overridable. */
-function schoolOrdersRecipient(): string {
-  return (process.env.SCHOOL_ORDERS_EMAIL || "orders@festiveframes.co").trim();
-}
 
 /** Attachment with a correct extension for its content type (toAttachment always
  *  says .png; a school print may be jpeg). */
@@ -569,7 +664,11 @@ function schoolOrderHtml(
   parts: PartsList | PanelPartsList | null,
   panelCount = 0,
   artworkNote = "",
+  contactNote = "",
 ): string {
+  const contactBlock = contactNote
+    ? `<p style="margin:0 0 12px;color:${INK};font-size:14px;"><strong>Reply to:</strong> ${esc(contactNote)}</p>`
+    : "";
   const partsBlock = parts
     ? `<div style="margin:18px 0 0;">${partsListHtml(parts)}</div>`
     : `<p style="margin:14px 0 0;color:${INK};font-size:13px;">No parts list was included — the print files are attached.</p>`;
@@ -589,17 +688,20 @@ function schoolOrderHtml(
     <p style="margin:0 0 8px;color:${INK};font-size:14px;">
       <strong>Design:</strong> ${esc(designName || "Untitled")}
     </p>
+    ${contactBlock}
     <p style="margin:0 0 12px;color:${INK};font-size:13px;">${filesNote}</p>
     ${artworkBlock}
     ${partsBlock}`,
+    "myschoolframe",
   );
 }
 
-function schoolOrderText(designName: string, panelCount = 0, artworkNote = ""): string {
+function schoolOrderText(designName: string, panelCount = 0, artworkNote = "", contactNote = ""): string {
   return [
     `NEW SCHOOL FRAME ORDER`,
     ``,
     `Design: ${designName || "Untitled"}`,
+    ...(contactNote ? [`Reply to: ${contactNote}`] : []),
     ...(artworkNote ? [``, artworkNote] : []),
     ``,
     panelCount
@@ -635,8 +737,8 @@ export async function sendSchoolOrderEmail(o: SchoolOrderInput): Promise<SchoolO
   const totalBytes = attachments.reduce((sum, a) => sum + attachmentBytes(a), 0);
   if (totalBytes > MAX_ATTACHMENT_BYTES) return { ok: false, reason: "attachment-too-large" };
 
-  const from = process.env.EMAIL_FROM || "Festive Frames <onboarding@resend.dev>";
-  const to = schoolOrdersRecipient();
+  const from = senderFor("myschoolframe");
+  const to = teamRecipientsFor("myschoolframe");
   // Strip control chars from the subject so a crafted design name can't inject a
   // header line; the HTML body escapes it separately via esc().
   const subjectName = (o.designName || "Untitled").replace(/[\r\n\t]+/g, " ").slice(0, 120);
@@ -646,8 +748,14 @@ export async function sendSchoolOrderEmail(o: SchoolOrderInput): Promise<SchoolO
       from,
       to,
       subject: `SCHOOL ORDER — ${subjectName}`,
-      html: schoolOrderHtml(o.designName, o.partsList ?? null, panelAttachments.length, o.artworkNote ?? ""),
-      text: schoolOrderText(o.designName, panelAttachments.length, o.artworkNote ?? ""),
+      html: schoolOrderHtml(
+        o.designName,
+        o.partsList ?? null,
+        panelAttachments.length,
+        o.artworkNote ?? "",
+        o.contactNote ?? "",
+      ),
+      text: schoolOrderText(o.designName, panelAttachments.length, o.artworkNote ?? "", o.contactNote ?? ""),
       attachments,
     });
     return { ok: true };
@@ -660,9 +768,10 @@ export async function sendSchoolOrderEmail(o: SchoolOrderInput): Promise<SchoolO
 /**
  * Plain-text alert that somebody asked for a school we do not have.
  *
- * INTERNAL ONLY, and opt-in: `to` is whatever the caller read out of
- * SCHOOL_REQUEST_EMAIL, and with it unset the route never calls this at all. The
- * REQUESTER is never mailed — see the rule at the top of lib/school-requests.ts.
+ * INTERNAL ONLY: it goes to MySchoolFrame's inbox (MSF_ORDER_EMAIL, default
+ * bill@myschoolframe.com) and nowhere else. The REQUESTER is never mailed — their
+ * address is in the body so a human can choose to reply; see the rule at the top
+ * of lib/school-requests.ts.
  *
  * Here rather than in the route because this is the one module that constructs a
  * Resend client, and a second one somewhere else is a second place to get the
@@ -671,12 +780,12 @@ export async function sendSchoolOrderEmail(o: SchoolOrderInput): Promise<SchoolO
  * failing to notify ourselves must not fail the parent's request.
  */
 export async function sendSchoolRequestAlert(
-  to: string[],
   req: { id: string; schoolName: string; city: string; state: string; email: string | null; note: string | null },
 ): Promise<void> {
   const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey || !to.length) return;
-  const from = process.env.EMAIL_FROM || "Festive Frames <onboarding@resend.dev>";
+  if (!apiKey) return;
+  const from = senderFor("myschoolframe");
+  const to = teamRecipientsFor("myschoolframe");
   // Strip control chars from the subject so a crafted school name cannot inject a
   // header line — the same guard the school-order subject carries.
   const subjectName = req.schoolName.replace(/[\r\n\t]+/g, " ").slice(0, 120);
@@ -692,13 +801,19 @@ export async function sendSchoolRequestAlert(
   }
 }
 
-/** Plain-text alert when fulfillment fails — guarantees a human is notified. */
-export async function sendFulfillmentFailureAlert(orderId: string, sessionId: string, customerEmail: string | null, reason: string): Promise<void> {
+/** Plain-text alert when fulfillment fails — guarantees a human is notified. A
+ *  MySchoolFrame order alerts MySchoolFrame's inbox, from MySchoolFrame. */
+export async function sendFulfillmentFailureAlert(
+  orderId: string,
+  sessionId: string,
+  customerEmail: string | null,
+  reason: string,
+  brand: EmailBrand = "festive-frames",
+): Promise<void> {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) return;
-  const from = process.env.EMAIL_FROM || "Festive Frames <onboarding@resend.dev>";
-  const to = (process.env.PRODUCTION_EMAILS || process.env.ADMIN_ORDER_EMAIL || "")
-    .split(",").map((s) => s.trim()).filter(Boolean);
+  const from = senderFor(brand);
+  const to = teamRecipientsFor(brand);
   if (!to.length) return;
   try {
     await new Resend(apiKey).emails.send({

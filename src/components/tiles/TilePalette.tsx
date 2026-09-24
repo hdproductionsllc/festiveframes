@@ -92,7 +92,7 @@ function MobileTileTray({ surfacedSetIds, extraPieces }: TilePaletteProps) {
           <button
             onClick={() => setOptionsOpen((v) => !v)}
             aria-expanded={optionsOpen}
-            className="shrink-0 rounded-full bg-surface-800 px-3 py-1.5 text-xs font-semibold
+            className="shrink-0 min-h-11 rounded-full bg-surface-800 px-4 py-1.5 text-xs font-semibold
               text-surface-200 active:scale-95 transition-transform"
           >
             {/* The gear is the button's only glyph, so it is swapped rather than

@@ -17,9 +17,11 @@ import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 
 import { getStripe } from "@/lib/stripe";
+import { nonSquareBadgeRows, SCHOOL_BADGES_ARE_SQUARE, SQUARE_RULE_MESSAGE } from "@/lib/order/square-badges";
 import { offer, priceForFramesCents, MAX_CART_FRAMES, schoolOffer, SCHOOL_CHECKOUT_OPEN } from "@/config/offers";
 import { artworkOrderMetadata, coerceArtworkRights } from "@/lib/order/artwork-rights";
 import { SITE_URL, season } from "@/config/season";
+import { MSF_THANKS_PATH } from "@/content/msf-pages";
 import { getDraft, saveCartDraft, type CartLineRef } from "@/lib/order/store";
 
 export const runtime = "nodejs";
@@ -116,8 +118,10 @@ export async function POST(request: Request): Promise<NextResponse> {
   // school's fundraiser take can be totalled straight from Stripe.
   if ((rawBody as Record<string, unknown>)?.kind === "school-frame") {
     // The parked-checkout decision is stated in config/offers and hides the Buy
-    // button on the client. A hidden button is not a lock: a direct POST charged
-    // the unconfirmed $49. The server holds the same line.
+    // button on the client. A hidden button is not a lock: a direct POST once
+    // charged the old placeholder price. The figures are owner-confirmed now, but
+    // checkout waits on one end-to-end test payment, and the server holds the
+    // same line until then.
     if (!SCHOOL_CHECKOUT_OPEN) {
       return NextResponse.json(
         { error: "School checkout is not open yet. Send your design instead and we will follow up." },
@@ -134,6 +138,17 @@ export async function POST(request: Request): Promise<NextResponse> {
         { error: "Your design didn't finish uploading. Please try Buy again." },
         { status: 409 },
       );
+    }
+    // THE SQUARE RULE, on the list the builder stashed with the draft — the same
+    // check /api/school/submit runs. A paid order is the one that reaches a
+    // printer, so a draft with no parts list at all is refused too: there is
+    // nothing to produce it from.
+    if (SCHOOL_BADGES_ARE_SQUARE) {
+      const rows = draft.parts?.rows;
+      const bad = Array.isArray(rows) ? nonSquareBadgeRows(rows) : ["no parts list"];
+      if (bad.length > 0) {
+        return NextResponse.json({ error: SQUARE_RULE_MESSAGE, nonSquare: bad.slice(0, 12) }, { status: 400 });
+      }
     }
     const rawName = (rawBody as Record<string, unknown>).designName;
     const designName =
@@ -169,7 +184,8 @@ export async function POST(request: Request): Promise<NextResponse> {
           },
         ],
         shipping_address_collection: { allowed_countries: ["US"] },
-        success_url: `${baseUrl}/thanks?session_id={CHECKOUT_SESSION_ID}&order=${encodeURIComponent(orderId)}`,
+        // MySchoolFrame's own confirmation page, not the holiday /thanks.
+        success_url: `${baseUrl}${MSF_THANKS_PATH}?session_id={CHECKOUT_SESSION_ID}&order=${encodeURIComponent(orderId)}`,
         cancel_url: school ? `${baseUrl}/s/${school}` : `${baseUrl}/lab/school`,
         metadata: {
           kind: "school-frame",

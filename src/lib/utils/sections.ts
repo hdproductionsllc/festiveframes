@@ -10,6 +10,8 @@
 
 import type { FrameConfig, FrameSlot, SectionId, SectionState } from "@/lib/types";
 import { panelOf } from "@/lib/utils/panels";
+import { buildGrid } from "@/lib/utils/slot-generator";
+import { badgeRule, squareSpansAt, type PlacementContext } from "@/lib/utils/snappet";
 
 /** Section order for the picker (left → top → bottom → right reads naturally). */
 export const SECTION_IDS: SectionId[] = ["wing-left", "top", "bottom", "wing-right"];
@@ -31,15 +33,46 @@ export function sectionSupportsText(id: SectionId): boolean {
 /**
  * Can this panel hold BADGES?
  *
- * Everything except the TOP strip, which is a single row tall — and a badge floors
- * at 2x2 (MIN_ART_SPAN), because artwork is unreadable at one ~1in cell. So no
- * badge can physically seat in the top row, and offering tiles there is offering a
- * mode that cannot produce anything. The top is a text banner, always.
+ * Asked of the FRAME when it is given one: a panel supports tiles exactly when a
+ * legal badge can anchor somewhere in it (`squareSpansAt` — the square rule and
+ * the floor, enumerated). On the flush frame that is the two side columns only:
+ * the 0.75" top bar is banner-only and the bottom runner is one 1" row, where the
+ * only squares are 1x1s under the frame's floor. Offering tiles there would offer
+ * a mode that cannot produce a badge.
  *
- * The BOTTOM banner is two rows tall, so a 2x2 does fit and it keeps the choice.
+ * Without a frame (or on a frame with no square rule), the geometry-free answer
+ * every frame before the rule shared: everything except the TOP strip, which is a
+ * single row tall — a badge floors at 2x2 (MIN_ART_SPAN), so none can seat there.
  */
-export function sectionSupportsTiles(id: SectionId): boolean {
-  return id !== "top";
+export function sectionSupportsTiles(id: SectionId, config?: FrameConfig): boolean {
+  if (!config || config.badgeShape !== "square") return id !== "top";
+  return panelHoldsBadge(id, config);
+}
+
+// One answer per (config, panel): the enumeration builds a grid, and callers ask
+// on every render and every hydrate. Configs are treated as immutable values.
+const badgeHolding = new WeakMap<FrameConfig, Map<SectionId, boolean>>();
+
+function panelHoldsBadge(id: SectionId, config: FrameConfig): boolean {
+  let byPanel = badgeHolding.get(config);
+  if (!byPanel) badgeHolding.set(config, (byPanel = new Map()));
+  const known = byPanel.get(id);
+  if (known !== undefined) return known;
+  const grid = buildGrid(config);
+  // An empty design with every panel in tiles mode: the question is what the
+  // FRAME allows, not what this design currently has on it.
+  const ctx: PlacementContext = {
+    grid,
+    slots: {},
+    sections: {},
+    barCovered: new Set(),
+    badges: badgeRule(config),
+  };
+  const holds = grid.slots.some(
+    (cell) => grid.panelAt(cell.row, cell.col) === id && squareSpansAt(ctx, cell).length > 0,
+  );
+  byPanel.set(id, holds);
+  return holds;
 }
 
 /**
@@ -51,10 +84,20 @@ export function sectionSupportsTiles(id: SectionId): boolean {
  * that change keeps a wing in text mode and there is no control anywhere to free it
  * — the panel reads as permanently locked to text.
  *
+ * An ABSENT panel means tiles. On a square-rule frame that is a claim the frame
+ * can refute: a design restored or saved without a `sections` entry for the flush
+ * bottom runner drew it as eleven empty 1" pockets no badge can fill. There, an
+ * absent panel that cannot hold a badge is materialised as a (blank) text banner,
+ * which the builder shows as "Add a phrase". Only on square-rule frames — /build
+ * never populates `sections`, and its 1-row top strip holds 1x1 tiles.
+ *
  * Returns the SAME object when nothing needs fixing, so callers can skip a write.
  */
 export function repairSections<T extends Partial<Record<SectionId, { mode?: string }>>>(
   sections: T,
+  /** The frame the sections sit on, so "can tiles seat here" is the frame's answer
+   *  (see sectionSupportsTiles). Omitted = the geometry-free answer. */
+  config?: FrameConfig,
 ): T {
   let changed = false;
   const out: Record<string, unknown> = {};
@@ -63,13 +106,20 @@ export function repairSections<T extends Partial<Record<SectionId, { mode?: stri
     if (sec?.mode === "text" && !sectionSupportsText(key)) {
       out[id] = { mode: "tiles" };
       changed = true;
-    } else if (sec?.mode === "tiles" && !sectionSupportsTiles(key)) {
-      // The top strip cannot seat a badge (see sectionSupportsTiles). Keep whatever
+    } else if (sec?.mode === "tiles" && !sectionSupportsTiles(key, config)) {
+      // No badge can seat in this panel (see sectionSupportsTiles). Keep whatever
       // text config is already there rather than discarding the user's copy.
       out[id] = { ...sec, mode: "text" };
       changed = true;
     } else {
       out[id] = sec;
+    }
+  }
+  if (config?.badgeShape === "square") {
+    for (const id of SECTION_IDS) {
+      if (id in out || !sectionSupportsText(id) || sectionSupportsTiles(id, config)) continue;
+      out[id] = { mode: "text" };
+      changed = true;
     }
   }
   return changed ? (out as T) : sections;

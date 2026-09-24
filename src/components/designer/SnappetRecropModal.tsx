@@ -9,6 +9,7 @@ import { reviewUploadedImage } from "@/lib/utils/image-moderation";
 import { buildGrid } from "@/lib/utils/slot-generator";
 import { SECTION_LABELS } from "@/lib/utils/sections";
 import { ImageCropModal, type ImageCropResult } from "./ImageCropModal";
+import { placedPreviewPx, thumbnailDataUrl } from "@/lib/utils/uploads";
 
 // ─── Re-crop an image-snappet resized to a non-matching aspect ────────────────
 //
@@ -34,6 +35,7 @@ export function SnappetRecropModal() {
   const resizeTile = useDesignStore((s) => s.resizeTile);
   const frameConfig = useDesignStore((s) => s.frameConfig);
   const slots = useDesignStore((s) => s.slots);
+  const tileFieldColor = useDesignStore((s) => s.tileFieldColor);
 
   const tile = recropRequest ? slots[recropRequest.slotId] : undefined;
   const image = tile?.image;
@@ -102,7 +104,8 @@ export function SnappetRecropModal() {
     try {
       await putFullRes(id, result.fullResBlob);
     } catch {
-      /* IndexedDB unavailable → the preview still renders; full-res is re-derivable */
+      // IndexedDB unavailable. The original is NOT recoverable after this; print
+      // falls back to the tile's own copy, which placedPreviewPx sizes for 300 DPI.
     }
     // Same moderation integration point as the first upload — gated server-side
     // before production; a no-op here (it does not fake an approval).
@@ -111,8 +114,12 @@ export function SnappetRecropModal() {
     // left to the store's reachability GC — it stays restorable via undo until the
     // pre-resize snapshot falls out of history.
     resizeTile(recropRequest.slotId, { cols: recropRequest.cols, rows: recropRequest.rows }, {
-      url: result.previewUrl,
+      // Print-sized, like a first upload — see placedPreviewPx.
+      url: await thumbnailDataUrl(result.previewUrl, placedPreviewPx(frameConfig)),
       fullResId: id,
+      // The art's field colour was derived from its pixels at upload; a re-frame
+      // of the same art keeps it (dropping it fell back to white in both renderers).
+      ...(image.field ? { field: image.field } : {}),
     });
     close();
   };
@@ -122,6 +129,7 @@ export function SnappetRecropModal() {
       file={source}
       targetInches={targetInches}
       panelLabel={panelLabel}
+      fieldColor={tile?.field ?? tileFieldColor ?? undefined}
       onCancel={close}
       onConfirm={onConfirm}
     />

@@ -25,6 +25,8 @@ const MAX_CHARS = 60; // room for multi-line school text
 export function SectionEditor() {
   const selectedSectionId = useDesignStore((s) => s.selectedSectionId);
   const sections = useDesignStore((s) => s.sections);
+  // The frame answers "can this panel hold a badge" (the square rule and floor).
+  const frameConfig = useDesignStore((s) => s.frameConfig);
   const setSectionText = useDesignStore((s) => s.setSectionText);
   const setSectionMode = useDesignStore((s) => s.setSectionMode);
   // Upload → crop → snappet flow (shared with the prominent Upload button).
@@ -56,7 +58,7 @@ export function SectionEditor() {
             wings (which have no switch, because art is all they do) look disabled by
             comparison. Changing a banner to badges is deliberate, so it sits with the
             rest of this panel's settings. */}
-        {sectionSupportsText(selectedSectionId) && sectionSupportsTiles(selectedSectionId) && (
+        {sectionSupportsText(selectedSectionId) && sectionSupportsTiles(selectedSectionId, frameConfig) && (
           <button
             type="button"
             onClick={() => setSectionMode(selectedSectionId, isText ? "tiles" : "text")}

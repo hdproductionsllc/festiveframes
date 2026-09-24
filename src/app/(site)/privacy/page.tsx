@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { copy } from "@/content/copy";
 import { SITE_URL } from "@/config/season";
 
 // Privacy policy at "/privacy". Server Component. Inherits the (site) sticker
@@ -12,7 +13,7 @@ import { SITE_URL } from "@/config/season";
 // change.
 
 const PRIVACY_URL = `${SITE_URL}/privacy`;
-const CONTACT_EMAIL = "hello@festiveframes.co";
+const CONTACT_EMAIL = copy.thanks.supportEmail;
 
 export const metadata: Metadata = {
   title: "Privacy Policy",

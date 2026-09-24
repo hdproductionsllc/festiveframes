@@ -27,6 +27,11 @@ import { RequestSchoolForm } from "./RequestSchoolForm";
 //
 // City and state are on every row because names repeat nationally — there are
 // eleven Lincoln High Schools and the name alone does not pick one.
+//
+// PILOT MODE (`national={false}`, see data/school-pilot.ts). During the six-school
+// pilot the national half is switched off: no request is made, the schools we
+// offer are listed before anyone types (six rows is a menu, not a search), and a
+// miss says plainly that we are starting with a few schools and takes a request.
 
 export interface SchoolChoice {
   slug: string;
@@ -120,11 +125,14 @@ export function FindMySchool({
    *  input and results are a white card either way so the field always reads as
    *  somewhere to type. */
   tone = "light",
+  /** Search the national roster as well as `schools`. Off during the pilot. */
+  national = true,
 }: {
   schools: SchoolChoice[];
   autoFocus?: boolean;
   placeholder?: string;
   tone?: "light" | "dark";
+  national?: boolean;
 }) {
   const [q, setQ] = useState("");
   const [roster, setRoster] = useState<{ q: string; hits: RosterHit[] }>({ q: "", hits: [] });
@@ -144,7 +152,7 @@ export function FindMySchool({
     // No clearing branch on purpose: a stale list is never MERGED, because every
     // merge below is gated on `roster.q === trimmed`. Clearing it here would be a
     // setState in an effect body for an effect nobody can see.
-    if (!searched) return;
+    if (!searched || !national) return;
     const timer = setTimeout(() => {
       abort.current?.abort();
       const ctrl = new AbortController();
@@ -158,10 +166,12 @@ export function FindMySchool({
         .catch(() => {});
     }, DEBOUNCE_MS);
     return () => clearTimeout(timer);
-  }, [trimmed, searched]);
+  }, [trimmed, searched, national]);
 
   const rows: Row[] = useMemo(() => {
-    const out: Row[] = authored.map((k) => ({
+    // A pilot's few schools are shown before anyone types.
+    const listed = !national && !searched ? schools : authored;
+    const out: Row[] = listed.map((k) => ({
       slug: k.slug,
       title: k.schoolName,
       detail: [k.mascot, k.city].filter(Boolean).join(" · "),
@@ -169,7 +179,7 @@ export function FindMySchool({
     const seen = new Set(out.map((r) => r.slug));
     // Only merge answers for the query on screen. A stale list under a newer
     // query is the same defect as a stale list replacing a newer one.
-    if (roster.q === trimmed) {
+    if (national && roster.q === trimmed) {
       for (const hit of roster.hits) {
         if (out.length >= TOTAL || seen.has(hit.slug)) continue;
         seen.add(hit.slug);
@@ -177,12 +187,12 @@ export function FindMySchool({
       }
     }
     return out.slice(0, TOTAL);
-  }, [authored, roster, trimmed]);
+  }, [authored, roster, trimmed, national, searched, schools]);
 
   // The capture only appears once the national search has ANSWERED this query
   // with nothing. Showing it while the request is in flight tells a parent their
   // school is missing a quarter-second before it appears.
-  const answered = roster.q === trimmed;
+  const answered = !national || roster.q === trimmed;
   const miss = searched && trimmed.length >= 3 && answered && rows.length === 0;
 
   return (
@@ -201,12 +211,15 @@ export function FindMySchool({
         onChange={(e) => setQ(e.target.value)}
         onKeyDown={(e) => {
           // Enter takes the top hit. On a phone this is the whole interaction.
-          if (e.key === "Enter" && rows[0]) router.push(`/s/${rows[0].slug}`);
+          // Only once the query has MATCHED: in pilot mode the unsearched list is
+          // the whole menu, so Go on an empty or one-letter field used to open
+          // whichever school happened to be listed first.
+          if (e.key === "Enter" && searched && rows[0]) router.push(`/s/${rows[0].slug}`);
         }}
         aria-describedby="msf-find-help"
       />
 
-      {searched && rows.length > 0 ? (
+      {(searched || !national) && rows.length > 0 ? (
         <ul className="msf-find-list">
           {rows.map((r) => (
             <li key={r.slug}>
@@ -224,17 +237,30 @@ export function FindMySchool({
         // this is a genuine gap rather than the ordinary case, and the right
         // answer is to capture it rather than to send them somewhere else.
         <div className="msf-find-miss">
-          <p>
-            We don&apos;t have <strong>{trimmed}</strong> yet — and if it is a real
-            school, that is a gap on our side.
-          </p>
+          {national ? (
+            <p>
+              We don&apos;t have <strong>{trimmed}</strong> yet — and if it is a real
+              school, that is a gap on our side.
+            </p>
+          ) : (
+            <p>
+              We&apos;re starting with a handful of St.&nbsp;Louis-area schools, and{" "}
+              <strong>{trimmed}</strong> isn&apos;t one of them yet.
+            </p>
+          )}
+          {/* NOT keyed on the query: the form follows this prefill until the
+              parent edits the School field itself, so finishing "Kirkwood" after
+              the miss fired at "Kir" updates the name without wiping the city,
+              state or email they may already have filled in. */}
           <RequestSchoolForm schoolName={trimmed} tone={tone} />
         </div>
       ) : null}
 
       <p className="msf-find-help" id="msf-find-help">
         {!searched
-          ? "Type your school's name, nickname or mascot."
+          ? national
+            ? "Type your school's name, nickname or mascot."
+            : "Tap your school to open its frame."
           : rows.length > 0
             ? "Tap your school to open its frame."
             // On a miss the panel above already says what to do, so this must not

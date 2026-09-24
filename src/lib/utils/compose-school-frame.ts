@@ -37,7 +37,7 @@ import type {
   SectionState,
   TextBarPlacement,
 } from "@/lib/types";
-import { getRenderHeightInches, getTotalWidthInches } from "@/lib/constants/frame";
+import { getRenderHeightInches, getTotalWidthInches, SCHOOL_PRINT_DPI } from "@/lib/constants/frame";
 import { buildGrid } from "@/lib/utils/slot-generator";
 import {
   coveredBySnappets,
@@ -61,7 +61,7 @@ import {
   slotSuppressed,
 } from "@/lib/utils/sections";
 import { isSidePanel, panelOverhangTiles, panelRects, type PanelRect } from "@/lib/utils/panels";
-import { bannerBands, trackingPx, widthLimitedFont } from "@/lib/utils/banner-tiers";
+import { bannerBands, capSeatBaseline, trackingAt, trackingPx, widthLimitedFont } from "@/lib/utils/banner-tiers";
 import {
   frameTab,
   keystoneBox,
@@ -81,6 +81,8 @@ import {
   artInset,
   tileField,
   artShadow,
+  badgeArtworkUrl,
+  badgeArtworkUrls,
   bevelAxis,
   bevelGradient,
   bevelMetrics,
@@ -96,8 +98,9 @@ import {
 } from "@/lib/utils/tile-theme";
 import { getFullRes } from "@/lib/utils/image-store";
 
-/** Default print resolution. 300 DPI is the eufyMake sheet standard. */
-export const SCHOOL_PRINT_DPI = 300;
+/** Default print resolution — defined beside the frame constants, re-exported here
+ *  where every print caller already looks for it. */
+export { SCHOOL_PRINT_DPI };
 
 export { EUFY_BED_LONG_INCHES, EUFY_BED_SHORT_INCHES } from "@/lib/constants/frame";
 
@@ -353,6 +356,32 @@ export interface SchoolDesign {
   sections: Partial<Record<SectionId, SectionState>>;
 }
 
+/**
+ * The design the PRINT renderer is handed, picked off anything shaped like the
+ * store (the store itself, a test fixture, a restored blob).
+ *
+ * THE ONE place that list is written. Every print call site used to spell it out
+ * longhand, and all three copies left out `tileFieldColor` and `rimColor` — so the
+ * builder painted each badge on the school colour (the banner's colour, the owner's
+ * rule) while the print file fell back to each piece's own navy field and brass
+ * rim. Measured on Eureka: banner 79,38,131 on screen, badge 55,27,85 in print.
+ * An axis derived on one side and written longhand on the other, again; a field
+ * added to `SchoolDesign` is now added here once and reaches every export.
+ */
+export function schoolDesignOf(s: SchoolDesign): SchoolDesign {
+  return {
+    frameConfig: s.frameConfig,
+    frameColor: s.frameColor,
+    tileFieldColor: s.tileFieldColor ?? null,
+    rimColor: s.rimColor ?? null,
+    slots: s.slots,
+    textBars: s.textBars,
+    qrCode: s.qrCode,
+    plateState: s.plateState,
+    sections: s.sections,
+  };
+}
+
 export interface ComposeSchoolOptions {
   /** Print resolution in DPI (px per inch). Default 300. */
   dpi?: number;
@@ -560,7 +589,7 @@ function drawTextBar(
   const avail = textBarAvailWidth(w, h, bar.qr);
   const text = cfg.text || "YOUR TEXT HERE";
   const fontPx = fitTextBarFont(ctx, text, cfg.fontFamily, cfg.letterSpacing, h, avail, cfg.fontSize ?? 1);
-  ctx.font = `700 ${fontPx}px ${cfg.fontFamily}`;
+  setFont(ctx, 700, fontPx, cfg.fontFamily);
   try { (ctx as CanvasRenderingContext2D & { letterSpacing?: string }).letterSpacing = `${cfg.letterSpacing}px`; } catch { /* unsupported */ }
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
@@ -611,6 +640,24 @@ function drawTextBar(
 }
 
 // ── Section TEXT block (mirrors SectionTextElement's fit + multi-line draw) ────
+/**
+ * Set a banner font, WEIGHT INCLUDED. Oswald ships as one VARIABLE file, and
+ * node's canvas (skia via @napi-rs) ignores the weight in the font shorthand for a
+ * variable face — it draws the default instance, 400 — while the browser applies
+ * the weight to the `wght` axis (clamped to the font's 700). So the node renders
+ * (sample sheets, kit samples) set the school name visibly lighter and ~10%
+ * narrower than the builder and than the print file the builder exports. Where the
+ * context exposes the axis (node), drive it with the same weight; a browser
+ * context has no such property and already matches. A face with no `wght` axis
+ * (Graduate) ignores it.
+ */
+function setFont(ctx: CanvasRenderingContext2D, weight: number, px: number, family: string): void {
+  ctx.font = `${weight} ${px}px ${family}`;
+  if ("fontVariationSettings" in ctx) {
+    (ctx as CanvasRenderingContext2D & { fontVariationSettings: string }).fontVariationSettings = `"wght" ${weight}`;
+  }
+}
+
 const SECTION_LINE_HEIGHT = 1.06;
 const SECTION_PAD_RATIO = 0.06;
 
@@ -628,7 +675,7 @@ function fitSectionFont(
   const lines = (text.length ? text : " ").split("\n");
   let fontPx = contentH / (SECTION_LINE_HEIGHT * lines.length);
   const probe = 100;
-  ctx.font = `700 ${probe}px ${fontFamily}`;
+  setFont(ctx, 700, probe, fontFamily);
   let widthLimited = Number.POSITIVE_INFINITY;
   for (const ln of lines) {
     const glyphs = ctx.measureText(ln).width;
@@ -656,6 +703,9 @@ function drawTextBlock(
   logoImg?: DrawableImage | null,
   /** The keystone, when this is a bottom bar on a frame that has one. */
   tab?: { tab: BottomTab; pxPerInch: number } | null,
+  /** This render's scale. Stored tracking is authored in print px, so it is
+   *  converted through this exactly as the builder converts it. */
+  pxPerInch: number = SCHOOL_PRINT_DPI,
 ) {
   const bevel = bevelMetrics(w, h, cfg.backgroundColor, unit);
   // A banner never reaches a frame corner on this geometry — the wings do, and they
@@ -700,7 +750,7 @@ function drawTextBlock(
   // than guessed alongside it, so the bevel can never cut into a descender again.
   const pad = Math.max(
     Math.min(w, h) * SECTION_PAD_RATIO,
-    chromeInset(w, h, cfg.backgroundColor, unit),
+    chromeInset(unit),
   );
   // A crest set into the banner takes width from the text BEFORE the font is fitted,
   // and shifts where the text is anchored. Same helper the builder calls, so the
@@ -711,7 +761,7 @@ function drawTextBlock(
   const headline = cfg.text ?? "";
   const taglineRaw = cfg.tagline?.trim() ? cfg.tagline : "";
   const fill = cfg.fontSize ?? 1;
-  const ls = cfg.letterSpacing ?? 0;
+  const ls = trackingAt(cfg.letterSpacing ?? 0, pxPerInch);
   const contentTop = y + pad;
   const align = cfg.textAlign;
   const textLeft = x + (logoBox?.textX ?? pad);
@@ -725,12 +775,13 @@ function drawTextBlock(
   // Draw one tier's `\n` lines, vertically centered within a band that starts
   // `bandTop` below the content top and is `bandH` tall.
   const drawTier = (str: string, fontPx: number, bandTop: number, bandH: number, family: string) => {
-    ctx.font = `800 ${fontPx}px ${family}`;
+    setFont(ctx, 800, fontPx, family);
     ctx.fillStyle = cfg.textColor;
-    ctx.textBaseline = "middle";
-    // Capped against the fitted size, exactly as the on-screen renderer does. At
-    // print resolution the cap never binds, which is the point: the sheet is
-    // unchanged and the phone stops being the odd one out.
+    // Seated on the CAPITALS, the convention the screen shares (capSeatBaseline).
+    ctx.textBaseline = "alphabetic";
+    const capH = ctx.measureText("H").actualBoundingBoxAscent;
+    // `ls` is already at this render's scale (`trackingAt`), exactly as the
+    // on-screen renderer converts it; the cap is the same guard both apply.
     try { (ctx as CanvasRenderingContext2D & { letterSpacing?: string }).letterSpacing = `${trackingPx(ls, fontPx)}px`; } catch { /* unsupported */ }
     ctx.textAlign = align === "left" ? "left" : align === "right" ? "right" : "center";
     const lines = str.split("\n");
@@ -752,6 +803,7 @@ function drawTextBlock(
     ctx.lineJoin = "round";
     ctx.miterLimit = 2;
     for (const ln of lines) {
+      const by = capSeatBaseline(ty, capH);
       // The cast shadow rides the OUTERMOST pass so it falls from the patch's true
       // silhouette (thread included), not from the letter inside it.
       ctx.save();
@@ -761,23 +813,23 @@ function drawTextBlock(
       ctx.shadowOffsetY = em.shadow.offsetY;
       ctx.strokeStyle = em.merrow.thread;
       ctx.lineWidth = em.merrow.width;
-      ctx.strokeText(ln, tx, ty);
+      ctx.strokeText(ln, tx, by);
       ctx.restore();
 
       // The seat between thread and felt. Without it the gold reads as a cartoon
       // keyline; the dark gap is what makes it look stitched ONTO something.
       ctx.strokeStyle = em.merrow.seatColour;
       ctx.lineWidth = em.merrow.seat;
-      ctx.strokeText(ln, tx, ty);
+      ctx.strokeText(ln, tx, by);
 
       ctx.fillStyle = em.shade;
-      ctx.fillText(ln, tx + em.depth, ty + em.depth);
+      ctx.fillText(ln, tx + em.depth, by + em.depth);
 
       ctx.fillStyle = em.highlight;
-      ctx.fillText(ln, tx - em.depth, ty - em.depth);
+      ctx.fillText(ln, tx - em.depth, by - em.depth);
 
       ctx.fillStyle = cfg.textColor;
-      ctx.fillText(ln, tx, ty);
+      ctx.fillText(ln, tx, by);
       ty += lineBox;
     }
     try { (ctx as CanvasRenderingContext2D & { letterSpacing?: string }).letterSpacing = "0px"; } catch { /* unsupported */ }
@@ -824,15 +876,16 @@ function drawTextBlock(
       const box = tabTextBox(tab.tab, tab.pxPerInch);
       const family = cfg.taglineFontFamily ?? cfg.fontFamily;
       ctx.save();
-      ctx.font = `700 100px ${family}`;
+      setFont(ctx, 700, 100, family);
       const em = ctx.measureText(line).width / 100;
       const fontPx = Math.min(box.height, widthLimitedFont(em, line.length, 0, box.width));
-      ctx.font = `800 ${fontPx}px ${family}`;
+      setFont(ctx, 800, fontPx, family);
       ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
+      ctx.textBaseline = "alphabetic";
       const ch = textChenille(fontPx, cfg.textColor, rimColor, cfg.backgroundColor);
       const cx = x + w / 2;
-      const cy = y - rise + box.centerFromTop;
+      // The capitals centred on the box centre — the screen's convention too.
+      const cy = capSeatBaseline(y - rise + box.centerFromTop, ctx.measureText("H").actualBoundingBoxAscent);
       ctx.lineJoin = "round";
       ctx.strokeStyle = ch.merrow.thread;
       ctx.lineWidth = ch.merrow.width;
@@ -946,7 +999,7 @@ export function drawSchoolFrame(
         const img = images.snappets.get(slot.id);
         if (img) drawFit(ctx, img, slot.x, slot.y, w, h, "cover", 1);
       } else {
-        const art = piece?.artworkUrl ? images.pieces.get(piece.artworkUrl) : undefined;
+        const art = piece?.artworkUrl ? images.pieces.get(badgeArtworkUrl(piece, field)) : undefined;
         // Art sits ON the field at its own aspect; the field fills the rest. Where
         // the art has alpha (Becky's die-cut snappets) the field shows through,
         // which is exactly what makes the set read as one scheme.
@@ -1017,7 +1070,7 @@ export function drawSchoolFrame(
         : null;
       drawTextBlock(
         ctx, bannerConfigFor(id, sec.text), box.x, box.y, box.width, box.height, m.tileSize,
-        design.rimColor, images.logos.get(id) ?? null, tab,
+        design.rimColor, images.logos.get(id) ?? null, tab, m.scale,
       );
     } else if (sec.mode === "image") {
       const img = images.sections.get(id);
@@ -1239,8 +1292,11 @@ async function renderSchoolFrameCanvas(
       );
     } else {
       const piece = getPiece(tile.pieceId);
-      if (piece?.artworkUrl && !bundle.pieces.has(piece.artworkUrl)) {
-        const artUrl = piece.artworkUrl;
+      // Both twins where a badge has two: the draw picks one by its field
+      // (`badgeArtworkUrl`), and re-deriving the field here would be a second copy
+      // of that rule to drift.
+      for (const artUrl of piece ? badgeArtworkUrls(piece) : []) {
+        if (bundle.pieces.has(artUrl)) continue;
         bundle.pieces.set(artUrl, null as unknown as DrawableImage); // reserve the slot
         jobs.push(loadImage(artUrl).then((img) => {
           if (img) bundle.pieces.set(artUrl, img); else bundle.pieces.delete(artUrl);

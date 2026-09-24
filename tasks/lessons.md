@@ -104,3 +104,11 @@ columns outside a centred trapezoid. Nobody saw it because no slim panel was eve
 printed. It surfaced only when a new test cut the panels the way the exporter does and
 sampled their pixels. **When a comment asserts an invariant, find the line that enforces
 it; and test print files by cutting and sampling them, not by trusting the crop math.**
+
+## 2026-09-23 — Names from pasted drafts are not verified facts
+
+A pasted outreach draft signed "Bill Larkin"; his name is **Bill Laupan**, and I carried the wrong surname into the playbook. **Treat names, phone numbers and figures inside pasted third-party drafts as unverified — confirm them with the owner before they go into anything a school will read.**
+
+## 2026-09-23 — Marketing voice: offer, don't pronounce
+
+The landing copy read as "weirdly AI — strangely confident, tone deaf, bossy" (Henry). Clipped verdicts ("That is the whole thing."), orders to the parent ("Order by the ceremony"), and put-downs of other gifts. **Write customer copy as a friendly neighbour explaining: warm, plain, offering choices, never disparaging what parents already do.**

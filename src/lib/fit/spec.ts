@@ -27,6 +27,7 @@ import {
   DEFAULT_FRAME_CONFIG,
   EUFY_BED_LONG_INCHES,
   EUFY_BED_SHORT_INCHES,
+  SCHOOL_FLUSH_FRAME_CONFIG,
   SCHOOL_JULY_SLIM_FRAME_CONFIG,
 } from "@/lib/constants/frame";
 import type { BottomTab } from "@/lib/types";
@@ -269,9 +270,10 @@ export const FLUSH_SPEC: FitSpec = {
   windowRows: 5,
   bottomDropInches: 0.75,
   runnerHeightInches: 1,
-  // A deeper keystone than the candidate's: the bar covers only 0.25" here, so 0.8
-  // of rise reaches 1.05, still under the date line, and gives the tagline air.
-  keystone: { ...DEFAULT_KEYSTONE, riseInches: 0.8 },
+  // The shipping keystone itself, read from the config rather than restated: it
+  // was `{ ...DEFAULT_KEYSTONE, riseInches: 0.8 }`, a copy that silently kept
+  // 6 / 5 / 0.25 when the config went to 6.25 / 5.25 / 0.375 (2026-09-23).
+  keystone: { ...(SCHOOL_FLUSH_FRAME_CONFIG.bottomTab as KeystoneSpec) },
   // 2.25 units at a 1.000" pitch: the rail cell plus a 1.25" wing, so the side
   // badge is SQUARE against its 2.25" row (owner, 2026-09-12).
   sideBadgeCells: 2.25,

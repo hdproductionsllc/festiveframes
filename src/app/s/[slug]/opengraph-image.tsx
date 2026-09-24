@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { ImageResponse } from "next/og";
-import { allSchoolKits } from "@/data/school-kits";
+import { isBuilderOpen, pilotSchoolKits } from "@/data/school-pilot";
 import { resolveSchoolKit } from "@/data/school-resolve";
 import { shift, luminance } from "@/lib/utils/tile-theme";
 
@@ -18,7 +18,7 @@ import { shift, luminance } from "@/lib/utils/tile-theme";
 // MySchoolFrame set under /school never reached here.
 //
 // Generated from the kit, so a new school needs nothing: its own colour is the
-// field, its own name is the headline, and the MySchoolFrame mark sits above it.
+// field, its own name is the headline, and the MySchoolFrame logo sits above it.
 
 export const alt = "MySchoolFrame — a custom license plate frame in your school's colors";
 export const size = { width: 1200, height: 630 };
@@ -28,10 +28,11 @@ const BRASS = "#f8c53b";
 const PAPER = "#f6f3ec";
 const NAVY = "#1b2a4a";
 
-/** The 27 authored cards are worth baking; the roster's render on demand.
- *  (`dynamicParams` defaults to true, which is what serves them.) */
+/** The pilot schools' cards are baked; anything else renders on demand
+ *  (`dynamicParams` defaults to true, which is what serves them) — as the
+ *  neutral card while the pilot gate is closed to it. */
 export function generateStaticParams() {
-  return allSchoolKits().map((k) => ({ slug: k.slug }));
+  return pilotSchoolKits().map((k) => ({ slug: k.slug }));
 }
 
 // Graduate — the collegiate slab the product is set in — committed under
@@ -40,20 +41,15 @@ export function generateStaticParams() {
 // gets bundler-rewritten to a path fetch() cannot parse.
 const graduateFont = readFile(join(process.cwd(), "src/app/school/_brand/Graduate.ttf"));
 
-/** The plate-frame mark, same geometry as icon.svg, in one colour. */
-function Mark({ s, color }: { s: number; color: string }) {
-  return (
-    <svg width={s} height={s} viewBox="0 0 64 64">
-      <path
-        fill={color}
-        fillRule="evenodd"
-        d="M10 13 h44 a7 7 0 0 1 7 7 v24 a7 7 0 0 1 -7 7 h-44 a7 7 0 0 1 -7 -7 v-24 a7 7 0 0 1 7 -7 Z
-           M11 18 a3 3 0 0 0 -3 3 v14 a3 3 0 0 0 3 3 h42 a3 3 0 0 0 3 -3 v-14 a3 3 0 0 0 -3 -3 Z
-           M24.5 42 h15 a2.5 2.5 0 0 1 0 5 h-15 a2.5 2.5 0 0 1 0 -5 Z"
-      />
-    </svg>
-  );
-}
+// The owner's logo in its own navy and brass, seated on a paper plate. The field is
+// the SCHOOL'S colour — any colour at all — and no single ink reads on every one of
+// them, so the logo brings its own ground instead of being recoloured per school.
+const logo = readFile(join(process.cwd(), "public/brand/msf-logo.png")).then(
+  (b) => `data:image/png;base64,${b.toString("base64")}`,
+);
+/** public/brand/msf-logo.png is 800 x 410. */
+const LOGO_W = 250;
+const LOGO_H = Math.round((LOGO_W * 410) / 800);
 
 export default async function OpengraphImage({
   params,
@@ -66,7 +62,13 @@ export default async function OpengraphImage({
   // chat. Without this every one of the 29,440 roster schools unfurled as "YOUR
   // SCHOOL" on a stock navy field — the generic card this file was written to
   // stop, just with a different cause.
-  const kit = resolveSchoolKit(slug);
+  //
+  // Behind the SAME pilot gate as the page: a school outside the pilot gets the
+  // neutral card (navy, our logo, no school name or colours). Its page says "we're
+  // not ready for X yet", and an unfurl in that school's colours saying "Design
+  // their frame" would claim the relationship the page is careful not to.
+  const resolved = resolveSchoolKit(slug);
+  const kit = resolved && isBuilderOpen(resolved.slug) ? resolved : null;
   // An unknown slug 404s on the page itself; the card still has to render.
   const field = kit?.colors.frame ?? NAVY;
   const ink = kit?.banners.text ?? PAPER;
@@ -93,9 +95,17 @@ export default async function OpengraphImage({
           padding: 60,
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 20, color: accent }}>
-          <Mark s={52} color={accent} />
-          <div style={{ fontSize: 36, letterSpacing: "0.04em" }}>MySchoolFrame</div>
+        <div
+          style={{
+            display: "flex",
+            padding: "14px 22px",
+            background: PAPER,
+            borderRadius: 18,
+            boxShadow: "0 6px 18px rgba(0,0,0,0.28)",
+          }}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element -- Satori, not the DOM */}
+          <img src={await logo} width={LOGO_W} height={LOGO_H} alt="" />
         </div>
 
         {/* The SCHOOL, as large as it fits. This is the whole point of the card:
@@ -106,7 +116,7 @@ export default async function OpengraphImage({
             textAlign: "center",
             fontSize: name.length > 26 ? 58 : 76,
             lineHeight: 1.1,
-            marginTop: 44,
+            marginTop: 34,
             maxWidth: 1000,
           }}
         >
@@ -119,7 +129,7 @@ export default async function OpengraphImage({
           </div>
         )}
 
-        <div style={{ display: "flex", fontSize: 26, marginTop: 46, opacity: 0.8, letterSpacing: "0.06em" }}>
+        <div style={{ display: "flex", fontSize: 26, marginTop: 36, opacity: 0.8, letterSpacing: "0.06em" }}>
           Design their frame · myschoolframe.com
         </div>
       </div>

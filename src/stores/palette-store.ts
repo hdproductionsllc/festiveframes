@@ -10,6 +10,12 @@ interface PaletteState {
    * off the frame (or tap-✕ on touch). One model, no modes.
    */
   selectedPieceId: string | null;
+  /**
+   * The last tile that WAS armed. Placing a tile disarms it, so "Fill all" right
+   * after placing Orchestra used to fill with the set's first tile (Band) while
+   * its title promised "your selected tile". Survives `clearSelection`.
+   */
+  lastPieceId: string | null;
 
   /**
    * Whether the first-time "👆 now tap the frame" finger hint has already been
@@ -28,11 +34,13 @@ interface PaletteState {
 export const usePaletteStore = create<PaletteState>()((set) => ({
   activeSetId: getSeasonalSetId(),
   selectedPieceId: null,
+  lastPieceId: null,
   armHintSeen: false,
 
   setActiveSet: (setId) => set({ activeSetId: setId }),
 
-  selectPiece: (pieceId) => set({ selectedPieceId: pieceId }),
+  selectPiece: (pieceId) =>
+    set(pieceId ? { selectedPieceId: pieceId, lastPieceId: pieceId } : { selectedPieceId: null }),
 
   clearSelection: () => set({ selectedPieceId: null }),
 

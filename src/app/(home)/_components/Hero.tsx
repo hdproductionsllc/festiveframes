@@ -22,7 +22,7 @@ export function Hero() {
   return (
     <section
       id="top"
-      className="relative mx-auto grid max-w-[1240px] items-center gap-10 px-5 pb-9 pt-14 sm:px-7 lg:grid-cols-[1.05fr_0.95fr]"
+      className="relative mx-auto grid max-w-[1240px] grid-cols-[minmax(0,1fr)] items-center gap-10 px-5 pb-9 pt-14 sm:px-7 lg:grid-cols-[1.05fr_0.95fr]"
     >
       {/* confetti field */}
       <div aria-hidden className="pointer-events-none absolute inset-0 z-0">

@@ -4,7 +4,7 @@ import { allSchoolKits, type SchoolKit } from "@/data/school-kits";
 import { SCHOOL_VARIANTS, type SchoolVariantId } from "@/data/school-variants";
 import { ACTIVITIES } from "@/data/activities";
 import { getAllSlotIds, buildGrid } from "@/lib/utils/slot-generator";
-import { canPlace, type PlacementContext } from "@/lib/utils/snappet";
+import { canPlace, placementContext } from "@/lib/utils/snappet";
 
 const VARIANTS = Object.keys(SCHOOL_VARIANTS) as SchoolVariantId[];
 
@@ -19,7 +19,7 @@ describe("kit seeding is derived, and lands on every geometry", () => {
 
     for (const kit of allSchoolKits()) {
       describe(`${kit.slug} on ${id}`, () => {
-        const seeds = kitSeedTiles(kit, config, badgeStack);
+        const seeds = kitSeedTiles(kit, config);
         const slots = Object.keys(seeds);
 
         // Which side a seed landed on is a COORDINATE question, not a string one:
@@ -46,7 +46,7 @@ describe("kit seeding is derived, and lands on every geometry", () => {
         });
 
         it("places badges the grid actually accepts", () => {
-          const ctx: PlacementContext = { grid, slots: {}, sections: {}, barCovered: new Set() };
+          const ctx = placementContext(config, { slots: {}, sections: {}, textBars: [] }, grid);
           for (const [slot, tile] of Object.entries(seeds)) {
             const anchor = grid.coordOf(slot);
             expect(anchor, `${slot} is not a cell on this grid`).not.toBeNull();
@@ -96,8 +96,8 @@ describe("a kit with no marks of its own still gets a school shape", () => {
   };
 
   it("falls back to the crest, never to a trophy nobody earned", () => {
-    const { config, badgeStack } = SCHOOL_VARIANTS.flush;
-    const pieces = Object.values(kitSeedTiles(bare, config, badgeStack)).map((t) => t.pieceId);
+    const { config } = SCHOOL_VARIANTS.flush;
+    const pieces = Object.values(kitSeedTiles(bare, config)).map((t) => t.pieceId);
     expect(pieces).toContain("hs:crest");
     expect(pieces).not.toContain("hs:trophy");
   });

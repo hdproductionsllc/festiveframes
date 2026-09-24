@@ -95,11 +95,14 @@ export async function fulfillOrder(
   const data = payload ?? (draft ? { parts: draft.parts, artifacts: draft.artifacts } : undefined);
 
   const customerEmail = session.customer_details?.email ?? null;
+  // A school frame is a MySchoolFrame order: its header, subject, sender and inbox
+  // (lib/email-msf) — including the alert when something goes wrong with it.
+  const brand = session.metadata?.kind === "school-frame" ? "myschoolframe" : undefined;
 
   if (!data) {
     // No design/artifacts available yet. Don't burn the idempotency claim.
     console.error(`[fulfill] no payload for paid order ${orderId} (session ${session.id}).`);
-    await sendFulfillmentFailureAlert(orderId, session.id, customerEmail, "Paid, but no design/artifacts were available to generate production files.");
+    await sendFulfillmentFailureAlert(orderId, session.id, customerEmail, "Paid, but no design/artifacts were available to generate production files.", brand);
     return "no-payload";
   }
 
@@ -122,6 +125,7 @@ export async function fulfillOrder(
     proof: data.artifacts.proof,
     printSheets: eufy.sheets.length ? eufy.sheets : data.artifacts.printSheets,
     banners: eufy.bannersIncluded ? [] : data.artifacts.banners,
+    brand,
   };
 
   try {
@@ -133,7 +137,7 @@ export async function fulfillOrder(
     await unmarkFulfilled(orderId);
     const reason = err instanceof Error ? err.message : "unknown error";
     console.error(`[fulfill] sending failed for order ${orderId}:`, err);
-    await sendFulfillmentFailureAlert(orderId, session.id, customerEmail, reason);
+    await sendFulfillmentFailureAlert(orderId, session.id, customerEmail, reason, brand);
     return "failed";
   }
 }

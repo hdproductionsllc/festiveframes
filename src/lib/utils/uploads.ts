@@ -1,5 +1,7 @@
-import type { TilePiece, TileSpan } from "@/lib/types";
+import type { FrameConfig, TilePiece, TileSpan } from "@/lib/types";
 import { TILE_BG } from "@/lib/utils/tile-theme";
+import { largestBadgeInches } from "@/lib/utils/snappet";
+import { SCHOOL_PRINT_DPI } from "@/lib/constants/frame";
 
 // ─── Uploaded art as a REUSABLE palette piece ────────────────────────────────
 //
@@ -44,6 +46,25 @@ export const MAX_UPLOADS = 6;
  * 256 covers a badge on a retina screen with room to spare and costs a few tens of KB.
  */
 export const UPLOAD_THUMB_PX = 256;
+
+/**
+ * The copy of a placed photo that rides on the tile, long edge in px.
+ *
+ * The crop modal's preview is up to 1200px — measured at 4.1 MB as a data URL —
+ * and the placed tile lives in the persisted design, so a SECOND photo on the
+ * frame pushed the design past localStorage's quota and it stopped saving.
+ *
+ * But this copy is not screen-only. Print takes the full-resolution original from
+ * IndexedDB by `fullResId`, and falls back to THIS url whenever that original is
+ * missing — IndexedDB refused the write, a private window, evicted site data. So
+ * it is sized to print the frame's largest badge at 300 DPI (675px on the 2.25"
+ * square), derived from the geometry rather than typed: a fixed 512 printed that
+ * fallback at 228 DPI with no warning. Never below 512, the screen's own need.
+ */
+export function placedPreviewPx(config: FrameConfig): number {
+  const inches = largestBadgeInches(config) ?? 0;
+  return Math.max(512, Math.ceil(inches * SCHOOL_PRINT_DPI));
+}
 
 /**
  * Shrink a preview data URL to `UPLOAD_THUMB_PX` on its long edge.

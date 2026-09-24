@@ -87,6 +87,7 @@ export default async function SlimSchoolForkPage(
         kit={kit}
         frameConfig={SCHOOL_SLIM_FRAME_CONFIG}
         variant="slim"
+        operatorTools
         banner={<ForkBanner slug={kit.slug} />}
       />
     );
@@ -96,7 +97,7 @@ export default async function SlimSchoolForkPage(
     <div className="build-skin school-skin">
       <ForkBanner />
       <BuilderFontsDeferred />
-      <SchoolBuilder frameConfig={SCHOOL_SLIM_FRAME_CONFIG} variant="slim" />
+      <SchoolBuilder frameConfig={SCHOOL_SLIM_FRAME_CONFIG} variant="slim" operatorTools />
     </div>
   );
 }

@@ -1,4 +1,6 @@
 import { describe, it, expect } from "vitest";
+import { largestBadgeInches } from "@/lib/utils/snappet";
+import { SCHOOL_SHIPPING_VARIANT, schoolVariant } from "@/data/school-variants";
 import {
   checkSvgBytes,
   decodeRaster,
@@ -129,13 +131,18 @@ describe("vector rasterisation size", () => {
     const bar = await decodeVector(
       '<svg xmlns="http://www.w3.org/2000/svg" width="600" height="100"><rect width="600" height="100" fill="#0B1B3A"/></svg>',
     );
+    // What a SHARP print of the badge needs on its short side (675 at 2.25 in).
+    const sharp = Math.ceil(BADGE_REQUIREMENT.tileSizeInches * BADGE_REQUIREMENT.dpi);
     for (const d of [square, bar]) {
       expect(d.ok).toBe(true);
       if (!d.ok) continue;
-      expect(Math.min(d.px.width, d.px.height)).toBeGreaterThanOrEqual(VECTOR_SHORT_SIDE_PX);
+      expect(Math.min(d.px.width, d.px.height)).toBeGreaterThan(sharp);
       expect(Math.min(d.px.width, d.px.height)).toBeGreaterThan(MIN_BADGE_PIXELS);
       expect(d.px.width * d.px.height).toBeLessThanOrEqual(MAX_DECODE_PIXELS);
     }
+    // The square reaches the full target; the 6:1 bar is trimmed by the decode
+    // cap first, and still lands past `sharp`.
+    if (square.ok) expect(Math.min(square.px.width, square.px.height)).toBeGreaterThanOrEqual(VECTOR_SHORT_SIDE_PX);
   });
 
   it("never renders a vector smaller than it declares itself", async () => {
@@ -331,11 +338,16 @@ describe("the resolution gate (constraint 5)", () => {
     expect(r.candidate.resolution.message).toMatch(/Vector/);
   });
 
-  it("judges against the 2x2 badge footprint the builder actually enforces", () => {
-    // `sectionSupportsTiles` forces 2x2 as the floor — a 1x1 badge does not exist —
-    // so judging against anything smaller would pass art the builder then refuses.
-    expect(BADGE_REQUIREMENT.span).toEqual({ cols: 2, rows: 2 });
-    expect(BADGE_REQUIREMENT.tileSizeInches).toBe(0.991);
+  it("judges against the shipping frame's own square badge, not the retired 0.991 pitch", () => {
+    // Every /s/<slug> prints badges at 2.25 x 2.25 in. Judging at the old 2x2 of
+    // 0.991 in (1.98 in) passed art that then printed at 264 DPI on the real badge.
+    const shipping = largestBadgeInches(schoolVariant(SCHOOL_SHIPPING_VARIANT).config)!;
+    expect(shipping).toBeCloseTo(2.25, 6);
+    expect(BADGE_REQUIREMENT.span).toEqual({ cols: 1, rows: 1 });
+    expect(BADGE_REQUIREMENT.tileSizeInches).toBe(shipping);
+    // 300 DPI on a 2.25 in badge is 675 px; a vector is rasterised with margin past it.
+    expect(Math.round(BADGE_REQUIREMENT.tileSizeInches * BADGE_REQUIREMENT.dpi)).toBe(675);
+    expect(VECTOR_SHORT_SIDE_PX).toBeGreaterThan(675);
   });
 });
 

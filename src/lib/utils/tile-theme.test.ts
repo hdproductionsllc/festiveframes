@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
+  artFieldCollision,
+  ART_FIELD_COLLISION_MAX,
   NO_CORNERS,
   radiusCss,
   insetRadii,
@@ -26,6 +28,7 @@ import {
   textEmboss,
   textChenilleCss,
   fieldForArtPixels,
+  shift,
 } from "./tile-theme";
 
 describe("luminance", () => {
@@ -121,9 +124,10 @@ describe("the edge is one width EVERYWHERE, measured against a grid cell", () =>
   });
 
   it("keeps text clearance constant, so both bars pad the same", () => {
-    expect(chromeInset(1800, CELL * 2, TILE_BG.navy, CELL)).toBe(
-      chromeInset(1800, CELL, TILE_BG.navy, CELL),
-    );
+    // It takes the CELL and nothing else, so a one-row and a two-row bar cannot
+    // be padded differently.
+    expect(chromeInset.length).toBe(1);
+    expect(chromeInset(CELL)).toBeGreaterThan(0);
   });
 
   it("still scales when the CELL scales — print is 2x the preview, not a fixed px", () => {
@@ -255,16 +259,22 @@ describe("chromeInset — why the bevel stopped cutting into banner text", () =>
     const [w, h] = [1200, 400];
     const rim = rimMetrics(w, h);
     const bevel = bevelMetrics(w, h);
-    expect(chromeInset(w, h)).toBeGreaterThan(rim.inset + rim.width + bevel.thickness);
+    expect(chromeInset(Math.min(w, h))).toBeGreaterThan(rim.inset + rim.width + bevel.thickness);
   });
 
   it("beats the old 6%-of-short-edge padding that left half a percent of clearance", () => {
     const [w, h] = [1200, 400];
-    expect(chromeInset(w, h)).toBeGreaterThan(Math.min(w, h) * 0.06);
+    expect(chromeInset(Math.min(w, h))).toBeGreaterThan(Math.min(w, h) * 0.06);
   });
 
   it("scales with the box, so a one-row top bar is not given a print-sized margin", () => {
-    expect(chromeInset(1200, 300)).toBeLessThan(chromeInset(1200, 600));
+    expect(chromeInset(300)).toBeLessThan(chromeInset(600));
+  });
+
+  it("is the same proportion of a cell at phone and print scale (no pixel floors)", () => {
+    // Summing rounded, 1px-floored rings took 8 of a phone top runner's 15 px.
+    const phoneCell = 19.66; // CSS px per inch on a 390px phone, 1" cell
+    expect(chromeInset(phoneCell) / phoneCell).toBeCloseTo(chromeInset(300) / 300, 9);
   });
 });
 
@@ -640,5 +650,66 @@ describe("merrowThread reads against the FIELD as well as the type", () => {
   it("still guards the type, with or without a field", () => {
     // SLUH: white rim, white type — the original defect, unchanged.
     expect(merrowThread(WHITE, "#FFFFFF", "#183B67")).toBe(BRASS.mid);
+  });
+});
+
+// ─── A failed rim falls back to the SCHOOL's colour before the brass ─────────
+//
+// Ladue (blue and white) and Parkway Central (red, black and white) both got gold
+// lettering outlines, because their rim failed the 0.25 gap and the only fallback
+// was brass. Neither school has any gold.
+describe("merrowThread prefers a deep shade of the school's own colour to brass", () => {
+  const WHITE = "#FFFFFF";
+
+  it("gives Ladue a deep navy thread, not gold", () => {
+    const thread = merrowThread(WHITE, "#FFFFFF", "#00599C");
+    expect(thread).not.toBe(BRASS.mid);
+    // Clears BOTH neighbours by the unchanged 0.25 rule...
+    expect(Math.abs(luminance(thread) - luminance(WHITE))).toBeGreaterThanOrEqual(0.25);
+    expect(Math.abs(luminance(thread) - luminance("#00599C"))).toBeGreaterThanOrEqual(0.25);
+    // ...and is still blue: blue channel leads, the way the banner's does.
+    const [r, , b] = [1, 3, 5].map((i) => parseInt(thread.slice(i, i + 2), 16));
+    expect(b).toBeGreaterThan(r);
+  });
+
+  it("still falls back to brass where no shade of the field can clear both gaps", () => {
+    // SLUH's navy is too dark to go 0.25 darker: brass, exactly as shipped.
+    expect(merrowThread(WHITE, "#FFFFFF", "#183B67")).toBe(BRASS.mid);
+  });
+
+  it("never replaces the brass on a frame that supplied no rim", () => {
+    expect(merrowThread(WHITE, null, "#00599C")).toBe(BRASS.mid);
+  });
+});
+
+describe("rimRamp keeps black trim black", () => {
+  it("lifts a near-black rim to a dark sheen, not a mid-grey", () => {
+    // #111111 lifted 0.42 was #757575 — primer, not black trim.
+    expect(luminance(rimRamp("#111111").light)).toBeLessThan(0.2);
+    expect(luminance(rimRamp("#111111").light)).toBeGreaterThan(luminance("#111111"));
+  });
+
+  it("leaves every ordinary trim colour's ramp exactly as it was", () => {
+    for (const rim of ["#8C1D40", "#A40925", "#FFCC00", "#068950", "#99A1A5", "#FFFFFF"]) {
+      expect(rimRamp(rim).light, rim).toBe(shift(rim, 0.42));
+    }
+  });
+});
+
+describe("artFieldCollision", () => {
+  const px = (...rgba: number[][]) => new Uint8ClampedArray(rgba.flat());
+  it("counts a mark filled with the field's own colour as lost", () => {
+    // Eureka: purple fill with a gold outline, on the purple badge.
+    const art = px([70, 46, 141, 255], [70, 46, 141, 255], [70, 46, 141, 255], [255, 204, 0, 255]);
+    expect(artFieldCollision(art, "#462E8D")).toBeCloseTo(0.75, 6);
+    expect(artFieldCollision(art, "#462E8D")).toBeGreaterThan(ART_FIELD_COLLISION_MAX);
+  });
+  it("passes the same mark on a white card", () => {
+    const carded = px([255, 255, 255, 255], [70, 46, 141, 255], [255, 204, 0, 255], [255, 255, 255, 255]);
+    // The purple fill is still there, but it is one pixel in four, on white.
+    expect(artFieldCollision(carded, "#462E8D")).toBeLessThanOrEqual(ART_FIELD_COLLISION_MAX);
+  });
+  it("ignores transparent pixels, which the field replaces anyway", () => {
+    expect(artFieldCollision(px([70, 46, 141, 0], [255, 255, 255, 255]), "#462E8D")).toBe(0);
   });
 });

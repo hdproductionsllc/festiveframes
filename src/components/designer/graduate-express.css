@@ -78,6 +78,8 @@
   text-transform: uppercase;
 }
 .msf-express-field input::placeholder {
+  /* The example is prose ("e.g. a nickname or first name"); upper-cased it read "E.G.". */
+  text-transform: none;
   color: #aab0c0;
   font-weight: 600;
 }

@@ -37,8 +37,8 @@ import { buildPanelPartsList } from "@/lib/order/parts-list";
  * from the kit's own sections and seeds.
  */
 function partsOf(kit: SchoolKit) {
-  const { config, badgeStack } = schoolVariant(SCHOOL_SHIPPING_VARIANT);
-  const slots = kitSeedTiles(kit, config, badgeStack) as Record<string, PlacedTile>;
+  const { config } = schoolVariant(SCHOOL_SHIPPING_VARIANT);
+  const slots = kitSeedTiles(kit, config) as Record<string, PlacedTile>;
   const list = buildPanelPartsList({
     slots,
     textBars: [],

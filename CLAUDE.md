@@ -11,8 +11,10 @@
   tap-to-place, preset one-tap layouts, school theming pre-applied. A parent
   arrives from a QR in the bleachers, on a phone. Do not start #31 without the
   owner's go — direction for the common builder is his call.
-- **Pricing placeholders** in `src/config/offers.ts`: $49/frame, $10/frame
-  donation. Not owner-confirmed; must be confirmed before any outreach ships.
+- **Pricing** in `src/config/offers.ts`: **$24.95/frame, $5/frame to the school**
+  (owner-confirmed 2026-09-23). Checkout stays PARKED (`SCHOOL_CHECKOUT_OPEN`
+  false) until the owner runs one end-to-end test payment; school surfaces still
+  show no figure by choice. Warranty: **1 year** (/returns#myschoolframe-warranty).
 - **Never email anyone without the owner's explicit permission.** Outreach email
   drafts (in the metro catalogs) are text deliverables only; the only mail the
   system sends is transactional order email.
@@ -285,9 +287,15 @@ error of 49/255 where the real figure was under 1/255.
   (4.75" per side). Still unmeasured: plate bottom edge → recess floor; the 6.5"
   frame needs it to be ≥ 0.5".
 - **The bench flags the 6.75" flush fork three times, on purpose**: 0.75" below the
-  plate (July proved 0.5), 0.75" of top cover (state-name band; Missouri's rule
-  unchecked), and the Pilot ceiling. Thresholds stay. Note for Bill:
+  plate (July proved 0.5), 0.75" of top cover (state-name band; Missouri's
+  RSMo 301.130.5 "all parts thereof shall be plainly visible", checked 2026-09-23:
+  as drawn this reads as an obstruction; owner decision, see tasks/flush-frame-for-bill.md), and the Pilot ceiling. Thresholds stay. Note for Bill:
   `tasks/flush-frame-for-bill.md`.
+- **Keystone tab is 6.25 base / 5.25 top with 0.375" top corners** (owner,
+  2026-09-23; was 6 / 5 / 0.25). Same 0.5" side slope over the 0.8" rise.
+- **Presets lay badges through `store.layBadges`**, not `clearAll` + taps: badges
+  only, one undo step, the parent's banners kept. Each badge is seated by the same
+  gate a tap uses (`seatTile`), against the badges laid before it.
 - Follow-ups: fitment-engine needs a `standard-15` preset; `frameCorners` gives the
   wide outside radius to row 0, which no badge reaches here (cosmetic); top-banner
   text has no keep-out at the screw slots yet (centred text clears them so far).
@@ -369,8 +377,9 @@ error of 49/255 where the real figure was under 1/255.
   its roster slug). The thin-kit page layers the cached colours on at render time
   through `assignSurfaces` — the same rule the scanner's own button uses — so the
   kit itself stays neutral and a change to that rule reaches every cached school.
-- **`/api/school/request` mails nobody but us**, and only when
-  `SCHOOL_REQUEST_EMAIL` is set. The requester's address is stored so a human can
+- **`/api/school/request` mails nobody but us**: MySchoolFrame's own inbox
+  (`MSF_ORDER_EMAIL`, see "MySchoolFrame mail identity" below), whenever
+  `RESEND_API_KEY` is set. The requester's address is stored so a human can
   choose to reply and is never a recipient; the route test asserts it. It is in
   `proxy.ts` (6 per IP / 10 min, 16 KB) like every other public POST.
 - The **finder is the front door**: `/api/school/find` answers nationally (roster
@@ -526,9 +535,93 @@ error of 49/255 where the real figure was under 1/255.
   untouchable. A school still writes to the company that printed the frame, which is
   why the takedown address is published on the gate itself and in the terms. Worth ten
   minutes with counsel before `SCHOOL_CHECKOUT_OPEN` flips.
-- **Open**: the takedown address is `copy.thanks.supportEmail` (`hello@festiveframes.co`)
-  and that domain no longer resolves as a website; the school product lives at
-  myschoolframe.com. Henry's call — the code reads one constant.
+- **Takedown address** is `ARTWORK_TAKEDOWN_EMAIL` (content/upload-rights.ts), which
+  reads `SCHOOL_CONTACT_EMAIL` (bill@myschoolframe.com). Change it there and the
+  gate, the terms and the order record all follow.
+
+## The six-school pilot pass (2026-09-23) — rules it added
+
+- **Scope is the pilot six** (`data/school-pilot.ts`): marquette-mustangs,
+  eureka-wildcats, lafayette-lancers, parkway-west-longhorns, parkway-central-colts,
+  ladue-rams. Any other `/s/<slug>` shows `SchoolNotReady` (request form prefilled)
+  while `SCHOOL_FINDER_SCOPE` is "pilot". No national-coverage claims anywhere.
+- **EVERY BADGE IS SQUARE, uploads included.** `FrameConfig.badgeShape: "square"`
+  on every school config; `canPlace` refuses a non-square or under-floor footprint
+  with reason `"shape"`, and every path that picks a size asks `squareSpansAt`
+  (canPlace tried at each size). On the shipping frame canPlace accepts exactly
+  six footprints, all 2.25 x 2.25. Saved designs are repaired in `merge` by
+  `squareUpSlots`. The submit route refuses a non-square parts-list badge (400).
+  Tile PNGs are padded to centred squares (`cut-enamel-pins.mjs`). Empty badge
+  positions render as ONE square pocket (`badgeSpots` in FrameCanvas).
+  `/build` has no badge rule and is unchanged.
+- **Banner layout**: the SCHOOL on the top runner; `KIT_BOTTOM_TAGLINE`
+  ("HOME OF THE") over the MASCOT on the bottom (in the keystone tab on the flush
+  frame). The one-tap banner lines (CLASS OF 2027 / SENIOR / #12 / PROUD PARENT,
+  `BANNER_LINES` in data/frame-buyers.ts) replace the tagline; a name, which is
+  optional, replaces the mascot. A name with no line never leaves
+  "HOME OF THE / MILLER": `writePerson` and the hydrate repair
+  (`repairDanglingTopLine`) both drop a seeded fragment tagline. Scan-to-kit
+  (`apply-brand.ts`) builds the same layout.
+- **Badge background = the horizontal text-panel colour.** All three brand
+  colours reach print through ONE picker, `schoolDesignOf` (compose-school-frame).
+- **Send opens a sheet** (`SendDesignSheet`): required email, optional phone,
+  who it's for. The contact is validated server-side (`order/order-contact`) and
+  PRINTED in the production email ("Reply to:") — never a recipient.
+- **Brand assets** (`public/brand/msf-logo*.png|webp`, the square mark in
+  `app/{school,s,lab/school,lab/slim}/icon.svg` + `apple-icon.png`, identical
+  copies — `school-brand-surfaces.test.ts` fails if they drift) are rebuilt with
+  `MSF_SRC="C:/Users/david/Documents/MySchoolFrame Pilot Kit/brand-source" node
+  "<that folder>/build-brand-assets.mjs"` from the repo root. Light surfaces use
+  `msf-logo.png`, dark ones (builder header, /school hero, /raised) the reversed
+  `msf-logo-reverse.png`. School-frame order emails carry the MySchoolFrame
+  header/subject/sender (`brand` in `fulfill.ts`).
+- **`scripts/pilot-qr.mjs` carries a copy of the pilot kits' names and colours**
+  (plain node). `data/pilot-qr.sync.test.ts` fails when they drift — it caught
+  the pre-measurement colours still on the cards. Regenerate the cards after any
+  pilot colour change.
+- **Pilot kit colours are MEASURED from each school's own artwork** (sources in
+  `MySchoolFrame Pilot Kit/school-brand/<slug>/sources.md`), still `status: "demo"`.
+  The mascot PNGs there are for SALES SAMPLES only — nothing goes into `public/`
+  until the school gives written permission.
+- **Plates**: Marquette STANGS, Eureka WLDCTS, Lafayette LANCER, Parkway West
+  HORNS, Parkway Central COLTS, Ladue RAMS (all `/plates/missouri-<word>-centered.jpg`).
+  The unpicked alternate (LNGHRN for West) was deleted.
+- **Sample frame 3 (academics) carries a student PHOTO badge** (left middle), placed
+  through `placeImageSnappet` like a parent's upload. The photos are generated
+  stand-ins from `MySchoolFrame Pilot Kit/gemini/photos` (`PILOT_PHOTOS_DIR`): the
+  cellist on music frames, the student with the beaker elsewhere. The caption and
+  manifest say "sample photo" / "not a real student".
+- Arts and academics lead: `ACTIVITY_GROUPS` and the high-school piece order put
+  them before sports (the phone tray and the intake dropdown open on them).
+
+## Pilot fix round 1 (2026-09-23): MySchoolFrame's own pages, honest fallbacks
+
+- **MySchoolFrame has its own warranty, terms, privacy, thanks and 404 pages**
+  under /school (`MSF_*_PATH` in `content/msf-pages.ts`, chrome in
+  `components/school/MsfPageShell` with `msfMetadata`). Every link to them is built
+  from those paths (landing FAQ + footer, confirmation email, send sheet, llms.txt,
+  sitemap). School checkouts return to `/school/thanks`; the holiday `/thanks`
+  redirects any school session there. `/returns#myschoolframe-warranty` stays as a
+  pointer for links already sent. `app/school/msf-pages.test.ts` RENDERS these pages
+  and fails on either form of the holiday brand — source-text scans cannot see a
+  title template or a metadata default. Known residue: Next's flight payload on a
+  404 still carries the root layout's metadata (the real `<head>` is clean), and
+  /s bundles still ship `DEFAULT_QR_CODE`/`DEFAULT_BOTTOM_BAR` holiday defaults.
+- **`GENERIC_MARKS` lives in school-presets.ts** (crest, plain star, cap) and is
+  what a markless kit's "school" positions resolve to, in presets AND the kit seed.
+  `hs:honor-star` ("Honor Roll") was that fallback and put academic claims on all
+  six pilot frames. `school-presets.test.ts` now checks the RESOLVED shipping
+  presets per pilot kit; `presetBlurb` derives a preset's words from what it lays.
+- **One honest-limit sentence**: `NOTHING_PRINTS_UNTIL_YES`. Sending prints nothing.
+- **Lettering is seated on its capitals in both renderers** (`capSeatBaseline` in
+  print, `CAP_SEAT_CSS` = `text-box: trim-both cap alphabetic` on screen; banner
+  tiers share `bannerBands` on screen now too). Measured: keystone tagline print
+  0.602 / screen 0.57-0.59 of the rise (was 0.631 / 0.509); bar name 0.507 / 0.49-0.53.
+  Firefox lacks text-box-trim and falls back to the old line-box centring.
+- The keystone part draws whenever the bottom section is text on a tab frame, name
+  or not, in BOTH renderers (it used to vanish on screen with an empty name).
+- A restored design's activity is read back off its badges (`activityOnFrame`:
+  an activity on two or more positions; seeded signatures appear once).
 
 ## Geometry facts worth not re-deriving
 
@@ -545,3 +638,64 @@ error of 49/255 where the real figure was under 1/255.
 browser whose blob is already at the current version — which is usually the exact
 case the repair was written for. Put repairs in `merge`, and make them return the
 **same object** when nothing changed so they don't churn renders.
+
+## Round-2 pilot fixes (2026-09-23): plate, ivory enamel, withheld art
+
+- **No school preview ever shows the FESTIVE plate.** `schoolPlatePhoto(kit, state)`
+  (data/school-kits.ts) is the one answer the builder and the sample sheets both ask:
+  the kit's vanity plate, else `SCHOOL_STOCK_PLATES` (MO = a real plate with its number
+  privacy-blurred, `scripts/stock-plate.mjs`). All six pilot schools now have their
+  own vanity plate (see the pilot pass's Plates bullet); the stock plate is the
+  fallback for everyone else.
+- **Ivory-enamel twins.** Navy enamel on navy/black/purple fields read as a gold line
+  sketch. `scripts/light-enamel.mjs` re-inks each navy-enamel badge ivory into
+  `public/tiles/high-school/light/` and writes `high-school-light.generated.ts`
+  (twins + the measured `NAVY_ENAMEL`). `badgeArtworkUrl(piece, field)` in tile-theme
+  picks the twin when WCAG contrast(IVORY_ENAMEL, field) beats contrast(NAVY_ENAMEL,
+  field) — no threshold. The first rule (navy below 1.6) kept navy on Parkway Central
+  red, a colour Central does not use, and the review read it as off-brand; every dark
+  school field now wears ivory, and navy stays on light fields (West, Webster, white).
+  Both renderers, the tray and every loader go through it; loaders fetch BOTH twins
+  (`badgeArtworkUrls`) so they never re-derive the field. Soccer and ice hockey are
+  KEEP (their navy is the drawing). Re-run the script whenever badge art changes.
+- **Replacing art under the same URL is supported**: `images.minimumCacheTTL` is one
+  day (next.config.ts), so a replaced badge (orchestra, torch, their ivory twins)
+  reaches every browser within two. It was a year, and a phone that had seen the old
+  violin would have kept it that long. Torch is 657 px (about 292 DPI at the 2.25"
+  badge) — it clears the 595 px intake gate, which was set for 2 x 2 at 0.991, but not
+  300 DPI at the size that ships. Orchestra is 751 px (334 DPI).
+- **`WITHHELD_ART`** (sets/high-school.ts) takes a badge out of the tray, the activity
+  picker, the chips and every kit signature while keeping it registered for saved
+  designs. Quiz Bowl is there: its art is a desk bell. Redraw it, run the one-inch
+  test, then delete the entry.
+
+## MySchoolFrame mail identity (2026-09-23)
+
+- **MSF mail config lives in `lib/email-msf.ts`.** One deployment sells two products;
+  Festive Frames keeps `EMAIL_FROM` / `ADMIN_ORDER_EMAIL` / `PRODUCTION_EMAILS`, and
+  MySchoolFrame reads its own two variables, so neither product can reroute the other.
+- **`MSF_ORDER_EMAIL`** (default `SCHOOL_CONTACT_EMAIL` = bill@myschoolframe.com)
+  receives paid school orders, send-sheet designs, school requests, school failure
+  alerts and the bcc on the parent's confirmation. The school request alert is no
+  longer opt-in: it always mails `MSF_ORDER_EMAIL` when `RESEND_API_KEY` is set.
+- **`MSF_EMAIL_FROM` stays UNSET until myschoolframe.com is verified in Resend.**
+  Unset, school mail goes from `EMAIL_FROM`'s mailbox under the display name
+  "MySchoolFrame". Set before verification, every school email fails.
+- **Retired**: `SCHOOL_ORDERS_EMAIL` and `SCHOOL_REQUEST_EMAIL` (ignored if still set
+  on Railway; delete them there).
+- Every recipient is server-fixed. On the send sheet, the school request and the
+  alerts, a parent's address is printed as "Reply to" and never read into to/cc/bcc
+  (`email-production.test.ts` asserts it field by field).
+- **The ONE exception, and an open owner decision**: a PAID school order's
+  confirmation goes `to` the paying parent (Stripe's `customer_details.email`),
+  with `MSF_ORDER_EMAIL` on bcc — the ordinary receipt, same as a holiday order
+  (`sendProductionEmails` customer branch; brand set in `order/fulfill.ts`). The
+  pilot brief said school mail goes to Bill "and never to a parent". Unreachable
+  while `SCHOOL_CHECKOUT_OPEN` is off. If Henry wants "never", the whole fix is
+  `sendProductionEmails(input, { skipCustomer: brand === "myschoolframe" })` in
+  `fulfillOrder`, with Stripe's own receipt covering the parent, and the three
+  tests that find the mail `to: "parent@example.com"` then flip to asserting
+  it is absent. Decide before checkout opens.
+- `school-no-festive.test.ts` guards the string "festiveframes" on MSF surfaces. The
+  localStorage key `festive-frames-school-v1` (SchoolDesigner) is deliberately not
+  matched: parents never see it, and renaming it would lose every saved design.

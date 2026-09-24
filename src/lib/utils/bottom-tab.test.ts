@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { tabPath, tabClipPath, tabTextBox, tabSkirt, frameTab } from "./bottom-tab";
 import { SCHOOL_FLUSH_FRAME_CONFIG, SCHOOL_SLIM_FRAME_CONFIG, SCHOOL_FRAME_CONFIG } from "@/lib/constants/frame";
 import { bannerRowBox, plateTopInches } from "./rows";
+import { PLATE_BOLT_INSET_INCHES, PLATE_BOLT_SPACING_INCHES, SCREW_HEAD_INCHES } from "./screw-slots";
 import type { BottomTab } from "@/lib/types";
 
 // ─── The keystone's shape ────────────────────────────────────────────────────
@@ -169,6 +170,37 @@ describe("frameTab", () => {
     expect(plateBottom - barTop).toBeCloseTo(0.25, 9);
     expect(plateBottom - (barTop - tab.riseInches)).toBeCloseTo(1.05, 9);
     expect(plateBottom - (barTop - tab.riseInches)).toBeLessThan(1.08);
+  });
+
+  it("the flush keystone is 6.25 over 5.25 with 0.375 corners, on the SAME side slope as the 6 / 5 it replaced", () => {
+    // Owner, 2026-09-23: 1/8" wider on each side, 1/4" overall, rounder top corners.
+    const tab = frameTab(SCHOOL_FLUSH_FRAME_CONFIG)!;
+    expect(tab.baseInches).toBe(6.25);
+    expect(tab.topInches).toBe(5.25);
+    expect(tab.cornerRadiusInches).toBe(0.375);
+    expect(tab.riseInches).toBe(0.8);
+    // The slope is the inset per side over the rise: 0.5 / 0.8, as it was at 6 / 5.
+    expect((tab.baseInches - tab.topInches) / 2 / tab.riseInches).toBeCloseTo((6 - 5) / 2 / 0.8, 12);
+  });
+
+  it("the wider flush keystone still clears the bottom bolt heads", () => {
+    // The bottom holes are PLATE_BOLT_INSET up from the plate's bottom edge and
+    // 2.5" in from each side. The tab stands centred on the plate; measure its
+    // slope's x at the hole's height against the screw head's outer rim.
+    const c = SCHOOL_FLUSH_FRAME_CONFIG;
+    const tab = frameTab(c)!;
+    const plateW = c.plateWidthInches;
+    const plateBottom = plateTopInches(c) + c.plateHeightInches;
+    const barTop = bannerRowBox(c, "bottom").y;
+    const holeY = plateBottom - PLATE_BOLT_INSET_INCHES;
+    const holeX = (plateW - PLATE_BOLT_SPACING_INCHES) / 2;
+    const upTheTab = barTop - holeY; // how far up the rise the hole's centre is
+    expect(upTheTab).toBeGreaterThan(0);
+    expect(upTheTab).toBeLessThan(tab.riseInches);
+    const inset = ((tab.baseInches - tab.topInches) / 2) * (upTheTab / tab.riseInches);
+    const tabLeftAtHole = (plateW - tab.baseInches) / 2 + inset;
+    // Head rim to the tab's slope: positive air, not contact.
+    expect(tabLeftAtHole - (holeX + SCREW_HEAD_INCHES / 2)).toBeGreaterThan(0.25);
   });
 
   it("the shipped tab has rounded top corners and clears the plate's date line", () => {

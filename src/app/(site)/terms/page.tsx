@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
+import { copy } from "@/content/copy";
 import { SITE_URL } from "@/config/season";
 import { ARTWORK_TAKEDOWN_EMAIL, UPLOAD_RIGHTS_TERMS } from "@/content/upload-rights";
+import { MSF_TERMS_PATH, MSF_WARRANTY_PATH } from "@/content/msf-pages";
 
 // Terms of Service at "/terms". Server Component in the (site) route group, so
 // it inherits SiteHeader, SiteFooter, and .sticker-theme chrome and renders
@@ -12,7 +14,7 @@ import { ARTWORK_TAKEDOWN_EMAIL, UPLOAD_RIGHTS_TERMS } from "@/content/upload-ri
 // update them whenever the business or practices change.
 
 const TERMS_URL = `${SITE_URL}/terms`;
-const CONTACT_EMAIL = "hello@festiveframes.co";
+const CONTACT_EMAIL = copy.thanks.supportEmail;
 
 export const metadata: Metadata = {
   title: "Terms of Service",
@@ -35,7 +37,7 @@ export default function TermsPage() {
         <h1 className="s-display text-[clamp(32px,6vw,48px)] font-bold leading-[1] tracking-[-1.5px] text-[#1e1b17]">
           Terms of Service
         </h1>
-        <p className="mt-2 text-sm font-bold text-[#6a6354]">Updated June 2026</p>
+        <p className="mt-2 text-sm font-bold text-[#6a6354]">Updated September 2026</p>
       </header>
 
       <div
@@ -48,6 +50,13 @@ export default function TermsPage() {
             and your purchase of our products. By using this site or placing an
             order, you agree to these terms. Please read them carefully. If you
             have questions, contact us using the details at the end.
+          </p>
+          <p className="mt-3">
+            MySchoolFrame school frames have their own{" "}
+            <a className="font-bold underline" href={MSF_TERMS_PATH}>
+              terms
+            </a>
+            .
           </p>
         </section>
 
@@ -153,7 +162,16 @@ export default function TermsPage() {
             Disclaimers and limitation of liability
           </h2>
           <p className="mt-3">
-            The site and our products are provided on an as-is basis to the
+            Except as stated in our 30-day guarantee and the MySchoolFrame
+            one-year warranty (see{" "}
+            <a className="font-bold underline" href="/returns">
+              Returns &amp; Refunds
+            </a>{" "}
+            and the{" "}
+            <a className="font-bold underline" href={MSF_WARRANTY_PATH}>
+              MySchoolFrame warranty
+            </a>
+            ), the site and our products are provided on an as-is basis to the
             fullest extent permitted by law. We do not guarantee that the site
             will always be available or error-free. To the extent permitted by
             law, our total liability for any claim related to a product is

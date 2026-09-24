@@ -1,6 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { allSchoolKits, kitPlateState, type SchoolKit } from "./school-kits";
+import { allSchoolKits, kitPlateState, schoolPlatePhoto, SCHOOL_STOCK_PLATES, type SchoolKit } from "./school-kits";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
+import { getPlateImageUrl } from "./plate-images";
 import { getPlateDesign } from "./plates";
+import { pilotSchoolKits } from "./school-pilot";
 
 /**
  * The plate under the frame is part of the mockup, and the store hard-coded "MO".
@@ -56,6 +60,48 @@ describe("kitPlateState", () => {
       expect(kitPlateState(kit), `${kit.slug} opens on the wrong state for its plate photo`).toBe(
         kit.plate.state,
       );
+    }
+  });
+});
+
+describe("schoolPlatePhoto", () => {
+  // The stock Missouri photo reads FESTIVE — the other brand. Five of six pilot
+  // builders showed it because they have no vanity plate of their own.
+  const festive = getPlateImageUrl("MO");
+
+  it("never hands a school preview the FESTIVE stock plate", () => {
+    expect(festive).toMatch(/festive/);
+    for (const kit of allSchoolKits()) {
+      const state = kitPlateState(kit) ?? "MO";
+      const src = schoolPlatePhoto(kit, state) ?? getPlateImageUrl(state);
+      expect(src, `${kit.slug} previews on ${src}`).not.toMatch(/festive/i);
+    }
+    expect(schoolPlatePhoto(null, "MO")).not.toMatch(/festive/i);
+  });
+
+  it("prefers the kit's own plate, only on the state that photo is", () => {
+    const kit = { city: "Ladue, MO", plate: { state: "MO", src: "/plates/missouri-rams-centered.jpg" } } as SchoolKit;
+    expect(schoolPlatePhoto(kit, "MO")).toBe("/plates/missouri-rams-centered.jpg");
+    expect(schoolPlatePhoto(kit, "KS")).toBeUndefined();
+    expect(schoolPlatePhoto(kitFor("Eureka, MO"), "MO")).toBe(SCHOOL_STOCK_PLATES.MO);
+  });
+
+  it("points at stock plates that exist", () => {
+    for (const src of Object.values(SCHOOL_STOCK_PLATES)) {
+      expect(existsSync(join(process.cwd(), "public", src)), src).toBe(true);
+    }
+  });
+
+  it("gives every pilot school a crisp plate of its own, on a file that exists", () => {
+    // The stock plate is a real Missouri plate with its number privacy-blurred.
+    // Side by side on a sales sheet, five blurred plates beside Ladue's crisp RAMS
+    // read as two different products — and the blur as a censored photo.
+    for (const kit of pilotSchoolKits()) {
+      expect(kit.plate, `${kit.slug} falls back to the blurred stock plate`).toBeDefined();
+      expect(schoolPlatePhoto(kit, kitPlateState(kit)!)).toBe(kit.plate!.src);
+    }
+    for (const kit of allSchoolKits()) {
+      if (kit.plate) expect(existsSync(join(process.cwd(), "public", kit.plate.src)), kit.plate.src).toBe(true);
     }
   });
 });

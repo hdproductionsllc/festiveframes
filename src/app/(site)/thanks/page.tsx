@@ -1,11 +1,9 @@
 import type { Metadata } from "next";
-import type Stripe from "stripe";
+import { redirect } from "next/navigation";
 
 import { copy } from "@/content/copy";
-import { getSchoolKit } from "@/data/school-kits";
-import { ShareYourFrame } from "@/components/school/ShareYourFrame";
-import { getKit } from "@/config/kits";
-import { getStripe } from "@/lib/stripe";
+import { MSF_THANKS_PATH } from "@/content/msf-pages";
+import { firstParam, getOrderView } from "@/lib/order/thanks-order";
 import { EmailCaptureForm } from "@/components/site/home/EmailCaptureForm";
 import { OrderFulfiller } from "@/components/site/thanks/OrderFulfiller";
 import { SharePrompt } from "@/components/site/thanks/SharePrompt";
@@ -21,7 +19,12 @@ import { SITE_URL } from "@/config/season";
 // order. ONLY a session we retrieved and that Stripe says is paid may be called
 // confirmed: with no session, an unreadable one, or Stripe not configured we
 // have no order to speak of, so the page says exactly that and points back at
-// the builder. It never redirects or crashes.
+// the builder. It never crashes.
+//
+// A MYSCHOOLFRAME order is not this page's to show: it redirects to
+// MSF_THANKS_PATH (MySchoolFrame chrome, Bill's address, the school's own share
+// ask). New school checkouts return there directly; this covers any session
+// that comes back here anyway (an older Stripe session, a bookmarked link).
 
 export const metadata: Metadata = {
   title: copy.thanks.metaTitle,
@@ -38,103 +41,17 @@ interface ThanksPageProps {
   searchParams: Promise<{ session_id?: string | string[]; order?: string | string[]; cart?: string | string[] }>;
 }
 
-interface OrderView {
-  kitNames: string[];
-  quantityLabel: string;
-  /** Count of A-Z & 0-9 letter set add-ons purchased (0 when none). */
-  alphabetQty: number;
-  selection: "single" | "bundle" | null;
-  /** Slug of the school this frame raises money for, when it is a school order. */
-  school: string | null;
-  /** Raw values for the analytics `purchase` event (primitives only). */
-  analytics: {
-    kitIds: string;
-    quantity: number;
-  };
-}
-
-/** Derive a clean display order from a retrieved Stripe session. */
-function buildOrderView(session: Stripe.Checkout.Session): OrderView {
-  const metadata = session.metadata ?? {};
-  const selection =
-    metadata.selection === "single" || metadata.selection === "bundle"
-      ? metadata.selection
-      : null;
-  const school =
-    metadata.kind === "school-frame" && typeof metadata.school === "string" && metadata.school
-      ? metadata.school
-      : null;
-
-  // Kit names: prefer the trusted metadata ids mapped through the catalog;
-  // fall back to expanded line item descriptions if metadata is absent.
-  let kitNames: string[] = [];
-  if (metadata.kitIds) {
-    kitNames = metadata.kitIds
-      .split(",")
-      .map((id) => id.trim())
-      .filter(Boolean)
-      .map((id) => getKit(id)?.name ?? id);
-  }
-  if (kitNames.length === 0) {
-    kitNames = (session.line_items?.data ?? [])
-      .map((item) => item.description)
-      .filter((d): d is string => Boolean(d));
-  }
-
-  // Letter-set add-on count. Guard NaN / invalid values to 0.
-  const parsedAlphabetQty = Number.parseInt(metadata.alphabetQty ?? "", 10);
-  const alphabetQty =
-    Number.isFinite(parsedAlphabetQty) && parsedAlphabetQty > 0
-      ? parsedAlphabetQty
-      : 0;
-
-  const quantity = metadata.quantity ? Number(metadata.quantity) : null;
-  const unit = selection === "bundle" ? "bundle" : "kit";
-  const quantityLabel =
-    quantity && Number.isFinite(quantity)
-      ? `${quantity} ${unit}${quantity > 1 ? "s" : ""}`
-      : "";
-
-  // Raw, primitive analytics values. Prefer the trusted metadata kit ids
-  // (already a comma-joined string); fall back to empty when absent.
-  const analytics = {
-    kitIds: metadata.kitIds ?? "",
-    quantity: quantity && Number.isFinite(quantity) ? quantity : 1,
-  };
-
-  return { kitNames, quantityLabel, alphabetQty, selection, school, analytics };
-}
-
-/** Safely retrieve and shape the order. Returns null on any failure. */
-async function getOrderView(sessionId: string): Promise<OrderView | null> {
-  try {
-    const stripe = getStripe();
-    // customer_details is inline on the session (not an expandable ref);
-    // only line_items needs expanding.
-    const session = await stripe.checkout.sessions.retrieve(sessionId, {
-      expand: ["line_items"],
-    });
-    // Only a session Stripe calls settled is a confirmed order. A 100%-off promo
-    // completes as `no_payment_required`; anything else (including "unpaid" and
-    // any status added later) is not ours to confirm.
-    if (session.payment_status !== "paid" && session.payment_status !== "no_payment_required") return null;
-    return buildOrderView(session);
-  } catch {
-    // Missing key, bad id, or network failure: fall back to generic.
-    return null;
-  }
-}
-
 export default async function ThanksPage({ searchParams }: ThanksPageProps) {
   const params = await searchParams;
-  const rawSessionId = params.session_id;
-  const sessionId = Array.isArray(rawSessionId) ? rawSessionId[0] : rawSessionId;
-  const rawOrderId = params.order;
-  const orderId = Array.isArray(rawOrderId) ? rawOrderId[0] : rawOrderId;
-  const rawCartId = params.cart;
-  const cartId = Array.isArray(rawCartId) ? rawCartId[0] : rawCartId;
+  const sessionId = firstParam(params.session_id);
+  const orderId = firstParam(params.order);
+  const cartId = firstParam(params.cart);
 
   const order = sessionId ? await getOrderView(sessionId) : null;
+  if (order?.schoolFrame && sessionId) {
+    const q = new URLSearchParams({ session_id: sessionId, ...(orderId ? { order: orderId } : {}) });
+    redirect(`${MSF_THANKS_PATH}?${q}`);
+  }
   const shareUrl = process.env.SITE_URL || SITE_URL;
 
   // No session, or one Stripe would not confirm as paid. There is no order to
@@ -175,15 +92,7 @@ export default async function ThanksPage({ searchParams }: ThanksPageProps) {
     );
   }
 
-  // Only when the kit is one we actually have a page for: sharing a link to a
-  // school whose page does not exist is worse than not asking.
-  const shareKit = order.school ? getSchoolKit(order.school) : undefined;
-  const schoolShare = shareKit
-    ? {
-        shortName: shareKit.shortName,
-        url: `${shareUrl.replace(/\/$/, "")}/s/${shareKit.slug}`,
-      }
-    : null;
+  const supportEmail = copy.thanks.supportEmail;
 
   return (
     <section className="bg-[#faf0d6]">
@@ -204,9 +113,11 @@ export default async function ThanksPage({ searchParams }: ThanksPageProps) {
             then emails the proof + production files). A cart carries its cartId;
             a single custom frame carries its orderId + localStorage backup. */}
         {cartId && sessionId ? (
-          <OrderFulfiller cartId={cartId} sessionId={sessionId} />
+          <OrderFulfiller cartId={cartId} sessionId={sessionId} supportEmail={supportEmail} messages={copy.thanks.fulfill} />
         ) : (
-          orderId && sessionId && <OrderFulfiller orderId={orderId} sessionId={sessionId} />
+          orderId && sessionId && (
+            <OrderFulfiller orderId={orderId} sessionId={sessionId} supportEmail={supportEmail} messages={copy.thanks.fulfill} />
+          )
         )}
 
         {/* Fire the funnel `purchase` event once. Only a confirmed order reaches
@@ -277,30 +188,18 @@ export default async function ThanksPage({ searchParams }: ThanksPageProps) {
           </div>
         </div>
 
-        {/* Share prompt. A SCHOOL order gets the school's own ask instead of the
-            house one: a fundraiser travels through the parent group chat, and
-            "this sends money to our booster club" is both a better reason to
-            forward it and the true one. */}
-        {schoolShare ? (
-          <div className="mt-10">
-            <ShareYourFrame
-              schoolShortName={schoolShare.shortName}
-              schoolUrl={schoolShare.url}
-            />
+        {/* Share prompt. */}
+        <div className="mt-10">
+          <h2 className="s-display text-2xl font-bold tracking-[-0.5px] text-[#1e1b17]">
+            {copy.thanks.share.heading}
+          </h2>
+          <p className="mt-2 max-w-prose text-base font-medium text-[#3a352c]">
+            {copy.thanks.share.body}
+          </p>
+          <div className="mt-3">
+            <SharePrompt url={shareUrl} shareText={copy.thanks.share.shareText} />
           </div>
-        ) : (
-          <div className="mt-10">
-            <h2 className="s-display text-2xl font-bold tracking-[-0.5px] text-[#1e1b17]">
-              {copy.thanks.share.heading}
-            </h2>
-            <p className="mt-2 max-w-prose text-base font-medium text-[#3a352c]">
-              {copy.thanks.share.body}
-            </p>
-            <div className="mt-3">
-              <SharePrompt url={shareUrl} shareText={copy.thanks.share.shareText} />
-            </div>
-          </div>
-        )}
+        </div>
       </div>
     </section>
   );

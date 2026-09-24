@@ -32,6 +32,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
 # vercel
 .vercel
@@ -53,3 +54,6 @@ scripts/out/
 
 # Agent worktrees (full checkouts; eslint ignores them too)
 .claude/worktrees/
+
+# Scratch scripts agents and people write in the repo root (_foo.tmp.mjs, ...)
+_*.tmp.*

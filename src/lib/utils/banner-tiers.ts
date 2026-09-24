@@ -4,6 +4,8 @@
 // content box into the same vertical bands and fit each line to its own band. Only the
 // per-engine text MEASUREMENT differs; the bands are identical.
 
+import { SCHOOL_PRINT_DPI } from "@/lib/constants/frame";
+
 export const BANNER_HEADLINE_FRACTION = 0.6; // top band — the big line
 export const BANNER_GAP_FRACTION = 0.08; // breathing room between the tiers
 export const BANNER_TAGLINE_FRACTION = 0.32; // bottom band — the smaller line
@@ -29,21 +31,53 @@ export function bannerBands(contentH: number): BannerBands {
   };
 }
 
+// ─── Where a line of lettering sits VERTICALLY: on its capitals ──────────────
+//
+// Both renderers used to centre a line by their own native convention: canvas on
+// textBaseline "middle", CSS on the em line box. The capitals land in different
+// places under the two, so the keystone tagline sat about 0.1" higher on screen
+// than in print, and the bar's name drifted the same way. Banner lettering is set
+// in capitals, so the one rule is: THE CAP BLOCK IS CENTRED ON THE LINE'S CENTRE.
+//
+//   print   textBaseline "alphabetic" at `capSeatBaseline(centre, capHeight)`,
+//           capHeight measured off the font ('H' ink ascent) at that size;
+//   screen  `CAP_SEAT_CSS` trims each line's box to cap-top..baseline, so the
+//           flex centring that already places it centres the capitals.
+//
+// A browser without `text-box-trim` (Firefox, as of 2026-09) ignores the two
+// properties and falls back to line-box centring — the old behaviour, a hair
+// high — rather than to anything broken.
+
+/** The alphabetic baseline that centres a line's capitals on `centreY`. */
+export function capSeatBaseline(centreY: number, capHeightPx: number): number {
+  return centreY + capHeightPx / 2;
+}
+
+/** CSS that makes a line's box exactly its cap block (see above). */
+export const CAP_SEAT_CSS = {
+  textBoxTrim: "trim-both",
+  textBoxEdge: "cap alphabetic",
+} as unknown as import("react").CSSProperties;
+
 // ─── Tracking, and the width the type actually occupies ──────────────────────
 //
-// `letterSpacing` is stored in PIXELS and applied in pixels by both renderers,
-// but the two draw at wildly different scales: the print sheet is thousands of
-// pixels wide and a phone's preview is a few hundred. So the same stored 4 is a
-// whisper on the print sheet and, on a 390px-wide phone, eats a hundred pixels
-// of a two-hundred-pixel banner — which starves the glyphs, forces the fitter
-// down to about 7px in a 21px-tall bar, and leaves lettering that is both tiny
-// and, once the edge treatment is added on top, thick. It also overflowed: the
-// bar clipped the first letter of a long school name.
+// `letterSpacing` is stored in PIXELS OF THE PRINT SHEET (SCHOOL_PRINT_DPI) — the
+// scale every seeded value was tuned against — and each renderer converts it
+// through its OWN px-per-inch with `trackingAt`. It used to be applied as raw
+// pixels at whatever scale the renderer drew, so the same stored 4 was 0.013" of
+// space in print, 0.073" on a 55 px/in desktop preview and about 0.2" on a phone:
+// the builder showed "W I L D C A T S" spaced out and shrunk while the print set
+// it tight and heavy, and the parent approves the phone view. One unit, converted
+// in one place, and the two renderers agree on the ink box.
 //
-// Tracking is a typographic proportion, so it is capped as a fraction of the
-// font it is applied to. The cap NEVER binds at print scale or on a desktop
-// preview — the stored values are already well inside it there — so this changes
-// nothing that currently looks right. It only stops the starved case.
+// Tracking is also a typographic proportion, so it is capped as a fraction of the
+// font it is applied to. With the scale fixed the cap is a GUARD, not the thing
+// doing the work: it never binds on a seeded banner at any scale.
+
+/** Stored `letterSpacing` → px, for a renderer drawing at `pxPerInch`. */
+export function trackingAt(letterSpacing: number, pxPerInch: number): number {
+  return (letterSpacing * pxPerInch) / SCHOOL_PRINT_DPI;
+}
 
 /** Ceiling on letter-spacing, as a fraction of the font size. */
 export const MAX_TRACKING_EM = 0.16;

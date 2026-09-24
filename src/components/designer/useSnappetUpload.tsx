@@ -4,14 +4,19 @@ import { useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useDesignStore } from "@/stores/design-store";
 import { SECTION_IDS, SECTION_LABELS } from "@/lib/utils/sections";
-import { buildGrid } from "@/lib/utils/slot-generator";
-import { coveredSlotIds } from "@/lib/utils/text-bar";
-import { panelSnappetPlacement, snappetInches } from "@/lib/utils/snappet";
+import {
+  badgeSpanAt,
+  badgeSpots,
+  panelSnappetPlacement,
+  placementContext,
+  snappetInches,
+  type BadgeSpot,
+} from "@/lib/utils/snappet";
 import { putFullRes } from "@/lib/utils/image-store";
 import { fieldForArtPixels } from "@/lib/utils/tile-theme";
 import { reviewUploadedImage } from "@/lib/utils/image-moderation";
 import type { FrameConfig, PlacedTile, PlacedTextBar, SectionId, SectionState, TileSpan } from "@/lib/types";
-import { thumbnailDataUrl } from "@/lib/utils/uploads";
+import { placedPreviewPx, thumbnailDataUrl } from "@/lib/utils/uploads";
 import { ImageCropModal, type ImageCropResult } from "./ImageCropModal";
 import { UploadRightsGate } from "./UploadRightsGate";
 import { UPLOAD_RIGHTS, UPLOAD_RIGHTS_VERSION } from "@/content/upload-rights";
@@ -59,8 +64,7 @@ export function firstUploadableSection(
   textBars: PlacedTextBar[],
   preferred?: SectionId | null,
 ): SectionId | null {
-  const grid = buildGrid(frameConfig);
-  const ctx = { grid, slots, sections, barCovered: new Set(coveredSlotIds(textBars)) };
+  const ctx = placementContext(frameConfig, { slots, sections, textBars });
   const order = preferred ? [preferred, ...SECTION_IDS] : SECTION_IDS;
   for (const id of order) {
     if (sections[id]?.mode === "text") continue; // a text banner can't hold art
@@ -77,17 +81,40 @@ export function uploadableSections(
   sections: Partial<Record<SectionId, SectionState>>,
   textBars: PlacedTextBar[],
 ): SectionId[] {
-  const grid = buildGrid(frameConfig);
-  const ctx = { grid, slots, sections, barCovered: new Set(coveredSlotIds(textBars)) };
+  const ctx = placementContext(frameConfig, { slots, sections, textBars });
   return SECTION_IDS.filter(
     (id) => sections[id]?.mode !== "text" && panelSnappetPlacement(ctx, id, 1, { allowEvict: true }),
   );
 }
 
+/**
+ * Where an upload goes: a whole PANEL (its first badge position — the older entry
+ * points), or ONE BADGE by its anchor — the one the parent tapped on the frame or
+ * picked from the map. On the shipping frame a photo is a badge, so the second is
+ * the one that matters: it is the difference between "put it on the middle-left
+ * badge" and "put it somewhere on the left".
+ */
+export type UploadTarget = SectionId | { anchorSlotId: string };
+
+/** "Left side · top badge" — a badge position in words, for the crop header and
+ *  the picker's labels. Derived from the positions themselves, so a frame with a
+ *  different number of badges per side reads correctly without a copy change. */
+export function badgeSpotLabel(spots: BadgeSpot[], anchorSlotId: string): string {
+  const spot = spots.find((s) => s.anchorSlotId === anchorSlotId);
+  if (!spot) return "this badge";
+  const side =
+    spot.panel === "wing-left" ? "Left side" : spot.panel === "wing-right" ? "Right side" : SECTION_LABELS[spot.panel];
+  const same = spots.filter((s) => s.panel === spot.panel);
+  const i = same.indexOf(spot);
+  const where =
+    same.length === 3 ? ["top", "middle", "bottom"][i] : same.length === 2 ? ["top", "bottom"][i] : `${i + 1}`;
+  return same.length === 1 ? `${side} badge` : `${side} · ${where} badge`;
+}
+
 export interface SnappetUpload {
-  /** Kick off the flow: size the crop for `sectionId` and open the crop modal. Pass
+  /** Kick off the flow: size the crop for the target and open the crop modal. Pass
    *  `knownAspect` to skip re-decoding when the caller already read it (mobile flow). */
-  begin: (file: File, sectionId: SectionId, knownAspect?: number) => Promise<void>;
+  begin: (file: File, target: UploadTarget, knownAspect?: number) => Promise<void>;
   /**
    * The flow's overlays — the rights gate, then the crop modal — or null when
    * idle. Render wherever the button lives.
@@ -105,6 +132,9 @@ export function useSnappetUpload(): SnappetUpload {
   const sections = useDesignStore((s) => s.sections);
   const textBars = useDesignStore((s) => s.textBars);
   const placeImageSnappet = useDesignStore((s) => s.placeImageSnappet);
+  // The badge field the letterbox of a "fit the whole image" crop shows, so the
+  // crop window previews the badge the parent will actually get.
+  const tileFieldColor = useDesignStore((s) => s.tileFieldColor);
   const addUpload = useDesignStore((s) => s.addUpload);
   const artworkRights = useDesignStore((s) => s.artworkRights);
   const acceptArtworkRights = useDesignStore((s) => s.acceptArtworkRights);
@@ -115,6 +145,11 @@ export function useSnappetUpload(): SnappetUpload {
   const [cropFile, setCropFile] = useState<File | null>(null);
   const [cropTarget, setCropTarget] = useState<{ width: number; height: number } | null>(null);
   const [target, setTarget] = useState<SectionId | null>(null);
+  // The crop header's words for where this is going ("Left side · top badge").
+  const [targetLabel, setTargetLabel] = useState<string>("");
+  // THE placement, decided once in `begin`: the crop is cut to it and the commit
+  // seats it. Deciding twice is how a crop and its badge came to disagree.
+  const pendingPlacement = useRef<{ anchorSlotId: string; span: TileSpan } | null>(null);
   const pendingAspect = useRef<number>(1);
   // The footprint the crop was sized against, and the file's own name. Both ride
   // along to the palette entry so a re-place reproduces the shape the user already
@@ -124,21 +159,35 @@ export function useSnappetUpload(): SnappetUpload {
   // An upload held at the rights gate: everything the crop step needs, waiting on
   // one tap. Held rather than re-derived so accepting does not redo the decode.
   const [gated, setGated] = useState<
-    { file: File; section: SectionId; cropTarget: { width: number; height: number } } | null
+    { file: File; section: SectionId; label: string; cropTarget: { width: number; height: number } } | null
   >(null);
 
-  const begin = async (file: File, sectionId: SectionId, knownAspect?: number) => {
+  const begin = async (file: File, to: UploadTarget, knownAspect?: number) => {
     const aspect = knownAspect ?? (await readImageAspect(file));
     pendingAspect.current = aspect;
-    const grid = buildGrid(frameConfig);
-    const ctx = { grid, slots, sections, barCovered: new Set(coveredSlotIds(textBars)) };
+    const ctx = placementContext(frameConfig, { slots, sections, textBars });
+    // ONE BADGE, named. Its footprint is the badge that is there (or the square
+    // the frame seats there), never a size the photo's shape suggests.
+    const named = typeof to === "string" ? null : to.anchorSlotId;
+    const namedAt = named ? ctx.grid.coordOf(named) : null;
+    const sectionId: SectionId | null =
+      typeof to === "string" ? to : namedAt ? ctx.grid.panelAt(namedAt.row, namedAt.col) : null;
+    if (!sectionId) return; // an anchor this frame does not have
+    const namedSpan = namedAt && ctx.badges.square ? badgeSpanAt(ctx, namedAt, named ?? undefined) : null;
     // The SAME floor the commit below uses, so the crop's aspect target matches the
     // footprint the photo actually lands at. Sizing the crop for 1x1 and then placing
     // a 2x2 would hand back a crop of the wrong shape.
-    const placement = panelSnappetPlacement(ctx, sectionId, aspect, {
-      allowEvict: true,
-      minSpan: frameConfig.minTileSpan,
-    });
+    const placement =
+      named && namedSpan
+        ? { anchorSlotId: named, span: namedSpan }
+        : panelSnappetPlacement(ctx, sectionId, aspect, {
+            allowEvict: true,
+            minSpan: frameConfig.minTileSpan,
+          });
+    pendingPlacement.current = placement;
+    const label = placement && ctx.badges.square
+      ? badgeSpotLabel(badgeSpots(frameConfig, { slots, sections, textBars }), placement.anchorSlotId)
+      : SECTION_LABELS[sectionId];
     const span = placement?.span ?? frameConfig.minTileSpan ?? { cols: 1, rows: 1 };
     pendingSpan.current = span;
     pendingName.current = file.name.replace(/\.[^.]+$/, "").slice(0, 40) || "Upload";
@@ -148,9 +197,16 @@ export function useSnappetUpload(): SnappetUpload {
     // that formula locked the crop to 2 x 1, then reported 300 DPI on a print
     // that resolves at 133 — below the hard block, which could therefore never
     // fire. No placement means no anchor yet: fall back to the panel's own cell.
+    //
+    // On a square-rule frame the placement IS a square badge, so this is a square
+    // crop whatever the photo's shape — a tall photo no longer claims the column.
+    const pitch = { width: span.cols * frameConfig.tileSizeInches, height: span.rows * frameConfig.tileSizeInches };
+    const side = Math.max(pitch.width, pitch.height);
     const cropInches = placement
       ? snappetInches(frameConfig, placement.anchorSlotId, span)
-      : { width: span.cols * frameConfig.tileSizeInches, height: span.rows * frameConfig.tileSizeInches };
+      : frameConfig.badgeShape === "square"
+        ? { width: side, height: side }
+        : pitch;
 
     // THE GATE. Once per design, before the first upload reaches the crop step —
     // the moment the parent has chosen a file is the moment the question is real,
@@ -158,11 +214,12 @@ export function useSnappetUpload(): SnappetUpload {
     // record made under older wording does not count: `UPLOAD_RIGHTS_VERSION` is
     // compared, not mere presence.
     if (artworkRights?.version !== UPLOAD_RIGHTS_VERSION) {
-      setGated({ file, section: sectionId, cropTarget: cropInches });
+      setGated({ file, section: sectionId, label, cropTarget: cropInches });
       return;
     }
 
     setCropTarget(cropInches);
+    setTargetLabel(label);
     setTarget(sectionId);
     setCropFile(file);
   };
@@ -200,7 +257,8 @@ export function useSnappetUpload(): SnappetUpload {
     try {
       await putFullRes(id, result.fullResBlob);
     } catch {
-      /* IndexedDB unavailable → the preview still renders; full-res is re-derivable */
+      // IndexedDB unavailable. The original is NOT recoverable after this; print
+      // falls back to the tile's own copy, which placedPreviewPx sizes for 300 DPI.
     }
     // Moderation integration point: user prints MUST be gated by a real server-side
     // vision check before production. No-op today (it does not fake an approval).
@@ -226,13 +284,16 @@ export function useSnappetUpload(): SnappetUpload {
     placeImageSnappet(
       target,
       {
-        imageUrl: result.previewUrl,
+        // A print-sized badge copy, not the 1200px crop preview — see placedPreviewPx.
+        imageUrl: await thumbnailDataUrl(result.previewUrl, placedPreviewPx(frameConfig)),
         fullResId: id,
         sourceAspect: pendingAspect.current,
         field,
       },
       frameConfig.minTileSpan,
+      pendingPlacement.current ?? undefined,
     );
+    pendingPlacement.current = null;
     setCropFile(null);
     setCropTarget(null);
     setTarget(null);
@@ -250,6 +311,7 @@ export function useSnappetUpload(): SnappetUpload {
               acceptArtworkRights();
               // Straight on to the crop step with the work `begin` already did.
               setCropTarget(gated.cropTarget);
+              setTargetLabel(gated.label);
               setTarget(gated.section);
               setCropFile(gated.file);
               setGated(null);
@@ -266,7 +328,8 @@ export function useSnappetUpload(): SnappetUpload {
           <ImageCropModal
             file={cropFile}
             targetInches={cropTarget}
-            panelLabel={SECTION_LABELS[target]}
+            panelLabel={targetLabel || SECTION_LABELS[target]}
+            fieldColor={tileFieldColor ?? undefined}
             note={UPLOAD_RIGHTS.reminder}
             onCancel={() => {
               setCropFile(null);

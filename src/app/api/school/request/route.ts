@@ -11,10 +11,11 @@ import { sendSchoolRequestAlert } from "@/lib/email-production";
 //
 // THE ONE THING THIS MUST NOT DO IS EMAIL THEM BACK. `email` is optional and is
 // stored so a human can choose to reply; nothing here writes to it, and the
-// internal alert only fires when SCHOOL_REQUEST_EMAIL names a recipient. That is
-// the standing rule in CLAUDE.md — nothing mails anyone without the owner saying
-// so — and it is enforced here rather than assumed, because "we'll let you know"
-// is exactly the promise a capture form invents on its own.
+// internal alert goes to MySchoolFrame's own inbox only (MSF_ORDER_EMAIL, default
+// bill@myschoolframe.com — owner, 2026-09-23). That is the standing rule in
+// CLAUDE.md — nothing mails anyone without the owner saying so — and it is
+// enforced here rather than assumed, because "we'll let you know" is exactly the
+// promise a capture form invents on its own.
 //
 // Rate limited in `src/proxy.ts` (6 per IP per 10 minutes, 16 KB) alongside the
 // other public POSTs: it writes to Postgres and can send mail.
@@ -79,14 +80,12 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json({ ok: false, error: "store-failed" }, { status: 503 });
   }
 
-  // Internal alert ONLY, and only when somebody has asked for it. Awaited rather
-  // than fired and forgotten: this route's process can be frozen the moment it
-  // responds, and an alert that usually arrives is worse than one that always does.
-  const to = (process.env.SCHOOL_REQUEST_EMAIL ?? "")
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
-  if (to.length) await sendSchoolRequestAlert(to, row);
+  // Internal alert ONLY, to MySchoolFrame's own inbox (MSF_ORDER_EMAIL, default
+  // bill@myschoolframe.com — lib/email-msf); the requester is never a recipient.
+  // Awaited rather than fired and forgotten: this route's process can be frozen the
+  // moment it responds, and an alert that usually arrives is worse than one that
+  // always does.
+  await sendSchoolRequestAlert(row);
 
   return NextResponse.json({ ok: true, id: row.id });
 }

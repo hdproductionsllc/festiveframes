@@ -22,6 +22,7 @@ import type {
   FrameConfig,
   FrameSlot,
   GridCoord,
+  PlacedTextBar,
   PlacedTile,
   SectionId,
   SectionState,
@@ -29,6 +30,7 @@ import type {
   TileSpan,
 } from "@/lib/types";
 import { buildGrid } from "@/lib/utils/slot-generator";
+import { coveredSlotIds } from "@/lib/utils/text-bar";
 import { getTotalWidthInches } from "@/lib/constants/frame";
 import type { FrameGrid } from "@/lib/utils/slot-generator";
 import { panelSuppressed } from "@/lib/utils/sections";
@@ -249,7 +251,72 @@ export function footprintCellsInches(
   return { widths, heights };
 }
 
-export type PlacementRejection = "plate" | "suppressed" | "offgrid" | "bar" | "panel" | "banner";
+export type PlacementRejection =
+  | "plate"
+  | "suppressed"
+  | "offgrid"
+  | "bar"
+  | "panel"
+  | "banner"
+  /** Not a badge this frame accepts: not square in inches, or under the floor.
+   *  Only ever reported on a square-rule frame (FrameConfig.badgeShape). */
+  | "shape";
+
+// ─── THE SQUARE RULE ─────────────────────────────────────────────────────────
+//
+// A badge is a square. The frame declares where squares go; art never chooses its
+// footprint.
+//
+// Spans are counted in CELLS, and cells are not all square: the flush frame's side
+// column is a 1.25" wing beside a 1.000" rail, both 2.25" tall. So {2,1} there is
+// the 2.25" square badge and {2,2} is a 2.25 x 4.5 slab that swallows the badge
+// below it — which is exactly what a tap did while sizing asked the PIECE (its
+// `defaultSpan`, a hint about its artwork's aspect) instead of the FRAME. The rule
+// is therefore geometric and lives in `canPlace`, the one gate every path already
+// goes through: it measures the footprint in the frame's own units and refuses a
+// rectangle. Every path that has to CHOOSE a size asks `squareSpansAt`, which is
+// simply canPlace enumerated — so a size can never be chosen that the gate would
+// then refuse.
+
+/** How badges may be sized on a frame. Carried on every PlacementContext. */
+export interface BadgeRule {
+  /** Every footprint must be square in inches (FrameConfig.badgeShape). */
+  square: boolean;
+  /** The smallest footprint, in cells (FrameConfig.minTileSpan). Enforced by
+   *  canPlace on a square-rule frame; a hint for callers elsewhere. */
+  floor: TileSpan;
+}
+
+/** /build and every non-school frame: spans are free and nothing is floored. */
+export const FREE_BADGES: BadgeRule = { square: false, floor: ONE_BY_ONE };
+
+/** The badge rule a frame declares. */
+export function badgeRule(config: Pick<FrameConfig, "badgeShape" | "minTileSpan">): BadgeRule {
+  if (config.badgeShape !== "square") return FREE_BADGES;
+  return { square: true, floor: tileSpan({ span: config.minTileSpan }) };
+}
+
+/**
+ * How far a footprint's width and height may differ and still be one square, as a
+ * fraction of its side. The grid is exact arithmetic on inch values, so a true
+ * square differs by float noise only; a thousandth of the side (0.002" on a 2.25"
+ * badge) is far below anything a printer or an eye resolves, and far above noise.
+ * Relative rather than absolute because the grid it measures may be in px.
+ */
+const SQUARE_TOLERANCE = 1e-3;
+
+/** Is this footprint a legal badge under the square rule? Pure geometry: assumes
+ *  every covered cell exists (canPlace has already refused anything else). */
+function isLegalBadge(
+  grid: Pick<FrameGrid, "cellAt">,
+  anchorCell: FrameSlot,
+  span: TileSpan,
+  rule: BadgeRule,
+): boolean {
+  if (span.cols < rule.floor.cols || span.rows < rule.floor.rows) return false;
+  const r = snappetRect(anchorCell, span, anchorCell.width, grid);
+  return Math.abs(r.width - r.height) <= SQUARE_TOLERANCE * Math.max(r.width, r.height);
+}
 
 export interface PlacementResult {
   ok: boolean;
@@ -281,6 +348,35 @@ export interface PlacementContext {
    * into one. Pass an empty set for a design with no bars.
    */
   barCovered: ReadonlySet<string>;
+  /**
+   * What shape a badge must be on this frame (`badgeRule(config)`). REQUIRED for
+   * the same reason `barCovered` is: the square rule is only a rule if no caller
+   * can build a context that forgets it.
+   */
+  badges: BadgeRule;
+}
+
+/**
+ * The placement context for a design on a frame — grid, bar coverage and badge
+ * rule derived in ONE place, so a caller cannot assemble a context that is right
+ * about three of them and silently wrong about the fourth.
+ */
+export function placementContext(
+  config: FrameConfig,
+  design: {
+    slots: Record<string, PlacedTile>;
+    sections: Partial<Record<SectionId, SectionState>>;
+    textBars: PlacedTextBar[];
+  },
+  grid: FrameGrid = buildGrid(config),
+): PlacementContext {
+  return {
+    grid,
+    slots: design.slots,
+    sections: design.sections,
+    barCovered: new Set(coveredSlotIds(design.textBars)),
+    badges: badgeRule(config),
+  };
 }
 
 /**
@@ -297,6 +393,8 @@ export interface PlacementContext {
  *   - covered coords in a section-suppressed PANEL are not → `suppressed`
  *     (that panel is one direct-print piece right now, not tiles — see sections.ts)
  *   - covered coords hidden under a TEXT BAR are not → `bar`
+ *   - on a square-rule frame, a footprint that is not square in inches, or is
+ *     smaller than the frame's floor, is not a badge → `shape`
  *   - OVERLAP with another tile is allowed and EVICTS it (reported in `evicts`)
  *
  * `excludeId` is the tile being moved, so it never collides with itself.
@@ -307,7 +405,7 @@ export function canPlace(
   span: TileSpan,
   excludeId?: string,
 ): PlacementResult {
-  const { grid, slots, sections, barCovered } = ctx;
+  const { grid, slots, sections, barCovered, badges } = ctx;
   const anchorCell = grid.cellAt(anchor.row, anchor.col);
   if (!anchorCell) return { ok: false, reason: "offgrid", evicts: [] };
   // The panel the anchor sits in. A real cell always belongs to exactly one panel
@@ -357,6 +455,13 @@ export function canPlace(
     }
   }
 
+  // THE SQUARE RULE, measured once every covered cell is known to be real. A 1x1
+  // is held to it too: on the flush side column one cell is 1.25 x 2.25, and the
+  // old "a 1x1 never needs checking" fast paths are how a sliver got placed.
+  if (badges.square && !isLegalBadge(grid, anchorCell, span, badges)) {
+    return { ok: false, reason: "shape", evicts: [] };
+  }
+
   // Anything already occupying one of these cells gets displaced. Test the OTHER
   // tiles' footprints against ours so a big snappet two cells away is caught too.
   const wanted = new Set(coords.map((c) => `${c.row}:${c.col}`));
@@ -372,6 +477,89 @@ export function canPlace(
   }
 
   return { ok: true, evicts };
+}
+
+/**
+ * Every footprint that may anchor at `anchor`, biggest first — the square rule's
+ * answer to "what size is a badge HERE".
+ *
+ * It is `canPlace` enumerated over the anchor's panel, so it can never offer a
+ * size the gate would refuse, and occupancy does not narrow it (overlap evicts; a
+ * replaced badge is still a legal answer). On a square-rule frame that is exactly
+ * the legal squares: on the flush side column one, {2,1} — the 2.25" badge — so a
+ * tap or a drop there replaces precisely the badge it lands on. Empty where no
+ * badge can anchor (the plate, a banner-only row, a panel in text mode).
+ *
+ * Meant for square-rule frames. On a free frame it lists every seatable
+ * rectangle, which is true but is not what any caller there wants.
+ */
+export function squareSpansAt(
+  ctx: PlacementContext,
+  anchor: GridCoord,
+  excludeId?: string,
+): TileSpan[] {
+  const b = panelBounds(ctx.grid, anchor);
+  if (!b || !ctx.grid.cellAt(anchor.row, anchor.col)) return [];
+  const out: TileSpan[] = [];
+  for (let cols = 1; cols <= b.col1 - anchor.col + 1; cols++) {
+    for (let rows = 1; rows <= b.row1 - anchor.row + 1; rows++) {
+      if (canPlace(ctx, anchor, { cols, rows }, excludeId).ok) out.push({ cols, rows });
+    }
+  }
+  return out.sort(bySizeDesc);
+}
+
+/** Largest footprint first; ties wider-first (the spanLadder order). */
+function bySizeDesc(a: TileSpan, b: TileSpan): number {
+  return b.cols * b.rows - a.cols * a.rows || b.cols - a.cols;
+}
+
+/**
+ * The distinct badge sizes a PANEL offers, biggest first: `squareSpansAt` over
+ * every anchor in the panel containing `coord`. What a drag resolves against —
+ * the pointer names a cell, the panel names the sizes, and the nudge walk finds
+ * the anchor that seats one.
+ */
+function panelSquareSpans(
+  ctx: PlacementContext,
+  coord: GridCoord,
+  excludeId?: string,
+): TileSpan[] {
+  const panelId = ctx.grid.panelAt(coord.row, coord.col);
+  if (!panelId) return [];
+  const seen = new Map<string, TileSpan>();
+  for (const cell of ctx.grid.slots) {
+    if (ctx.grid.panelAt(cell.row, cell.col) !== panelId) continue;
+    for (const span of squareSpansAt(ctx, cell, excludeId)) {
+      seen.set(`${span.cols}x${span.rows}`, span);
+    }
+  }
+  return [...seen.values()].sort(bySizeDesc);
+}
+
+/**
+ * The footprint a NEW badge takes at `anchor` on a square-rule frame, or null
+ * when no badge can anchor there.
+ *
+ * The badge already sitting there is the answer when its footprint is still legal
+ * — replacing a badge must replace THAT badge, never grow over its neighbour.
+ * Otherwise the biggest legal square, which is what a drop resolves to as well.
+ */
+export function badgeSpanAt(
+  ctx: PlacementContext,
+  anchor: GridCoord,
+  excludeId?: string,
+): TileSpan | null {
+  const squares = squareSpansAt(ctx, anchor, excludeId);
+  if (squares.length === 0) return null;
+  const here = ctx.grid.cellAt(anchor.row, anchor.col);
+  const occupant = here ? ctx.slots[here.id] : undefined;
+  if (occupant) {
+    const own = tileSpan(occupant);
+    const same = squares.find((s) => s.cols === own.cols && s.rows === own.rows);
+    if (same) return same;
+  }
+  return squares[0];
 }
 
 // ─── Dragging a footprint ────────────────────────────────────────────────────
@@ -710,7 +898,20 @@ export function resolveSnappetDrop(
 
   // Sizes to try, biggest first. Without shrinkToFit that is just the requested
   // span, so a MOVE behaves exactly as before.
-  const sizes = req.shrinkToFit ? spanLadder(preferred, floor) : [span];
+  //
+  // On a SQUARE-RULE frame a new badge's size is not the piece's to propose: the
+  // panel under the pointer lists its legal squares and the nudge walk below finds
+  // the anchor that seats one. The piece's span and the growToPanel/minSpan hints
+  // are ignored there — art never chooses its footprint. A MOVE still carries its
+  // own (already square) span, and canPlace re-checks it at the new anchor.
+  const squares = ctx.badges.square && req.shrinkToFit
+    ? panelSquareSpans(ctx, start, req.excludeId)
+    : null;
+  const sizes = squares?.length
+    ? squares
+    : req.shrinkToFit && !ctx.badges.square
+      ? spanLadder(preferred, floor)
+      : [span];
 
   // First legal (size, anchor) wins. Otherwise remember the first candidate that is
   // a real cell: a rejection still has to be DRAWN somewhere, and drawing it on a
@@ -728,6 +929,30 @@ export function resolveSnappetDrop(
   // Every candidate was blocked AND none of them was a drawable cell — fall back
   // to the cell the pointer is genuinely over, which is a real slot by definition.
   return rejected ?? at(over, preferred, canPlace(ctx, over, preferred, req.excludeId));
+}
+
+/**
+ * Resolve a TAP-TO-PLACE — an armed palette piece tapped onto the cell
+ * `overSlotId` — into the footprint it will commit. The touch twin of a palette
+ * drag, resolved identically so the two gestures can never disagree.
+ *
+ * `piece` is the catalogue piece, or a stand-in carrying an upload's tray span.
+ * On a square-rule frame the piece's span is ignored: the panel's legal squares
+ * size it, so one tap on a side badge replaces exactly that badge.
+ */
+export function resolveTapDrop(
+  ctx: PlacementContext,
+  overSlotId: string,
+  piece: Pick<TilePiece, "defaultSpan" | "spanRequired"> | null | undefined,
+  floor?: TileSpan,
+): SnappetPreview | null {
+  return resolveSnappetDrop(ctx, {
+    overSlotId,
+    span: piece?.defaultSpan ?? { cols: 1, rows: 1 },
+    shrinkToFit: ctx.badges.square || !piece?.spanRequired,
+    growToPanel: !piece?.spanRequired,
+    minSpan: minSpanFor(piece, floor),
+  });
 }
 
 /**
@@ -862,6 +1087,27 @@ export function panelSnappetPlacement(
 
   const inPanel = grid.slots.filter((s) => grid.panelAt(s.row, s.col) === panelId);
   if (inPanel.length === 0) return null;
+
+  // SQUARE RULE: the photo's aspect does not size it. The first badge position in
+  // the panel (top-most, left-most) that has a legal square with nothing on it
+  // wins; the crop is then cut to that square (the crop modal reads the same
+  // answer). A full panel, on a deliberate upload, replaces its first badge.
+  if (ctx.badges.square) {
+    const ordered = [...inPanel].sort((a, b) => a.row - b.row || a.col - b.col);
+    for (const cell of ordered) {
+      for (const span of squareSpansAt(ctx, cell)) {
+        const clear = occupiedCoords(cell, span).every((c) => !occupied.has(`${c.row}:${c.col}`));
+        if (clear) return { anchorSlotId: cell.id, span };
+      }
+    }
+    if (!opts.allowEvict) return null;
+    for (const cell of ordered) {
+      const span = badgeSpanAt(ctx, cell);
+      if (span) return { anchorSlotId: cell.id, span };
+    }
+    return null;
+  }
+
   const col0 = Math.min(...inPanel.map((s) => s.col));
   const col1 = Math.max(...inPanel.map((s) => s.col));
   const row0 = Math.min(...inPanel.map((s) => s.row));
@@ -1017,6 +1263,10 @@ export function blockFill(
    * panel that already divides evenly is laid exactly as before.
    */
   const sizesFor = (anchor: GridCoord): TileSpan[] => {
+    // A square-rule frame lays its own squares: the block IS the badge the frame
+    // declares at this anchor, and nothing stretches (a stretched block is a
+    // rectangle). A strip no square fits is left empty, as below.
+    if (ctx.badges.square) return squareSpansAt({ ...ctx, slots }, anchor);
     const bounds = panelBounds(grid, anchor);
     const ext = bounds
       ? { cols: bounds.col1 - bounds.col0 + 1, rows: bounds.row1 - bounds.row0 + 1 }
@@ -1143,6 +1393,10 @@ export function growUndersizedBadges(
   minFor: (pieceId: string) => TileSpan,
 ): Record<string, PlacedTile> {
   const { slots, grid } = ctx;
+  // A square-rule frame's badge size is the frame's, not the piece's: growing a
+  // {2,1} side badge to a piece's {2,2} preference is precisely the 2.25 x 4.5
+  // slab the rule forbids. `squareUpSlots` owns repairs there.
+  if (ctx.badges.square) return slots;
   let changed = false;
   const out: Record<string, PlacedTile> = {};
   for (const [id, tile] of Object.entries(slots)) {
@@ -1166,4 +1420,150 @@ export function growUndersizedBadges(
     }
   }
   return changed ? out : slots;
+}
+
+/**
+ * Reseat every badge that breaks the square rule as the square at its OWN anchor.
+ *
+ * Designs saved before the rule can hold a {2,2} side slab (2.25 x 4.5), a tall
+ * {1,2} or a {2,3}. Each becomes the legal square at the same anchor — the badge
+ * stays where the person put it, at the size the frame declares there — and one
+ * with no legal square at its anchor is dropped, because an illegal footprint
+ * prints as a part that does not exist.
+ *
+ * Legal badges are seated first and are never displaced by a repair: a reseated
+ * square that would land on one is dropped instead of evicting it. A reseated
+ * PHOTO is flagged `needsRecrop` — the crop its owner approved was cut for the old
+ * shape, and the builder offers to re-frame it.
+ *
+ * Runs in the store's `merge` (every hydrate), not `migrate`. Returns the SAME
+ * object when nothing changed. A no-op on a frame without the rule.
+ */
+export function squareUpSlots(ctx: PlacementContext): Record<string, PlacedTile> {
+  const { slots, grid, badges } = ctx;
+  if (!badges.square) return slots;
+  const legal = new Map<string, PlacedTile>();
+  const illegal: Array<[string, PlacedTile]> = [];
+  for (const [id, tile] of Object.entries(slots)) {
+    const anchor = grid.coordOf(id);
+    // An id this grid does not have is not this repair's business (the geometry
+    // reconciliation owns stale ids); leave it exactly as it is.
+    if (!anchor) {
+      legal.set(id, tile);
+      continue;
+    }
+    const verdict = canPlace({ ...ctx, slots: {} }, anchor, tileSpan(tile));
+    // This is a SHAPE repair. A badge refused only because its panel is hidden
+    // (a side panel saved in text mode) or a bar covers it is some other code's
+    // business — `repairSections` flips the panel back, and the badge must still
+    // be there when it does. Dropping it here emptied a legal side column.
+    if (verdict.ok || verdict.reason === "suppressed" || verdict.reason === "bar") legal.set(id, tile);
+    else illegal.push([id, tile]);
+  }
+  if (illegal.length === 0) return slots;
+
+  const out: Record<string, PlacedTile> = Object.fromEntries(legal);
+  for (const [id, tile] of illegal) {
+    const anchor = grid.coordOf(id)!;
+    const probe: PlacementContext = { ...ctx, slots: out };
+    const square = squareSpansAt(probe, anchor).find(
+      (span) => canPlace(probe, anchor, span).evicts.length === 0,
+    );
+    if (!square) continue; // no legal badge here — drop it
+    const next: PlacedTile = { ...tile };
+    if (isMultiCell(square)) next.span = square;
+    else delete next.span;
+    if (next.image) next.image = { ...next.image, needsRecrop: true };
+    out[id] = next;
+  }
+  return out;
+}
+
+// ─── Where a badge can go ────────────────────────────────────────────────────
+
+/** One badge POSITION on a square-rule frame: where a badge sits (or would sit),
+ *  and its rect in inches on the frame, for drawing a map of the frame. */
+export interface BadgeSpot {
+  anchorSlotId: string;
+  span: TileSpan;
+  panel: SectionId;
+  /** Frame-relative, in inches (x/y from the frame's top-left). */
+  rect: { x: number; y: number; width: number; height: number };
+  /** The badge sitting here now, or null for an empty position. */
+  occupant: PlacedTile | null;
+}
+
+/**
+ * Every badge POSITION on a square-rule frame, left panel first and top to bottom
+ * — the answer to "which badge should this photo go on?".
+ *
+ * A position is a badge that is there now, or, where nothing is, the square a new
+ * badge would take (the biggest legal one, packed from the panel's top-left). The
+ * positions never overlap, so on the shipping frame this is exactly the six side
+ * badges whether they are all filled, all empty or anything between. It is built
+ * from `canPlace` and `squareSpansAt`, so it can never name a spot the placement
+ * gate would refuse. Empty on a frame without the rule, whose badges have no fixed
+ * positions to offer.
+ */
+export function badgeSpots(
+  config: FrameConfig,
+  design: {
+    slots: Record<string, PlacedTile>;
+    sections: Partial<Record<SectionId, SectionState>>;
+    textBars: PlacedTextBar[];
+  },
+): BadgeSpot[] {
+  // Ask the frame FIRST: /build is free-span and calls this on every edit, and
+  // building a grid only to return [] was pure waste there.
+  if (!badgeRule(config).square) return [];
+  // Built on a grid at ONE px per inch, so every rect is already in inches.
+  const grid = buildGrid(config, getTotalWidthInches(config));
+  const ctx = placementContext(config, design, grid);
+  const taken = new Set<string>();
+  const out: BadgeSpot[] = [];
+  const claim = (cell: FrameSlot, span: TileSpan, occupant: PlacedTile | null) => {
+    for (const c of occupiedCoords(cell, span)) taken.add(`${c.row}:${c.col}`);
+    out.push({
+      anchorSlotId: cell.id,
+      span,
+      panel: grid.panelAt(cell.row, cell.col)!,
+      rect: snappetRect(cell, span, config.tileSizeInches, grid),
+      occupant,
+    });
+  };
+  // The badges already on the frame ARE its positions.
+  for (const [id, tile] of Object.entries(ctx.slots)) {
+    const at = grid.coordOf(id);
+    const cell = at ? grid.cellAt(at.row, at.col) : null;
+    if (!cell || !canPlace(ctx, cell, tileSpan(tile), id).ok) continue;
+    claim(cell, tileSpan(tile), tile);
+  }
+  // Then the empty room, packed the way a fill packs it.
+  const ordered = [...grid.slots].sort((a, b) => a.row - b.row || a.col - b.col);
+  for (const cell of ordered) {
+    if (taken.has(`${cell.row}:${cell.col}`)) continue;
+    const span = squareSpansAt(ctx, cell).find((s) =>
+      occupiedCoords(cell, s).every((c) => !taken.has(`${c.row}:${c.col}`)),
+    );
+    if (span) claim(cell, span, null);
+  }
+  const panelOrder: SectionId[] = ["wing-left", "top", "bottom", "wing-right"];
+  return out.sort(
+    (a, b) =>
+      panelOrder.indexOf(a.panel) - panelOrder.indexOf(b.panel) ||
+      a.rect.y - b.rect.y ||
+      a.rect.x - b.rect.x,
+  );
+}
+
+/**
+ * The side of the BIGGEST square badge this frame seats, in inches — the badge
+ * art is most likely to be printed at, and so the one a resolution check has to
+ * hold art to. On the shipping frame, 2.25. Null on a frame without the square
+ * rule (its badges have no one size).
+ */
+export function largestBadgeInches(config: FrameConfig): number | null {
+  const spots = badgeSpots(config, { slots: {}, sections: {}, textBars: [] });
+  if (spots.length === 0) return null;
+  return Math.max(...spots.map((s) => Math.min(s.rect.width, s.rect.height)));
 }

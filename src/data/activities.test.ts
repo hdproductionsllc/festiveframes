@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { ACTIVITIES, ACTIVITY_GROUPS, hasJerseyNumber } from "./activities";
+import { ACTIVITIES, ACTIVITY_GROUPS, activityOnFrame, hasJerseyNumber } from "./activities";
 import { getPiece } from "@/data/sets";
 
 /**
@@ -74,5 +74,17 @@ describe("which activities wear a number", () => {
     expect(hasJerseyNumber("")).toBe(false);
     expect(hasJerseyNumber(null)).toBe(false);
     expect(hasJerseyNumber("hs:not-a-thing")).toBe(false);
+  });
+});
+
+describe("activityOnFrame (the activity a restored design is about)", () => {
+  it("reads back an activity laid on two or more positions", () => {
+    expect(activityOnFrame(["hs:orchestra", "hs:crest", "hs:orchestra", "hs:orchestra", "hs:crest", "hs:orchestra"])).toBe("hs:orchestra");
+  });
+  it("does not mistake a kit's seeded signature (each badge once) for a choice", () => {
+    expect(activityOnFrame(["hs:ice-hockey", "hs:crest", "hs:journalism", "hs:softball-patch", "hs:star", "hs:field-hockey"])).toBeNull();
+  });
+  it("ignores marks and graduation pieces", () => {
+    expect(activityOnFrame(["hs:crest", "hs:crest", "hs:diploma-cap", "hs:diploma-cap", null, undefined])).toBeNull();
   });
 });

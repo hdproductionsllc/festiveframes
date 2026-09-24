@@ -44,7 +44,8 @@ import {
   type QcFinding,
 } from "@/lib/utils/artwork-qc";
 import { TARGET_DPI } from "@/lib/utils/print-resolution";
-import { DEFAULT_FRAME_CONFIG } from "@/lib/constants/frame";
+import { largestBadgeInches } from "@/lib/utils/snappet";
+import { SCHOOL_SHIPPING_VARIANT, schoolVariant } from "@/data/school-variants";
 
 import { checkFullResHandoff, MAX_DECODE_PIXELS, planDecode, planPreview } from "./raster-safety";
 import { gateByResolution } from "./rank-candidates";
@@ -64,16 +65,21 @@ import {
 // ─── the footprint everything is judged against ──────────────────────────────
 
 /**
- * The smallest badge that exists on this frame: 2x2 tiles at the 0.991" pitch.
+ * The badge art is judged against: the SHIPPING frame's square badge, 2.25 in.
  *
- * `sectionSupportsTiles` already forces 2x2 as the floor — a 1x1 badge is
- * unreadable and is never offered — so this is the real physical size, and it is the
- * same number `MIN_BADGE_INCHES` states in the pure package. Judging against
- * anything smaller would pass art the builder then refuses.
+ * It was "2x2 tiles at the 0.991 pitch" — a 1.98 in badge on a grid no school
+ * frame uses any more — so art that clears 300 DPI at 1.98 in was passed and then
+ * printed at 264 DPI on the real 2.25 in badge. Derived from the variant every
+ * /s/<slug> serves (`largestBadgeInches`), as one square cell of that size, so a
+ * geometry change moves this with it instead of leaving a stale number here.
  */
+const SHIPPING_BADGE_INCHES = largestBadgeInches(schoolVariant(SCHOOL_SHIPPING_VARIANT).config);
+if (SHIPPING_BADGE_INCHES == null) {
+  throw new Error("The shipping school frame declares no square badge to judge art against.");
+}
 export const BADGE_REQUIREMENT = {
-  span: { cols: 2, rows: 2 },
-  tileSizeInches: DEFAULT_FRAME_CONFIG.tileSizeInches,
+  span: { cols: 1, rows: 1 },
+  tileSizeInches: SHIPPING_BADGE_INCHES,
   dpi: TARGET_DPI,
 } as const;
 
@@ -81,13 +87,16 @@ export const BADGE_REQUIREMENT = {
  * Short side we rasterise vector art to.
  *
  * An SVG has no resolution, so we pick one, and the only wrong answer is "too
- * small". 600px on the SHORT side is ~1.5x the 397px a 2" badge needs, which clears
- * the block with margin on a square crest AND on a 6:1 wordmark. Scaling by the LONG
+ * small". 1.5x on the SHORT side of what a sharp badge needs (1013px for the
+ * 2.25 in badge's 675) clears the block with margin on a square crest AND on a
+ * 6:1 wordmark — which `MAX_DECODE_PIXELS` then trims to ~816px short side, still
+ * past 675. It was a typed 600, set for the 2 in badge, and a crest rasterised at
+ * 600 graded soft on the badge it actually prints on. Scaling by the LONG
  * side instead — the obvious version — gives that wordmark a 200px short side and
  * hands the user a vector our own resolution gate then refuses, which is exactly the
  * dead end constraint 5 exists to prevent.
  */
-export const VECTOR_SHORT_SIDE_PX = 600;
+export const VECTOR_SHORT_SIDE_PX = Math.ceil(BADGE_REQUIREMENT.tileSizeInches * TARGET_DPI * 1.5);
 
 /**
  * Absolute pixel ceiling before we will hand bytes to the decoder at all.

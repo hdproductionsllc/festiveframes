@@ -17,12 +17,14 @@ import {
 import type { TextBarRow, BannerPreview, TileSpan } from "@/lib/types";
 import { useDesignStore } from "@/stores/design-store";
 import { useUIStore } from "@/stores/ui-store";
-import { measureTextBarUnits, rowLength, findFreeStart, coveredSlotIds } from "@/lib/utils/text-bar";
+import { measureTextBarUnits, rowLength, findFreeStart } from "@/lib/utils/text-bar";
 import { buildGrid } from "@/lib/utils/slot-generator";
 import {
   isMultiCell,
   minSpanFor,
+  placementContext,
   resolveSnappetDrop,
+  snappetInches,
   tileSpan,
   NO_GRAB,
   UPLOAD_PIECE_ID,
@@ -225,7 +227,11 @@ export function DndProvider({
     "tile" | "placed-tile" | "textbar" | "placed-textbar" | null
   >(null);
   const [dragBarId, setDragBarId] = useState<string | null>(null);
-  const [dragSpan, setDragSpan] = useState<TileSpan>({ cols: 1, rows: 1 });
+  // The lifted ghost's size in px: 48 per cell, as it always was — except on a
+  // square-rule frame, where cells are not square and 48 x cols by 48 x rows
+  // would lift a 2.25" square badge as a 2:1 bar. There it is 48 per INCH of the
+  // footprint's real size, so what you carry is the shape that will land.
+  const [dragGhost, setDragGhost] = useState<{ width: number; height: number }>({ width: 48, height: 48 });
   // Uploaded art carried by a placed-tile drag — the overlay lifts the photo itself
   // (getPiece("upload") is undefined, so the set-piece ghost path can't render it).
   const [dragImage, setDragImage] = useState<{ url: string; fullResId?: string } | null>(null);
@@ -248,6 +254,15 @@ export function DndProvider({
   // pointer move. Its px fields are unused here; FrameCanvas owns the on-screen
   // geometry, and the two agree because both derive from this one config.
   const grid = useMemo(() => buildGrid(frameConfig), [frameConfig]);
+  // THE SQUARE RULE: every tile drag on such a frame is a footprint drag, 1x1
+  // included — a plain cell there is a 1.25 x 2.25 sliver, so the single-cell
+  // fast path below would seat a shape the frame forbids.
+  const squareRule = frameConfig.badgeShape === "square";
+  /** Does this drag resolve a footprint (vs the /build single-cell path)? */
+  const isFootprintDrag = useCallback(
+    (span: TileSpan) => squareRule || isMultiCell(span),
+    [squareRule],
+  );
 
   /**
    * Where a multi-cell drag will land, from the single cell dnd-kit reports.
@@ -265,9 +280,9 @@ export function DndProvider({
       autoSize?: boolean,
       minSpan?: TileSpan,
     ): SnappetPreview | null => {
-      if (!overId?.startsWith("frame:") || !isMultiCell(span)) return null;
+      if (!overId?.startsWith("frame:") || !isFootprintDrag(span)) return null;
       return resolveSnappetDrop(
-        { grid, slots, sections, barCovered: new Set(coveredSlotIds(textBars)) },
+        placementContext(frameConfig, { slots, sections, textBars }, grid),
         {
           overSlotId: overId,
           span,
@@ -281,7 +296,7 @@ export function DndProvider({
         },
       );
     },
-    [grid, slots, sections, textBars],
+    [grid, slots, sections, textBars, frameConfig, isFootprintDrag],
   );
 
   // MOUSE-only (not PointerSensor). PointerSensor also fires on TOUCH, and with just a
@@ -326,10 +341,17 @@ export function DndProvider({
     );
     setDragPieceId((data?.pieceId as string | undefined) ?? null);
     setDragBarId((data?.id as string | undefined) ?? null);
-    setDragSpan(dragSpanOf(data));
+    const span = dragSpanOf(data);
+    const fromSlot = data?.slotId as string | undefined;
+    if (squareRule && fromSlot) {
+      const inches = snappetInches(frameConfig, fromSlot, span);
+      setDragGhost({ width: 48 * inches.width, height: 48 * inches.height });
+    } else {
+      setDragGhost({ width: 48 * span.cols, height: 48 * span.rows });
+    }
     setDragImage((data?.image as { url: string; fullResId?: string } | undefined) ?? null);
     if (soundEnabled) playSound("pickup");
-  }, [soundEnabled]);
+  }, [soundEnabled, squareRule, frameConfig]);
 
   const handleDragOver = useCallback(
     (event: DragOverEvent) => {
@@ -390,7 +412,7 @@ export function DndProvider({
       // drop really is refused. The 1x1 line below is untouched for everything
       // else (all of /build).
       const span = dragSpanOf(data);
-      if (isMultiCell(span)) {
+      if (isFootprintDrag(span)) {
         const grab = readGrab(data);
         setCue(
           null,
@@ -403,7 +425,7 @@ export function DndProvider({
       // Tile drags: drive the single gliding drop indicator via the over slot id.
       setCue(overId?.startsWith("frame:") ? overId : null, null);
     },
-    [setCue, textBars, bottomBar, qrCode, frameConfig, dragBarId, resolveDrop, minTileSpan]
+    [setCue, textBars, bottomBar, qrCode, frameConfig, dragBarId, resolveDrop, minTileSpan, isFootprintDrag]
   );
 
   const handleDragEnd = useCallback(
@@ -411,7 +433,7 @@ export function DndProvider({
       setDragPieceId(null);
       setDragKind(null);
       setDragBarId(null);
-      setDragSpan({ cols: 1, rows: 1 });
+      setDragGhost({ width: 48, height: 48 });
       setDragImage(null);
       setCue(null, null);
 
@@ -462,7 +484,7 @@ export function DndProvider({
         if (overId?.startsWith("frame:")) {
           // A REJECTED footprint drop is a no-op, not a removal: the tile is over
           // the frame, the preview said "not here", so it stays where it was.
-          if (isMultiCell(span) && !drop?.valid) return;
+          if (isFootprintDrag(span) && !drop?.valid) return;
           const toSlotId = drop?.anchorSlotId ?? overId;
           moveTile(fromSlotId, toSlotId);
           emitTilePlaced(toSlotId);
@@ -476,7 +498,7 @@ export function DndProvider({
 
       const pieceId = data?.pieceId as string | undefined;
       if (overId?.startsWith("frame:") && pieceId) {
-        if (isMultiCell(span) && !drop?.valid) return;
+        if (isFootprintDrag(span) && !drop?.valid) return;
         const setId = pieceId.split(":")[0];
         const toSlotId = drop?.anchorSlotId ?? overId;
         // Commit the RESOLVED footprint, not the requested one. With shrinkToFit a
@@ -508,6 +530,7 @@ export function DndProvider({
       setCue,
       resolveDrop,
       minTileSpan,
+      isFootprintDrag,
     ]
   );
 
@@ -515,7 +538,7 @@ export function DndProvider({
     setDragPieceId(null);
     setDragKind(null);
     setDragBarId(null);
-    setDragSpan({ cols: 1, rows: 1 });
+    setDragGhost({ width: 48, height: 48 });
     setDragImage(null);
     setCue(null, null);
   }, [setCue]);
@@ -569,13 +592,13 @@ export function DndProvider({
           // per span unit), the image twin of the set-piece ghost below.
           <div
             className="ff-drag-lift relative pointer-events-none"
-            style={{ width: 48 * dragSpan.cols, height: 48 * dragSpan.rows }}
+            style={{ width: dragGhost.width, height: dragGhost.height }}
           >
             <PlacedTileView
               pieceId={UPLOAD_PIECE_ID}
               image={dragImage}
-              width={48 * dragSpan.cols}
-              height={48 * dragSpan.rows}
+              width={dragGhost.width}
+              height={dragGhost.height}
             />
           </div>
         ) : piece && dragKind === "placed-tile" ? (
@@ -585,12 +608,12 @@ export function DndProvider({
           // looks like the thing that will land. 48x48 for a 1x1, as before.
           <div
             className="ff-drag-lift relative pointer-events-none"
-            style={{ width: 48 * dragSpan.cols, height: 48 * dragSpan.rows }}
+            style={{ width: dragGhost.width, height: dragGhost.height }}
           >
             <PlacedTileView
               pieceId={piece.id}
-              width={48 * dragSpan.cols}
-              height={48 * dragSpan.rows}
+              width={dragGhost.width}
+              height={dragGhost.height}
             />
           </div>
         ) : null}

@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 import { copy } from "@/content/copy";
-import { OG_IMAGE_ALT } from "@/config/season";
+import { OG_IMAGE_ALT } from "@/content/copy";
 
 // Code-rendered default Open Graph / social-share image for the whole site,
 // served by Next's file convention at /opengraph-image. 1200x630, no external

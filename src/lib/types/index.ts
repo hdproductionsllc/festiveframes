@@ -18,6 +18,10 @@ export interface TilePiece {
   setId: string;
   name: string;
   artworkUrl: string; // empty = use emoji fallback
+  /** The same badge with its navy enamel re-inked ivory, drawn instead of
+   *  `artworkUrl` on a field where ivory reads better. Never read directly —
+   *  `badgeArtworkUrl(piece, field)` in utils/tile-theme is the one decision. */
+  darkFieldArtworkUrl?: string;
   emoji: string;
   backgroundColor: string; // hex color for fallback rendering
   textColor?: string; // for emoji contrast
@@ -87,6 +91,29 @@ export interface FrameConfig {
    * Becky's artwork because nothing else carries that field.
    */
   minTileSpan?: TileSpan;
+  /**
+   * THE SQUARE RULE: every badge on this frame is a square, measured in INCHES.
+   *
+   * A badge is a square. The frame declares where squares go; art never chooses
+   * its footprint. Spans are counted in CELLS, and a frame's cells are not all
+   * square (the flush side column is a 1.25" wing beside a 1.000" rail, each
+   * 2.25" tall), so "2x2" is a square on one lattice and a 2.25 x 4.5 slab on
+   * another. With this set, `canPlace` measures the footprint and refuses
+   * anything that is not square — or is smaller than `minTileSpan` — with the
+   * reason "shape", and every sizing path the SCHOOL builder reaches (drop,
+   * tap, Fill All, Random, mirror, upload, presets via `layPreset`) asks
+   * `squareSpansAt` instead of reading a piece's `defaultSpan`. Hydrate reseats
+   * anything else (`squareUpSlots` in the store's merge).
+   *
+   * NOT gated: the store's `fillEmpty`, `alternateSlots`, `applyPreset`,
+   * `applyLook` and `loadDesign` write slots directly. Each is /build-only today
+   * (Designer.tsx, LooksPicker; `alternateSlots` has no caller). Wiring any of
+   * them into a school route means routing it through `canPlace` first.
+   *
+   * Set on every SCHOOL frame. Absent (/build, the seasonal sets) = spans are
+   * free, which is what those products are.
+   */
+  badgeShape?: "square";
   topSlots: number;
   bottomSlots: number;
   leftSlots: number;
@@ -243,6 +270,15 @@ export interface PlacedTile {
      * saved before this existed → both renderers fall back to white together.
      */
     field?: string;
+    /**
+     * This photo's footprint was changed by a REPAIR, not by the person who
+     * cropped it — a design saved before the square rule, whose tall photo was
+     * reseated as the square at its own anchor. It still renders (cover-fitted),
+     * but the crop they approved is not the crop that prints, so the tile's
+     * controls offer "Re-crop" until it is re-framed. Any re-crop writes a fresh
+     * `image` without this flag.
+     */
+    needsRecrop?: boolean;
   };
 }
 

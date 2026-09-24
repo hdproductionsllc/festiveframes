@@ -1,9 +1,13 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import "../../../lab/school/school-skin.css";
 import "../../../school/school-landing.css";
-import { allSchoolKits, getSchoolKit } from "@/data/school-kits";
+import { getSchoolKit, type SchoolKit } from "@/data/school-kits";
+import { isBuilderOpen, pilotSchoolKits } from "@/data/school-pilot";
+import { SCHOOL_CHECKOUT_OPEN } from "@/config/school-checkout";
+import { SCHOOL_CONTACT_EMAIL } from "@/content/school-contact";
 import { schoolTotals } from "@/lib/order/school-ledger";
 
 // ─── The booster page: /s/<slug>/raised ──────────────────────────────────────
@@ -24,14 +28,25 @@ import { schoolTotals } from "@/lib/order/school-ledger";
 export const dynamic = "force-dynamic"; // a live figure, never a build-time one
 
 export function generateStaticParams() {
-  return allSchoolKits().map((k) => ({ slug: k.slug }));
+  return pilotSchoolKits().map((k) => ({ slug: k.slug }));
+}
+
+/**
+ * The kit this page may speak for, or null. Behind the SAME pilot gate as the
+ * builder: "Fundraiser to date" and "money owed to <school>" is exactly the
+ * relationship claim `SchoolNotReady` exists to avoid for a school we have not
+ * spoken to, and a typed or old URL reached it.
+ */
+function raisedKit(slug: string): SchoolKit | null {
+  const kit = getSchoolKit(slug);
+  return kit && isBuilderOpen(kit.slug) ? kit : null;
 }
 
 export async function generateMetadata(
   { params }: { params: Promise<{ slug: string }> },
 ): Promise<Metadata> {
   const { slug } = await params;
-  const kit = getSchoolKit(slug);
+  const kit = raisedKit(slug);
   if (!kit) return { title: { absolute: "MySchoolFrame" } };
   const title = `${kit.shortName} fundraiser — MySchoolFrame`;
   return {
@@ -55,7 +70,7 @@ export default async function RaisedPage(
   { params }: { params: Promise<{ slug: string }> },
 ) {
   const { slug } = await params;
-  const kit = getSchoolKit(slug);
+  const kit = raisedKit(slug);
   if (!kit) notFound();
 
   const t = await schoolTotals(slug);
@@ -65,7 +80,18 @@ export default async function RaisedPage(
   return (
     <main className="msf msf-raised">
       <section className="msf-band msf-band-navy">
-        <p className="msf-brand">MySchoolFrame</p>
+        <p className="msf-brand">
+          {/* Reversed for the navy band, as on the /school hero. */}
+          <Image
+            src="/brand/msf-logo-reverse.png"
+            alt="MySchoolFrame"
+            width={800}
+            height={410}
+            priority
+            sizes="(max-width: 480px) 62vw, 280px"
+            style={{ width: "min(280px, 62vw)", height: "auto" }}
+          />
+        </p>
         <h1>{kit.shortName} {kit.mascot}</h1>
         <p className="msf-lede">Fundraiser to date</p>
 
@@ -76,11 +102,24 @@ export default async function RaisedPage(
         </p>
 
         {t.frames === 0 ? (
+          // "Automatically" is only true of an order paid through checkout, which
+          // is what the ledger records. While checkout is closed, orders are taken
+          // by follow-up and never reach this figure, so the page says so.
           <p className="msf-lede msf-raised-empty">
-            Nothing yet. This page fills in the moment the first parent orders,
-            and the figure is the real one: every frame carrying{" "}
-            {kit.shortName} adds a set donation to it automatically, with nothing
-            for the club to submit or reconcile.
+            {SCHOOL_CHECKOUT_OPEN ? (
+              <>
+                Nothing yet. This page fills in the moment the first parent
+                orders, and the figure is the real one: every frame carrying{" "}
+                {kit.shortName} adds a set donation to it automatically, with
+                nothing for the club to submit or reconcile.
+              </>
+            ) : (
+              <>
+                Nothing yet. During the pilot, parents send their design and we
+                follow up to take the order, so those frames are not counted on
+                this page. We send your club the total with every payout.
+              </>
+            )}
           </p>
         ) : (
           <ul className="msf-raised-grid">
@@ -112,8 +151,8 @@ export default async function RaisedPage(
           </li>
           <li>
             <strong>A set amount per frame.</strong> A fixed figure from every
-            frame, not a percentage of profit after costs. Multiply the frame
-            count and you get the total; there is no other arithmetic.
+            frame, not a percentage of profit after costs. The total is simply
+            the number of frames times that amount.
           </li>
           <li>
             <strong>Nothing to reconcile.</strong> No order forms to collect, no
@@ -121,9 +160,11 @@ export default async function RaisedPage(
             submit anything to make this number move.
           </li>
           <li>
-            <strong>You get it in writing every month.</strong> We send this
-            figure to your club by email at the start of each month, along with
-            the payout for the period.
+            <strong>You get it in writing with each payout.</strong> We send
+            your club the total with every payout
+            {SCHOOL_CHECKOUT_OPEN
+              ? ", so the figure here and the money you receive always match."
+              : ". While ordering is by follow-up during the pilot, that written total is the one to go by: follow-up orders are not counted on this page."}
           </li>
         </ul>
         <div className="msf-ctas">
@@ -132,7 +173,7 @@ export default async function RaisedPage(
           </Link>
           <a
             className="msf-btn msf-btn-brass"
-            href={`mailto:hello@festiveframes.co?subject=${encodeURIComponent(
+            href={`mailto:${SCHOOL_CONTACT_EMAIL}?subject=${encodeURIComponent(
               `${kit.shortName} fundraiser — question`,
             )}`}
           >
@@ -141,7 +182,7 @@ export default async function RaisedPage(
         </div>
         <p className="msf-fineprint">
           Figures update as orders are paid. Questions about a specific order go
-          to <a href="mailto:hello@festiveframes.co">hello@festiveframes.co</a>.
+          to <a href={`mailto:${SCHOOL_CONTACT_EMAIL}`}>{SCHOOL_CONTACT_EMAIL}</a>.
         </p>
       </section>
     </main>

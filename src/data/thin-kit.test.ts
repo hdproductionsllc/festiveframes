@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { GENERIC_MARKS, kitSeedTiles } from "@/data/kit-seed";
 import { SCHOOL_SHIPPING_VARIANT, schoolVariant } from "@/data/school-variants";
 import { fitBanner, stripHighSchool, thinKitFromRoster } from "@/data/thin-kit";
-import { kitPlateState } from "@/data/school-kits";
+import { kitPlateState, kitSections } from "@/data/school-kits";
 import type { RosterEntry } from "@/data/roster";
 
 // ─── A generated kit still has to be a kit ───────────────────────────────────
@@ -109,18 +109,27 @@ describe("a thin kit", () => {
     expect(Object.keys(kit).filter((k) => !ALLOWED.has(k))).toEqual([]);
   });
 
-  it("puts the name on the banners in both tiers, without repeating itself", () => {
+  it("puts the school on the top runner and never says HOME OF over a missing mascot", () => {
     const kit = thinKitFromRoster(entry());
+    expect(kit.banners.top).toBe("ALBERTVILLE HIGH SCHOOL");
     expect(kit.banners.bottom).toBe("ALBERTVILLE");
-    expect(kit.banners.tagline).toBe("ALBERTVILLE HIGH SCHOOL");
+    // Empty, not absent: absent would pick up the authored kits' HOME OF THE.
+    expect(kit.banners.tagline).toBe("");
+    expect(kitSections(kit).bottom?.text?.tagline).toBe("");
 
-    // The 60-character case: the two tiers must not say the same words twice.
+    // The 60-character case: the two banners must not say the same words twice.
     const long = thinKitFromRoster(
       entry({ name: "Alternative Computerized Education (ACE) Charter High School" }),
     );
-    expect(long.banners.tagline).not.toBe(long.banners.bottom);
+    expect(long.banners.top).not.toBe(long.banners.bottom);
     expect(long.banners.bottom.length).toBeLessThanOrEqual(26);
-    expect(long.banners.tagline.length).toBeLessThanOrEqual(34);
+    expect(long.banners.top.length).toBeLessThanOrEqual(34);
+
+    // A name with no school suffix is the same both ways; the bottom falls back to
+    // the town rather than printing the name twice.
+    const academy = thinKitFromRoster(entry({ name: "Lincoln Park Academy" }));
+    expect(academy.banners.top).toBe("LINCOLN PARK ACADEMY");
+    expect(academy.banners.bottom).toBe("ALBERTVILLE");
   });
 
   it("leaves at least two generic marks for the badge seeder", () => {
@@ -133,8 +142,8 @@ describe("a thin kit", () => {
   });
 
   it("seeds a complete frame on the variant every school ships on", () => {
-    const { config, badgeStack } = schoolVariant(SCHOOL_SHIPPING_VARIANT);
-    const slots = kitSeedTiles(thinKitFromRoster(entry()), config, badgeStack);
+    const { config } = schoolVariant(SCHOOL_SHIPPING_VARIANT);
+    const slots = kitSeedTiles(thinKitFromRoster(entry()), config);
     const pieces = Object.values(slots).map((t) => t.pieceId);
     expect(pieces.length).toBe(6);
     expect(pieces.every((p) => typeof p === "string" && p.includes(":"))).toBe(true);

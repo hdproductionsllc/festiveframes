@@ -157,15 +157,22 @@ for (const file of readdirSync(src).filter((f) => /\.(webp|png|jpe?g)$/i.test(f)
     if (x < x0) x0 = x; if (x > x1) x1 = x;
     if (y < y0) y0 = y; if (y > y1) y1 = y;
   }
-  // Trimmed to its OWN bounds and left at its own aspect — deliberately NOT padded
-  // back out to a square. Both renderers draw badge art with `contain`, so whatever
-  // this file's aspect is gets fitted to the tile: pad a tall racquet out to a
-  // square and `contain` fits the SQUARE, leaving the racquet small with dead space
-  // either side. The earlier version squared it and so undid its own trim, which is
-  // why the racquetball badge sat visibly smaller in its tile than its neighbours.
+  // Trim to the art's OWN bounds, THEN pad back out to a centred transparent
+  // square. Every badge cell is square (the shipping frame's side badges are 2.25
+  // in square, and owner, 2026-09-23: all artwork is square), and both renderers
+  // draw badge art with `contain` — so in a square cell a padded square draws
+  // pixel-for-pixel the same as the trimmed art would, while a non-square file is
+  // what let a 395 x 1000 violin spill out of a fixed-size tile on the homepage.
+  // Trimming first still matters: it is what makes the art fill its square rather
+  // than float in the generator's own margin. The order is the rule — trim, then
+  // pad — and high-school.spans.test.ts asserts the result is square.
   const bw = x1 - x0 + 1, bh = y1 - y0 + 1;
-  const cut = createCanvas(bw, bh);
-  cut.getContext("2d").drawImage(cv, x0, y0, bw, bh, 0, 0, bw, bh);
+  const side = Math.max(bw, bh);
+  const cut = createCanvas(side, side);
+  cut.getContext("2d").drawImage(
+    cv, x0, y0, bw, bh,
+    Math.floor((side - bw) / 2), Math.floor((side - bh) / 2), bw, bh,
+  );
 
   const name = file.replace(/\.\w+$/, ".png");
   const buf = await sharp(cut.toBuffer("image/png"))

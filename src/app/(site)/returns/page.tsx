@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import { copy } from "@/content/copy";
 import { SITE_URL } from "@/config/season";
+import { MSF_WARRANTY, MSF_WARRANTY_PATH } from "@/content/msf-pages";
 
 // Returns & Refund policy at "/returns". Server Component in the (site) route
 // group, so it inherits SiteHeader, SiteFooter, and .sticker-theme chrome and
@@ -9,14 +11,19 @@ import { SITE_URL } from "@/config/season";
 // reasonable direct-to-consumer defaults to back the 30-day guarantee. It is a
 // starting template, not legal advice, and can be edited. The owner should have
 // it reviewed by qualified counsel and update it whenever practices change.
+//
+// MYSCHOOLFRAME WARRANTY (owner decision 2026-09-23: one year) lives on
+// MySchoolFrame's own page (content/msf-pages.ts, MSF_WARRANTY_PATH). This page
+// keeps a short pointer under the old #myschoolframe-warranty anchor for links
+// that were already sent.
 
 const RETURNS_URL = `${SITE_URL}/returns`;
-const CONTACT_EMAIL = "hello@festiveframes.co";
+const CONTACT_EMAIL = copy.thanks.supportEmail;
 
 export const metadata: Metadata = {
   title: "Returns & Refunds",
   description:
-    "Our 30-day returns and refund policy for Festive Frames kits: how to start a return, the return window, refund timelines, and condition requirements.",
+    "Our 30-day returns and refund policy for Festive Frames kits: how to start a return, timelines, and what is covered.",
   alternates: { canonical: RETURNS_URL },
 };
 
@@ -34,7 +41,7 @@ export default function ReturnsPage() {
         <h1 className="s-display text-[clamp(32px,6vw,48px)] font-bold leading-[1] tracking-[-1.5px] text-[#1e1b17]">
           Returns &amp; Refunds
         </h1>
-        <p className="mt-2 text-sm font-bold text-[#6a6354]">Updated June 2026</p>
+        <p className="mt-2 text-sm font-bold text-[#6a6354]">Updated September 2026</p>
       </header>
 
       <div
@@ -47,6 +54,13 @@ export default function ReturnsPage() {
             can return it within 30 days of delivery for a refund. This page
             explains how returns and refunds work. If anything is unclear, reach
             out using the contact details at the end.
+          </p>
+          <p className="mt-3">
+            MySchoolFrame school frames are made to order and carry their own{" "}
+            <a className="font-bold underline" href={MSF_WARRANTY_PATH}>
+              one-year warranty
+            </a>
+            .
           </p>
         </section>
 
@@ -134,6 +148,22 @@ export default function ReturnsPage() {
             contact us within 30 days of delivery with a photo if you can. We
             will make it right with a replacement or a full refund, including
             shipping, at no cost to you.
+          </p>
+        </section>
+
+        {/* The school frame's warranty lives on MySchoolFrame's own page
+            (MSF_WARRANTY_PATH). This anchor stays so an old link or email that
+            points here still finds it; the words are the shared MSF_WARRANTY. */}
+        <section id="myschoolframe-warranty" className="scroll-mt-24">
+          <h2 className="s-display text-xl font-bold tracking-[-0.5px] text-[#1e1b17]">
+            MySchoolFrame school frames
+          </h2>
+          <p className="mt-3">
+            {MSF_WARRANTY.term} The full warranty, and how to make a claim, is on{" "}
+            <a className="font-bold underline" href={MSF_WARRANTY_PATH}>
+              the MySchoolFrame warranty page
+            </a>
+            .
           </p>
         </section>
 

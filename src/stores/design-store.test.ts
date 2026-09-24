@@ -1,9 +1,15 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { SCHOOL_SHIPPING_VARIANT, schoolVariant } from "@/data/school-variants";
-import { getSchoolKit } from "@/data/school-kits";
+import { getSchoolKit, kitSections } from "@/data/school-kits";
 import { kitSeedTiles } from "@/data/kit-seed";
 import type { FrameConfig, PlacedTile } from "@/lib/types";
-import { DEFAULT_FRAME_CONFIG, SCHOOL_FRAME_CONFIG, MAX_HISTORY_DEPTH } from "@/lib/constants/frame";
+import {
+  DEFAULT_FRAME_CONFIG,
+  SCHOOL_FLUSH_FRAME_CONFIG,
+  SCHOOL_FRAME_CONFIG as SCHOOL_FRAME_WITH_SQUARE_RULE,
+  MAX_HISTORY_DEPTH,
+} from "@/lib/constants/frame";
+import { badgeSpots, snappetInches, tileSpan } from "@/lib/utils/snappet";
 import { getAllSlotIds, buildGrid } from "@/lib/utils/slot-generator";
 import { MAX_UPLOADS } from "@/lib/utils/uploads";
 import { UPLOAD_RIGHTS_VERSION } from "@/content/upload-rights";
@@ -66,6 +72,17 @@ function fillAllSlots(config: FrameConfig): Record<string, PlacedTile> {
   }
   return slots;
 }
+
+/**
+ * The live school grid with FREE spans — the test bed for the store's placement
+ * ENGINE (mirror reflects footprints, resize evicts whole, 1x1 marker tiles in
+ * every cell, and so on). Those behaviours are the engine's on any frame without
+ * the square rule, and pinning them here is what keeps them honest. The school
+ * frames' square rule is pinned separately, on the frames that carry it, in
+ * "THE SQUARE RULE" below.
+ */
+const { badgeShape: _squareRule, ...SCHOOL_FRAME_CONFIG } = SCHOOL_FRAME_WITH_SQUARE_RULE;
+void _squareRule;
 
 let storeSeq = 0;
 /** A fresh store on a unique persist key so tests can't bleed into each other. */
@@ -606,6 +623,50 @@ describe("snappet spans", () => {
 // Uploaded art is a SNAPPET (Stage 10). One system: an upload enters `slots` as a
 // tile carrying `image`, sized by suggestSnappetSize, and rides the same
 // drag/resize/remove engine as any snappet.
+describe("placeImageSnappet onto ONE named badge (the shipping frame)", () => {
+  const variant = schoolVariant(SCHOOL_SHIPPING_VARIANT);
+  const kit = getSchoolKit("eureka-wildcats")!;
+  const seeded = () => {
+    const store = createDesignStore(`test-key-${storeSeq++}`, {
+      frameConfig: variant.config,
+      sections: kitSections(kit),
+      initialSlots: kitSeedTiles(kit, variant.config),
+    });
+    return store;
+  };
+
+  it("replaces exactly the badge it names, and a second photo can go on another", () => {
+    const store = seeded();
+    const s = () => store.getState();
+    const spots = badgeSpots(variant.config, s());
+    const before = { ...s().slots };
+    const [a, , , d] = spots;
+    s().placeImageSnappet("wing-left", { imageUrl: "data:a", sourceAspect: 1 }, undefined, a);
+    s().placeImageSnappet("wing-right", { imageUrl: "data:d", sourceAspect: 1 }, undefined, d);
+    expect(s().slots[a.anchorSlotId].image?.url).toBe("data:a");
+    expect(s().slots[d.anchorSlotId].image?.url).toBe("data:d");
+    // The other four badges are untouched, and nothing grew.
+    for (const spot of spots) {
+      if (spot === a || spot === d) continue;
+      expect(s().slots[spot.anchorSlotId]).toBe(before[spot.anchorSlotId]);
+    }
+    expect(Object.keys(s().slots).sort()).toEqual(Object.keys(before).sort());
+    expect(tileSpan(s().slots[a.anchorSlotId])).toEqual(a.span);
+  });
+
+  it("refuses a footprint the frame will not seat rather than writing it", () => {
+    const store = seeded();
+    const s = () => store.getState();
+    const [a] = badgeSpots(variant.config, s());
+    const before = s().slots;
+    s().placeImageSnappet("wing-left", { imageUrl: "data:x", sourceAspect: 1 }, undefined, {
+      anchorSlotId: a.anchorSlotId,
+      span: { cols: a.span.cols, rows: a.span.rows + 1 }, // a slab, not a badge
+    });
+    expect(s().slots).toBe(before);
+  });
+});
+
 describe("placeImageSnappet (uploaded art as a snappet)", () => {
   const grid = buildGrid(SCHOOL_FRAME_CONFIG);
   const anchorId = grid.cellAt(0, 0)!.id; // top-left of the LEFT panel
@@ -924,6 +985,23 @@ describe("the background override reaches the BANNERS too", () => {
     store.getState().setTileFieldColor("#8C1D40");
     expect(store.getState().sections).toBe(before); // same object → no render churn
   });
+
+  it("survives CLEAR — the reseeded banners wear the badges' colour, not the kit's", () => {
+    // Every preset tap clears first. The banners came back in the kit's seed colour
+    // while every badge kept the colour the parent picked: two colours on one frame,
+    // where the owner's rule is that the badge background IS the banner colour.
+    const store = createDesignStore(`test-key-${storeSeq++}`, {
+      frameConfig: SCHOOL_FRAME_CONFIG,
+      sections: {
+        bottom: { mode: "text", text: { ...DEFAULT_BOTTOM_BAR, text: "WILDCATS", backgroundColor: "#462E8D" } },
+      },
+      initialBrand: { frameColor: "#462E8D", tileFieldColor: "#462E8D", rimColor: "#FFCC00" },
+    });
+    store.getState().setTileFieldColor("#8C1D40");
+    store.getState().clearAll();
+    expect(store.getState().sections.bottom?.text?.backgroundColor).toBe("#8C1D40");
+    expect(store.getState().sections.bottom?.text?.text).toBe("WILDCATS");
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -936,9 +1014,9 @@ describe("a returning visitor survives a persist version bump, on the frame we s
     // design was never drawn on: 0 of 6 seeded side badges survived. Latent at
     // the current version, fatal on the next bump — exactly when nobody is
     // looking at the school builder.
-    const { config, badgeStack } = schoolVariant(SCHOOL_SHIPPING_VARIANT);
+    const { config } = schoolVariant(SCHOOL_SHIPPING_VARIANT);
     const kit = getSchoolKit("sluh-jr-bills")!;
-    const seeds = kitSeedTiles(kit, config, badgeStack);
+    const seeds = kitSeedTiles(kit, config);
     expect(Object.keys(seeds)).toHaveLength(6);
 
     memoryStorage.setItem(
@@ -953,6 +1031,33 @@ describe("a returning visitor survives a persist version bump, on the frame we s
     }
     expect(after.frameConfig).toEqual(config);
     expect(after.designName).toBe("Miller");
+  });
+});
+
+describe("a legacy wing-in-text design keeps its badges on hydrate", () => {
+  it("repairs the panel BEFORE the square rule looks at the badges in it", () => {
+    // The slot repairs ask canPlace, which refuses every badge in a text-mode
+    // panel. Run first, squareUpSlots found "no legal square" and deleted a
+    // perfectly legal 2.25 in badge; repairSections then flipped the wing back to
+    // tiles on the next line — an empty side column and no failure anywhere.
+    const KEY = "festive-frames-school-wingtext-test";
+    const { config } = schoolVariant(SCHOOL_SHIPPING_VARIANT);
+    const badge = { pieceId: "hs:football-patch", setId: "hs", span: { cols: 2, rows: 1 } };
+    memoryStorage.setItem(
+      KEY,
+      JSON.stringify({
+        state: {
+          slots: { "frame:wing-left-3": badge },
+          sections: { "wing-left": { mode: "text" } },
+          frameConfig: { ...config },
+        },
+        version: 7,
+      }),
+    );
+    const after = createDesignStore(KEY, { frameConfig: config, migrateExtra: migrateSchoolDesign }).getState();
+    expect(after.sections["wing-left"]?.mode).toBe("tiles");
+    expect(after.slots["frame:wing-left-3"]?.pieceId).toBe("hs:football-patch");
+    expect(after.slots["frame:wing-left-3"]?.span).toEqual({ cols: 2, rows: 1 });
   });
 });
 
@@ -1043,5 +1148,147 @@ describe("artworkRights and loadDesign", () => {
     store.getState().loadDesign({ designName: "Somebody else's frame", slots: {} });
     expect(store.getState().artworkRights).toBeNull();
     expect(store.getState().designName).toBe("Somebody else's frame");
+  });
+});
+
+// ─── THE SQUARE RULE, through the store ──────────────────────────────────────
+//
+// Every path that writes a badge on the shipping frame — a placement, a Mirror, a
+// Fill All, and a HYDRATE of a design saved before the rule — ends on 2.25 in
+// squares. A badge is a square; the frame declares where squares go.
+
+describe("THE SQUARE RULE on the shipping frame", () => {
+  const FLUSH = SCHOOL_FLUSH_FRAME_CONFIG;
+  const LEFT = ["frame:wing-left-3", "frame:wing-left-4", "frame:wing-left-5"];
+  const RIGHT = ["frame:wing-right-0", "frame:wing-right-1", "frame:wing-right-2"];
+
+  /** Every placed badge is a 2.25 in square; returns how many there are. */
+  function expectAllSquare(slots: Record<string, PlacedTile>): number {
+    for (const [id, tile] of Object.entries(slots)) {
+      const { width, height } = snappetInches(FLUSH, id, tileSpan(tile));
+      expect(width, id).toBeCloseTo(2.25, 6);
+      expect(height, id).toBeCloseTo(2.25, 6);
+    }
+    return Object.keys(slots).length;
+  }
+
+  it("placeTile sizes a badge from the frame, whatever span it is handed", () => {
+    const store = makeStore(FLUSH);
+    for (const id of [...LEFT, ...RIGHT]) store.getState().placeTile(id, "hs:crest", "hs");
+    // A piece's own {2,2} preference, and a tall {1,2}: both become the square
+    // at that anchor and replace exactly that badge.
+    store.getState().placeTile(LEFT[0], "hs:orchestra", "hs", { cols: 2, rows: 2 });
+    store.getState().placeTile(LEFT[1], "hs:golf", "hs", { cols: 1, rows: 2 });
+    const slots = store.getState().slots;
+    expect(expectAllSquare(slots)).toBe(6);
+    expect(slots[LEFT[0]].pieceId).toBe("hs:orchestra");
+    expect(slots[LEFT[1]].pieceId).toBe("hs:golf");
+    expect(slots[LEFT[2]].pieceId).toBe("hs:crest");
+  });
+
+  it("a restored design with no sections gets banners, not an empty tile runner", () => {
+    // Absent = tiles, and the flush runners hold no badge: without the repair the
+    // bottom runner drew as eleven empty 1" pockets. loadDesign repairs like hydrate.
+    const store = makeStore(FLUSH);
+    store.getState().loadDesign({ slots: {} });
+    const { sections } = store.getState();
+    expect(sections.top?.mode).toBe("text");
+    expect(sections.bottom?.mode).toBe("text");
+    expect(sections["wing-left"]).toBeUndefined();
+  });
+
+  it("placeTile refuses a cell no badge can anchor (the rail half, the top bar)", () => {
+    const store = makeStore(FLUSH);
+    store.getState().placeTile("frame:wing-left-0", "hs:crest", "hs");
+    store.getState().placeTile("frame:top-3", "hs:crest", "hs");
+    expect(store.getState().slots).toEqual({});
+  });
+
+  it("Mirror on the shipping frame lands six squares", () => {
+    const store = makeStore(FLUSH);
+    for (const id of LEFT) store.getState().placeTile(id, "hs:soccer-patch", "hs");
+    store.getState().mirrorTopSlots();
+    const slots = store.getState().slots;
+    expect(expectAllSquare(slots)).toBe(6);
+    for (const id of RIGHT) expect(slots[id]?.pieceId).toBe("hs:soccer-patch");
+  });
+
+  it("Fill All and Random on the shipping frame lay six squares", () => {
+    const store = makeStore(FLUSH);
+    store.getState().fillAll("hs:crest", "hs");
+    expect(expectAllSquare(store.getState().slots)).toBe(6);
+    store.getState().randomFill([{ pieceId: "hs:crest", setId: "hs" }, { pieceId: "hs:golf", setId: "hs" }]);
+    expect(expectAllSquare(store.getState().slots)).toBe(6);
+  });
+
+  it("an uploaded photo lands on ONE badge, square, whatever its aspect", () => {
+    const store = makeStore(FLUSH);
+    for (const id of [...LEFT, ...RIGHT]) store.getState().placeTile(id, "hs:crest", "hs");
+    store.getState().placeImageSnappet("wing-left", { imageUrl: "data:x", sourceAspect: 1 / 3 });
+    const slots = store.getState().slots;
+    expect(expectAllSquare(slots)).toBe(6);
+    expect(slots[LEFT[0]].image?.url).toBe("data:x");
+    expect(slots[LEFT[1]].pieceId).toBe("hs:crest");
+  });
+
+  describe("a design saved before the rule", () => {
+    const KEY = "festive-frames-school-v1:flush:square-test";
+    const writeBlob = (state: Record<string, unknown>) =>
+      memoryStorage.setItem(KEY, JSON.stringify({ state, version: 7 }));
+
+    it("hydrates its {2,2} slab and {1,2} tall as squares at their own anchors", () => {
+      writeBlob({
+        slots: {
+          // The slab a tap used to make: 2.25 x 4.5, over the middle badge.
+          [LEFT[0]]: { pieceId: "hs:crest", setId: "hs", span: { cols: 2, rows: 2 } },
+          // A TALL photo at its own declaration: 1.0 x 4.5 down the right rail,
+          // which is where the right-hand badge anchors.
+          [RIGHT[1]]: { pieceId: "upload", setId: "upload", span: { cols: 1, rows: 2 }, image: { url: "data:p" } },
+          [LEFT[2]]: { pieceId: "hs:soccer-patch", setId: "hs", span: { cols: 2, rows: 1 } },
+          // The LEFT rail anchors no badge (its square would cover the plate).
+          "frame:wing-left-1": { pieceId: "hs:golf", setId: "hs", span: { cols: 1, rows: 2 } },
+        },
+        frameConfig: { ...FLUSH },
+      });
+      const store = createDesignStore(KEY, { frameConfig: FLUSH, migrateExtra: migrateSchoolDesign });
+      const slots = store.getState().slots;
+      expectAllSquare(slots);
+      expect(slots[LEFT[0]].span).toEqual({ cols: 2, rows: 1 });
+      expect(slots[LEFT[2]].pieceId).toBe("hs:soccer-patch");
+      expect(slots[RIGHT[1]].span).toEqual({ cols: 2, rows: 1 });
+      expect(slots[RIGHT[1]].image).toEqual({ url: "data:p", needsRecrop: true });
+      // No square anchors on the left rail, so that one is dropped rather than
+      // printed as a part the frame does not have.
+      expect(slots["frame:wing-left-1"]).toBeUndefined();
+      expect(Object.keys(slots)).toHaveLength(3);
+      memoryStorage.removeItem(KEY);
+    });
+
+    it("marks a reseated photo for re-crop, and re-cropping at the same size clears it", () => {
+      writeBlob({
+        slots: {
+          [LEFT[0]]: { pieceId: "upload", setId: "upload", span: { cols: 2, rows: 3 }, image: { url: "data:t", fullResId: "t" } },
+        },
+        frameConfig: { ...FLUSH },
+      });
+      const store = createDesignStore(KEY, { frameConfig: FLUSH, migrateExtra: migrateSchoolDesign });
+      const tile = store.getState().slots[LEFT[0]];
+      expect(tile.span).toEqual({ cols: 2, rows: 1 });
+      expect(tile.image?.needsRecrop).toBe(true);
+      // The re-crop commit: SAME footprint, fresh art. Not a no-op.
+      store.getState().resizeTile(LEFT[0], { cols: 2, rows: 1 }, { url: "data:new", fullResId: "n" });
+      expect(store.getState().slots[LEFT[0]].image).toEqual({ url: "data:new", fullResId: "n" });
+      memoryStorage.removeItem(KEY);
+    });
+
+    it("leaves a design that already obeys the rule exactly as it was", () => {
+      const slots = Object.fromEntries(
+        LEFT.map((id) => [id, { pieceId: "hs:crest", setId: "hs", span: { cols: 2, rows: 1 } }]),
+      );
+      writeBlob({ slots, frameConfig: { ...FLUSH } });
+      const store = createDesignStore(KEY, { frameConfig: FLUSH, migrateExtra: migrateSchoolDesign });
+      expect(store.getState().slots).toEqual(slots);
+      memoryStorage.removeItem(KEY);
+    });
   });
 });

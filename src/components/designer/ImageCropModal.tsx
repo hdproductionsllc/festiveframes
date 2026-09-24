@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   evaluateResolution,
   RESOLUTION_COPY,
+  TARGET_DPI,
   type ResolutionLevel,
 } from "@/lib/utils/print-resolution";
 import { keyBackground, KEY_REFUSAL_COPY, type KeyReport } from "@/lib/utils/key-background";
@@ -28,6 +29,20 @@ const MAX_ZOOM = 12;
 const BLEED_INCHES = 0.0625; // borderless seam — subjects near it can be lost
 const VIEWPORT_MAX_W = 460;
 const VIEWPORT_MAX_H = 360;
+/** The crop window's share of the screen's height. On a phone the whole modal —
+ *  window, zoom, meter and buttons — has to fit without the window itself being
+ *  the thing that scrolls away. */
+const VIEWPORT_SCREEN_SHARE = 0.45;
+/**
+ * The most detail a LETTERBOXED ("fit the whole image") export keeps, as DPI at
+ * the target's print size. A fitted photo cannot be cropped to the image's own
+ * pixels — the canvas is the whole badge — so a 12 MP phone photo would otherwise
+ * become a 4000 x 4000 transparent PNG in IndexedDB. Twice the print target is
+ * more than the printer resolves.
+ */
+const LETTERBOX_MAX_DPI = TARGET_DPI * 2;
+/** Source px of slack before a crop counts as reaching past the image. */
+const EDGE_EPSILON_PX = 0.5;
 
 const METER_COLOR: Record<ResolutionLevel, string> = {
   green: "#2e9e5b",
@@ -55,6 +70,14 @@ interface ImageCropModalProps {
   /** One quiet line under the actions. Used for the uploaded-artwork reminder, so
    *  the promise made at the gate is still on screen at the moment art is added. */
   note?: string;
+  /**
+   * The badge's field colour. Shown behind the image in the crop window, so a
+   * photo fitted whole ("Fit whole image") previews on the ground it will print
+   * on. The exported letterbox itself is TRANSPARENT: both renderers already paint
+   * the badge field under an uploaded image, so the border follows the school's
+   * colour if it is changed later instead of freezing today's.
+   */
+  fieldColor?: string;
   onCancel: () => void;
   onConfirm: (result: ImageCropResult) => void;
 }
@@ -121,8 +144,40 @@ async function keyToImage(
   return { image, url, report };
 }
 
-export function ImageCropModal({ file, targetInches, panelLabel, note, onCancel, onConfirm }: ImageCropModalProps) {
+export function ImageCropModal({
+  file,
+  targetInches,
+  panelLabel,
+  note,
+  fieldColor,
+  onCancel,
+  onConfirm,
+}: ImageCropModalProps) {
   const aspect = targetInches.width / targetInches.height;
+
+  // The room the crop window may take: the modal's own width (a 390px phone has
+  // ~326px, not the 460 the desktop gets) and a share of the screen's height.
+  // A fixed 360px square overflowed the modal on every phone.
+  const modalRef = useRef<HTMLDivElement | null>(null);
+  const [room, setRoom] = useState({ w: VIEWPORT_MAX_W, h: VIEWPORT_MAX_H });
+  useEffect(() => {
+    const el = modalRef.current;
+    if (!el) return;
+    const measure = () => {
+      const pad = parseFloat(getComputedStyle(el).paddingLeft) + parseFloat(getComputedStyle(el).paddingRight);
+      const w = Math.max(160, Math.min(VIEWPORT_MAX_W, el.clientWidth - pad));
+      const h = Math.max(160, Math.min(VIEWPORT_MAX_H, Math.round(window.innerHeight * VIEWPORT_SCREEN_SHARE)));
+      setRoom((r) => (r.w === w && r.h === h ? r : { w, h }));
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    window.addEventListener("resize", measure);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, []);
 
   // Viewport (the crop window) — the LARGEST rectangle of the panel's EXACT aspect
   // that fits inside the bounded box. The aspect lock is load-bearing: the crop the
@@ -134,14 +189,14 @@ export function ImageCropModal({ file, targetInches, panelLabel, note, onCancel,
   // the whole panel — which is exactly what the user is framing. Kept as floats so
   // viewport.w / viewport.h === aspect exactly (rounding would reintroduce the drift).
   const viewport = useMemo(() => {
-    let w = VIEWPORT_MAX_W;
+    let w = room.w;
     let h = w / aspect;
-    if (h > VIEWPORT_MAX_H) {
-      h = VIEWPORT_MAX_H;
+    if (h > room.h) {
+      h = room.h;
       w = h * aspect;
     }
     return { w, h };
-  }, [aspect]);
+  }, [aspect, room]);
 
   const [img, setImg] = useState<HTMLImageElement | null>(null);
   const [loadError, setLoadError] = useState(false);
@@ -173,13 +228,31 @@ export function ImageCropModal({ file, targetInches, panelLabel, note, onCancel,
     return Math.max(viewport.w / img.naturalWidth, viewport.h / img.naturalHeight);
   }, [img, viewport]);
 
-  // Keep the image covering the viewport for any zoom (offset ranges are negative).
+  // FIT THE WHOLE IMAGE. Zoom 1 is cover (the crop fills the badge); below it the
+  // image shrinks until, at `minZoom`, all of it is inside the window — a wordmark
+  // or a wide logo keeps its ends instead of being amputated to a square. The
+  // strip it leaves is the badge's own field (see `fieldColor`).
+  const minZoom = useMemo(() => {
+    if (!img) return 1;
+    const contain = Math.min(viewport.w / img.naturalWidth, viewport.h / img.naturalHeight);
+    return Math.min(1, contain / baseScale);
+  }, [img, viewport, baseScale]);
+  const canFit = minZoom < 0.99;
+
+  // Keep the image covering the viewport while it is bigger than it, and inside
+  // the viewport once it is smaller (a fitted image may be placed, never lost off
+  // an edge). The two ranges are the same expression with the bounds swapped.
   const clampOffset = useCallback(
     (x: number, y: number, z: number) => {
       if (!img) return { x: 0, y: 0 };
       const dw = img.naturalWidth * baseScale * z;
       const dh = img.naturalHeight * baseScale * z;
-      return { x: clamp(x, viewport.w - dw, 0), y: clamp(y, viewport.h - dh, 0) };
+      const rx = viewport.w - dw;
+      const ry = viewport.h - dh;
+      return {
+        x: clamp(x, Math.min(rx, 0), Math.max(rx, 0)),
+        y: clamp(y, Math.min(ry, 0), Math.max(ry, 0)),
+      };
     },
     [img, baseScale, viewport],
   );
@@ -194,17 +267,36 @@ export function ImageCropModal({ file, targetInches, panelLabel, note, onCancel,
     [img, baseScale, viewport],
   );
 
-  // Load the file → decode → center it. Object URL revoked on unmount/replace.
+  // Load the file → decode → center it. Object URL revoked on unmount/replace —
+  // but never while the decode is still in flight. Revoking in the cleanup
+  // straight away (which React's development double-mount does within the same
+  // tick) cancelled the first load mid-fetch: `net::ERR_FILE_NOT_FOUND` in the
+  // console on every upload, and an `onerror` that could flash "That image could
+  // not be read" on a perfectly good photo.
   useEffect(() => {
     const url = URL.createObjectURL(file);
     const image = new Image();
+    let live = true;
+    let settled = false;
+    const settle = () => {
+      settled = true;
+      if (!live) URL.revokeObjectURL(url);
+    };
     image.onload = () => {
+      settle();
+      if (!live) return;
       setImg(image);
       setLoadError(false);
     };
-    image.onerror = () => setLoadError(true);
+    image.onerror = () => {
+      settle();
+      if (live) setLoadError(true);
+    };
     image.src = url;
-    return () => URL.revokeObjectURL(url);
+    return () => {
+      live = false;
+      if (settled) URL.revokeObjectURL(url);
+    };
   }, [file]);
 
   // Center once the image + geometry are known.
@@ -288,11 +380,20 @@ export function ImageCropModal({ file, targetInches, panelLabel, note, onCancel,
     setOffset(center(1));
   }, [center]);
 
+  // One tap between the two framings people actually want: the whole image on
+  // the badge, or the badge filled.
+  const fitted = canFit && zoom <= minZoom + 0.005;
+  const toggleFit = useCallback(() => {
+    const z = fitted ? 1 : minZoom;
+    setZoom(z);
+    setOffset(center(z));
+  }, [fitted, minZoom, center]);
+
   // Zoom around a viewport-space anchor, keeping the source point under it fixed.
   const applyZoom = useCallback(
     (nextZoom: number, anchorX: number, anchorY: number) => {
       if (!img) return;
-      const z = clamp(nextZoom, 1, MAX_ZOOM);
+      const z = clamp(nextZoom, minZoom, MAX_ZOOM);
       setOffset((prev) => {
         const oldScale = baseScale * zoom;
         const newScale = baseScale * z;
@@ -302,7 +403,7 @@ export function ImageCropModal({ file, targetInches, panelLabel, note, onCancel,
       });
       setZoom(z);
     },
-    [img, baseScale, zoom, clampOffset],
+    [img, baseScale, zoom, clampOffset, minZoom],
   );
 
   // ── Pointer interaction: drag to pan, two-finger pinch to zoom ──────────────
@@ -380,18 +481,41 @@ export function ImageCropModal({ file, targetInches, panelLabel, note, onCancel,
     if (!image || verdict.blocked || busy) return;
     setBusy(true);
     try {
-      const sx = Math.max(0, cropSource.x);
-      const sy = Math.max(0, cropSource.y);
-      const sw = Math.min(cropSource.width, image.naturalWidth - sx);
-      const sh = Math.min(cropSource.height, image.naturalHeight - sy);
-
-      // Full-resolution crop, drawn at NATIVE source pixels.
       const full = document.createElement("canvas");
-      full.width = Math.max(1, Math.round(sw));
-      full.height = Math.max(1, Math.round(sh));
-      const fctx = full.getContext("2d");
-      if (!fctx) throw new Error("no ctx");
-      fctx.drawImage(image, sx, sy, sw, sh, 0, 0, full.width, full.height);
+      // Does the window reach past the image (a fitted, letterboxed crop)?
+      const letterboxed =
+        cropSource.x < -EDGE_EPSILON_PX ||
+        cropSource.y < -EDGE_EPSILON_PX ||
+        cropSource.x + cropSource.width > image.naturalWidth + EDGE_EPSILON_PX ||
+        cropSource.y + cropSource.height > image.naturalHeight + EDGE_EPSILON_PX;
+      if (letterboxed) {
+        // The WHOLE window, in source pixels, capped at LETTERBOX_MAX_DPI; the
+        // image drawn where it sits in it and the rest left transparent, so the
+        // badge's own field shows through in both renderers.
+        const k = Math.min(1, (targetInches.width * LETTERBOX_MAX_DPI) / cropSource.width);
+        full.width = Math.max(1, Math.round(cropSource.width * k));
+        full.height = Math.max(1, Math.round(cropSource.height * k));
+        const fctx = full.getContext("2d");
+        if (!fctx) throw new Error("no ctx");
+        fctx.drawImage(
+          image,
+          -cropSource.x * k,
+          -cropSource.y * k,
+          image.naturalWidth * k,
+          image.naturalHeight * k,
+        );
+      } else {
+        const sx = Math.max(0, cropSource.x);
+        const sy = Math.max(0, cropSource.y);
+        const sw = Math.min(cropSource.width, image.naturalWidth - sx);
+        const sh = Math.min(cropSource.height, image.naturalHeight - sy);
+        // Full-resolution crop, drawn at NATIVE source pixels.
+        full.width = Math.max(1, Math.round(sw));
+        full.height = Math.max(1, Math.round(sh));
+        const fctx = full.getContext("2d");
+        if (!fctx) throw new Error("no ctx");
+        fctx.drawImage(image, sx, sy, sw, sh, 0, 0, full.width, full.height);
+      }
 
       // Small preview (<=1200 px long edge) from the same crop.
       const pScale = Math.min(1, PREVIEW_MAX_PX / Math.max(full.width, full.height));
@@ -423,7 +547,13 @@ export function ImageCropModal({ file, targetInches, panelLabel, note, onCancel,
   };
 
   const copy = RESOLUTION_COPY[verdict.level];
-  const meterPct = clamp(Math.round((verdict.dpi / 300) * 100), 4, 100);
+  const meterPct = clamp(Math.round((verdict.dpi / TARGET_DPI) * 100), 4, 100);
+  // What a SHARP print of this target needs, in the photo's own pixels — derived
+  // from the target's inches, so the warning names the real badge (2.25 in on the
+  // shipping frame) rather than a number someone typed.
+  const printInches = Math.min(targetInches.width, targetInches.height);
+  const neededPx = Math.ceil(printInches * TARGET_DPI);
+  const inchesLabel = `${Number(printInches.toFixed(2))} in`;
 
   // Safe-area inset (fraction of the viewport that the bleed seam can eat).
   const insetX = clamp(BLEED_INCHES / targetInches.width, 0, 0.25) * viewport.w;
@@ -431,24 +561,29 @@ export function ImageCropModal({ file, targetInches, panelLabel, note, onCancel,
 
   return (
     <div
-      className="ff-school-portal ff-scrim fixed inset-0 z-[100] flex items-center justify-center p-4"
+      className="ff-school-portal ff-scrim fixed inset-0 z-[100] overflow-y-auto overscroll-contain"
       role="dialog"
       aria-modal="true"
       onClick={onCancel}
     >
+      {/* `min-h-full` + auto margins rather than centring the scrim itself: a
+          flex-centred box taller than a short phone screen loses its TOP (the
+          header and the close button) above the scroll origin, unreachable. */}
+      <div className="flex min-h-full items-center justify-center p-3 sm:p-4">
       <div
+        ref={modalRef}
         className="ff-modal w-full max-w-[560px] p-4"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mb-3 flex items-center justify-between">
-          <h3 className="ff-h2">Crop for {panelLabel ?? "panel"}</h3>
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <h3 className="ff-h2 min-w-0">Crop for {panelLabel ?? "panel"}</h3>
           {/* The ✕ is this button's only label, so it is replaced rather than
               dropped. Same house spec as every other icon in the re-skin. */}
           <button
             type="button"
             onClick={onCancel}
             aria-label="Close"
-            className="ff-btn ff-btn-secondary ff-btn-icon"
+            className="ff-btn ff-btn-secondary ff-btn-icon shrink-0 max-lg:min-h-11 max-lg:min-w-11"
           >
             <svg
               aria-hidden
@@ -480,11 +615,15 @@ export function ImageCropModal({ file, targetInches, panelLabel, note, onCancel,
                   width: viewport.w,
                   height: viewport.h,
                   cursor: "grab",
-                  // A CHECKERBOARD under a cut-out, a flat field otherwise. Showing
-                  // transparency against the modal's dark ink made a keyed white logo
-                  // look identical to a keyed white card — the one thing this control
-                  // exists to let someone tell apart.
-                  ...(keyOn && keyedImg
+                  // THE BADGE'S OWN FIELD when we know it: the cut-out and the
+                  // letterbox of a fitted image both print on it, so that is the
+                  // only honest preview (a checkerboard under "Fit the whole image"
+                  // contradicted the line promising "your badge colour around it").
+                  // A CHECKERBOARD under a cut-out only when the field is unknown.
+                  // Showing transparency against the modal's dark ink made a keyed
+                  // white logo look identical to a keyed white card — the one thing
+                  // this control exists to let someone tell apart.
+                  ...(keyOn && keyedImg && !fieldColor
                     ? {
                         backgroundColor: "#ffffff",
                         backgroundImage:
@@ -493,7 +632,7 @@ export function ImageCropModal({ file, targetInches, panelLabel, note, onCancel,
                         backgroundSize: "16px 16px",
                         backgroundPosition: "0 0, 8px 8px",
                       }
-                    : { backgroundColor: "var(--ff-ink)" }),
+                    : { backgroundColor: fieldColor ?? "var(--ff-ink)" }),
                 }}
                 onPointerDown={onPointerDown}
                 onPointerMove={onPointerMove}
@@ -550,17 +689,24 @@ export function ImageCropModal({ file, targetInches, panelLabel, note, onCancel,
               </div>
             </div>
 
-            {/* Zoom control */}
+            {/* Zoom control. Pinch on the image does the same thing. */}
             <div className="mt-3 flex items-center gap-3">
               <span className="ff-label">Zoom</span>
               <input
                 type="range"
-                min={1}
+                aria-label="Zoom"
+                min={minZoom}
                 max={MAX_ZOOM}
                 step={0.01}
                 value={zoom}
                 onChange={(e) => applyZoom(Number(e.target.value), viewport.w / 2, viewport.h / 2)}
-                className="h-1.5 flex-1 cursor-pointer appearance-none rounded-full bg-[var(--ff-line)]
+                // A 44px-tall touch target with the 6px track DRAWN inside it:
+                // the input itself was the 6px bar, a sliver to hit on a phone.
+                className="h-11 flex-1 cursor-pointer appearance-none bg-transparent
+                  [&::-webkit-slider-runnable-track]:h-1.5 [&::-webkit-slider-runnable-track]:rounded-full
+                  [&::-webkit-slider-runnable-track]:bg-[var(--ff-line)]
+                  [&::-moz-range-track]:h-1.5 [&::-moz-range-track]:rounded-full [&::-moz-range-track]:bg-[var(--ff-line)]
+                  [&::-webkit-slider-thumb]:-mt-[5px]
                   [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:appearance-none
                   [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white
                   [&::-webkit-slider-thumb]:bg-[var(--ff-accent)] [&::-webkit-slider-thumb]:shadow-sm"
@@ -568,11 +714,28 @@ export function ImageCropModal({ file, targetInches, panelLabel, note, onCancel,
               <button
                 type="button"
                 onClick={reset}
-                className="ff-btn ff-btn-secondary ff-btn-sm"
+                className="ff-btn ff-btn-secondary ff-btn-sm max-lg:min-h-11"
               >
                 Reset
               </button>
             </div>
+            {/* FIT THE WHOLE IMAGE. Offered only when it differs from filling —
+                a square photo on a square badge has nothing to fit. */}
+            {canFit && (
+              <button
+                type="button"
+                onClick={toggleFit}
+                aria-pressed={fitted}
+                className="ff-btn ff-btn-secondary ff-btn-block mt-2 max-lg:min-h-11"
+              >
+                {fitted ? "Fill the badge instead" : "Fit the whole image"}
+              </button>
+            )}
+            {fitted && (
+              <p className="ff-micro mt-1">
+                The whole image sits on the badge, with your badge color around it.
+              </p>
+            )}
 
             {/* Cut the background out. Shown only when there is a flat backdrop to
                 cut — an offer that does nothing is worse than no offer. When the
@@ -596,8 +759,8 @@ export function ImageCropModal({ file, targetInches, panelLabel, note, onCancel,
                     </label>
                     <p className="ff-micro mt-1">
                       {keyOn
-                        ? "The logo sits straight on your frame's colour, with no white box behind it."
-                        : `There's a flat ${keyReport?.backdrop === "#FFFFFF" ? "white" : "coloured"} background behind this - cut it out and the logo sits straight on your frame.`}
+                        ? "The logo sits straight on your frame's color, with no white box behind it."
+                        : `There's a flat ${keyReport?.backdrop === "#FFFFFF" ? "white" : "colored"} background behind this - cut it out and the logo sits straight on your frame.`}
                     </p>
                   </>
                 ) : (
@@ -622,7 +785,31 @@ export function ImageCropModal({ file, targetInches, panelLabel, note, onCancel,
               <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-[var(--ff-line)]">
                 <div className="h-full rounded-full transition-all" style={{ width: `${meterPct}%`, backgroundColor: METER_COLOR[verdict.level] }} />
               </div>
-              <p className="ff-micro mt-1">{copy.detail}</p>
+              {/* The generic advice only when there is no specific alert below:
+                  "zoom out" beside "use a larger photo" at minimum zoom was two
+                  instructions, one of them impossible. */}
+              {verdict.level === "green" && <p className="ff-micro mt-1">{copy.detail}</p>}
+              {/* THE LOW-RESOLUTION WARNING, in numbers a parent can act on: how
+                  many pixels a sharp badge needs and how many this crop has. */}
+              {verdict.level !== "green" && (
+                <p
+                  role="alert"
+                  className="mt-2 rounded-[6px] px-2.5 py-2 text-[12.5px] font-semibold leading-snug"
+                  style={{
+                    backgroundColor: verdict.level === "red" ? "#fde8eb" : "#fff4dc",
+                    color: verdict.level === "red" ? "#8a0b20" : "#6b4a00",
+                  }}
+                >
+                  {verdict.level === "red"
+                    ? `Too small to print on a ${inchesLabel} badge.`
+                    : `This will print soft on a ${inchesLabel} badge.`}{" "}
+                  A sharp print needs about {neededPx} × {neededPx} px; this crop has{" "}
+                  {Math.round(verdict.minSidePx)} px.{" "}
+                  {/* Only offer "zoom out" when there is somewhere to zoom out TO:
+                      a photo already at its widest crop can only be replaced. */}
+                  {zoom > minZoom + 0.005 ? "Zoom out, or use a larger photo." : "Use a larger photo."}
+                </p>
+              )}
             </div>
 
             {/* Actions */}
@@ -630,7 +817,7 @@ export function ImageCropModal({ file, targetInches, panelLabel, note, onCancel,
               <button
                 type="button"
                 onClick={onCancel}
-                className="ff-btn ff-btn-secondary"
+                className="ff-btn ff-btn-secondary max-lg:min-h-11"
               >
                 Cancel
               </button>
@@ -638,7 +825,7 @@ export function ImageCropModal({ file, targetInches, panelLabel, note, onCancel,
                 type="button"
                 onClick={handleConfirm}
                 disabled={verdict.blocked || busy || keying || !img}
-                className="ff-btn ff-btn-primary"
+                className="ff-btn ff-btn-primary max-lg:min-h-11"
               >
                 {busy
                   ? "Adding..."
@@ -654,6 +841,7 @@ export function ImageCropModal({ file, targetInches, panelLabel, note, onCancel,
             {note && <p className="ff-help mt-2 text-pretty text-[11px]">{note}</p>}
           </>
         )}
+      </div>
       </div>
     </div>
   );

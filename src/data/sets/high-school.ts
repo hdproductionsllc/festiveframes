@@ -1,5 +1,6 @@
-import type { TileSet, TileSpan } from "@/lib/types";
+import type { TilePiece, TileSet, TileSpan } from "@/lib/types";
 import { TILE_BG } from "@/lib/utils/tile-theme";
+import { LIGHT_ENAMEL_FILES } from "./high-school-light.generated";
 
 // ─── High School Collection ─────────────────────────────────────────────────
 //
@@ -45,24 +46,50 @@ const H = "hs";
 const NAVY = TILE_BG.navy;
 
 /**
- * FOOTPRINT FOLLOWS THE ART'S OWN SHAPE, and it is derived from the file rather
- * than chosen by eye — `high-school.spans.test.ts` re-measures every PNG and fails
- * if a declaration drifts from it.
+ * EVERY FOOTPRINT IS SQUARE, because every badge is a square (owner, 2026-09-23).
  *
- * The intake trims each badge to its own bounds and deliberately does not pad it
- * back out to a square, so the shipped aspects run from 0.50 (a trumpet lying flat)
- * to 3.07 (an upright torch). Declaring all of them square — which is what the
- * enamel rebuild did — puts a 3:1 torch in a 2x2 tile where `contain` fits it to the
- * height and leaves two thirds of the tile empty navy. That is the same defect that
- * made the racquetball look undersized, in a different disguise.
- *
- * The buckets are deliberately wide. Only art that is decisively one shape gets a
- * non-square footprint; anything within about 3:2 stays square, because a footprint
- * that tracks every small variation makes the palette look ragged.
+ * The footprint used to follow the art's own aspect — TALL {1,2} for an upright
+ * torch, WIDE {2,1} for a trumpet lying flat. Two things retired that: the art is
+ * now padded to a centred transparent square at intake (`high-school.spans.test.ts`
+ * measures every PNG), and on the school frames the SQUARE RULE sizes every badge
+ * from the frame, not from the piece (FrameConfig.badgeShape). A non-square
+ * declaration would be a second shape rule living beside the cell's own.
  */
-const TALL: TileSpan = { cols: 1, rows: 2 };   // h/w >= 1.45
-const WIDE: TileSpan = { cols: 2, rows: 1 };   // h/w <= 0.69
 const PREFERRED: TileSpan = { cols: 2, rows: 2 };
+
+/**
+ * Each badge's IVORY-ENAMEL twin, where it has one (scripts/light-enamel.mjs):
+ * the same pin with its navy enamel re-inked, drawn on a school colour where ivory
+ * reads better than navy (`badgeArtworkUrl` decides). Attached from the generated list
+ * rather than typed per piece, so a twin on disk and a twin in the data cannot
+ * disagree.
+ */
+const LIGHT = new Set(LIGHT_ENAMEL_FILES);
+
+/**
+ * Badges whose art is WITHHELD from every offer — the tray, the activity picker,
+ * the welcome chips and the kit signatures — until it is redrawn, id -> why.
+ *
+ * They stay registered in the set below, so a design saved with one still
+ * resolves and prints what its owner chose; nobody new is handed it. Redraw
+ * through the art pipeline, clear the one-inch test, then delete the entry.
+ */
+export const WITHHELD_ART: ReadonlyMap<string, string> = new Map([
+  [
+    `${H}:quiz-bowl`,
+    "the art is a brass desk bell, which a parent reads as a hotel concierge bell, not Scholar Bowl; redraw as a buzzer with its light lit",
+  ],
+  [
+    `${H}:model-un`,
+    "a gridded globe inside an olive wreath reads as the United Nations emblem, whose commercial use is restricted; redraw without the wreath",
+  ],
+]);
+function withDarkFieldTwins(pieces: TilePiece[]): TilePiece[] {
+  return pieces.map((p) => {
+    const file = /^\/tiles\/high-school\/([^/]+)\.png$/.exec(p.artworkUrl)?.[1];
+    return file && LIGHT.has(file) ? { ...p, darkFieldArtworkUrl: `${A}/light/${file}.png` } : p;
+  });
+}
 
 export const highSchoolSet: TileSet = {
   id: H,
@@ -72,7 +99,7 @@ export const highSchoolSet: TileSet = {
     "Embroidered high-school patches — team sports, academic clubs, and activities.",
   price: 0,
   // Ordered so related activities sit together in one flat palette.
-  pieces: [
+  pieces: withDarkFieldTwins([
     // ─── THE ENAMEL LIBRARY ────────────────────────────────────────────────
     // One make, end to end. The embroidered patches this replaces were withdrawn
     // wholesale rather than mixed in: at the size a badge is actually seen — about
@@ -90,256 +117,13 @@ export const highSchoolSet: TileSet = {
     // seams). See tasks/enamel-pin-ideogram-prompts.md.
     //
     // Cut by scripts/cut-enamel-pins.mjs: global chroma key, hard unspill clamp,
-    // 3px matte erode, trimmed to content and left at its OWN aspect so `contain`
-    // fits the artwork rather than a square of padding around it.
+    // 3px matte erode, trimmed to content, then padded to a centred transparent
+    // SQUARE — every badge is square (owner, 2026-09-23), so the file is too.
+    //
+    // ORDER is what a phone tray shows first: arts and academics lead, athletics
+    // follow (owner: strong non-sports examples).
     //
     // IDs are unchanged wherever one existed, so saved designs keep resolving.
-
-    // ── Athletics ──
-    {
-      id: `${H}:soccer-patch`,
-      setId: H,
-      name: "Soccer",
-      artworkUrl: `${A}/soccer.png`,
-      emoji: "⚽",
-      backgroundColor: NAVY,
-      defaultSpan: PREFERRED,
-    },
-    {
-      id: `${H}:football-patch`,
-      setId: H,
-      name: "Football",
-      artworkUrl: `${A}/football.png`,
-      emoji: "🏈",
-      backgroundColor: NAVY,
-      defaultSpan: PREFERRED,
-    },
-    {
-      id: `${H}:basketball-patch`,
-      setId: H,
-      name: "Basketball",
-      artworkUrl: `${A}/basketball.png`,
-      emoji: "🏀",
-      backgroundColor: NAVY,
-      defaultSpan: PREFERRED,
-    },
-    {
-      id: `${H}:volleyball-patch`,
-      setId: H,
-      name: "Volleyball",
-      artworkUrl: `${A}/volleyball.png`,
-      emoji: "🏐",
-      backgroundColor: NAVY,
-      defaultSpan: PREFERRED,
-    },
-    {
-      id: `${H}:baseball-patch`,
-      setId: H,
-      name: "Baseball",
-      artworkUrl: `${A}/baseball.png`,
-      emoji: "⚾",
-      backgroundColor: NAVY,
-      defaultSpan: PREFERRED,
-    },
-    {
-      id: `${H}:softball-patch`,
-      setId: H,
-      name: "Softball",
-      artworkUrl: `${A}/softball.png`,
-      emoji: "🥎",
-      backgroundColor: NAVY,
-      defaultSpan: PREFERRED,
-    },
-    {
-      id: `${H}:track`,
-      setId: H,
-      name: "Track",
-      artworkUrl: `${A}/track.png`,
-      emoji: "🏃",
-      backgroundColor: NAVY,
-      defaultSpan: PREFERRED,
-    },
-    {
-      id: `${H}:cross-country`,
-      setId: H,
-      name: "Cross Country",
-      artworkUrl: `${A}/cross-country.png`,
-      emoji: "🌲",
-      backgroundColor: NAVY,
-      defaultSpan: PREFERRED,
-    },
-    {
-      id: `${H}:tennis`,
-      setId: H,
-      name: "Tennis",
-      artworkUrl: `${A}/tennis.png`,
-      emoji: "🎾",
-      backgroundColor: NAVY,
-      defaultSpan: PREFERRED,
-    },
-    {
-      id: `${H}:golf`,
-      setId: H,
-      name: "Golf",
-      artworkUrl: `${A}/golf.png`,
-      emoji: "⛳",
-      backgroundColor: NAVY,
-      defaultSpan: TALL,
-    },
-    {
-      id: `${H}:swim-dive`,
-      setId: H,
-      name: "Swim & Dive",
-      artworkUrl: `${A}/swim-dive.png`,
-      emoji: "🏊",
-      backgroundColor: NAVY,
-      defaultSpan: PREFERRED,
-    },
-    {
-      id: `${H}:water-polo`,
-      setId: H,
-      name: "Water Polo",
-      artworkUrl: `${A}/water-polo.png`,
-      emoji: "🤽",
-      backgroundColor: NAVY,
-      defaultSpan: PREFERRED,
-    },
-    {
-      id: `${H}:racquetball`,
-      setId: H,
-      name: "Racquetball",
-      artworkUrl: `${A}/racquetball.png`,
-      emoji: "🎾",
-      backgroundColor: NAVY,
-      defaultSpan: TALL,
-    },
-    {
-      id: `${H}:rugby`,
-      setId: H,
-      name: "Rugby",
-      artworkUrl: `${A}/rugby.png`,
-      emoji: "🏉",
-      backgroundColor: NAVY,
-      defaultSpan: PREFERRED,
-    },
-    {
-      id: `${H}:lacrosse`,
-      setId: H,
-      name: "Lacrosse",
-      artworkUrl: `${A}/lacrosse.png`,
-      emoji: "🥍",
-      backgroundColor: NAVY,
-      defaultSpan: PREFERRED,
-    },
-    {
-      id: `${H}:ice-hockey`,
-      setId: H,
-      name: "Ice Hockey",
-      artworkUrl: `${A}/ice-hockey.png`,
-      emoji: "🏒",
-      backgroundColor: NAVY,
-      defaultSpan: PREFERRED,
-    },
-    {
-      id: `${H}:field-hockey`,
-      setId: H,
-      name: "Field Hockey",
-      artworkUrl: `${A}/field-hockey.png`,
-      emoji: "🏑",
-      backgroundColor: NAVY,
-      defaultSpan: PREFERRED,
-    },
-    {
-      id: `${H}:wrestling`,
-      setId: H,
-      name: "Wrestling",
-      artworkUrl: `${A}/wrestling.png`,
-      emoji: "🤼",
-      backgroundColor: NAVY,
-      defaultSpan: PREFERRED,
-    },
-    {
-      id: `${H}:gymnastics`,
-      setId: H,
-      name: "Gymnastics",
-      artworkUrl: `${A}/gymnastics.png`,
-      emoji: "🤸",
-      backgroundColor: NAVY,
-      defaultSpan: PREFERRED,
-    },
-    {
-      id: `${H}:bowling`,
-      setId: H,
-      name: "Bowling",
-      artworkUrl: `${A}/bowling.png`,
-      emoji: "🎳",
-      backgroundColor: NAVY,
-      defaultSpan: PREFERRED,
-    },
-    {
-      id: `${H}:cheer`,
-      setId: H,
-      name: "Cheer",
-      artworkUrl: `${A}/cheer.png`,
-      emoji: "📣",
-      backgroundColor: NAVY,
-      defaultSpan: WIDE,
-    },
-    {
-      id: `${H}:dance`,
-      setId: H,
-      name: "Dance",
-      artworkUrl: `${A}/dance.png`,
-      emoji: "🩰",
-      backgroundColor: NAVY,
-      defaultSpan: TALL,
-    },
-    {
-      id: `${H}:esports`,
-      setId: H,
-      name: "Esports",
-      artworkUrl: `${A}/esports.png`,
-      emoji: "🎮",
-      backgroundColor: NAVY,
-      defaultSpan: PREFERRED,
-    },
-
-    {
-      id: `${H}:crew`,
-      setId: H,
-      name: "Crew",
-      artworkUrl: `${A}/crew.png`,
-      emoji: "🚣",
-      backgroundColor: NAVY,
-      defaultSpan: PREFERRED,
-    },
-    {
-      id: `${H}:sailing`,
-      setId: H,
-      name: "Sailing",
-      artworkUrl: `${A}/sailing.png`,
-      emoji: "⛵",
-      backgroundColor: NAVY,
-      defaultSpan: PREFERRED,
-    },
-    {
-      id: `${H}:ski`,
-      setId: H,
-      name: "Ski Team",
-      artworkUrl: `${A}/ski.png`,
-      emoji: "🎿",
-      backgroundColor: NAVY,
-      defaultSpan: PREFERRED,
-    },
-    {
-      id: `${H}:weightlifting`,
-      setId: H,
-      name: "Weightlifting",
-      artworkUrl: `${A}/weightlifting.png`,
-      emoji: "🏋️",
-      backgroundColor: NAVY,
-      defaultSpan: WIDE,
-    },
 
     // ── Music, arts & media ──
     {
@@ -349,7 +133,7 @@ export const highSchoolSet: TileSet = {
       artworkUrl: `${A}/band.png`,
       emoji: "🎺",
       backgroundColor: NAVY,
-      defaultSpan: WIDE,
+      defaultSpan: PREFERRED,
     },
     {
       id: `${H}:marching-band`,
@@ -367,7 +151,7 @@ export const highSchoolSet: TileSet = {
       artworkUrl: `${A}/orchestra.png`,
       emoji: "🎻",
       backgroundColor: NAVY,
-      defaultSpan: TALL,
+      defaultSpan: PREFERRED,
     },
     {
       id: `${H}:choir`,
@@ -496,7 +280,7 @@ export const highSchoolSet: TileSet = {
       artworkUrl: `${A}/chess.png`,
       emoji: "♞",
       backgroundColor: NAVY,
-      defaultSpan: TALL,
+      defaultSpan: PREFERRED,
     },
     {
       id: `${H}:debate`,
@@ -505,7 +289,7 @@ export const highSchoolSet: TileSet = {
       artworkUrl: `${A}/debate.png`,
       emoji: "🎙️",
       backgroundColor: NAVY,
-      defaultSpan: TALL,
+      defaultSpan: PREFERRED,
     },
     {
       id: `${H}:quiz-bowl`,
@@ -513,6 +297,252 @@ export const highSchoolSet: TileSet = {
       name: "Quiz Bowl",
       artworkUrl: `${A}/quiz-bowl.png`,
       emoji: "🔔",
+      backgroundColor: NAVY,
+      defaultSpan: PREFERRED,
+    },
+
+    // ── Athletics ──
+    {
+      id: `${H}:soccer-patch`,
+      setId: H,
+      name: "Soccer",
+      artworkUrl: `${A}/soccer.png`,
+      emoji: "⚽",
+      backgroundColor: NAVY,
+      defaultSpan: PREFERRED,
+    },
+    {
+      id: `${H}:football-patch`,
+      setId: H,
+      name: "Football",
+      artworkUrl: `${A}/football.png`,
+      emoji: "🏈",
+      backgroundColor: NAVY,
+      defaultSpan: PREFERRED,
+    },
+    {
+      id: `${H}:basketball-patch`,
+      setId: H,
+      name: "Basketball",
+      artworkUrl: `${A}/basketball.png`,
+      emoji: "🏀",
+      backgroundColor: NAVY,
+      defaultSpan: PREFERRED,
+    },
+    {
+      id: `${H}:volleyball-patch`,
+      setId: H,
+      name: "Volleyball",
+      artworkUrl: `${A}/volleyball.png`,
+      emoji: "🏐",
+      backgroundColor: NAVY,
+      defaultSpan: PREFERRED,
+    },
+    {
+      id: `${H}:baseball-patch`,
+      setId: H,
+      name: "Baseball",
+      artworkUrl: `${A}/baseball.png`,
+      emoji: "⚾",
+      backgroundColor: NAVY,
+      defaultSpan: PREFERRED,
+    },
+    {
+      id: `${H}:softball-patch`,
+      setId: H,
+      name: "Softball",
+      artworkUrl: `${A}/softball.png`,
+      emoji: "🥎",
+      backgroundColor: NAVY,
+      defaultSpan: PREFERRED,
+    },
+    {
+      id: `${H}:track`,
+      setId: H,
+      name: "Track",
+      artworkUrl: `${A}/track.png`,
+      emoji: "🏃",
+      backgroundColor: NAVY,
+      defaultSpan: PREFERRED,
+    },
+    {
+      id: `${H}:cross-country`,
+      setId: H,
+      name: "Cross Country",
+      artworkUrl: `${A}/cross-country.png`,
+      emoji: "🌲",
+      backgroundColor: NAVY,
+      defaultSpan: PREFERRED,
+    },
+    {
+      id: `${H}:tennis`,
+      setId: H,
+      name: "Tennis",
+      artworkUrl: `${A}/tennis.png`,
+      emoji: "🎾",
+      backgroundColor: NAVY,
+      defaultSpan: PREFERRED,
+    },
+    {
+      id: `${H}:golf`,
+      setId: H,
+      name: "Golf",
+      artworkUrl: `${A}/golf.png`,
+      emoji: "⛳",
+      backgroundColor: NAVY,
+      defaultSpan: PREFERRED,
+    },
+    {
+      id: `${H}:swim-dive`,
+      setId: H,
+      name: "Swim & Dive",
+      artworkUrl: `${A}/swim-dive.png`,
+      emoji: "🏊",
+      backgroundColor: NAVY,
+      defaultSpan: PREFERRED,
+    },
+    {
+      id: `${H}:water-polo`,
+      setId: H,
+      name: "Water Polo",
+      artworkUrl: `${A}/water-polo.png`,
+      emoji: "🤽",
+      backgroundColor: NAVY,
+      defaultSpan: PREFERRED,
+    },
+    {
+      id: `${H}:racquetball`,
+      setId: H,
+      name: "Racquetball",
+      artworkUrl: `${A}/racquetball.png`,
+      emoji: "🎾",
+      backgroundColor: NAVY,
+      defaultSpan: PREFERRED,
+    },
+    {
+      id: `${H}:rugby`,
+      setId: H,
+      name: "Rugby",
+      artworkUrl: `${A}/rugby.png`,
+      emoji: "🏉",
+      backgroundColor: NAVY,
+      defaultSpan: PREFERRED,
+    },
+    {
+      id: `${H}:lacrosse`,
+      setId: H,
+      name: "Lacrosse",
+      artworkUrl: `${A}/lacrosse.png`,
+      emoji: "🥍",
+      backgroundColor: NAVY,
+      defaultSpan: PREFERRED,
+    },
+    {
+      id: `${H}:ice-hockey`,
+      setId: H,
+      name: "Ice Hockey",
+      artworkUrl: `${A}/ice-hockey.png`,
+      emoji: "🏒",
+      backgroundColor: NAVY,
+      defaultSpan: PREFERRED,
+    },
+    {
+      id: `${H}:field-hockey`,
+      setId: H,
+      name: "Field Hockey",
+      artworkUrl: `${A}/field-hockey.png`,
+      emoji: "🏑",
+      backgroundColor: NAVY,
+      defaultSpan: PREFERRED,
+    },
+    {
+      id: `${H}:wrestling`,
+      setId: H,
+      name: "Wrestling",
+      artworkUrl: `${A}/wrestling.png`,
+      emoji: "🤼",
+      backgroundColor: NAVY,
+      defaultSpan: PREFERRED,
+    },
+    {
+      id: `${H}:gymnastics`,
+      setId: H,
+      name: "Gymnastics",
+      artworkUrl: `${A}/gymnastics.png`,
+      emoji: "🤸",
+      backgroundColor: NAVY,
+      defaultSpan: PREFERRED,
+    },
+    {
+      id: `${H}:bowling`,
+      setId: H,
+      name: "Bowling",
+      artworkUrl: `${A}/bowling.png`,
+      emoji: "🎳",
+      backgroundColor: NAVY,
+      defaultSpan: PREFERRED,
+    },
+    {
+      id: `${H}:cheer`,
+      setId: H,
+      name: "Cheer",
+      artworkUrl: `${A}/cheer.png`,
+      emoji: "📣",
+      backgroundColor: NAVY,
+      defaultSpan: PREFERRED,
+    },
+    {
+      id: `${H}:dance`,
+      setId: H,
+      name: "Dance",
+      artworkUrl: `${A}/dance.png`,
+      emoji: "🩰",
+      backgroundColor: NAVY,
+      defaultSpan: PREFERRED,
+    },
+    {
+      id: `${H}:esports`,
+      setId: H,
+      name: "Esports",
+      artworkUrl: `${A}/esports.png`,
+      emoji: "🎮",
+      backgroundColor: NAVY,
+      defaultSpan: PREFERRED,
+    },
+
+    {
+      id: `${H}:crew`,
+      setId: H,
+      name: "Crew",
+      artworkUrl: `${A}/crew.png`,
+      emoji: "🚣",
+      backgroundColor: NAVY,
+      defaultSpan: PREFERRED,
+    },
+    {
+      id: `${H}:sailing`,
+      setId: H,
+      name: "Sailing",
+      artworkUrl: `${A}/sailing.png`,
+      emoji: "⛵",
+      backgroundColor: NAVY,
+      defaultSpan: PREFERRED,
+    },
+    {
+      id: `${H}:ski`,
+      setId: H,
+      name: "Ski Team",
+      artworkUrl: `${A}/ski.png`,
+      emoji: "🎿",
+      backgroundColor: NAVY,
+      defaultSpan: PREFERRED,
+    },
+    {
+      id: `${H}:weightlifting`,
+      setId: H,
+      name: "Weightlifting",
+      artworkUrl: `${A}/weightlifting.png`,
+      emoji: "🏋️",
       backgroundColor: NAVY,
       defaultSpan: PREFERRED,
     },
@@ -534,7 +564,7 @@ export const highSchoolSet: TileSet = {
       artworkUrl: `${A}/service.png`,
       emoji: "🤝",
       backgroundColor: NAVY,
-      defaultSpan: WIDE,
+      defaultSpan: PREFERRED,
     },
     {
       id: `${H}:rotc`,
@@ -600,7 +630,7 @@ export const highSchoolSet: TileSet = {
       artworkUrl: `${A}/diploma-tall.png`,
       emoji: "📜",
       backgroundColor: NAVY,
-      defaultSpan: TALL,
+      defaultSpan: PREFERRED,
     },
     {
       id: `${H}:grad-cap`,
@@ -609,7 +639,7 @@ export const highSchoolSet: TileSet = {
       artworkUrl: `${A}/grad-cap.png`,
       emoji: "🎓",
       backgroundColor: NAVY,
-      defaultSpan: WIDE,
+      defaultSpan: PREFERRED,
     },
     {
       id: `${H}:diploma-cap`,
@@ -627,7 +657,7 @@ export const highSchoolSet: TileSet = {
       artworkUrl: `${A}/grad-tassel.png`,
       emoji: "🎓",
       backgroundColor: NAVY,
-      defaultSpan: TALL,
+      defaultSpan: PREFERRED,
     },
     {
       id: `${H}:honor-star`,
@@ -654,7 +684,7 @@ export const highSchoolSet: TileSet = {
       artworkUrl: `${A}/medal.png`,
       emoji: "🥇",
       backgroundColor: NAVY,
-      defaultSpan: TALL,
+      defaultSpan: PREFERRED,
     },
     {
       id: `${H}:star`,
@@ -681,7 +711,7 @@ export const highSchoolSet: TileSet = {
       artworkUrl: `${A}/diploma.png`,
       emoji: "📜",
       backgroundColor: NAVY,
-      defaultSpan: WIDE,
+      defaultSpan: PREFERRED,
     },
     {
       id: `${H}:torch`,
@@ -690,9 +720,9 @@ export const highSchoolSet: TileSet = {
       artworkUrl: `${A}/torch.png`,
       emoji: "🔥",
       backgroundColor: NAVY,
-      defaultSpan: TALL,
+      defaultSpan: PREFERRED,
     },
-  ],
+  ]),
   // No starter layouts yet — the collection is a palette of activities that each
   // school picks from, so presets would be guesses. Same as the July 4th set.
   presets: [],

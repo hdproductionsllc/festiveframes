@@ -1,62 +1,70 @@
 import { describe, it, expect } from "vitest";
 import sharp from "sharp";
+import { readdirSync } from "node:fs";
 import path from "node:path";
 import { highSchoolSet } from "./high-school";
 import { minSpanFor, MIN_ART_SPAN } from "@/lib/utils/snappet";
 
 /**
- * A badge's footprint must match the shape of its artwork.
+ * ALL BADGE ARTWORK IS SQUARE (owner, 2026-09-23).
  *
- * This exists because the shapes drifted silently and nobody noticed for two
- * commits. The intake trims each badge to its own bounds without padding it back
- * out to a square, so the files carry real aspect ratios — 0.50 for a trumpet lying
- * flat, 3.07 for an upright torch — while the rebuild declared all forty-eight of
- * them square. `contain` then fits a 3:1 torch to the tile's height and leaves two
- * thirds of it empty. Re-cut a badge at a different crop and the declaration here
- * has to move with it, so the test measures the PNG rather than trusting a list.
+ * Every badge cell a parent can fill on the shipping frame is square — the side
+ * column is three 2.25 in squares — and uploads are cropped square. The library
+ * used to carry real aspect ratios instead (0.50 for a trumpet lying flat, 3.07 for
+ * an upright torch) with TALL / WIDE footprints declared to match. That is what let
+ * a 395 x 1000 violin spill out of a fixed-size tile on the homepage, and it is a
+ * second shape rule living beside the cell's own.
+ *
+ * So the intake trims each badge to its own bounds and THEN pads it to a centred
+ * transparent square (scripts/cut-enamel-pins.mjs). Both renderers draw art with
+ * `contain`, so in a square cell the padded file draws exactly as the trimmed art
+ * did. This file measures the PNGs rather than trusting a list, as before — the
+ * earlier version of it pinned the opposite rule (portrait and landscape pieces
+ * must exist), and that assertion is replaced here, not dropped.
  */
 
 const PUBLIC = path.join(process.cwd(), "public");
-const TALL_AT = 1.45;   // h/w at or above this is portrait
-const WIDE_AT = 0.69;   // h/w at or below this is landscape
-
-function shapeOf(aspect: number): "tall" | "wide" | "square" {
-  if (aspect >= TALL_AT) return "tall";
-  if (aspect <= WIDE_AT) return "wide";
-  return "square";
-}
-
-function shapeOfSpan(span: { cols: number; rows: number }): "tall" | "wide" | "square" {
-  if (span.rows > span.cols) return "tall";
-  if (span.cols > span.rows) return "wide";
-  return "square";
-}
+const DIR = path.join(PUBLIC, "tiles/high-school");
+/** The 300 DPI gate for a 2x2 tile at the 0.991 in pitch — the long side of the
+ *  art itself, not of the padding, has to clear it. */
+const PRINT_FLOOR = Math.ceil(0.991 * 2 * 300);
 
 const pieces = highSchoolSet.pieces.filter((p) => p.artworkUrl && p.defaultSpan);
+const files = readdirSync(DIR).filter((f) => f.endsWith(".png")).sort();
 
-describe("high-school footprints track their artwork", () => {
-  it("has pieces to check", () => {
+describe("high-school badge art is square", () => {
+  it("has pieces and files to check", () => {
     expect(pieces.length).toBeGreaterThan(40);
+    expect(files.length).toBeGreaterThan(40);
+  });
+
+  it.each(files)("%s is a square canvas", async (f) => {
+    const { width, height } = await sharp(path.join(DIR, f)).metadata();
+    expect(width, `${f} has no width`).toBeTruthy();
+    expect(width, `${f} is ${width} x ${height}`).toBe(height);
+  });
+
+  it.each(files)("%s is trimmed THEN padded, and its art clears the print floor", async (f) => {
+    const file = path.join(DIR, f);
+    const { width: side } = await sharp(file).metadata();
+    const { info } = await sharp(file).trim({ threshold: 1 }).toBuffer({ resolveWithObject: true });
+    const artLong = Math.max(info.width, info.height);
+    // The art touches the square on its long axis: padded to a square, never
+    // floated in extra margin that `contain` would then shrink.
+    expect(artLong, `${f}: art ${info.width} x ${info.height} floats in a ${side} square`).toBe(side);
+    expect(artLong, `${f}: art long side ${artLong}px is under the ${PRINT_FLOOR}px gate`).toBeGreaterThanOrEqual(PRINT_FLOOR);
   });
 
   it.each(pieces.map((p) => [p.name, p] as const))(
-    "%s declares a footprint matching its art",
+    "%s declares a square footprint, matching its art",
     async (_name, piece) => {
-      const file = path.join(PUBLIC, piece.artworkUrl!);
-      const { width, height } = await sharp(file).metadata();
-      expect(width, `${piece.artworkUrl} has no width`).toBeTruthy();
-      const aspect = height! / width!;
-      expect(shapeOfSpan(piece.defaultSpan!)).toBe(shapeOf(aspect));
+      const { width, height } = await sharp(path.join(PUBLIC, piece.artworkUrl!)).metadata();
+      expect(width).toBe(height);
+      // A 1x2 or 2x1 cell holding square art draws it at half the cell's long side.
+      const { cols, rows } = piece.defaultSpan!;
+      expect(cols, `${piece.artworkUrl} is square art on a ${cols}x${rows} footprint`).toBe(rows);
     },
   );
-
-  it("keeps at least one portrait and one landscape piece", () => {
-    // The regression this guards was the total disappearance of both, so assert
-    // the buckets are non-empty rather than only that each piece is self-consistent.
-    const shapes = pieces.map((p) => shapeOfSpan(p.defaultSpan!));
-    expect(shapes).toContain("tall");
-    expect(shapes).toContain("wide");
-  });
 });
 
 describe("the readability floor keeps a piece's shape", () => {

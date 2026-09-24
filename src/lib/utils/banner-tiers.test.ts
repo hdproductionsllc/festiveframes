@@ -4,6 +4,7 @@ import {
   BANNER_HEADLINE_FRACTION,
   BANNER_GAP_FRACTION,
   BANNER_TAGLINE_FRACTION,
+  trackingAt,
   trackingPx,
   widthLimitedFont,
   MAX_TRACKING_EM,
@@ -49,6 +50,30 @@ describe("bannerBands", () => {
 // two-hundred-pixel banner. On a 390px phone the long school name was fitted to
 // 7.9px in a 21px-tall bar and still overflowed, so the bar clipped its first
 // letter — small, thick and cut off.
+
+// Stored tracking is authored in PRINT px and converted through each renderer's own
+// px-per-inch. Raw pixels at every scale made the same stored 4 about 5.5x wider on
+// a desktop preview and 10x wider on a phone than in the print (measured: the
+// Eureka top runner inked 4.68" on screen against 4.00" in the export).
+describe("trackingAt", () => {
+  it("is the identity at the print scale, so the sheet is unchanged", () => {
+    expect(trackingAt(4, 300)).toBe(4);
+    expect(trackingAt(2, 300)).toBe(2);
+  });
+
+  it("gives the same PHYSICAL spacing at every scale", () => {
+    const inches = (px: number, ppi: number) => trackingAt(px, ppi) / ppi;
+    for (const ppi of [19.6, 55, 110, 300, 600]) {
+      expect(inches(4, ppi)).toBeCloseTo(4 / 300, 9);
+    }
+  });
+
+  it("leaves the cap as a guard that a seeded value never reaches", () => {
+    // Top runner at phone scale: ~19.6 px/in, a 0.75" bar, type about 9px tall.
+    const ls = trackingAt(4, 19.6);
+    expect(trackingPx(ls, 9)).toBe(ls);
+  });
+});
 
 describe("trackingPx", () => {
   it("leaves the stored spacing alone wherever it is already sane", () => {

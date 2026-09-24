@@ -3,20 +3,22 @@ import { writeFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { createCanvas, loadImage, type Image } from "@napi-rs/canvas";
-import { allSchoolKits, kitSections, type SchoolKit } from "@/data/school-kits";
+import { allSchoolKits, type SchoolKit } from "@/data/school-kits";
 import { resolveSchoolKit } from "@/data/school-resolve";
-import { kitSeedTiles } from "@/data/kit-seed";
-import { SCHOOL_SHIPPING_VARIANT, schoolVariant, type SchoolVariantId } from "@/data/school-variants";
+import { schoolStoreOptions } from "@/data/school-store";
+import { createDesignStore } from "@/stores/design-store";
+import { SCHOOL_SHIPPING_VARIANT, type SchoolVariantId } from "@/data/school-variants";
 import { getPiece } from "@/data/sets";
 import {
   SCHOOL_PRINT_DPI,
   drawSchoolFrame,
   schoolCanvasSize,
+  schoolDesignOf,
   type SchoolDesign,
   type SchoolImageBundle,
 } from "@/lib/utils/compose-school-frame";
-import type { PlacedTile } from "@/lib/types";
 import { registerNodeFonts, registeredFamilies } from "@/lib/utils/node-fonts";
+import { badgeArtworkUrls } from "@/lib/utils/tile-theme";
 
 // ─── LOOK AT THE SCHOOL, not at a test fixture ───────────────────────────────
 //
@@ -49,9 +51,11 @@ async function bundleFor(design: SchoolDesign): Promise<SchoolImageBundle> {
   const pieces = new Map<string, Image>();
   for (const tile of Object.values(design.slots)) {
     const piece = getPiece(tile.pieceId);
-    if (!piece?.artworkUrl || pieces.has(piece.artworkUrl)) continue;
-    const bytes = await readFile(join(PUBLIC, piece.artworkUrl));
-    pieces.set(piece.artworkUrl, await loadImage(bytes));
+    if (!piece?.artworkUrl) continue;
+    // Both twins, as the real loader does — the draw picks one by field.
+    for (const url of badgeArtworkUrls(piece)) {
+      if (!pieces.has(url)) pieces.set(url, await loadImage(await readFile(join(PUBLIC, url))));
+    }
   }
   return {
     plate: null,
@@ -63,24 +67,16 @@ async function bundleFor(design: SchoolDesign): Promise<SchoolImageBundle> {
   };
 }
 
-function designFor(kit: SchoolKit, variantId: SchoolVariantId): SchoolDesign {
-  const { config, badgeStack } = schoolVariant(variantId);
-  return {
-    frameConfig: config,
-    slots: kitSeedTiles(kit, config, badgeStack) as Record<string, PlacedTile>,
-    textBars: [],
-    qrCode: { enabled: false, url: "", size: 0 },
-    plateState: "MO",
-    sections: kitSections(kit) as SchoolDesign["sections"],
-    // ALL THREE brand colours, exactly as `SchoolBuilder` seeds them from the kit.
-    // Passing only `frameColor` rendered every school's badges on the stock navy
-    // field, which looked like a product defect and was really this harness
-    // lying: a sample that does not carry what the builder carries is not a
-    // sample of the product.
-    frameColor: kit.colors.frame,
-    tileFieldColor: kit.colors.tileField,
-    rimColor: kit.colors.rim,
-  } as SchoolDesign;
+/**
+ * The design a parent from this school OPENS on: a real design store, created with
+ * the builder's own options (`schoolStoreOptions`) and read through the picker
+ * every export uses (`schoolDesignOf`). This harness used to type the design out
+ * by hand, and once passed only `frameColor`, which rendered every school's badges
+ * on stock navy: a sample built any other way than the builder's is not a sample.
+ */
+function designFor(kit: SchoolKit, variant: SchoolVariantId): SchoolDesign {
+  const store = createDesignStore(`kit-sample:${kit.slug}:${variant}`, schoolStoreOptions({ kit, variant }));
+  return schoolDesignOf(store.getState());
 }
 
 describe("the banner faces are actually available to the renderer", () => {

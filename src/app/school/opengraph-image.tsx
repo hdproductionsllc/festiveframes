@@ -29,22 +29,14 @@ const graduateFont = readFile(
   join(process.cwd(), "src/app/school/_brand/Graduate.ttf"),
 );
 
-/** The plate-frame mark, same geometry as icon.svg. Monochrome: the chenille
- *  bar is punched OUT of the bottom band (evenodd), so it stays visible when
- *  the whole mark renders in one color. */
-function Mark({ s }: { s: number }) {
-  return (
-    <svg width={s} height={s} viewBox="0 0 64 64">
-      <path
-        fill={BRASS}
-        fillRule="evenodd"
-        d="M10 13 h44 a7 7 0 0 1 7 7 v24 a7 7 0 0 1 -7 7 h-44 a7 7 0 0 1 -7 -7 v-24 a7 7 0 0 1 7 -7 Z
-           M11 18 a3 3 0 0 0 -3 3 v14 a3 3 0 0 0 3 3 h42 a3 3 0 0 0 3 -3 v-14 a3 3 0 0 0 -3 -3 Z
-           M24.5 42 h15 a2.5 2.5 0 0 1 0 5 h-15 a2.5 2.5 0 0 1 0 -5 Z"
-      />
-    </svg>
-  );
-}
+// The owner's logo, REVERSED (navy ink -> paper, brass kept) because this card is
+// navy and the navy original would vanish on it. Satori takes a data: URI.
+const logo = readFile(join(process.cwd(), "public/brand/msf-logo-reverse.png")).then(
+  (b) => `data:image/png;base64,${b.toString("base64")}`,
+);
+/** public/brand/msf-logo-reverse.png is 800 x 410. */
+const LOGO_W = 440;
+const LOGO_H = Math.round((LOGO_W * 410) / 800);
 
 export default async function OpengraphImage() {
   return new ImageResponse(
@@ -63,11 +55,8 @@ export default async function OpengraphImage() {
           padding: 60,
         }}
       >
-        {/* Lockup */}
-        <div style={{ display: "flex", alignItems: "center", gap: 22, color: BRASS }}>
-          <Mark s={64} />
-          <div style={{ fontSize: 46, letterSpacing: "0.04em" }}>MySchoolFrame</div>
-        </div>
+        {/* eslint-disable-next-line @next/next/no-img-element -- Satori, not the DOM */}
+        <img src={await logo} width={LOGO_W} height={LOGO_H} alt="" />
 
         {/* The locked headline, brass middle beat matching the hero h1. */}
         <div
@@ -76,8 +65,8 @@ export default async function OpengraphImage() {
             flexWrap: "wrap",
             justifyContent: "center",
             gap: 22,
-            fontSize: 72,
-            marginTop: 52,
+            fontSize: 64,
+            marginTop: 30,
             textAlign: "center",
           }}
         >
@@ -89,7 +78,7 @@ export default async function OpengraphImage() {
         <div
           style={{
             fontSize: 26,
-            marginTop: 56,
+            marginTop: 34,
             color: "#aab6d0",
             letterSpacing: "0.08em",
           }}

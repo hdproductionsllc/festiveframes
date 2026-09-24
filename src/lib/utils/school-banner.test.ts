@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { schoolTopLine, normalizeLine } from "./school-banner";
+import { schoolTopLine, normalizeLine, SEEDED_TOP_FRAGMENTS, writePersonOnBanner } from "./school-banner";
 import { getSchoolKit } from "@/data/school-kits";
 
 /**
@@ -93,18 +93,21 @@ describe("the top line when a person takes the bottom banner", () => {
     expect(schoolTopLine({ currentTop: "HOME OF THE", currentBottom: "", personName: "OKAFOR" })).toBeNull();
   });
 
-  it("works against the REAL kits, not just a stand-in", () => {
+  it("leaves the REAL kits' top runner alone: it already names the school", () => {
+    // Kits seed the school on the top runner and HOME OF THE over the mascot, so
+    // a name landing on the bottom never needs anything promoted.
     for (const slug of ["sluh-jr-bills", "kirkwood-pioneers", "micds-rams"]) {
       const kit = getSchoolKit(slug)!;
-      const line = schoolTopLine({
-        kit,
-        currentTop: kit.banners.top,
-        currentBottom: kit.banners.bottom,
-        personName: "OKAFOR",
-      });
-      expect(line, `${slug} left its top line dangling`).toBeTruthy();
-      expect(line).not.toBe("HOME OF THE");
-      expect(line).not.toBe("OKAFOR");
+      expect(
+        schoolTopLine({
+          kit,
+          currentTop: kit.banners.top,
+          currentBottom: kit.banners.bottom,
+          personName: "OKAFOR",
+        }),
+        slug,
+      ).toBeNull();
+      expect(SEEDED_TOP_FRAGMENTS).not.toContain(normalizeLine(kit.banners.top));
     }
   });
 });
@@ -113,5 +116,54 @@ describe("normalizeLine", () => {
   it("ignores case, padding and runs of space", () => {
     expect(normalizeLine("  jr.   bills ")).toBe("JR. BILLS");
     expect(normalizeLine(undefined)).toBe("");
+  });
+});
+
+describe("writePersonOnBanner — the builder's one banner write", () => {
+  /** A minimal store: the two banners and the one action the write uses. */
+  function target(top: string, bottom: string, tagline: string) {
+    const sections: Record<string, { text: { text: string; tagline?: string } }> = {
+      top: { text: { text: top } },
+      bottom: { text: { text: bottom, tagline } },
+    };
+    return {
+      sections,
+      setSectionText: (id: "top" | "bottom", u: { text?: string; tagline?: string }) => {
+        sections[id] = { text: { ...sections[id].text, ...u } };
+      },
+    };
+  }
+  const kit = { banners: { bottom: "WILDCATS" } };
+
+  it("writes a banner line over HOME OF THE and leaves the school and mascot alone", () => {
+    const api = target("EUREKA HIGH SCHOOL", "WILDCATS", "HOME OF THE");
+    writePersonOnBanner(api, kit, { tagline: "PROUD PARENT · 2027" });
+    expect(api.sections.top.text.text).toBe("EUREKA HIGH SCHOOL");
+    expect(api.sections.bottom.text).toEqual({ text: "WILDCATS", tagline: "PROUD PARENT · 2027" });
+  });
+
+  it("drops the seeded HOME OF THE when a name arrives with no line of its own", () => {
+    const api = target("EUREKA HIGH SCHOOL", "WILDCATS", "HOME OF THE");
+    writePersonOnBanner(api, kit, { name: "miller" });
+    expect(api.sections.bottom.text).toEqual({ text: "MILLER", tagline: "" });
+  });
+
+  it("promotes the school over an old seeded top fragment", () => {
+    const api = target("HOME OF THE", "WILDCATS", "CLASS OF 2027");
+    const named = { banners: { bottom: "WILDCATS", tagline: "EUREKA HIGH SCHOOL" } };
+    writePersonOnBanner(api, named, { name: "MILLER", tagline: "CLASS OF 2027" });
+    expect(api.sections.top.text.text).toBe("EUREKA HIGH SCHOOL");
+  });
+
+  it("promotes the mascot when the kit names no school", () => {
+    const api = target("HOME OF THE", "WILDCATS", "CLASS OF 2027");
+    writePersonOnBanner(api, kit, { name: "MILLER", tagline: "CLASS OF 2027" });
+    expect(api.sections.top.text.text).toBe("WILDCATS");
+  });
+
+  it("does nothing with nothing to write", () => {
+    const api = target("EUREKA HIGH SCHOOL", "WILDCATS", "HOME OF THE");
+    writePersonOnBanner(api, kit, {});
+    expect(api.sections.bottom.text.tagline).toBe("HOME OF THE");
   });
 });

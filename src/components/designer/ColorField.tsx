@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 // ─── One colour control, used everywhere a colour is chosen ─────────────────
 //
@@ -52,14 +52,17 @@ export function ColorSwatch({
 }) {
   return (
     <label
-      className="relative shrink-0 cursor-pointer overflow-hidden rounded-[var(--ff-radius-sm,6px)] border"
+      // 44px on a phone whatever `size` asks for: min-* outranks the inline size.
+      // The keyline is an INSET SHADOW, not a border: a 1px border sat outside the
+      // input's `inset-0` box, so the actual tap target measured 42 x 42.
+      className="relative shrink-0 cursor-pointer overflow-hidden rounded-[var(--ff-radius-sm,6px)] max-lg:min-h-11 max-lg:min-w-11"
       style={{
         width: size,
         height: size,
         background: background ?? value,
-        borderColor: "var(--ff-line-strong, #d3d1cb)",
+        boxShadow: "inset 0 0 0 1px var(--ff-line-strong, #d3d1cb)",
       }}
-      title={`${label} — click for the full colour picker`}
+      title={`${label} — click for the full color picker`}
     >
       <input
         type="color"
@@ -101,34 +104,33 @@ export function HexInput({
   label: string;
   className?: string;
 }) {
+  // The field shows the DESIGN's value (so a preset, the eyedropper or undo is
+  // reflected at once) except while it is being edited, when it shows what is
+  // being typed. Derived, not synced by an effect: a half-typed "#1B3" is never
+  // overwritten mid-keystroke, and blurring falls back to the design's value.
   const [text, setText] = useState(value);
-  // Follow the design when it changes from elsewhere (a preset, the eyedropper,
-  // undo) — but never while this field is the thing being edited.
   const [focused, setFocused] = useState(false);
-  useEffect(() => {
-    if (!focused) setText(value);
-  }, [value, focused]);
 
   return (
     <input
       type="text"
       inputMode="text"
       spellCheck={false}
-      value={text}
+      value={focused ? text : value}
       aria-label={`${label} hex value`}
       placeholder="#1B3F6E"
-      onFocus={() => setFocused(true)}
+      onFocus={() => {
+        setText(value);
+        setFocused(true);
+      }}
       onChange={(e) => {
         setText(e.target.value);
         const hex = parseHex(e.target.value);
         if (hex) onChange(hex);
       }}
-      onBlur={() => {
-        setFocused(false);
-        setText(parseHex(text) ?? value);
-      }}
+      onBlur={() => setFocused(false)}
       className={
-        "h-7 w-[92px] rounded-[var(--ff-radius-sm,6px)] border border-[var(--ff-line-strong,#d3d1cb)] " +
+        "h-7 w-[92px] rounded-[var(--ff-radius-sm,6px)] border border-[var(--ff-line-strong,#d3d1cb)] max-lg:h-11 max-lg:w-[104px] max-lg:text-[16px] " +
         "bg-white px-2 font-mono text-[12px] uppercase tracking-tight text-[var(--ff-ink,#16181c)] " +
         "placeholder:text-[var(--ff-ink-3,#5f656e)] " +
         className

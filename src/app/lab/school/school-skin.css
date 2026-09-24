@@ -820,6 +820,16 @@
   color: var(--ff-on-dark-2);
 }
 
+/* Phones: the school's own line only. The second line ("This frame is your
+   student's...") restates what the builder shows, and on a 390px screen the
+   hero's height is what kept the FRAME off the first screen for a parent
+   arriving from a QR. */
+@media (max-width: 639px) {
+  .school-skin .msf-kit-line + .msf-kit-line {
+    display: none;
+  }
+}
+
 .school-skin .msf-kit-chips {
   display: flex;
   flex-wrap: wrap;
@@ -1007,6 +1017,8 @@
   align-items: center;
   gap: 0;
   cursor: pointer;
+  /* A thumb target, not a text height: the hero chips are the one-tap entry. */
+  min-height: 44px;
 }
 /* The arrow is ALWAYS present, dim, and brightens and slides on approach.
    It was hover-only at first, which is invisible on exactly the device this
@@ -1071,5 +1083,14 @@
   .build-skin.school-skin .ff-app-header .ff-h1 {
     flex: 0 0 auto;
     overflow: visible;
+  }
+}
+
+/* Phones: the pinned status line under the frame already carries the armed-tile
+   callout and its Done button. A second callout in the tray, worded differently
+   with a second Done, is one too many. */
+@media (max-width: 1023px) {
+  .school-skin .ff-armed[data-placement="tray"] {
+    display: none;
   }
 }

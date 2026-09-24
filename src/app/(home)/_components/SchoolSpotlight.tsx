@@ -1,7 +1,10 @@
 import Link from "next/link";
+import { SCHOOL_CHECKOUT_OPEN } from "@/config/school-checkout";
+import { SCHOOL_CONTACT_EMAIL } from "@/content/school-contact";
 import Image from "next/image";
 import { FindMySchool } from "@/components/school/FindMySchool";
-import { allSchoolKits } from "@/data/school-kits";
+import { finderSchools, SCHOOL_FINDER_SCOPE } from "@/data/school-pilot";
+import { ACTIVITY_COUNT_LABEL } from "@/content/school-activity-count";
 
 const INK = "#1e1b17";
 
@@ -19,18 +22,15 @@ const INK = "#1e1b17";
 // the panel beside it answers the second without either having to read the
 // other's copy.
 
-const SCHOOLS = allSchoolKits().map((k) => ({
-  slug: k.slug,
-  schoolName: k.schoolName,
-  shortName: k.shortName,
-  mascot: k.mascot,
-  city: k.city,
-}));
+const SCHOOLS = finderSchools();
+const NATIONAL = SCHOOL_FINDER_SCOPE === "national";
 
-// NO PRICE, NO PER-FRAME FIGURE. Pricing is parked until it is owner-confirmed,
-// and a number here is a promise to a booster club that we cannot make yet.
+// NO PRICE, NO PER-FRAME FIGURE. The pilot price is owner-confirmed (config/
+// offers.ts), but checkout stays parked until one end-to-end test payment has
+// run, and school surfaces show no figure until it opens — see
+// no-school-pricing.test.ts.
 /** Real print artwork, straight from the badge library. */
-const BADGES = ["football", "band", "cheer", "robotics", "drama", "medal"] as const;
+const BADGES = ["orchestra", "science", "drama", "marching-band", "soccer", "football"] as const;
 
 export function SchoolSpotlight() {
   return (
@@ -48,36 +48,42 @@ export function SchoolSpotlight() {
             className="m-0 mb-3.5 text-[clamp(32px,5vw,42px)] font-bold leading-none tracking-[-1px] text-[#fff9ec]"
             style={{ textShadow: `3px 3px 0 ${INK}` }}
           >
-            Their school.
+            Their school,
             <br />
-            Their name on it.
+            and their story on it.
           </h2>
           <p className="m-0 mb-1 max-w-[440px] text-lg font-bold leading-[1.5] text-[#c9d0e2]">
-            A frame in your school&apos;s colors with your student&apos;s last
-            name in varsity chenille, and a badge for everything they actually
-            do. Every one sends a set donation back to the school.
+            A frame in your school&apos;s colors with their class year, their
+            number and a badge for the things they do, from orchestra to varsity
+            soccer. Every frame sends a set donation back to the school.
           </p>
 
-          <FindMySchool schools={SCHOOLS} tone="dark" />
+          <FindMySchool schools={SCHOOLS} tone="dark" national={NATIONAL} />
 
-          <div className="flex flex-wrap gap-2.5">
+          {/* Even rows: three by two on a phone, one row of six from sm up. A
+              flex-wrap broke 4 + 2 at 390px. */}
+          <div className="grid w-fit grid-cols-3 gap-2.5 sm:grid-cols-6">
             {BADGES.map((slug) => (
               <span
                 key={slug}
                 className="inline-flex h-14 w-14 items-center justify-center rounded-[10px] border-2 border-[#f8c53b]/45 bg-[#16233d]"
               >
+                {/* Sized by class, not just by attribute: the global
+                    `img { height: auto }` let the tall orchestra art (395 x 1000)
+                    render ~111px high and spill out of its 56px tile. */}
                 <Image
                   src={`/tiles/high-school/${slug}.png`}
                   alt=""
                   aria-hidden="true"
                   width={44}
                   height={44}
+                  className="h-11 w-11 object-contain"
                 />
               </span>
             ))}
           </div>
           <p className="mt-3 text-sm font-bold text-[#c9d0e2]">
-            60+ activity badges, from football to ceramics.
+            {ACTIVITY_COUNT_LABEL} activity badges, from football to orchestra.
           </p>
         </div>
 
@@ -89,15 +95,19 @@ export function SchoolSpotlight() {
             Running a fundraiser?
           </h3>
           <p className="m-0 mb-5 text-base font-bold leading-[1.55] text-[#c9d0e2]">
-            No minimums, no inventory, nothing to front. Every frame is printed
-            after a parent orders it, so there is no case pack to buy and nothing
-            left over at the end of the season.
+            There&apos;s no minimum and nothing to buy up front. Every frame is
+            printed after a parent orders it, so there&apos;s no case pack to
+            buy and nothing left over at the end of the season.
           </p>
           <ul className="m-0 mb-6 list-none space-y-3 p-0">
             {[
               ["A set amount per frame", "A fixed dollar figure, not a percentage of profit after costs."],
-              ["A live running total", "Your club gets its own page, plus the figure by email every month."],
-              ["You approve the design", "Your colors and crest, used with your written permission."],
+              // The club page only counts orders paid through checkout, so the
+              // "running total" claim waits for checkout to open.
+              SCHOOL_CHECKOUT_OPEN
+                ? ["A running total", "Your club gets its own page, and we send you the total with each payout."]
+                : ["The total in writing", "We send your club the total with each payout."],
+              ["You approve the design", "We only put your school's own logos and mascot art on frames with your written permission, and we'd love your help getting the colors exactly right."],
             ].map(([title, body]) => (
               <li key={title} className="text-[#c9d0e2]">
                 <strong className="block text-[15px] font-extrabold text-[#f8c53b]">
@@ -116,7 +126,7 @@ export function SchoolSpotlight() {
               How the fundraiser works
             </Link>
             <a
-              href="mailto:hello@festiveframes.co?subject=School%20fundraiser%20%E2%80%94%20MySchoolFrame"
+              href={`mailto:${SCHOOL_CONTACT_EMAIL}?subject=School%20fundraiser%20%E2%80%94%20MySchoolFrame`}
               className="inline-flex min-h-[44px] items-center rounded-full border-[3px] border-[#f8c53b]/60 px-5 py-2.5 text-base font-extrabold text-[#fff9ec]"
             >
               Talk to us

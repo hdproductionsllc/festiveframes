@@ -2,7 +2,7 @@
 
 import type { BottomTab } from "@/lib/types";
 import { keystoneBox, keystoneChrome, keystoneOutline, pathD, type Box } from "@/lib/utils/bottom-tab";
-import { bevelGradient, cornerRadii, luminance, rimRamp, shift } from "@/lib/utils/tile-theme";
+import { bevelAxis, bevelGradient, cornerRadii, luminance, rimRamp, shift } from "@/lib/utils/tile-theme";
 import { useDesignStore } from "@/stores/design-store";
 
 // ─── The keystone-shaped bar's chrome, on screen ────────────────────────────
@@ -47,6 +47,10 @@ export function KeystoneBarChrome({
   const ramp = rimRamp(rimColor);
   const surround = shift(background, luminance(background) > 0.5 ? -0.1 : -0.22);
   const id = `ks-${Math.round(box.w)}-${Math.round(box.h)}`;
+  // The bevel's light axis is DERIVED, the same call drawKeystoneChrome makes. A
+  // corner-to-corner run looks right on a badge and turns into a left-to-right
+  // wash on an 11-inch bar, which is how the screen keystone once read flat.
+  const ax = bevelAxis(0, 0, box.w, box.h);
 
   return (
     <svg
@@ -62,7 +66,7 @@ export function KeystoneBarChrome({
         <clipPath id={`${id}-clip`}>
           <path d={d} />
         </clipPath>
-        <linearGradient id={`${id}-bevel`} gradientUnits="userSpaceOnUse" x1={0} y1={0} x2={box.w} y2={box.h}>
+        <linearGradient id={`${id}-bevel`} gradientUnits="userSpaceOnUse" x1={ax.x0} y1={ax.y0} x2={ax.x1} y2={ax.y1}>
           {bevelGradient(background, box.w, box.h).map(([at, colour]) => (
             <stop key={at} offset={at} stopColor={colour} />
           ))}
@@ -80,6 +84,11 @@ export function KeystoneBarChrome({
         {c.surroundTo > 0 && (
           <path d={d} fill="none" stroke={surround} strokeWidth={c.surroundTo * 2} strokeLinejoin="round" />
         )}
+        {/* The outer hairline, ON PURPOSE a fixed screen floor rather than a scaled
+            width. Print draws it 1 px at 300 DPI (1/300"); scaled to a 390px phone
+            (about 20 px/in) that is under a tenth of a CSS pixel and would vanish.
+            2 here leaves ONE visible pixel inside the clip, the thinnest line a
+            screen can show, so it reads heavier than the part's by design. */}
         <path d={d} fill="none" stroke="rgba(0,0,0,0.30)" strokeWidth={2} strokeLinejoin="round" />
       </g>
       {selected && (

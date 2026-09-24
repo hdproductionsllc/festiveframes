@@ -1,6 +1,6 @@
 import type { FrameConfig } from "@/lib/types";
 import type { SchoolKit } from "@/data/school-kits";
-import { sideAnchors } from "@/data/school-presets";
+import { GENERIC_MARKS as PRESET_GENERIC_MARKS, sideColumn } from "@/data/school-presets";
 import { markPieceId } from "@/data/sets/school-marks";
 
 // ─── The frame a school's parent lands on, DERIVED ───────────────────────────
@@ -21,9 +21,10 @@ import { markPieceId } from "@/data/sets/school-marks";
 //                   allowed to use it. Absent for most schools, which is fine:
 //                   the generic crest is still a school shape.
 //
-// and one input the VARIANT knows: how many badges its side panel holds and how
-// tall each is. Add a school, get a finished frame on every geometry; add a
-// geometry, get a finished frame for every school. No per-school layout, ever.
+// and one input the FRAME knows: where its side badges go and how big each is —
+// the squares the square rule declares down each side column (`sideColumn`). Add
+// a school, get a finished frame on every geometry; add a geometry, get a finished
+// frame for every school. No per-school layout, and no span written by hand.
 //
 // THE PATTERN obeys the same three rules the presets do (school-presets.ts):
 // never the same badge twice in a row, nothing nobody earned, and each position
@@ -40,10 +41,10 @@ export interface SeedTile {
 
 /**
  * Shapes that stand in for a school's own mark when we have not been given one —
- * which is most schools. Every one is still a SCHOOL shape; a stock trophy is not
- * on this list, because nobody earned it (school-presets.ts, rule 2).
+ * which is most schools. ONE list, owned by school-presets.ts, so the landing
+ * frame and a preset tap agree; see the note there on why "Honor Roll" left it.
  */
-export const GENERIC_MARKS = ["hs:crest", "hs:honor-star", "hs:grad-cap"];
+export const GENERIC_MARKS: readonly string[] = PRESET_GENERIC_MARKS;
 
 /**
  * The two marks a kit leads with.
@@ -82,7 +83,9 @@ function isMarkAt(i: number, n: number): boolean {
 
 /** One side's pieces, top to bottom. `side` 0 is left, 1 is right. */
 function columnPieces(n: number, marks: [string, string], signature: string[], side: 0 | 1): string[] {
-  const sigs = signature.length ? signature : ["hs:honor-star"];
+  // No signature: the column's activity positions take the generic marks the
+  // centre does not, never a badge that claims something (school-presets rule 2).
+  const sigs = signature.length ? signature : GENERIC_MARKS.filter((id) => !marks.includes(id));
   // The right column starts further along both lists, so the two sides lead with
   // different marks and show different activities whenever the kit has enough of
   // them. Mirrored geometry, not mirrored content.
@@ -107,18 +110,18 @@ function columnPieces(n: number, marks: [string, string], signature: string[], s
  *
  * Initial state only — a returning visitor's saved design wins, per the kit
  * layering rule in school-kits.ts.
+ *
+ * Positions and spans are the frame's (`sideColumn`), and nothing else: a second
+ * input that could disagree with the frame (it once took the variant's
+ * `badgeStack` too) is how a seed came to name a span the frame would refuse.
  */
-export function kitSeedTiles(
-  kit: SchoolKit,
-  config: FrameConfig,
-  stack: number[],
-): Record<string, SeedTile> {
+export function kitSeedTiles(kit: SchoolKit, config: FrameConfig): Record<string, SeedTile> {
   const marks = kitMarks(kit);
   const out: Record<string, SeedTile> = {};
   for (const [i, side] of (["wing-left", "wing-right"] as const).entries()) {
-    const anchors = sideAnchors(config, side, stack);
-    const pieces = columnPieces(anchors.length, marks, kit.signature ?? [], i as 0 | 1);
-    anchors.forEach((slot, at) => {
+    const column = sideColumn(config, side);
+    const pieces = columnPieces(column.length, marks, kit.signature ?? [], i as 0 | 1);
+    column.forEach(({ slot, span }, at) => {
       const pieceId = pieces[at];
       out[slot] = {
         pieceId,
@@ -127,7 +130,7 @@ export function kitSeedTiles(
         // Deriving it beats restating it, which is how a seed ends up naming a
         // set the piece is not in.
         setId: pieceId.split(":")[0],
-        span: { cols: 2, rows: stack[at] },
+        span,
       };
     });
   }

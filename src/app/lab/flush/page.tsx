@@ -78,6 +78,7 @@ export default async function FlushSchoolForkPage(
       <SchoolKitPage
         kit={kit}
         variant="flush"
+        operatorTools
         banner={<ForkBanner slug={kit.slug} />}
       />
     );
@@ -87,7 +88,7 @@ export default async function FlushSchoolForkPage(
     <div className="build-skin school-skin">
       <ForkBanner />
       <BuilderFontsDeferred />
-      <SchoolBuilder variant="flush" />
+      <SchoolBuilder variant="flush" operatorTools />
     </div>
   );
 }

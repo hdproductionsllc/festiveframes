@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { buildBrandKit, bannerTextOn, type SchoolBrandKit } from "./apply-brand";
 import { luminance } from "@/lib/utils/tile-theme";
+import { KIT_BOTTOM_TAGLINE } from "@/data/school-kits";
 import type { SchoolProfile, TextCandidate, ColorCandidate } from "./types";
 
 // The kit is the demo's most visible moment — paste a URL, watch the frame become
@@ -36,11 +37,11 @@ describe("buildBrandKit", () => {
     expect(kit.schoolName).toBe("Parkway West High School");
     expect(kit.primary).toBe("#8A1F2B");
     expect(kit.secondary).toBe("#C9A34A");
-    // The classic gym-wall stack, in the seeded design's own shape: top strip,
-    // mascot headline, school name in the tagline tier.
-    expect(kit.top!.text).toBe("HOME OF THE");
+    // The authored kits' own layout: the school on the top runner, HOME OF THE
+    // over the mascot on the bottom banner.
+    expect(kit.top!.text).toBe("PARKWAY WEST HIGH SCHOOL");
     expect(kit.bottom.text).toBe("LONGHORNS");
-    expect(kit.bottom.tagline).toBe("PARKWAY WEST HIGH SCHOOL");
+    expect(kit.bottom.tagline).toBe(KIT_BOTTOM_TAGLINE);
     // Dark maroon → white type, by the same luminance rule the tile edges use.
     expect(kit.top!.textColor).toBe("#FFFFFF");
     expect(kit.bottom.backgroundColor).toBe("#8A1F2B");

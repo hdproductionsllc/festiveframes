@@ -56,7 +56,7 @@ const PHRASE_TEMPLATES: { category: string; phrases: string[] }[] = [
   },
   {
     category: "Achievement",
-    phrases: ["HONOR\nROLL", "SCHOLAR\nATHLETE", "STATE\nCHAMPS", "ALL-STATE", "VARSITY", "NHS"],
+    phrases: ["HONOR\nROLL", "SCHOLAR\nATHLETE", "STATE\nCHAMPS", "ALL-STATE", "VARSITY", "HONOR\nSOCIETY"],
   },
   {
     category: "Roles",

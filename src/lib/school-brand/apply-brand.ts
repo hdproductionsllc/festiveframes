@@ -1,4 +1,5 @@
 import type { BottomBarConfig } from "@/lib/types";
+import { KIT_BOTTOM_TAGLINE } from "@/data/school-kits";
 import { luminance, shift } from "@/lib/utils/tile-theme";
 import type { ColorCandidate, SchoolProfile, TextCandidate } from "./types";
 
@@ -68,8 +69,8 @@ export interface SchoolBrandKit {
   rimColor: string;
   /**
    * Ready-to-apply SECTION text patches, matching the seeded design's own shape:
-   * the top strip says "HOME OF THE", the bottom's headline carries the mascot and
-   * its tagline the school name. Filling the pattern the placeholder already
+   * the top strip names the school, the bottom's headline carries the mascot and
+   * its tagline "HOME OF THE". Filling the pattern the placeholder already
    * teaches — rather than inventing a new arrangement — is what makes the applied
    * frame read as "your school", instantly, to someone who has seen any gym wall.
    */
@@ -230,7 +231,10 @@ export function buildBrandKit(profile: BrandSource): SchoolBrandKit | null {
   // one only ever says things the page said — "HOME OF THE" with nothing under it
   // never ships, and neither does an invented tagline.
   //
-  //   mascot          HOME OF THE / WILDCATS / NORTHWESTERN   (the gym-wall stack)
+  // The same layout the authored kits seed (school-kits `banners`): the school on
+  // the top runner, "HOME OF THE" over the mascot on the bottom banner.
+  //
+  //   mascot          NORTHWESTERN / HOME OF THE / WILDCATS
   //   motto only      NORTHWESTERN / QUAECUMQUE SUNT VERA
   //   neither         NORTHWESTERN                            (name alone, one bar)
   const headline = mascot
@@ -238,11 +242,11 @@ export function buildBrandKit(profile: BrandSource): SchoolBrandKit | null {
     : motto
       ? motto.value.toUpperCase()
       : name.value.toUpperCase();
-  const tagline = mascot ? name.value.toUpperCase() : undefined;
+  const tagline = mascot ? KIT_BOTTOM_TAGLINE : undefined;
   // The top strip carries the school only when the bottom is carrying something
   // else. With the name already on the headline there is nothing left for it to
   // say, so it is left alone rather than made to repeat.
-  const top = mascot ? "HOME OF THE" : motto ? name.value.toUpperCase() : null;
+  const top = mascot || motto ? name.value.toUpperCase() : null;
   notes.push(
     mascot
       ? `stack from mascot "${mascot.value}"`

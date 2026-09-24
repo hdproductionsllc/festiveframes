@@ -11,7 +11,7 @@ import { SECTION_IDS, sectionBounds, slotSuppressed } from "@/lib/utils/sections
 import { bannerConfigFor } from "@/lib/utils/banner-logo";
 import { buildGrid } from "@/lib/utils/slot-generator";
 import { coveredSlotIds } from "@/lib/utils/text-bar";
-import { coveredBySnappets, hasAnySpan, isMultiCell, resolveSnappetResize, snappetRect, tileSpan, visibleAnchorSlots, type SnappetPreview } from "@/lib/utils/snappet";
+import { badgeRule, badgeSpots, coveredBySnappets, hasAnySpan, isMultiCell, occupiedCoords, resolveSnappetResize, snappetRect, squareSpansAt, tileSpan, visibleAnchorSlots, type PlacementContext, type SnappetPreview } from "@/lib/utils/snappet";
 import { RailSlot } from "./RailSlot";
 import { SnappetResizeHandles } from "./SnappetResizeHandles";
 import { LicensePlateArea } from "./LicensePlateArea";
@@ -325,6 +325,31 @@ export const FrameCanvas = forwardRef<FrameCanvasHandle, FrameCanvasProps>(
     const anchorIds = new Set(snappetAnchors.map((a) => a.slot.id));
     const cellSlots = anySpan ? visibleSlots.filter((s) => !anchorIds.has(s.id)) : visibleSlots;
 
+    // EMPTY BADGE POSITIONS on a square-badge frame are drawn as the badge they
+    // will hold: ONE square pocket from the position's anchor cell, with the other
+    // cells under it drop-only (exactly like the cells under a placed badge). Left
+    // as plain cells, an emptied 2.25" side badge read as two unrelated rectangles
+    // (the 1.25" wing cell and the 1.00" rail cell). `badgeSpots` is built from the
+    // placement gate, so a pocket is always a square a tap or drop would fill.
+    // Empty on /build, whose frame has no badge rule.
+    const emptySpots = useMemo(() => {
+      const pocket = new Map<string, { width: number; height: number }>();
+      const under = new Set<string>();
+      for (const spot of badgeSpots(frameConfig, { slots, sections, textBars })) {
+        if (spot.occupant || !isMultiCell(spot.span)) continue;
+        const anchor = grid.coordOf(spot.anchorSlotId);
+        const cell = anchor ? grid.cellAt(anchor.row, anchor.col) : null;
+        if (!cell) continue;
+        const r = snappetRect(cell, spot.span, tileSize, grid);
+        pocket.set(cell.id, { width: r.width, height: r.height });
+        for (const c of occupiedCoords(anchor!, spot.span)) {
+          const id = grid.cellAt(c.row, c.col)?.id;
+          if (id && id !== cell.id) under.add(id);
+        }
+      }
+      return { pocket, under };
+    }, [frameConfig, slots, sections, textBars, grid, tileSize]);
+
     // ─── Resize handles ────────────────────────────────────────────────────────
     // The selected snappet gets drag handles. It has to be a currently-RENDERED
     // anchor (a visible multi-cell tile) — a stale selection whose tile was moved,
@@ -340,10 +365,23 @@ export const FrameCanvas = forwardRef<FrameCanvasHandle, FrameCanvasProps>(
     const barCoveredSet = useMemo(() => new Set(coveredSlotIds(textBars)), [textBars]);
     const resolveResize = useMemo(() => {
       if (!selectedSnappetSlotId) return null;
-      const ctx = { grid: resizeGrid, slots, sections, barCovered: barCoveredSet };
+      const ctx: PlacementContext = {
+        grid: resizeGrid,
+        slots,
+        sections,
+        barCovered: barCoveredSet,
+        badges: badgeRule(frameConfig),
+      };
+      // THE SQUARE RULE: where the frame declares only one badge size at this
+      // anchor (every side badge on the flush frame), there is nothing to resize
+      // to, and a handle would only ever preview a refusal. No handles at all.
+      if (ctx.badges.square) {
+        const at = resizeGrid.coordOf(selectedSnappetSlotId);
+        if (!at || squareSpansAt(ctx, at, selectedSnappetSlotId).length <= 1) return null;
+      }
       return (cols: number, rows: number): SnappetPreview | null =>
         resolveSnappetResize(ctx, selectedSnappetSlotId, cols, rows);
-    }, [selectedSnappetSlotId, resizeGrid, slots, sections, barCoveredSet]);
+    }, [selectedSnappetSlotId, resizeGrid, slots, sections, barCoveredSet, frameConfig]);
 
     // Commit a resize. For UPLOADED art, a resize to a shape the photo does NOT
     // match (a different cols:rows aspect) would cover-crop the image with no crop
@@ -621,7 +659,9 @@ export const FrameCanvas = forwardRef<FrameCanvasHandle, FrameCanvasProps>(
               key={slot.id}
               slot={slot}
               placedTile={covered?.has(slot.id) ? undefined : slots[slot.id]}
-              covered={covered?.has(slot.id)}
+              covered={covered?.has(slot.id) || emptySpots.under.has(slot.id)}
+              spanWidth={emptySpots.pocket.get(slot.id)?.width}
+              spanHeight={emptySpots.pocket.get(slot.id)?.height}
             />
           ))}
 
@@ -668,12 +708,19 @@ export const FrameCanvas = forwardRef<FrameCanvasHandle, FrameCanvasProps>(
                           : bannerConfigFor(id, sec.text)
                       }
                       unit={tileSize}
+                      pxPerInch={scale}
                       // A keystone bar's chrome is one shape with the tab, drawn
                       // by KeystoneBarChrome below this overlay; the bar is text.
                       bare={id === "bottom" && !!bottomTab}
                     />
                   ) : (
-                    <div className="flex h-full w-full items-center justify-center bg-[#1e1b17]/70 px-1 text-center text-[10px] font-bold uppercase tracking-wide text-[#faf0d6]/70">
+                    <div
+                      className={`flex h-full w-full items-center justify-center px-1 text-center text-[10px] font-bold uppercase tracking-wide text-[#faf0d6]/70 ${
+                        // On a keystone the part's chrome is already under this
+                        // (KeystoneBarChrome), so the hint is text only.
+                        id === "bottom" && bottomTab && sec.mode === "text" ? "" : "bg-[#1e1b17]/70"
+                      }`}
+                    >
                       Add a phrase
                     </div>
                   )}
@@ -685,7 +732,11 @@ export const FrameCanvas = forwardRef<FrameCanvasHandle, FrameCanvasProps>(
                 at the base. Frame geometry, so the frame draws it. */}
             {(() => {
               const bottomBox = bottomTab ? sectionBounds("bottom", frameSlots, frameConfig) : null;
-              if (!bottomTab || !bottomBox || !sections.bottom?.text?.text) return null;
+              // The SAME condition the print composer draws the part under: the
+              // bottom section is text (a name or not) on a frame with a tab. Keyed
+              // on the name, the screen dropped the whole keystone whenever the
+              // name was empty while the print still made the keystone-shaped part.
+              if (!bottomTab || !bottomBox || sections.bottom?.mode !== "text" || !sections.bottom.text) return null;
               const cfg = bannerConfigFor("bottom", sections.bottom.text);
               const pxPerInch = tileSize / frameConfig.tileSizeInches;
               return (

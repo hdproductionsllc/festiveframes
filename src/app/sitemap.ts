@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { SITE_URL } from "@/config/season";
+import { MSF_PRIVACY_PATH, MSF_TERMS_PATH, MSF_WARRANTY_PATH } from "@/content/msf-pages";
 
 // XML sitemap served at /sitemap.xml. Indexable marketing + SEO landing pages.
 // The order page (/thanks), the redirected /buy, and API routes are excluded.
@@ -12,7 +13,7 @@ import { SITE_URL } from "@/config/season";
 const LAST_MODIFIED: Record<string, string> = {
   // The root serves the /school landing (next.config rewrites it), so this is
   // that page's date.
-  "/": "2026-09-12",
+  "/": "2026-09-23",
   "/america-250-license-plate-frame": "2026-09-12",
   "/patriotic-license-plate-frame": "2026-09-12",
   "/veteran-license-plate-frame": "2026-09-12",
@@ -24,8 +25,11 @@ const LAST_MODIFIED: Record<string, string> = {
   "/gifts/personalized-gift-for-dad": "2026-09-12",
   "/blog/license-plate-frame-sayings": "2026-09-12",
   "/privacy": "2026-09-12",
-  "/returns": "2026-09-12",
-  "/terms": "2026-09-12",
+  "/returns": "2026-09-23",
+  "/terms": "2026-09-23",
+  [MSF_WARRANTY_PATH]: "2026-09-23",
+  [MSF_TERMS_PATH]: "2026-09-23",
+  [MSF_PRIVACY_PATH]: "2026-09-23",
 };
 
 const LANDING_PAGES: { path: string; priority: number }[] = [
@@ -42,7 +46,7 @@ const LANDING_PAGES: { path: string; priority: number }[] = [
 ];
 
 /** Legal / policy pages. Low priority, but they belong in the index. */
-const POLICY_PAGES = ["/privacy", "/returns", "/terms"];
+const POLICY_PAGES = ["/privacy", "/returns", "/terms", MSF_WARRANTY_PATH, MSF_TERMS_PATH, MSF_PRIVACY_PATH];
 
 function lastModified(path: string): Date {
   return new Date(`${LAST_MODIFIED[path]}T00:00:00.000Z`);

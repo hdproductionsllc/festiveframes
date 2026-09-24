@@ -9,8 +9,20 @@ const create = vi.fn();
 vi.mock("@/lib/stripe", () => ({
   getStripe: () => ({ checkout: { sessions: { create } } }),
 }));
+// A school draft as the builder stashes it: square side badges and the runners'
+// direct-print panel parts.
+const SQUARE_DRAFT = {
+  parts: {
+    rows: [
+      { pieceId: "hs:orchestra", size: "2.25 x 2.25" },
+      { pieceId: "panel:top", size: "11.00 x 0.75" },
+    ],
+  },
+  artifacts: {},
+};
+const getDraft = vi.fn();
 vi.mock("@/lib/order/store", () => ({
-  getDraft: vi.fn().mockResolvedValue({ parts: {}, artifacts: {} }),
+  getDraft: (...a: unknown[]) => getDraft(...a),
   saveCartDraft: vi.fn(),
 }));
 
@@ -25,6 +37,8 @@ function req(body: unknown): Request {
 beforeEach(() => {
   create.mockReset();
   create.mockResolvedValue({ url: "https://checkout.stripe.test/s" });
+  getDraft.mockReset();
+  getDraft.mockResolvedValue(SQUARE_DRAFT);
   vi.resetModules();
 });
 
@@ -57,6 +71,10 @@ describe("POST /api/checkout — school-frame", () => {
       school: "sluh-jr-bills",
       donationCents: String(schoolOffer.schoolDonationCents),
     });
+    // A paying parent comes back to MySchoolFrame's own confirmation page, never
+    // the holiday product's /thanks.
+    const { MSF_THANKS_PATH } = await import("@/content/msf-pages");
+    expect(new URL(args.success_url).pathname).toBe(MSF_THANKS_PATH);
   });
 
   it("records the artwork attestation on the payment, so the order carries its own evidence", async () => {
@@ -120,5 +138,32 @@ describe("POST /api/checkout — school-frame", () => {
     const { POST } = await import("./route");
     await POST(req({ kind: "school-frame", orderId: "o1", school: "<script>alert(1)</script>" }));
     expect(create.mock.calls[0][0].metadata.school).toBe("");
+  });
+
+  it("refuses a draft carrying a non-square badge — the same rule /api/school/submit enforces", async () => {
+    vi.doMock("@/config/offers", async (importOriginal) => ({
+      ...(await importOriginal<typeof import("@/config/offers")>()),
+      SCHOOL_CHECKOUT_OPEN: true,
+    }));
+    getDraft.mockResolvedValue({ parts: { rows: [{ pieceId: "hs:crest", size: "2.25 x 4.50" }] }, artifacts: {} });
+    const { POST } = await import("./route");
+    const res = await POST(req({ kind: "school-frame", orderId: "o1", school: "sluh-jr-bills" }));
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.error).toMatch(/square/i);
+    expect(json.nonSquare).toEqual(["hs:crest (2.25 x 4.50)"]);
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it("refuses a draft with no parts list: a paid order must be producible", async () => {
+    vi.doMock("@/config/offers", async (importOriginal) => ({
+      ...(await importOriginal<typeof import("@/config/offers")>()),
+      SCHOOL_CHECKOUT_OPEN: true,
+    }));
+    getDraft.mockResolvedValue({ parts: {}, artifacts: {} });
+    const { POST } = await import("./route");
+    const res = await POST(req({ kind: "school-frame", orderId: "o1", school: "sluh-jr-bills" }));
+    expect(res.status).toBe(400);
+    expect(create).not.toHaveBeenCalled();
   });
 });

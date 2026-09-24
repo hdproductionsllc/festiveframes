@@ -17,6 +17,8 @@
 // these are REMOVED, not penalised.
 
 import { MIN_DPI } from "@/lib/utils/artwork-qc";
+import { largestBadgeInches } from "@/lib/utils/snappet";
+import { SCHOOL_SHIPPING_VARIANT, schoolVariant } from "@/data/school-variants";
 import { evaluateResolution, type ResolutionVerdict } from "@/lib/utils/print-resolution";
 import type { DropReason, LogoCandidate, LogoKind } from "./types";
 import {
@@ -617,13 +619,15 @@ export function rankLogoCandidates(
 // ─── the resolution gate (constraint 5) ──────────────────────────────────────
 
 /**
- * The smallest thing a school badge can be: 2×2 tiles at the school frame's 0.991"
- * pitch. `sectionSupportsTiles` already forces 2×2 as the floor — a 1×1 badge does
- * not exist — so this is the real physical size every candidate must survive.
+ * The badge a candidate must survive: the one square badge the shipping frame
+ * prints (2.25" on the flush frame). Derived from the variant /s/<slug> serves —
+ * the same source as prepare-artwork's BADGE_REQUIREMENT — so the two gates can
+ * never judge art against different badges again (this was once a hand-typed
+ * 2 x 0.991", a badge the shipping frame no longer has).
  */
-export const MIN_BADGE_INCHES = 2 * 0.991;
+export const MIN_BADGE_INCHES = largestBadgeInches(schoolVariant(SCHOOL_SHIPPING_VARIANT).config)!;
 
-/** Pixels a candidate needs on its short side to clear the block. 397 at 200 DPI. */
+/** Pixels a candidate needs on its short side to clear the block. 450 at 200 DPI. */
 export const MIN_BADGE_PIXELS = Math.ceil(MIN_DPI * MIN_BADGE_INCHES);
 
 export interface UsabilityVerdict {

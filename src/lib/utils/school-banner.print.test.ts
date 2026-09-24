@@ -10,7 +10,6 @@ import {
 } from "./compose-school-frame";
 import { SCHOOL_FRAME_CONFIG } from "@/lib/constants/frame";
 import { kitSections, getSchoolKit } from "@/data/school-kits";
-import { schoolTopLine } from "./school-banner";
 import type { SectionState } from "@/lib/types";
 
 /**
@@ -28,12 +27,8 @@ const kit = getSchoolKit("sluh-jr-bills")!;
 
 function personalized(): SchoolDesign {
   const sections = kitSections(kit) as Record<string, SectionState>;
-  const top = schoolTopLine({
-    kit,
-    currentTop: sections.top.text!.text,
-    currentBottom: sections.bottom.text!.text,
-    personName: "OKAFOR",
-  })!;
+  // The kit already seeds the school's full name on the top runner.
+  const top = sections.top.text!.text;
   return {
     frameConfig: SCHOOL_FRAME_CONFIG,
     slots: {},

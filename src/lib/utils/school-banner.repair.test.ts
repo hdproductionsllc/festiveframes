@@ -44,6 +44,27 @@ describe("repairing a design that was already saved broken", () => {
     }
   });
 
+  it("never strips HOME OF THE from a headline the parent edited — it cannot tell a name from a nickname", () => {
+    // Today's kits seed HOME OF THE over the mascot. A parent who rewrites the
+    // headline to their own words keeps the fragment above it: LADY WILDCATS and
+    // MILLER look the same to a hydrate repair, and erasing the first between
+    // visits is silent data loss. A NAME is kept off the fragment at write time
+    // instead (writePersonOnBanner — see school-banner.test.ts).
+    for (const before of [
+      saved("ST. LOUIS UNIVERSITY HIGH", "LADY WILDCATS", "HOME OF THE"),
+      saved("ST. LOUIS UNIVERSITY HIGH", "MUSTANG PRIDE", "HOME OF THE"),
+    ]) {
+      expect(repairDanglingTopLine(before, seeded)).toBe(before);
+    }
+  });
+
+  it("leaves today's seeded frame (school on top, HOME OF THE over the mascot) alone", () => {
+    const before = saved("ST. LOUIS UNIVERSITY HIGH", "JR. BILLS", "HOME OF THE");
+    expect(seeded.top!.text!.text).toBe("ST. LOUIS UNIVERSITY HIGH");
+    expect(seeded.bottom!.text!.tagline).toBe("HOME OF THE");
+    expect(repairDanglingTopLine(before, seeded)).toBe(before);
+  });
+
   it("repairs the KITLESS builder too, where WILDCATS is the only school word", () => {
     const kitless = {
       top: { mode: "text" as const, text: { ...SCHOOL_DEFAULT_SECTIONS.top.text, text: "HOME OF THE" } },

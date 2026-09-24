@@ -4,7 +4,7 @@ import type { FrameConfig } from "@/lib/types";
 import type { SchoolVariantId } from "@/data/school-variants";
 import { BuilderFontsDeferred } from "@/app/BuilderFontsDeferred";
 import { SchoolBuilder } from "@/components/designer/SchoolDesigner";
-import { CHIP_PRESET_PIECE, type SchoolKit } from "@/data/school-kits";
+import { chipPiece, type SchoolKit } from "@/data/school-kits";
 
 // ─── A school's own builder page ─────────────────────────────────────────────
 //
@@ -37,12 +37,16 @@ export function SchoolKitPage({
   /** Offer the website scanner for THIS school. Only /s/<slug> on a roster-backed
    *  (thin) kit passes it — see SchoolBuilder's `brandScan`. */
   brandScan,
+  /** The production print-file export in the header. Lab routes only — see
+   *  SchoolDesigner's `operatorTools`. */
+  operatorTools = false,
 }: {
   kit: SchoolKit;
   frameConfig?: FrameConfig;
   variant?: SchoolVariantId;
   banner?: React.ReactNode;
   brandScan?: { slug: string; heading?: string; blurb?: React.ReactNode };
+  operatorTools?: boolean;
 }) {
   const w = kit.welcome;
   return (
@@ -66,6 +70,7 @@ export function SchoolKitPage({
         frameConfig={frameConfig}
         variant={variant}
         brandScan={brandScan}
+        operatorTools={operatorTools}
         hero={w ? (
           <section className="msf-kit-hero">
             {/* The school's own lockup, above its own words. This is the first
@@ -108,21 +113,22 @@ export function SchoolKitPage({
                 away. The label names the action, the arrow marks them as controls,
                 and the hover lifts them. */}
             <p className="msf-kit-chips-label">
-              One tap builds the frame. Pick what they do:
+              Tap an activity and we&apos;ll build the frame around it:
             </p>
             <div className="msf-kit-chips">
-              {w.chips.map((c) => (
-                // Live controls, not decoration: each chip carries its preset in
-                // the hash; the builder below listens and composes the frame.
-                <a
-                  key={c}
-                  className="msf-kit-chip"
-                  href={`#preset=${encodeURIComponent(CHIP_PRESET_PIECE[c.toLowerCase()] ?? "generic")}`}
-                >
-                  {c}
-                  <span aria-hidden className="msf-kit-chip-go">→</span>
-                </a>
-              ))}
+              {w.chips.flatMap((c) => {
+                // Live controls, not decoration: each chip carries its badge in
+                // the hash; the builder below listens and composes the frame. A
+                // label with no badge is a tradition, not an activity — tapping it
+                // could only ever build the generic crest — so it is not a chip.
+                const piece = chipPiece(c);
+                return piece ? [
+                  <a key={c} className="msf-kit-chip" href={`#preset=${encodeURIComponent(piece)}`}>
+                    {c}
+                    <span aria-hidden className="msf-kit-chip-go">→</span>
+                  </a>,
+                ] : [];
+              })}
             </div>
             <p className="msf-kit-ordering">{w.ordering}</p>
           </section>

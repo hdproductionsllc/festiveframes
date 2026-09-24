@@ -22,6 +22,7 @@ import {
   grabOffsetIn,
   anchorIdFor,
   panelSnappetPlacement,
+  FREE_BADGES,
   type PlacementContext,
 } from "./snappet";
 import { buildGrid } from "./slot-generator";
@@ -41,12 +42,19 @@ const noSections = {};
 const noSlots: Record<string, PlacedTile> = {};
 const noBars: ReadonlySet<string> = new Set();
 
-/** A placement context on the school grid, overriding whichever field a test cares about. */
+/**
+ * A placement context on the school grid, overriding whichever field a test cares about.
+ *
+ * These tests pin the placement ENGINE — overhang, panels, bars, nudging, the
+ * ladder — so they run it with FREE spans. The school frames' square rule is a
+ * separate input (`badges`) with its own suite in snappet.square.test.ts.
+ */
 const ctx = (over: Partial<PlacementContext> = {}): PlacementContext => ({
   grid: schoolGrid,
   slots: noSlots,
   sections: noSections,
   barCovered: noBars,
+  badges: FREE_BADGES,
   ...over,
 });
 
@@ -632,7 +640,7 @@ describe("resolveSnappetDrop", () => {
   it("a 1x1 resolves to exactly the hovered cell — the /build shape", () => {
     const defaultGrid = buildGrid(DEFAULT_FRAME_CONFIG);
     const p = resolveSnappetDrop(
-      { grid: defaultGrid, slots: noSlots, sections: noSections, barCovered: noBars },
+      { grid: defaultGrid, slots: noSlots, sections: noSections, barCovered: noBars, badges: FREE_BADGES },
       { overSlotId: "frame:top-3", span: { cols: 1, rows: 1 } },
     )!;
     expect(p.anchorSlotId).toBe("frame:top-3");
@@ -873,6 +881,7 @@ describe("resolveSnappetDrop — auto-sizing a palette drag", () => {
       slots: noSlots,
       sections: noSections,
       barCovered: noBars,
+      badges: FREE_BADGES,
     };
     const anchor = wideGrid.cellAt(2, 0)!;
     const panelCols = wideGrid.slots.filter(
@@ -944,7 +953,7 @@ describe("panelSnappetPlacement — uploaded photos size to the panel too", () =
     expect(narrow.span).toEqual({ cols: 2, rows: 2 });
 
     const wide = panelSnappetPlacement(
-      { grid: wideGrid, slots: noSlots, sections: noSections, barCovered: noBars },
+      { grid: wideGrid, slots: noSlots, sections: noSections, barCovered: noBars, badges: FREE_BADGES },
       "wing-left",
       1,
     )!;
@@ -1226,7 +1235,7 @@ describe("blockFill — no holes, nothing off the frame", () => {
   function coverage(cfg: typeof SCHOOL_FRAME_CONFIG) {
     const grid = buildGrid(cfg);
     const slots = blockFill(
-      { grid, slots: {}, sections: {}, barCovered: new Set() },
+      { grid, slots: {}, sections: {}, barCovered: new Set(), badges: FREE_BADGES },
       pick,
       MIN_ART_SPAN,
     );

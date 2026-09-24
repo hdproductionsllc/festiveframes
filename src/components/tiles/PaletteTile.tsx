@@ -7,7 +7,7 @@ import { usePaletteStore } from "@/stores/palette-store";
 import { useUIStore } from "@/stores/ui-store";
 import { useDesignStore } from "@/stores/design-store";
 import { TileArtwork, hasCustomArtwork, canDieCut } from "./TileArtwork";
-import { tileField } from "@/lib/utils/tile-theme";
+import { badgeArtworkUrl, tileField } from "@/lib/utils/tile-theme";
 import { playSound } from "@/lib/utils/sound";
 import type { UploadedArt } from "@/lib/utils/uploads";
 
@@ -44,6 +44,7 @@ export function PaletteTile({ piece, size = "md", demo = false, upload, onRemove
   const isSelected = selectedPieceId === piece.id;
   const hasArt = hasCustomArtwork(piece.id);
   const isDieCut = dieCut && canDieCut(piece.id);
+  const field = tileField(piece, tileFieldColor);
   // WYSIWYG swatch. The palette drew every piece as a square, so the 2:1 PORTRAIT
   // badges — the tall crests, the pennant, the tie — advertised a 1x1 and then
   // landed twice as tall as the thumbnail promised. The swatch now takes the
@@ -117,7 +118,11 @@ export function PaletteTile({ piece, size = "md", demo = false, upload, onRemove
       {/* Remove an upload from the tray. `stopPropagation` on POINTERDOWN as well as
           click: the drag listeners live on the parent node, so without it a tap on
           the ✕ starts dragging the very tile it is meant to delete. Tiles already
-          placed from this upload are untouched — they carry their own copy. */}
+          placed from this upload are untouched — they carry their own copy.
+          A touch screen has no hover, so a hover-only reveal left the ✕ invisible
+          but still live: a tap near an upload's corner deleted it with no warning.
+          On a coarse pointer it is always shown, and the ::after pads the 18px
+          disc to a 44px target. */}
       {onRemove && (
         <button
           type="button"
@@ -131,7 +136,8 @@ export function PaletteTile({ piece, size = "md", demo = false, upload, onRemove
           className="absolute -right-1 -top-1 z-20 grid h-[18px] w-[18px] place-items-center rounded-full
             border border-[var(--ff-line,#1e1b17)] bg-[var(--ff-card,#fff)] text-[11px] leading-none
             text-[var(--ff-ink-2,#4b5058)] opacity-0 transition-opacity group-hover:opacity-100
-            focus-visible:opacity-100"
+            focus-visible:opacity-100 pointer-coarse:opacity-100
+            after:absolute after:-inset-[13px] after:content-['']"
         >
           ×
         </button>
@@ -174,7 +180,7 @@ export function PaletteTile({ piece, size = "md", demo = false, upload, onRemove
           // The palette must show the SAME field the frame will paint, or picking a
           // tile is a guess: with a school colour applied, a swatch still showing its
           // designed navy is advertising a tile that no longer exists.
-          backgroundColor: isDieCut ? "transparent" : tileField(piece, tileFieldColor),
+          backgroundColor: isDieCut ? "transparent" : field,
           filter: isDieCut ? "drop-shadow(0 1px 2px rgba(0,0,0,0.5))" : undefined,
         }}
       >
@@ -182,7 +188,7 @@ export function PaletteTile({ piece, size = "md", demo = false, upload, onRemove
           // Resized and lazy — the swatch is ~56px and the file behind it is a
           // print master. See TileArtImg.
           <TileArtImg
-            src={piece.artworkUrl}
+            src={badgeArtworkUrl(piece, field)}
             alt={piece.name}
             width={artW}
             height={artH}
@@ -197,7 +203,7 @@ export function PaletteTile({ piece, size = "md", demo = false, upload, onRemove
           self-explanatory and the labels just bloated the rail, so they're dropped
           (the full name still shows in the title tooltip on hover). */}
       {size === "lg" && (
-        <span className="w-16 truncate text-center text-[11px] text-surface-300">
+        <span className="line-clamp-2 w-16 text-center text-[11px] leading-tight text-surface-300">
           {piece.name}
         </span>
       )}

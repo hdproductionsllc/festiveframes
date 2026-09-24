@@ -17,6 +17,7 @@ interface QuickActionsProps {
 
 export function QuickActions({ surfacedSetIds }: QuickActionsProps = {}) {
   const selectedPieceId = usePaletteStore((s) => s.selectedPieceId);
+  const lastPieceId = usePaletteStore((s) => s.lastPieceId);
   const activeSetId = usePaletteStore((s) => s.activeSetId);
   const soundEnabled = useUIStore((s) => s.soundEnabled);
   const { fillAll, randomFill, mirrorTopSlots, clearAll, undo, redo, canUndo, canRedo } =
@@ -40,7 +41,8 @@ export function QuickActions({ surfacedSetIds }: QuickActionsProps = {}) {
     // Prefer the user's selected tile. A piece that REQUIRES an exact footprint
     // can't tile a uniform grid, so fall back to the first fillable piece and always
     // do something obvious instead of squishing it.
-    const selected = selectedPieceId ? pieces.find((p) => p.id === selectedPieceId) : null;
+    const chosen = selectedPieceId ?? lastPieceId;
+    const selected = chosen ? pieces.find((p) => p.id === chosen) : null;
     const selectedFills = selected ? fillablePieces.includes(selected) : false;
     const pieceId = (selectedFills ? selected!.id : fillablePieces[0]?.id) ?? null;
     if (!pieceId) return;
@@ -49,9 +51,15 @@ export function QuickActions({ surfacedSetIds }: QuickActionsProps = {}) {
     sfx("cascade");
   };
 
+  // On a school builder Random draws BADGES only. The school set also carries plain
+  // colour blocks (the solids: no artwork), and one dropped among badges reads as a
+  // badge that failed to load — a blank white square, or Crimson on a blue school.
+  // /build keeps its exact prior pool.
+  const randomPool = surfacedSetIds ? fillablePieces.filter((p) => p.artworkUrl) : fillablePieces;
+
   const handleRandomFill = () => {
-    if (fillablePieces.length === 0) return;
-    const pieceData = fillablePieces.map((p) => ({ pieceId: p.id, setId: p.setId }));
+    if (randomPool.length === 0) return;
+    const pieceData = randomPool.map((p) => ({ pieceId: p.id, setId: p.setId }));
     randomFill(pieceData);
     sfx("rattle");
   };
@@ -73,7 +81,7 @@ export function QuickActions({ surfacedSetIds }: QuickActionsProps = {}) {
       // Enabled as long as the set has tiles — uses your selected tile, or the
       // set's first tile if you haven't picked one yet.
       disabled: fillablePieces.length === 0,
-      title: selectedPieceId
+      title: selectedPieceId ?? lastPieceId
         ? "Fill every slot with your selected tile"
         : "Fill every slot with this set's first tile (tap a tile to choose)",
     },
@@ -115,7 +123,7 @@ export function QuickActions({ surfacedSetIds }: QuickActionsProps = {}) {
             onClick={action.onClick}
             disabled={action.disabled}
             title={action.title}
-            className={`bsk-btn ${action.color} flex items-center gap-1.5 px-2 py-1.5 rounded-md text-xs font-bold
+            className={`bsk-btn ${action.color} flex items-center gap-1.5 px-2 py-1.5 rounded-md text-xs font-bold max-lg:min-h-11
               disabled:opacity-40 disabled:cursor-not-allowed`}
           >
             <span className={`ff-icon ${action.iconClass}`}>{action.icon}</span>
@@ -128,7 +136,7 @@ export function QuickActions({ surfacedSetIds }: QuickActionsProps = {}) {
           onClick={() => { undo(); sfx("rewind"); }}
           disabled={!canUndo()}
           title="Undo (Ctrl+Z)"
-          className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-md text-xs font-medium
+          className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-md text-xs font-medium max-lg:min-h-11
             bsk-btn bsk-cream disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {/* ONE wrapper span, deliberately. The four buttons above already render
@@ -143,7 +151,7 @@ export function QuickActions({ surfacedSetIds }: QuickActionsProps = {}) {
           onClick={() => { redo(); sfx("forward"); }}
           disabled={!canRedo()}
           title="Redo (Ctrl+Shift+Z)"
-          className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-md text-xs font-medium
+          className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-md text-xs font-medium max-lg:min-h-11
             bsk-btn bsk-cream disabled:opacity-40 disabled:cursor-not-allowed"
         >
           <span className="ff-glyph-wrap"><span className="ff-icon ff-i-redo">↪</span> Redo</span>

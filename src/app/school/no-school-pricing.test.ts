@@ -5,10 +5,13 @@ import path from "node:path";
 /**
  * NO PRICE ON ANY SCHOOL-FACING SURFACE.
  *
- * MySchoolFrame pricing is a placeholder that has never been owner-confirmed, so
- * the published path is send-your-design and we follow up with ordering details.
- * That decision was already made and already implemented — the Buy button in the
- * builder header sits behind a `{false && ...}` guard with a comment saying so.
+ * The pilot price IS owner-confirmed now ($24.95, $5 of it to the school — see
+ * config/offers.ts). What is not done is the one end-to-end test payment that
+ * opens checkout (SCHOOL_CHECKOUT_OPEN), so the published path is still
+ * send-your-design and we follow up with ordering details. Until checkout opens,
+ * a figure on a school surface quotes a price nobody can pay yet, and the owner's
+ * call is that school pages show no figure until then. When checkout opens, this
+ * test is the place to decide deliberately where the confirmed price may appear.
  *
  * It then leaked back in anyway, in four places at once, because each addition
  * looked harmless on its own: "$10 per frame" on the homepage panel, the same on
@@ -16,8 +19,9 @@ import path from "node:path";
  * into parent group chats, and — worst — a graduate "Order" button wired straight
  * past the parked guard to Stripe.
  *
- * A number in any of these is a promise to a school or a parent that we cannot
- * make yet, so this fails the build rather than relying on anyone remembering.
+ * A number in any of these gets forwarded and repeated before we can stand behind
+ * it at checkout, so this fails the build rather than relying on anyone
+ * remembering.
  *
  * NOTE: /build is a different, live product with confirmed pricing ($39/$69).
  * Only school surfaces are covered here.
@@ -77,7 +81,9 @@ describe("school surfaces carry no price", () => {
     const src = readFileSync(path.join(ROOT, "src/components/designer/SchoolDesigner.tsx"), "utf8");
     // handleBuy still exists for the flip back once pricing is confirmed, but
     // nothing user-reachable may call it while the header's guard is `false`.
-    expect(src).toContain("onSend={handleSubmit}");
+    // The express opens the send sheet (contact first); the sheet sends.
+    expect(src).toContain("onSend={() => void openSend()}");
+    expect(src).toContain("onSend={(contact) => void handleSubmit(contact)}");
     expect(src).not.toContain("onSend={handleBuy}");
     expect(src).not.toContain("onOrder={handleBuy}");
   });

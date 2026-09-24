@@ -27,6 +27,12 @@
 //
 // which is how a real personalized plate frame is laid out, and which says the
 // school, the student and the year exactly once each.
+//
+// Kits now SEED that layout (2026-09-23): the school on the top runner and
+// "HOME OF THE" as the bottom tagline, over the mascot. The fragment moved, it
+// did not go away — a name on the headline would read "HOME OF THE / OKAFOR" —
+// so the same repair drops a seeded tagline fragment once the headline is no
+// longer the mascot.
 
 /**
  * Top lines this builder has SEEDED, which are therefore ours to replace.
@@ -133,21 +139,85 @@ export function repairDanglingTopLine<T extends BannerSections>(
   const top = sections?.top?.text;
   const bottom = sections?.bottom?.text;
   const seededBottom = seeded?.bottom?.text;
-  if (!top?.text || !bottom?.text || !seededBottom?.text) return sections;
-  if (!SEEDED_TOP_FRAGMENTS.includes(normalizeLine(top.text))) return sections;
+  if (!bottom?.text || !seededBottom?.text) return sections;
   // Still the mascot the builder put there: the sentence is intact, leave it.
   if (normalizeLine(bottom.text) === normalizeLine(seededBottom.text)) return sections;
 
-  const promoted = schoolTopLine({
-    // The identity as it was SEEDED — the persisted tagline has since become the
-    // class year, so the school's own name only survives here.
-    kit: { banners: { tagline: seededBottom.tagline, bottom: seededBottom.text } },
-    currentTop: top.text,
-    personName: bottom.text,
+  let out = sections;
+
+  // NO BOTTOM-FRAGMENT REPAIR, deliberately. Kits now seed HOME OF THE as the
+  // bottom tagline over the mascot, and a name on that headline would dangle the
+  // same way — but that case is closed at WRITE time (`writePersonOnBanner`), and
+  // no design was ever saved under that layout before the write-time rule
+  // existed. A hydrate repair could not tell MILLER from a parent's own
+  // LADY WILDCATS under HOME OF THE, and would have erased the second between
+  // visits with nothing in the session to show why.
+
+  // THE TOP FRAGMENT, in designs saved under the old layout (HOME OF THE on top).
+  if (top?.text && SEEDED_TOP_FRAGMENTS.includes(normalizeLine(top.text))) {
+    const promoted = schoolTopLine({
+      // The identity as it was SEEDED — the persisted tagline has since become the
+      // class year, so the school's own name only survives in the seed: on the
+      // seeded top runner (today's kits), or as the seeded tagline (older ones).
+      kit: {
+        banners: {
+          tagline: [seeded?.top?.text?.text, seededBottom.tagline].find(
+            (l) => l && !SEEDED_TOP_FRAGMENTS.includes(normalizeLine(l)),
+          ),
+          bottom: seededBottom.text,
+        },
+      },
+      currentTop: top.text,
+      personName: bottom.text,
+    });
+    if (promoted) {
+      out = { ...out, top: { ...out.top, mode: "text", text: { ...top, text: promoted } } };
+    }
+  }
+  return out;
+}
+
+/** What `writePersonOnBanner` needs of the design store — the store satisfies it. */
+export interface BannerWriteTarget {
+  sections?: BannerSections;
+  setSectionText: (id: "top" | "bottom", updates: { text?: string; tagline?: string }) => void;
+}
+
+/**
+ * Put the PERSON on the bottom banner and move the SCHOOL up to the top.
+ *
+ * THE builder's banner write — every intake field, banner-line chip and preset
+ * goes through it (SchoolDesigner's `writePerson`), and so do the pilot sample
+ * sheets, so a sample can never say something a parent's frame would not.
+ *
+ * The two halves are one operation: a name on the headline under a seeded
+ * fragment reads "HOME OF THE / MILLER", so the school is promoted to the top
+ * strip when the top is ours to replace (`schoolTopLine`) and the seeded bottom
+ * fragment goes when the name arrives with no line of its own. That half lives
+ * ONLY here, at write time — the hydrate repair (`repairDanglingTopLine`) cannot
+ * tell a name from a parent's own headline, so it does not try.
+ */
+export function writePersonOnBanner(
+  api: BannerWriteTarget,
+  kit: TopLineInput["kit"],
+  person: { name?: string; tagline?: string },
+): void {
+  const name = (person.name ?? "").trim().toUpperCase();
+  const tagline = person.tagline ?? "";
+  if (!name && !tagline) return;
+  if (name) {
+    const promoted = schoolTopLine({
+      kit,
+      currentTop: api.sections?.top?.text?.text,
+      currentBottom: api.sections?.bottom?.text?.text,
+      personName: name,
+    });
+    if (promoted) api.setSectionText("top", { text: promoted });
+  }
+  const dangling =
+    name && !tagline && SEEDED_TOP_FRAGMENTS.includes(normalizeLine(api.sections?.bottom?.text?.tagline));
+  api.setSectionText("bottom", {
+    ...(name ? { text: name } : {}),
+    ...(tagline ? { tagline } : dangling ? { tagline: "" } : {}),
   });
-  if (!promoted) return sections;
-  return {
-    ...sections,
-    top: { ...sections.top, mode: "text", text: { ...top, text: promoted } },
-  };
 }

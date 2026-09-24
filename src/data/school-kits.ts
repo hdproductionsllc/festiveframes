@@ -1,5 +1,7 @@
 import type { SectionId, SectionState } from "@/lib/types";
 import { getPlateDesign } from "@/data/plates";
+import { WITHHELD_ART } from "@/data/sets/high-school";
+import { fitBanner } from "@/data/thin-kit";
 import { DEFAULT_BOTTOM_BAR } from "@/lib/constants/defaults";
 import { SCHOOL_HEADLINE_FONT, SCHOOL_TAGLINE_FONT } from "@/lib/constants/defaults";
 
@@ -53,13 +55,27 @@ export interface SchoolKit {
   city: string;
   /** Frame body / behind-badge field / rim-override colors, #RRGGBB. */
   colors: { frame: string; tileField: string | null; rim: string | null };
-  /** Banner seeds. `bg` is OPTIONAL and defaults to the badge field colour: they
-   *  are one background as far as anyone looking at the frame is concerned, and
-   *  two independent fields let a kit disagree with itself. It did — SLUH shipped
-   *  with banners a shade off its own tiles, which is what the mismatch reported
-   *  on desktop turned out to be. Set it only to say something different on
-   *  purpose. */
-  banners: { top: string; bottom: string; tagline: string; bg?: string; text: string };
+  /**
+   * Banner seeds. The frame reads, top to bottom (owner, 2026-09-23 — the old
+   * "HOME OF THE" top runner over a crowded bottom banner "looks squished"):
+   *
+   *     top runner     the SCHOOL — `top`, e.g. "EUREKA HIGH SCHOOL"
+   *     bottom banner  "HOME OF THE" — `tagline`, default `KIT_BOTTOM_TAGLINE`
+   *                    the MASCOT — `bottom`, e.g. "WILDCATS"
+   *
+   * `tagline` is optional because it is the same three words on every kit; set
+   * it only to say something different on purpose. On the shipping frame the
+   * tagline sits in the keystone tab, ABOVE the bar's headline, so the bottom
+   * reads as one phrase.
+   *
+   * `bg` is OPTIONAL and defaults to the badge field colour: they are one
+   * background as far as anyone looking at the frame is concerned, and two
+   * independent fields let a kit disagree with itself. It did — SLUH shipped
+   * with banners a shade off its own tiles, which is what the mismatch reported
+   * on desktop turned out to be. Set it only to say something different on
+   * purpose.
+   */
+  banners: { top: string; bottom: string; tagline?: string; bg?: string; text: string };
   /** Builder font family string for the banner faces. Absent = house default. */
   fontFamily?: string;
   /** Parent-facing welcome above the builder: the "they did their homework"
@@ -68,7 +84,10 @@ export interface SchoolKit {
   welcome?: {
     headline: string;
     message: string[];
-    /** Activity/tradition chips — what the school is actually known for. */
+    /** Activity chips — what the school is actually known for, each one a
+     *  one-tap control that builds that activity's frame. ACTIVITIES only: a
+     *  tradition ("Battle of 109", "Mayor's Bowl") has no badge and goes in
+     *  `message`. See `chipPiece`. */
     chips: string[];
     ordering: string;
   };
@@ -146,7 +165,7 @@ const KITS: SchoolKit[] = [
     mascot: "Pioneers",
     city: "Kirkwood, MO",
     colors: { frame: "#7A0E1F", tileField: "#7A0E1F", rim: "#FFFFFF" },
-    banners: { top: "HOME OF THE", bottom: "PIONEERS", tagline: "KIRKWOOD HIGH SCHOOL", text: "#FFFFFF" },
+    banners: { top: "KIRKWOOD HIGH SCHOOL", bottom: "PIONEERS", text: "#FFFFFF" },
     // "PIONEERS" vanity mockup, generated from the SLUH plate photo via Gemini
     // image editing (scripts/gen-plate.mjs) so every school's plate is the same
     // photograph with new embossing. Conformed to the same 924x467 framing the
@@ -170,11 +189,10 @@ const KITS: SchoolKit[] = [
     city: "St. Louis, MO",
     // Sampled from the official artwork itself (see colorSource) — not eyeballed.
     colors: { frame: "#183B67", tileField: "#183B67", rim: "#FFFFFF" },
-    // Tagline is their wordmark's own spelling — full name, no "SCHOOL",
+    // The top runner is their wordmark's own spelling — full name, no "SCHOOL",
     // exactly as the official lockup writes it. (Default rule: prefer the full
-    // school name on the tagline line when it fits; the intake swaps it for
-    // CLASS OF YYYY once the frame becomes the student's.)
-    banners: { top: "HOME OF THE", bottom: "JR. BILLS", tagline: "ST. LOUIS UNIVERSITY HIGH", text: "#FFFFFF" },
+    // school name on the top runner when it fits.)
+    banners: { top: "ST. LOUIS UNIVERSITY HIGH", bottom: "JR. BILLS", text: "#FFFFFF" },
     // Every welcome fact is research-verified w/ sources (scratchpad sluh-profile):
     // 1818/oldest-west (Wikipedia, stlmag), racquetball 16 national titles thru
     // 2023 (Prep News, USA Racquetball), soccer 2024+2025 back-to-back (Post-
@@ -190,7 +208,7 @@ const KITS: SchoolKit[] = [
       headline: "Jr. Bills, this one's for the back of the car.",
       message: [
         "SLUH families have worn the blue since 1818. From soccer in November to racquetball season, the Blue Crew shows up loud.",
-        "This frame is your student's. Their last name across the bottom banner, their sport or club on the badges, their class year in brass, all in SLUH blue.",
+        "This frame is your student's. Their sport or club on the badges, their class year on the banner, all in SLUH blue.",
       ],
       chips: [
         "Soccer",
@@ -261,7 +279,7 @@ const KITS: SchoolKit[] = [
     mascot: "Rams",
     city: "St. Louis, MO",
     colors: { frame: "#04463D", tileField: "#04463D", rim: "#BCBBB6" },
-    banners: { top: "HOME OF THE", bottom: "RAMS", tagline: "MICDS", text: "#FFFFFF" },
+    banners: { top: "MICDS", bottom: "RAMS", text: "#FFFFFF" },
     // "RAMS" vanity mockup from the per-school plate pipeline (scripts/gen-plate.mjs).
     plate: { state: "MO", src: "/plates/missouri-rams-centered.jpg" },
     // PARTLY RESEARCHED — needs a second pass. Lacrosse and football are sourced
@@ -279,13 +297,13 @@ const KITS: SchoolKit[] = [
     mascot: "Cadets",
     city: "Town and Country, MO",
     colors: { frame: "#5B2B82", tileField: "#5B2B82", rim: "#C5B358" },
-    banners: { top: "HOME OF THE", bottom: "CADETS", tagline: "CBC HIGH SCHOOL", text: "#FFFFFF" },
+    banners: { top: "CBC HIGH SCHOOL", bottom: "CADETS", text: "#FFFFFF" },
     signature: ["hs:football-patch", "hs:basketball-patch", "hs:lacrosse", "hs:wrestling"],
     welcome: {
       headline: "For the families who fill the purple side of the stands.",
       message: [
         "Every Cadet family knows the rhythm — fall Fridays under the lights, a winter that belongs to the gym and the wrestling room, and a spring where half the school is on a field somewhere because nobody gets cut.",
-        "This frame is your student's. Their last name across the bottom banner, their sport or their club on the badges, their class year in brass, all in purple and gold.",
+        "This frame is your student's. Their sport or their club on the badges, their class year on the banner, all in purple and gold.",
       ],
       chips: ["Football", "Basketball", "Wrestling", "Lacrosse", "Racquetball", "Rugby", "Robotics", "Cadet Student Network", "The Guidon", "Service"],
       ordering:
@@ -302,13 +320,13 @@ const KITS: SchoolKit[] = [
     mascot: "Spartans",
     city: "Creve Coeur, MO",
     colors: { frame: "#7A1F2E", tileField: "#7A1F2E", rim: "#FFFFFF" },
-    banners: { top: "HOME OF THE", bottom: "SPARTANS", tagline: "DE SMET JESUIT", text: "#FFFFFF" },
+    banners: { top: "DE SMET JESUIT", bottom: "SPARTANS", text: "#FFFFFF" },
     signature: ["hs:ice-hockey", "hs:football-patch", "hs:basketball-patch", "hs:volleyball-patch"],
     welcome: {
       headline: "Built for Spartan Country — the rink, the stands and the drive home.",
       message: [
         "You already know which nights are non-negotiable. The rink in February, a Friday in the fall, a gym in March. Same families, same seats, same drive back across New Ballas.",
-        "This frame is your student's. Their last name across the bottom banner, their sport or their club on the badges, their class year in brass, all in maroon.",
+        "This frame is your student's. Their sport or their club on the badges, their class year on the banner, all in maroon.",
       ],
       chips: ["Hockey", "Football", "Basketball", "Volleyball", "Rugby", "Robotics", "Spartan Spectacular", "Men's Club", "Lacrosse", "Service"],
       ordering:
@@ -325,13 +343,13 @@ const KITS: SchoolKit[] = [
     mascot: "Red Devils",
     city: "Creve Coeur, MO",
     colors: { frame: "#C8102E", tileField: "#C8102E", rim: "#FFFFFF" },
-    banners: { top: "HOME OF THE", bottom: "RED DEVILS", tagline: "CHAMINADE COLLEGE PREP", text: "#FFFFFF" },
+    banners: { top: "CHAMINADE COLLEGE PREP", bottom: "RED DEVILS", text: "#FFFFFF" },
     signature: ["hs:basketball-patch", "hs:ice-hockey", "hs:soccer-patch", "hs:journalism"],
     welcome: {
       headline: "Cardinal and white, for the families who drive to every one of them.",
       message: [
         "Some winters here you plan around a gym, and some you plan around a sheet of ice. Either way the Red Devils section is loud and your car is in the lot.",
-        "This frame is your student's. Their last name across the bottom banner, their sport or their club on the badges, their class year in brass, all in cardinal and white.",
+        "This frame is your student's. Their sport or their club on the badges, their class year on the banner, all in cardinal and white.",
       ],
       chips: ["Basketball", "Ice Hockey", "Soccer", "Cardinal & White", "Robotics", "Model U.N.", "Drama", "Band", "House System", "Service"],
       ordering:
@@ -348,13 +366,13 @@ const KITS: SchoolKit[] = [
     mascot: "Griffins",
     city: "Kirkwood, MO",
     colors: { frame: "#101010", tileField: "#101010", rim: "#FFC72C" },
-    banners: { top: "HOME OF THE", bottom: "GRIFFINS", tagline: "ST. JOHN VIANNEY", text: "#FFFFFF" },
+    banners: { top: "ST. JOHN VIANNEY", bottom: "GRIFFINS", text: "#FFFFFF" },
     signature: ["hs:volleyball-patch", "hs:chess", "hs:soccer-patch", "hs:baseball-patch"],
     welcome: {
       headline: "Black and gold, for the families who go to everything.",
       message: [
         "At Vianney the trophy case argues with itself. Volleyball has owned more springs than anyone wants to count, the soccer banners go back decades, and the chess team has come home from nationals with a title — which is a very Griffin way to win something.",
-        "This frame is your student's. Their last name across the bottom banner, their sport or their club on the badges, their class year in brass, in the Griffin's own colours.",
+        "This frame is your student's. Their sport or their club on the badges, their class year on the banner, in the Griffin's own colors.",
       ],
       chips: ["Volleyball", "Soccer", "Baseball", "Ice Hockey", "Wrestling", "Chess", "Football", "Racquetball", "Bowling", "Lacrosse"],
       ordering:
@@ -371,13 +389,13 @@ const KITS: SchoolKit[] = [
     mascot: "Angels",
     city: "Frontenac, MO",
     colors: { frame: "#00843D", tileField: "#00843D", rim: "#FFFFFF" },
-    banners: { top: "HOME OF THE", bottom: "ANGELS", tagline: "ST. JOSEPH'S ACADEMY", text: "#FFFFFF" },
+    banners: { top: "ST. JOSEPH'S ACADEMY", bottom: "ANGELS", text: "#FFFFFF" },
     signature: ["hs:basketball-patch", "hs:field-hockey", "hs:robotics", "hs:tennis"],
     welcome: {
       headline: "Not I, But We — including the carpool line.",
       message: [
         "Green and white, and the same three letters on every carpool sign. Whether your Angel is on the field hockey turf, in the JoeBotics build space, or waiting on a call time, the drive there and back is most of what you will remember about these four years.",
-        "This frame is your student's. Her last name across the bottom banner, her sport or her club on the badges, her class year in brass, all in Angels green.",
+        "This frame is your student's. Her sport or her club on the badges, her class year on the banner, all in Angels green.",
       ],
       chips: ["Basketball", "Field Hockey", "JoeBotics", "Tennis", "Swim & Dive", "Cross Country", "Lacrosse", "Campus Ministry", "Theatre", "Service"],
       ordering:
@@ -393,13 +411,13 @@ const KITS: SchoolKit[] = [
     mascot: "Markers",
     city: "Webster Groves, MO",
     colors: { frame: "#1E5631", tileField: "#1E5631", rim: "#FFFFFF" },
-    banners: { top: "HOME OF THE", bottom: "MARKERS", tagline: "NERINX HALL", text: "#FFFFFF" },
+    banners: { top: "NERINX HALL", bottom: "MARKERS", text: "#FFFFFF" },
     signature: ["hs:soccer-patch", "hs:drama", "hs:field-hockey", "hs:service"],
     welcome: {
       headline: "Green and white, from Hey Day to graduation.",
       message: [
         "From the day the seniors hand over the beanies you are a Marker family — and Marker families drive. To Heagney for the fall play, out to the turf, back down Lockwood again.",
-        "This frame is your student's. Her last name across the bottom banner, her sport or her club on the badges, her class year in brass, all in Nerinx green.",
+        "This frame is your student's. Her sport or her club on the badges, her class year on the banner, all in Nerinx green.",
       ],
       chips: ["Soccer", "Field Hockey", "Lacrosse", "Heagney Theatre", "Hey Day", "Service Learning", "Cross Country", "Hallways", "The Key", "A Cappella"],
       ordering:
@@ -416,13 +434,13 @@ const KITS: SchoolKit[] = [
     mascot: "Chargers",
     city: "Affton, MO",
     colors: { frame: "#C8102E", tileField: "#C8102E", rim: "#FFFFFF" },
-    banners: { top: "HOME OF THE", bottom: "CHARGERS", tagline: "COR JESU ACADEMY", text: "#FFFFFF" },
+    banners: { top: "COR JESU ACADEMY", bottom: "CHARGERS", text: "#FFFFFF" },
     signature: ["hs:soccer-patch", "hs:swim-dive", "hs:service", "hs:track"],
     welcome: {
       headline: "Shine bright. Be brilliant. Drive accordingly.",
       message: [
         "Chargers — and anyone who has sat through a Funderwear pep rally waiting on the Pants Trophy knows better than to add a word in front of it. First Fridays, spirit week, and a lot of miles down Gravois.",
-        "This frame is your student's. Her last name across the bottom banner, her sport or her club on the badges, her class year in brass, all in Charger red.",
+        "This frame is your student's. Her sport or her club on the badges, her class year on the banner, all in Charger red.",
       ],
       chips: ["Soccer", "Swim & Dive", "Track & Field", "Dance Team", "Funderwear", "Penny Queen", "Corde Players", "Chamber Choir", "The Corette", "Service"],
       ordering:
@@ -439,13 +457,13 @@ const KITS: SchoolKit[] = [
     mascot: "Red Knights",
     city: "Bel-Nor, MO",
     colors: { frame: "#C8102E", tileField: "#C8102E", rim: "#FFC72C" },
-    banners: { top: "HOME OF THE", bottom: "RED KNIGHTS", tagline: "INCARNATE WORD ACADEMY", text: "#FFFFFF" },
+    banners: { top: "INCARNATE WORD ACADEMY", bottom: "RED KNIGHTS", text: "#FFFFFF" },
     signature: ["hs:basketball-patch", "hs:esports", "hs:robotics", "hs:volleyball-patch"],
     welcome: {
       headline: "For the families who fill the Red Knights' side of the gym.",
       message: [
         "Red and gold, and a gym that has been standing room only for years now. Whether your Red Knight is out on that floor, in the STEM lab, or on a late bus back from a meet, you are the one driving her there.",
-        "This frame is your student's. Her last name across the bottom banner, her sport or her club on the badges, her class year in brass, in red and gold.",
+        "This frame is your student's. Her sport or her club on the badges, her class year on the banner, in red and gold.",
       ],
       chips: ["Basketball", "Volleyball", "Soccer", "Track & Field", "Cross Country", "Swim & Dive", "Tennis", "Golf", "STEM Lab", "Esports"],
       ordering:
@@ -462,13 +480,13 @@ const KITS: SchoolKit[] = [
     mascot: "Statesmen",
     city: "Webster Groves, MO",
     colors: { frame: "#E87722", tileField: "#E87722", rim: "#111111" },
-    banners: { top: "HOME OF THE", bottom: "STATESMEN", tagline: "WEBSTER GROVES HIGH", text: "#FFFFFF" },
+    banners: { top: "WEBSTER GROVES HIGH", bottom: "STATESMEN", text: "#FFFFFF" },
     signature: ["hs:football-patch", "hs:basketball-patch", "hs:journalism", "hs:track"],
     welcome: {
       headline: "Statesmen families — orange and black, on the back of the car.",
       message: [
         "In Webster the season has a finish line everybody already knows the date of. The Bell goes home with somebody on Thanksgiving morning, and the rest of the year — the gym in March, the track in May, a show in the new theater — gets talked about in the same breath.",
-        "This frame is your student's. Their last name across the bottom banner, their sport or their club on the badges, their class year in brass, all in orange and black.",
+        "This frame is your student's. Their sport or their club on the badges, their class year on the banner, all in orange and black.",
       ],
       chips: ["Football", "Basketball", "Track & Field", "Cross Country", "Marching Band", "Orchestra", "Theater", "The Echo", "Wrestling", "Turkey Day"],
       ordering:
@@ -484,21 +502,31 @@ const KITS: SchoolKit[] = [
     shortName: "Ladue",
     mascot: "Rams",
     city: "St. Louis, MO",
-    colors: { frame: "#003087", tileField: "#003087", rim: "#FFFFFF" },
-    banners: { top: "HOME OF THE", bottom: "RAMS", tagline: "LADUE HORTON WATKINS", text: "#FFFFFF" },
-    signature: ["hs:quiz-bowl", "hs:soccer-patch", "hs:track", "hs:football-patch"],
+    colors: { frame: "#00599C", tileField: "#00599C", rim: "#FFFFFF" },
+    banners: { top: "LADUE HORTON WATKINS", bottom: "RAMS", text: "#FFFFFF" },
+    // The same "RAMS" vanity mockup MICDS wears (scripts/gen-plate.mjs) — a plate
+    // that says the mascot instead of the other brand's FESTIVE.
+    plate: { state: "MO", src: "/plates/missouri-rams-centered.jpg" },
+    // Scholar Bowl leads Ladue's story (the welcome copy keeps it), but its badge
+    // art is withheld until redrawn (WITHHELD_ART), so it is not on the frame.
+    signature: ["hs:track", "hs:soccer-patch", "hs:football-patch", "hs:tennis"],
+    // Welcome facts (voice pass 2026-09-23), each sourced: Scholar Bowl state titles
+    // 2006-2021 (QBWiki "Ladue"; MSHSAA school championships page) and 2023
+    // (ladueactivities.com, 2023-05-08); boys AND girls track Class 4 titles in May
+    // 2024 (ladueactivities.com 2024-05-28; MileSplit); blue and white since 1952
+    // (school history page, per colorSource).
     welcome: {
-      headline: "Rams parents — one frame, blue and white, all four years on it.",
+      headline: "Welcome, Ram families.",
       message: [
-        "Ladue is a school where the Scholar Bowl banner hangs as comfortably as the ones from the track meet, and nobody here thinks that is a strange combination. Fall Fridays, a spring afternoon at the state meet, a buzzer round on a Saturday morning — the same families are in the stands for all of it.",
-        "This frame is your student's. Their last name across the bottom banner, their sport or their club on the badges, their class year in brass, all in Ladue blue.",
+        "Ladue's Scholar Bowl team has been winning state championships since 2006, most recently in 2023, and in 2024 the boys and girls track teams both won Class 4 state titles. Blue and white have been the school's colors since 1952.",
+        "You can add the things your student does as badges and their class year to the banner, all in Ladue blue.",
       ],
-      chips: ["Scholar Bowl", "Soccer", "Track & Field", "Football", "Field Hockey", "Swim & Dive", "Tennis", "Panorama", "Band", "Basketball"],
+      chips: ["Scholar Bowl", "Band", "Soccer", "Track & Field", "Football", "Field Hockey", "Swim & Dive", "Tennis", "Basketball"],
       ordering:
-        "Ladue families: design your frame and send it in, and we will follow up with ordering details. A set donation from every frame goes back to Ladue.",
+        "When you're happy with your frame, send it to us and we'll follow up with ordering details. A set donation from every frame goes back to Ladue.",
     },
     status: "demo",
-    colorSource: "Blue and white are official and dated — both chosen in 1952 with the Ram, per the school's own history page. The blue's shade is not published; the hex is our approximation. White is the school's own second colour.",
+    colorSource: "MEASURED from the school's own ram logo (lhwhs.ladueschools.net): blue #00599C (56.1%), white (42.6%). Blue and white have been the school's colours since 1952 (school history page). The school website's theme navy #003087 is darker than the logo blue, so confirm which blue the school treats as primary. No Ladue colour clears merrowThread's gap against white type as-is; the renderer now falls back to a deeper shade of the banner blue (a near-black navy keyline) before brass.",
   },
   {
     slug: "clayton-greyhounds",
@@ -508,13 +536,13 @@ const KITS: SchoolKit[] = [
     mascot: "Greyhounds",
     city: "Clayton, MO",
     colors: { frame: "#00529B", tileField: "#00529B", rim: "#F58220" },
-    banners: { top: "HOME OF THE", bottom: "GREYHOUNDS", tagline: "CLAYTON HIGH SCHOOL", text: "#FFFFFF" },
+    banners: { top: "CLAYTON HIGH SCHOOL", bottom: "GREYHOUNDS", text: "#FFFFFF" },
     signature: ["hs:journalism", "hs:soccer-patch", "hs:debate", "hs:yearbook"],
     welcome: {
       headline: "Greyhound families — something to put the whole four years on.",
       message: [
         "There is a stone globe out front and a Globe that comes out of the newsroom, and at Clayton it is an even bet which one a graduate talks about first. Lately the soccer fields have given everyone something to shout about too.",
-        "This frame is your student's. Their last name across the bottom banner, their sport or their paper on the badges, their class year in brass, in Clayton blue and orange.",
+        "This frame is your student's. Their sport or their paper on the badges, their class year on the banner, in Clayton blue and orange.",
       ],
       chips: ["The Globe", "Yearbook", "Speech & Debate", "Mock Trial", "Soccer", "Field Hockey", "Basketball", "Tennis", "Track & Field", "Cross Country"],
       ordering:
@@ -531,13 +559,13 @@ const KITS: SchoolKit[] = [
     mascot: "Flyers",
     city: "St. Louis, MO",
     colors: { frame: "#006341", tileField: "#006341", rim: "#FFC425" },
-    banners: { top: "HOME OF THE", bottom: "FLYERS", tagline: "LINDBERGH HIGH SCHOOL", text: "#FFFFFF" },
+    banners: { top: "LINDBERGH HIGH SCHOOL", bottom: "FLYERS", text: "#FFFFFF" },
     signature: ["hs:marching-band", "hs:cross-country", "hs:volleyball-patch", "hs:tennis"],
     welcome: {
       headline: "Flyers families — green and gold, right where everyone can see it.",
       message: [
         "At Lindbergh the band is not the warm-up act. The Spirit of St. Louis comes down Concord School Road at Homecoming and up the sideline on Friday nights, and Lindy works the crowd in his goggles.",
-        "This frame is your student's. Their last name across the bottom banner, their sport or their instrument on the badges, their class year in brass, all in green and gold.",
+        "This frame is your student's. Their sport or their instrument on the badges, their class year on the banner, all in green and gold.",
       ],
       chips: ["Marching Band", "Color Guard", "Cross Country", "Volleyball", "Wrestling", "Tennis", "Swim & Dive", "Golf", "Softball", "Homecoming Parade"],
       ordering:
@@ -553,21 +581,35 @@ const KITS: SchoolKit[] = [
     shortName: "Parkway West",
     mascot: "Longhorns",
     city: "Ballwin, MO",
-    colors: { frame: "#C8102E", tileField: "#C8102E", rim: "#6CACE4" },
-    banners: { top: "HOME OF THE", bottom: "LONGHORNS", tagline: "PARKWAY WEST HIGH", text: "#FFFFFF" },
-    signature: ["hs:quiz-bowl", "hs:journalism", "hs:field-hockey", "hs:drama"],
+    colors: { frame: "#5199CD", tileField: "#5199CD", rim: "#A40925" },
+    // The top runner is the school's name run through the thin kit's banner fitter
+    // (drop HIGH SCHOOL only when it does not fit), not a hand-trimmed "... HIGH".
+    banners: { top: fitBanner("PARKWAY WEST HIGH SCHOOL"), bottom: "LONGHORNS", text: "#FFFFFF" },
+    // "HORNS" vanity mockup from the per-school plate pipeline (scripts/gen-plate.mjs,
+    // conformed to 924x467). Read letter by letter; letter PITCH measured even.
+    plate: { state: "MO", src: "/plates/missouri-horns-centered.jpg" },
+    // Scholar Bowl badge withheld until its art is redrawn (WITHHELD_ART).
+    // WATER POLO is a real West program (MaxPreps, MSHSAA rosters) and the welcome
+    // copy says so, but it is NOT a chip or a signature: its light-blue wave enamel
+    // is nearly this #5199CD field, so the badge a chip would build read as a bare
+    // gold outline. Put the chip back when the art has waves that hold on light blue.
+    signature: ["hs:journalism", "hs:field-hockey", "hs:drama", "hs:band"],
+    // Welcome facts (voice pass 2026-09-23), each sourced: the Pathfinder is West's
+    // student news site (pwestpathfinder.com); field hockey and water polo are West
+    // programs (MaxPreps team pages); red and Columbia blue are the named colours
+    // (Wikipedia, MaxPreps; see colorSource).
     welcome: {
-      headline: "For the families who fill the West High student section.",
+      headline: "Welcome, Longhorn families.",
       message: [
-        "Build it in Longhorn red and Columbia blue — the frame you look at every morning in the West lot, and every Friday you park somewhere else to watch them play.",
-        "This frame is your student's. Their last name across the bottom banner, their sport or their club on the badges, their class year in brass.",
+        "Parkway West students run their own news site, the Pathfinder, and the Longhorns field teams in everything from field hockey to water polo.",
+        "You can add the things your student does as badges and their class year to the banner, all in West blue and red.",
       ],
-      chips: ["Scholar Bowl", "Pathfinder", "Field Hockey", "Water Polo", "Theatre", "Homecoming Week", "Powder Puff", "Cross Country", "Band", "Special Olympics"],
+      chips: ["Scholar Bowl", "Journalism", "Theatre", "Band", "Field Hockey", "Cross Country"],
       ordering:
-        "Parkway West families: design your frame and send it in, and we will follow up with ordering details. A set donation from every frame goes back to Parkway West.",
+        "When you're happy with your frame, send it to us and we'll follow up with ordering details. A set donation from every frame goes back to Parkway West.",
     },
     status: "demo",
-    colorSource: "Red, Columbia blue and white are the published colour NAMES (Wikipedia, MaxPreps); both hexes are our approximations, and which colour the school treats as the body colour is our guess — confirm before print.",
+    colorSource: "Body is Parkway West's district-standard colour (Parkway Brand Standards: West = PANTONE 278 C; the school site's CSS carries its web value #8BB8E8), taken at the deeper blue the school's athletic W is actually filled with, #5199CD — the official 278 C is too pale for white type (2.1:1). That blue was MEASURED alongside the W's red outline #A40925 from the school's own marks (westhigh.parkwayschools.net wordmark; Bound athletic logo). White type on #5199CD is 3.2:1 — large-text only. Raster sources; get vectors before a print run.",
   },
   {
     slug: "parkway-central-colts",
@@ -576,21 +618,28 @@ const KITS: SchoolKit[] = [
     shortName: "Parkway Central",
     mascot: "Colts",
     city: "Chesterfield, MO",
-    colors: { frame: "#C8102E", tileField: "#C8102E", rim: "#111111" },
-    banners: { top: "HOME OF THE", bottom: "COLTS", tagline: "PARKWAY CENTRAL HIGH", text: "#FFFFFF" },
-    signature: ["hs:swim-dive", "hs:soccer-patch", "hs:service", "hs:journalism"],
+    colors: { frame: "#AB1E38", tileField: "#AB1E38", rim: "#FFFFFF" },
+    banners: { top: fitBanner("PARKWAY CENTRAL HIGH SCHOOL"), bottom: "COLTS", text: "#FFFFFF" },
+    // "COLTS" vanity mockup from the per-school plate pipeline (scripts/gen-plate.mjs,
+    // conformed to 924x467). Read letter by letter; letter PITCH measured even.
+    plate: { state: "MO", src: "/plates/missouri-colts-centered.jpg" },
+    signature: ["hs:swim-dive", "hs:debate", "hs:soccer-patch", "hs:journalism"],
+    // Welcome facts (voice pass 2026-09-23), each sourced: established 1954, the
+    // first high school built in the new Parkway district (Wikipedia "Parkway Central
+    // High School"; alumni.parkwayschools.net History of Parkway); red, black and
+    // white are the named colours (Wikipedia, MaxPreps; see colorSource).
     welcome: {
-      headline: "Colt families — the first high school in Parkway, on the back of your car.",
+      headline: "Welcome, Colt families.",
       message: [
-        "Central was the district's original high school, and Colt families have been turning up in red and black ever since: theme days, class games, the dance, the whole week of it.",
-        "This frame is your student's. Their last name across the bottom banner, their sport or their club on the badges, their class year in brass, in red and black.",
+        "Parkway Central was founded in 1954 as the first high school built in the Parkway district, and its colors are red, black and white.",
+        "You can add the things your student does as badges and their class year to the banner, all in Colt red.",
       ],
-      chips: ["Swim & Dive", "Soccer", "Water Polo", "Corral", "DECA", "Scholar Bowl", "Speech & Debate", "Archery", "Basketball", "Service"],
+      chips: ["Swim & Dive", "Speech & Debate", "Scholar Bowl", "Soccer", "Water Polo", "Basketball", "Service"],
       ordering:
-        "Parkway Central families: design your frame and send it in, and we will follow up with ordering details. A set donation from every frame goes back to Parkway Central.",
+        "When you're happy with your frame, send it to us and we'll follow up with ordering details. A set donation from every frame goes back to Parkway Central.",
     },
     status: "demo",
-    colorSource: "Red, black and white are the published colour NAMES (Wikipedia, MaxPreps); the red hex is our approximation — confirm before print.",
+    colorSource: "MEASURED from the school's own COLTS wordmark (centralhigh.parkwayschools.net primary logo): red #AB1E38 (58.2%), grey #99A1A5 (37.8%). The district's standard colour for Central is PANTONE 485 C (web #DA291C, on the school site), a brighter red than the athletic mark. Black is a named school colour but is not on the current mark. 256px raster only; get the vector before print. Trim is WHITE by owner call (2026-09-23): the measured grey read as no border on red.",
   },
   {
     slug: "lafayette-lancers",
@@ -599,21 +648,70 @@ const KITS: SchoolKit[] = [
     shortName: "Lafayette",
     mascot: "Lancers",
     city: "Wildwood, MO",
-    colors: { frame: "#101010", tileField: "#101010", rim: "#FFC72C" },
-    banners: { top: "HOME OF THE", bottom: "LANCERS", tagline: "LAFAYETTE HIGH SCHOOL", text: "#FFFFFF" },
+    colors: { frame: "#231F20", tileField: "#231F20", rim: "#FFCC00" },
+    banners: { top: "LAFAYETTE HIGH SCHOOL", bottom: "LANCERS", text: "#FFFFFF" },
+    // "LANCER" vanity mockup from the per-school plate pipeline (scripts/gen-plate.mjs,
+    // conformed to 924x467). Read letter by letter; letter PITCH measured even.
+    plate: { state: "MO", src: "/plates/missouri-lancer-centered.jpg" },
     signature: ["hs:volleyball-patch", "hs:marching-band", "hs:softball-patch", "hs:cross-country"],
+    // Welcome facts (voice pass 2026-09-23), each sourced: the Lancer Regiment is the
+    // marching band (lhs.band; Wikipedia); volleyball won six straight state titles
+    // 2011-2016 and its ninth in 2024 (St. Louis American; stltoday 2024 Class 5
+    // final); the 2024 Class 5 softball title on a walk-off home run (SI high
+    // school; stltoday 2024-11-01; West Newsmagazine);
+    // the Mayor's Bowl with Marquette every fall (lancerfeed.press 2024; MSHSAA
+    // 8/25/2023 — its week varies, so no "finale" claim); the Battle of 109 with Eureka (SI; Wikipedia Suburban Conference).
+    // No colour words: whether Lafayette says "black and gold" is still open (see
+    // colorSource), and the welcome should not assert it before the school does.
     welcome: {
-      headline: "Lancer families: black and gold, from the Regiment's pregame on.",
+      headline: "Welcome, Lancer families.",
       message: [
-        "You have stood in these bleachers for the Lancer Regiment coming up the sideline, for a volleyball season that simply would not end, and for one more Mayor's Bowl.",
-        "This frame is your student's. Their last name across the bottom banner, their sport or their section on the badges, their class year in brass, in black and gold.",
+        "The Lancer Regiment is Lafayette's marching band. The volleyball team won six straight state titles from 2011 to 2016 and its ninth in 2024, the softball team won the 2024 Class 5 state title on a walk-off home run, and every fall the Lancers meet Marquette in the Mayor's Bowl and Eureka in the Battle of 109.",
+        "You can add the things your student does as badges and their class year to the banner.",
       ],
-      chips: ["Volleyball", "Marching Band", "Softball", "Cross Country", "Wrestling", "Field Hockey", "Water Polo", "The Lancer Feed", "Mayor's Bowl", "Key Club"],
+      chips: ["Volleyball", "Marching Band", "Softball", "Cross Country", "Wrestling", "Field Hockey", "Water Polo", "Service"],
       ordering:
-        "Lafayette families: design your frame and send it in, and we will follow up with ordering details. A set donation from every frame goes back to Lafayette.",
+        "When you're happy with your frame, send it to us and we'll follow up with ordering details. A set donation from every frame goes back to Lafayette.",
     },
     status: "demo",
-    colorSource: "Black, white and gold are the published colour NAMES; the gold hex is our approximation and the black is lifted off pure black for print — Lafayette's gold could equally be an old gold, so confirm.",
+    colorSource: "MEASURED black #231F20 from the school's own logo (Rockwood SD, High_Lafayette_BW_Outline.png, lafayette.rsdmo.org), which is black and white only. Gold #FFCC00 is the school website's --secondary-color. It is not on the mark and matches Eureka's value exactly (possibly a shared district template), so confirm Lafayette's gold with the school. One source describes the palette as black and white, often accented with gold — check whether the school says 'black and gold' before print (the welcome copy deliberately names no colours until it does).",
+  },
+  {
+    // Pilot school (2026-09-23). Researched the same way as the rest: Wikipedia,
+    // MaxPreps, West Newsmagazine, the Post-Dispatch and the Wildcat Bands' own
+    // site. Unsourced and deliberately left out: a 2000 basketball title (could not
+    // confirm which team), the student-section name, publication names.
+    slug: "eureka-wildcats",
+    rosterId: "292685001621",
+    schoolName: "Eureka High School",
+    shortName: "Eureka",
+    mascot: "Wildcats",
+    city: "Eureka, MO",
+    colors: { frame: "#462E8D", tileField: "#462E8D", rim: "#FFCC00" },
+    banners: { top: "EUREKA HIGH SCHOOL", bottom: "WILDCATS", text: "#FFFFFF" },
+    // "WLDCTS" vanity mockup from the per-school plate pipeline (scripts/gen-plate.mjs,
+    // conformed to 924x467). Read letter by letter; letter PITCH measured even.
+    plate: { state: "MO", src: "/plates/missouri-wldcts-centered.jpg" },
+    signature: ["hs:volleyball-patch", "hs:marching-band", "hs:cross-country", "hs:lacrosse"],
+    // Welcome facts (voice pass 2026-09-23), each sourced: opened 1908, the first
+    // high school in what became Rockwood (Wikipedia "Eureka High School (Missouri)");
+    // the Battle of 109 with Lafayette (SI; Wikipedia Suburban Conference); first
+    // volleyball state title 2018 (West Newsmagazine 2018-11-13); first girls cross
+    // country title 2024 (MileSplit / SI 2024 Class 5); girls lacrosse state titles
+    // 2024 and 2026 (Metro Sports STL 2024-05-28; stltoday 2026). The "more than 500
+    // music students" line was dropped: no source could be found for it.
+    welcome: {
+      headline: "Welcome, Wildcat families.",
+      message: [
+        "Eureka opened in 1908 as the first high school in what became the Rockwood School District, and its game with Lafayette is known as the Battle of 109. The volleyball team won its first state title in 2018, the girls cross country team won its first in 2024, and girls lacrosse won state titles in 2024 and 2026.",
+        "You can add the things your student does as badges and their class year to the banner, all in purple and gold.",
+      ],
+      chips: ["Volleyball", "Marching Band", "Orchestra", "Choir", "Jazz Band", "Color Guard", "Cross Country", "Lacrosse", "Football"],
+      ordering:
+        "When you're happy with your frame, send it to us and we'll follow up with ordering details. A set donation from every frame goes back to Eureka.",
+    },
+    status: "demo",
+    colorSource: "MEASURED from the school's own logo (Rockwood SD, High_Eureka_Color_Outline.png, eurekahs.rsdmo.org): purple #462E8D (83.7%), gold #FFCC00 (15.3%). The gold is corroborated exactly by the school website's --secondary-color #FFCC00. The site's primary #4B09A1 is a web-theme purple; we use the ink on the mark. Raster source; get the vector before a print run.",
   },
   {
     slug: "marquette-mustangs",
@@ -622,21 +720,32 @@ const KITS: SchoolKit[] = [
     shortName: "Marquette",
     mascot: "Mustangs",
     city: "Chesterfield, MO",
-    colors: { frame: "#0C2340", tileField: "#0C2340", rim: "#00843D" },
-    banners: { top: "HOME OF THE", bottom: "MUSTANGS", tagline: "MARQUETTE HIGH SCHOOL", text: "#FFFFFF" },
-    signature: ["hs:ice-hockey", "hs:softball-patch", "hs:field-hockey", "hs:journalism"],
+    colors: { frame: "#0D293F", tileField: "#0D293F", rim: "#068950" },
+    banners: { top: "MARQUETTE HIGH SCHOOL", bottom: "MUSTANGS", text: "#FFFFFF" },
+    // "STANGS" vanity mockup from the per-school plate pipeline (scripts/gen-plate.mjs,
+    // conformed to 924x467). Read letter by letter; letter PITCH measured even.
+    plate: { state: "MO", src: "/plates/missouri-stangs-centered.jpg" },
+    signature: ["hs:ice-hockey", "hs:journalism", "hs:softball-patch", "hs:field-hockey"],
+    // Welcome facts (voice pass 2026-09-23), each sourced: Marquette fields an ice
+    // hockey team (MaxPreps: boys club hockey); the Mayor's Bowl with Lafayette is
+    // played every fall (lancerfeed.press 2024, where it was both teams' finale;
+    // MSHSAA lists it on 8/25/2023, week one, so "closes the season" is NOT claimed). The "Homecoming
+    // carnival" line was dropped: no source could be found for it.
     welcome: {
-      headline: "Mustang families — navy and green, one frame, four years.",
+      headline: "Welcome, Mustang families.",
       message: [
-        "Marquette turns out: the Homecoming carnival, a cold rink on a Friday night, and the last game of the regular season with the Mayor's Bowl sitting there to be won back.",
-        "This frame is your student's. Their last name across the bottom banner, their sport or their club on the badges, their class year in brass, in navy and green.",
+        "Marquette fields its own ice hockey team, and every fall the Mustangs meet Lafayette in the Mayor's Bowl.",
+        "You can add the things your student does as badges and their class year to the banner, all in navy and green.",
       ],
-      chips: ["Hockey", "Softball", "Field Hockey", "Marquette Messenger", "Homecoming Carnival", "Band", "Model UN", "Robotics", "Mayor's Bowl", "Dance"],
+      // "Model UN" withdrawn 2026-09-23: its badge art (a gridded globe in an
+      // olive wreath) reads as the United Nations emblem, whose commercial use is
+      // restricted. Put it back when the art is redrawn without the wreath.
+      chips: ["Hockey", "Journalism", "Band", "Robotics", "Softball", "Field Hockey", "Dance"],
       ordering:
-        "Marquette families: design your frame and send it in, and we will follow up with ordering details. A set donation from every frame goes back to Marquette.",
+        "When you're happy with your frame, send it to us and we'll follow up with ordering details. A set donation from every frame goes back to Marquette.",
     },
     status: "demo",
-    colorSource: "Navy and green are the published colour NAMES (Wikipedia, MaxPreps); both hexes are our approximations and the green is the risky one — confirm before print.",
+    colorSource: "MEASURED from the school's own logo (Rockwood SD, High_Marquette_Color.png, marquette.rsdmo.org) by sampling decoded pixels: navy #0D293F (51.6%), green #068950 (18.5%). The school website's theme colours are the Rockwood district default, so no published hex corroborates them. Raster source; get the vector before a print run.",
   },
   {
     slug: "john-burroughs-bombers",
@@ -645,13 +754,13 @@ const KITS: SchoolKit[] = [
     mascot: "Bombers",
     city: "Ladue, MO",
     colors: { frame: "#00205B", tileField: "#00205B", rim: "#C9A227" },
-    banners: { top: "HOME OF THE", bottom: "BOMBERS", tagline: "JOHN BURROUGHS SCHOOL", text: "#FFFFFF" },
+    banners: { top: "JOHN BURROUGHS SCHOOL", bottom: "BOMBERS", text: "#FFFFFF" },
     signature: ["hs:field-hockey", "hs:football-patch", "hs:soccer-patch", "hs:honor-star"],
     welcome: {
       headline: "Blue and gold, all the way out to the parking lot.",
       message: [
-        "Every year the grades put on their assigned colours, the Class Cup gets loud, and the week ends with the bonfire out on Field 4. Burroughs is a small school that takes its own traditions seriously, and parents learn the calendar fast.",
-        "This frame is your student's. Their last name across the bottom banner, their sport or their club on the badges, their class year in brass, in blue and gold.",
+        "Every year the grades put on their assigned colors, the Class Cup gets loud, and the week ends with the bonfire out on Field 4. Burroughs is a small school that takes its own traditions seriously, and parents learn the calendar fast.",
+        "This frame is your student's. Their sport or their club on the badges, their class year on the banner, in blue and gold.",
       ],
       chips: ["Field Hockey", "Football", "Soccer", "Spirit Week", "Pep Rally & Bonfire", "Class Cup", "Student Government", "Cheerleading", "Theatre", "Service"],
       ordering:
@@ -668,13 +777,13 @@ const KITS: SchoolKit[] = [
     mascot: "Ravens",
     city: "Creve Coeur, MO",
     colors: { frame: "#002D62", tileField: "#002D62", rim: "#C8102E" },
-    banners: { top: "HOME OF THE", bottom: "RAVENS", tagline: "SAINT LOUIS PRIORY", text: "#FFFFFF" },
+    banners: { top: "SAINT LOUIS PRIORY", bottom: "RAVENS", text: "#FFFFFF" },
     signature: ["hs:ice-hockey", "hs:soccer-patch", "hs:robotics", "hs:journalism"],
     welcome: {
       headline: "A Raven for the car that makes every run down to campus.",
       message: [
         "The year starts in August at the Raven Roundup and the club fair, runs through the Junior School's Rusty Bucket, and lands at the Christmas Classic. Priory keeps its own calendar, in its own way, and parents pick it up quickly.",
-        "This frame is your student's. His last name across the bottom banner, his sport or his club on the badges, his class year in brass.",
+        "This frame is your student's. His sport or his club on the badges, his class year on the banner.",
       ],
       chips: ["Hockey", "Soccer", "Robotics", "The Record", "Raven Roundup", "Rusty Bucket", "Christmas Classic", "Quiz Bowl", "Ultimate Frisbee", "Service"],
       ordering:
@@ -691,13 +800,13 @@ const KITS: SchoolKit[] = [
     mascot: "Warriors",
     city: "Creve Coeur, MO",
     colors: { frame: "#00703C", tileField: "#00703C", rim: "#FFFFFF" },
-    banners: { top: "HOME OF THE", bottom: "WARRIORS", tagline: "WHITFIELD SCHOOL", text: "#FFFFFF" },
+    banners: { top: "WHITFIELD SCHOOL", bottom: "WARRIORS", text: "#FFFFFF" },
     signature: ["hs:wrestling", "hs:soccer-patch", "hs:basketball-patch", "hs:esports"],
     welcome: {
       headline: "Green and white, and everybody knows whose car it is.",
       message: [
         "Whitfield is small on purpose, and it shows — advisory, assemblies, Spirit Week, and a gym whose banners are mostly soccer and wrestling. Parents here tend to know everybody's kid, not just their own.",
-        "This frame is your student's. Their last name across the bottom banner, the season you actually sit through on the badges, their class year in brass.",
+        "This frame is your student's. The season you actually sit through on the badges, their class year on the banner.",
       ],
       chips: ["Wrestling", "Soccer", "Basketball", "Esports", "Climbing Club", "Field Hockey", "Dance", "Spirit Week", "Advisory", "Service"],
       ordering:
@@ -714,13 +823,13 @@ const KITS: SchoolKit[] = [
     mascot: "Jaguars",
     city: "O'Fallon, MO",
     colors: { frame: "#4B2E83", tileField: "#4B2E83", rim: "#A7A9AC" },
-    banners: { top: "HOME OF THE", bottom: "JAGUARS", tagline: "FORT ZUMWALT WEST", text: "#FFFFFF" },
+    banners: { top: "FORT ZUMWALT WEST", bottom: "JAGUARS", text: "#FFFFFF" },
     signature: ["hs:dance", "hs:marching-band", "hs:soccer-patch", "hs:football-patch"],
     welcome: {
       headline: "Purple and silver, parked where everybody can see it.",
       message: [
         "Friday nights out here sound like the Silver Jaguar Brigade coming up the track, and the dance team has the hardware to match. West is a big school that still turns out for its own — band, guard, the soccer field, the mat.",
-        "This frame is your student's. Their last name across the bottom banner, the programme you actually sit for on the badges, their class year in brass.",
+        "This frame is your student's. The programme you actually sit for on the badges, their class year on the banner.",
       ],
       chips: ["Dance Team", "Marching Band", "Color Guard", "Winter Guard", "Soccer", "Football", "Wrestling", "Jazz Bands", "Homecoming Week", "Basketball"],
       ordering:
@@ -737,15 +846,15 @@ const KITS: SchoolKit[] = [
     mascot: "Panthers",
     city: "Mehlville, MO",
     colors: { frame: "#00703C", tileField: "#00703C", rim: "#FFFFFF" },
-    banners: { top: "HOME OF THE", bottom: "PANTHERS", tagline: "MEHLVILLE HIGH SCHOOL", text: "#FFFFFF" },
+    banners: { top: "MEHLVILLE HIGH SCHOOL", bottom: "PANTHERS", text: "#FFFFFF" },
     signature: ["hs:football-patch", "hs:debate", "hs:drama", "hs:service"],
     welcome: {
       headline: "Every senior gets a paw print. This one you get to drive.",
       message: [
         "You know the walk — the painted path up to Jack Jordan Stadium, every paw print done up by somebody's kid, and the Green Pit already going before kickoff. Green and white is not a costume here, it is just what a Friday looks like.",
-        "This frame is your student's. Their last name across the bottom banner, their sport or their club on the badges, their class year in brass.",
+        "This frame is your student's. Their sport or their club on the badges, their class year on the banner.",
       ],
-      chips: ["Football", "Speech & Debate", "Drama Club", "The Green Pit", "Senior Paw Prints", "DECA", "HOSA", "Key Club", "Art Club", "Service"],
+      chips: ["Football", "Speech & Debate", "Drama Club", "The Green Pit", "Senior Paw Prints", "Art Club", "Service"],
       ordering:
         "Mehlville families: design your frame and send it in, and we will follow up with ordering details. A set donation from every frame goes back to Mehlville.",
     },
@@ -760,15 +869,15 @@ const KITS: SchoolKit[] = [
     mascot: "Tigers",
     city: "Oakville, MO",
     colors: { frame: "#101010", tileField: "#101010", rim: "#FFC72C" },
-    banners: { top: "HOME OF THE", bottom: "TIGERS", tagline: "OAKVILLE HIGH SCHOOL", text: "#FFFFFF" },
+    banners: { top: "OAKVILLE HIGH SCHOOL", bottom: "TIGERS", text: "#FFFFFF" },
     signature: ["hs:water-polo", "hs:field-hockey", "hs:marching-band", "hs:football-patch"],
     welcome: {
       headline: "If you own the shirt, you know what Friday is.",
       message: [
         "The Cage has been doing this a long time now, and it still works the same way — black and gold on Friday, everybody in it, nobody sitting down. Whatever your kid plays, the pool and the turf and the field hockey pitch all get the same treatment.",
-        "This frame is your student's. Their last name across the bottom banner, their sport or their club on the badges, their class year in brass.",
+        "This frame is your student's. Their sport or their club on the badges, their class year on the banner.",
       ],
-      chips: ["Water Polo", "Field Hockey", "Marching Band", "Color Guard", "Football", "The Tiger Cage", "Quiz Bowl", "Drama Troupe", "Robotics", "DECA"],
+      chips: ["Water Polo", "Field Hockey", "Marching Band", "Color Guard", "Football", "The Tiger Cage", "Quiz Bowl", "Drama Troupe", "Robotics"],
       ordering:
         "Oakville families: design your frame and send it in, and we will follow up with ordering details. A set donation from every frame goes back to Oakville.",
     },
@@ -783,15 +892,15 @@ const KITS: SchoolKit[] = [
     mascot: "Pirates",
     city: "Maryland Heights, MO",
     colors: { frame: "#00693E", tileField: "#00693E", rim: "#FFFFFF" },
-    banners: { top: "HOME OF THE", bottom: "PIRATES", tagline: "PATTONVILLE HIGH SCHOOL", text: "#FFFFFF" },
+    banners: { top: "PATTONVILLE HIGH SCHOOL", bottom: "PIRATES", text: "#FFFFFF" },
     signature: ["hs:journalism", "hs:marching-band", "hs:robotics", "hs:football-patch"],
     welcome: {
       headline: "Pirates of all ages come out for this one.",
       message: [
         "The parade rolls in the morning, the floats match whatever theme they picked this year, and by halftime the drill team and the marching band have the field. Pattonville families tend to show up for all of it, not just the game.",
-        "This frame is your student's. Their last name across the bottom banner, their sport or their club on the badges, their class year in brass, in green and white.",
+        "This frame is your student's. Their sport or their club on the badges, their class year on the banner, in green and white.",
       ],
-      chips: ["Journalism", "Marching Band", "Robotics", "Drill Team", "Football", "Softball", "Girls Soccer", "Volleyball", "Homecoming Parade", "DECA"],
+      chips: ["Journalism", "Marching Band", "Robotics", "Drill Team", "Football", "Softball", "Girls Soccer", "Volleyball", "Homecoming Parade"],
       ordering:
         "Pattonville families: design your frame and send it in, and we will follow up with ordering details. A set donation from every frame goes back to Pattonville.",
     },
@@ -806,13 +915,13 @@ const KITS: SchoolKit[] = [
     mascot: "Vikings",
     city: "St. Charles, MO",
     colors: { frame: "#0033A0", tileField: "#0033A0", rim: "#FFC72C" },
-    banners: { top: "HOME OF THE", bottom: "VIKINGS", tagline: "FRANCIS HOWELL", text: "#FFFFFF" },
+    banners: { top: "FRANCIS HOWELL", bottom: "VIKINGS", text: "#FFFFFF" },
     signature: ["hs:football-patch", "hs:wrestling", "hs:honor-star", "hs:service"],
     welcome: {
       headline: "The 12th Man never did sit down.",
       message: [
         "Howell families already know what a season can turn into. The wrestling room made this district's first state champion of any kind long before anybody was watching, and the Friday night that ended in blue and gold confetti still comes up in line at the gas station.",
-        "This frame is your student's. Their last name across the bottom banner, their sport or their club on the badges, their class year in brass, in royal and gold.",
+        "This frame is your student's. Their sport or their club on the badges, their class year on the banner, in royal and gold.",
       ],
       chips: ["Football", "Wrestling", "The 12th Man", "Victor the Viking", "Hockey", "Service"],
       ordering:
@@ -825,9 +934,8 @@ const KITS: SchoolKit[] = [
 
 const BY_SLUG = new Map(KITS.map((k) => [k.slug, k]));
 
-/** Welcome-chip label -> badge piece for the preset engine. Labels without a
- *  matching badge (racquetball, water polo...) fall back to the generic crest
- *  preset — the chip still composes a frame rather than doing nothing. */
+/** Welcome-chip label -> badge piece for the preset engine. Read it through
+ *  `chipPiece`; a label with no entry here is not rendered as a chip. */
 export const CHIP_PRESET_PIECE: Record<string, string> = {
   soccer: "hs:soccer-patch",
   football: "hs:football-patch",
@@ -872,10 +980,22 @@ export const CHIP_PRESET_PIECE: Record<string, string> = {
   diving: "hs:swim-dive",
   "honor roll": "hs:honor-star",
   "honor society": "hs:honor-star",
+  // What schools call quiz bowl in St. Louis; the same buzzer and the same badge.
+  "scholar bowl": "hs:quiz-bowl",
+  "track & field": "hs:track",
+  "track and field": "hs:track",
+  theatre: "hs:drama",
+  science: "hs:science",
+  yearbook: "hs:yearbook",
+  photography: "hs:photography",
+  chess: "hs:chess",
+  "art club": "hs:art-club",
+  art: "hs:art-club",
   // Speech has no badge of its own: the debate pin is a lectern and a microphone,
   // which is what a speech event actually looks like.
   speech: "hs:debate",
   "speech and debate": "hs:debate",
+  "speech & debate": "hs:debate",
   debate: "hs:debate",
   crew: "hs:crew",
   rowing: "hs:crew",
@@ -912,6 +1032,24 @@ export const CHIP_PRESET_PIECE: Record<string, string> = {
   scouting: "hs:scouts",
 };
 
+/**
+ * The badge a welcome chip builds, or null when the label names no activity we
+ * have a badge for.
+ *
+ * A chip is a CONTROL ("Tap an activity and we'll build the frame around it"), so
+ * a chip that builds nothing of its own is a broken promise: "Battle of 109" used to fall back to the generic
+ * crest, and a parent who tapped it saw no sign of what they tapped. Such labels
+ * are traditions, not activities, and belong in the welcome copy. The kit page
+ * renders only chips this resolves; school-kits.chips.test.ts holds every pilot
+ * kit to having no others.
+ */
+export function chipPiece(label: string): string | null {
+  const id = CHIP_PRESET_PIECE[label.trim().toLowerCase()] ?? null;
+  // A chip whose badge art is withheld builds nothing we will show, so it is not
+  // a chip until the art is redrawn: the kit page hides it, the research stays.
+  return id && !WITHHELD_ART.has(id) ? id : null;
+}
+
 export function getSchoolKit(slug: string): SchoolKit | undefined {
   return BY_SLUG.get(slug);
 }
@@ -939,6 +1077,40 @@ export function kitPlateState(kit: SchoolKit | undefined | null): string | null 
   return getPlateDesign(abbr) ? abbr : null;
 }
 
+/**
+ * The school builder's own stock plate per state, for a kit with no vanity plate.
+ *
+ * The shared stock Missouri photo (plate-images.ts) reads FESTIVE — Festive
+ * Frames' name — and a school with no plate of its own fell through to it, so
+ * five of six pilot builders showed the other brand's word as the biggest thing
+ * on screen. A MySchoolFrame preview must never do that. Missouri's is a real
+ * photographed plate with its number privacy-blurred (scripts/stock-plate.mjs),
+ * in the same 924x467 framing, so plate-images' MO display fits it unchanged.
+ * Other states' stock photos are standard-issue plates and need no override.
+ */
+export const SCHOOL_STOCK_PLATES: Readonly<Record<string, string>> = {
+  MO: "/plates/missouri-stock-centered.jpg",
+};
+
+/**
+ * The plate photo a school frame's PREVIEW shows for `state`: the kit's own
+ * vanity plate while the picker is on the state that photo is (Ladue's RAMS),
+ * else the school stock plate for that state, else undefined — the caller's
+ * generic stock photo. The builder and the sample sheets both ask this, so they
+ * cannot disagree about which plate a school gets.
+ */
+export function schoolPlatePhoto(kit: SchoolKit | undefined | null, state: string): string | undefined {
+  if (kit?.plate && kit.plate.state === state) return kit.plate.src;
+  return SCHOOL_STOCK_PLATES[state];
+}
+
+/**
+ * The words over the mascot on the bottom banner, for every kit that does not say
+ * otherwise. One constant rather than 27 copies: it is not a fact about a school,
+ * it is the frame's own phrase ("HOME OF THE / WILDCATS").
+ */
+export const KIT_BOTTOM_TAGLINE = "HOME OF THE";
+
 export function kitSections(kit: SchoolKit): Partial<Record<SectionId, SectionState>> {
   const font = kit.fontFamily ?? SCHOOL_HEADLINE_FONT;
   // One background colour for the whole frame unless a kit deliberately overrides.
@@ -948,11 +1120,13 @@ export function kitSections(kit: SchoolKit): Partial<Record<SectionId, SectionSt
       mode: "text",
       text: {
         ...DEFAULT_BOTTOM_BAR,
-        // The kit's own top line, which this used to ignore in favour of a
-        // hard-coded "HOME OF THE" — every kit happens to say that today, so a
-        // kit that wanted a different one would have been silently overruled.
+        // The school, as the kit spells it. Set in the TAGLINE face on purpose:
+        // the school's name is also what the keystone line says on a design
+        // whose top was promoted, and one name in two typefaces on one sheet
+        // read as two different schools. The condensed face is also what lets
+        // "LADUE HORTON WATKINS" sit on a 0.75" runner at a size you can read.
         text: kit.banners.top,
-        fontFamily: font,
+        fontFamily: SCHOOL_TAGLINE_FONT,
         letterSpacing: 4,
         backgroundColor: bg,
         textColor: kit.banners.text,
@@ -963,7 +1137,7 @@ export function kitSections(kit: SchoolKit): Partial<Record<SectionId, SectionSt
       text: {
         ...DEFAULT_BOTTOM_BAR,
         text: kit.banners.bottom,
-        tagline: kit.banners.tagline,
+        tagline: kit.banners.tagline ?? KIT_BOTTOM_TAGLINE,
         fontFamily: font,
         taglineFontFamily: SCHOOL_TAGLINE_FONT,
         letterSpacing: 2,

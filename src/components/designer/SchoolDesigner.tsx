@@ -12,15 +12,26 @@
 // STORE NOTE: it owns an ISOLATED design store (its own `createDesignStore`
 // instance + its own persist key), so nothing it does can reach /build's design.
 
+import Image from "next/image";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { FirstRunTour } from "./FirstRunTour";
-import { BUYERS, DEFAULT_BUYER, getBuyer, yearsFor, type BuyerId } from "@/data/frame-buyers";
+import {
+  BANNER_LINES,
+  BUYERS,
+  DEFAULT_BUYER,
+  bannerTagline,
+  getBuyer,
+  yearsFor,
+  type BannerLineId,
+  type BuyerId,
+} from "@/data/frame-buyers";
 import { SCHOOL_CHECKOUT_OPEN } from "@/config/offers";
-import { presetsFor, presetTiles, getPreset, SCHOOL_PRESETS, type SchoolPreset } from "@/data/school-presets";
+import { presetsFor, presetBlurb, getPreset, layPreset as layPresetOn, SCHOOL_PRESETS, type SchoolPreset } from "@/data/school-presets";
 import { schoolVariant, type SchoolVariantId } from "@/data/school-variants";
-import { kitSeedTiles } from "@/data/kit-seed";
-import { markPieceId } from "@/data/sets/school-marks";
+import { schoolStoreOptions } from "@/data/school-store";
 import { GraduateExpress } from "./GraduateExpress";
+import { SendDesignSheet } from "./SendDesignSheet";
+import type { OrderContact } from "@/lib/order/order-contact";
 import {
   useDesignStore,
   useDesignStoreApi,
@@ -28,14 +39,14 @@ import {
   createDesignStore,
   onPersistQuotaExceeded,
 } from "@/stores/design-store";
-import { composeSchoolFrame, composeSchoolPanels } from "@/lib/utils/compose-school-frame";
+import { composeSchoolFrame, composeSchoolPanels, schoolDesignOf } from "@/lib/utils/compose-school-frame";
 import { makeZip, dataUrlToBytes, type ZipEntry } from "@/lib/utils/zip";
 import { buildPanelPartsList } from "@/lib/order/parts-list";
 import { DndProvider } from "./DndProvider";
 import { FrameCanvas, type FrameCanvasHandle } from "@/components/frame/FrameCanvas";
 import { TilePalette } from "@/components/tiles/TilePalette";
-import { SCHOOL_SURFACED_SET_IDS } from "@/data/sets";
-import { kitMarkPieces } from "@/data/sets/school-marks";
+import { SCHOOL_SURFACED_SET_IDS, getPiece } from "@/data/sets";
+import { kitMarkIds, kitMarkPieces } from "@/data/sets/school-marks";
 import { FrameColorPicker } from "./FrameColorPicker";
 import { SectionEditor } from "./SectionEditor";
 import { UploadPhotoButton } from "./UploadPhotoButton";
@@ -45,22 +56,38 @@ import { SchoolBrandImport } from "./SchoolBrandImport";
 import { SnappetRecropModal } from "./SnappetRecropModal";
 import { SnappetSizeControl } from "./SnappetSizeControl";
 import { ArmedBanner } from "@/components/tiles/ArmedBanner";
+import { usePaletteStore } from "@/stores/palette-store";
 import { StateSelector } from "@/components/frame/StateSelector";
 import {
   SCHOOL_FRAME_CONFIG,
   getRenderHeightInches,
   getTotalWidthInches,
 } from "@/lib/constants/frame";
-import { SCHOOL_DEFAULT_SECTIONS } from "@/lib/constants/defaults";
-import { migrateSchoolDesign } from "@/lib/utils/school-migration";
-import { schoolTopLine } from "@/lib/utils/school-banner";
-import { ACTIVITIES, ACTIVITY_GROUPS, hasJerseyNumber } from "@/data/activities";
-import { kitSections, kitPlateState, type SchoolKit } from "@/data/school-kits";
+import { writePersonOnBanner } from "@/lib/utils/school-banner";
+import { ACTIVITIES, ACTIVITY_GROUPS, activityOnFrame } from "@/data/activities";
+import { schoolPlatePhoto, type SchoolKit } from "@/data/school-kits";
 import type { BannerPreview } from "@/lib/types";
 import type { SnappetPreview } from "@/lib/utils/snappet";
 
 /** The school builder's own persist key — its design never touches /build's. */
 export const SCHOOL_PERSIST_KEY = "festive-frames-school-v1";
+
+/**
+ * Does this browser already hold a design under `key`? Read from the blob, not the
+ * store: a seeded first visit and a restored design look identical in the store.
+ *
+ * The key MUST be the one the store persists under. This used to read the bare
+ * SCHOOL_PERSIST_KEY while every /s/<slug> store persists under
+ * `<key>:<variant>:<slug>`, so "We restored your last design" never appeared on a
+ * parent's builder.
+ */
+function hasSavedDesign(key: string): boolean {
+  try {
+    return localStorage.getItem(key) != null;
+  } catch {
+    return false;
+  }
+}
 
 /**
  * Vertical room the page chrome needs above and below the pinned frame — the header,
@@ -126,12 +153,25 @@ export function SchoolDesigner({
   // grid from both, so "has a bottomTab" could not tell them apart.
   presets = SCHOOL_PRESETS,
   brandScan,
+  operatorTools = false,
+  persistKey = SCHOOL_PERSIST_KEY,
 }: {
   kit?: SchoolKit;
   hero?: React.ReactNode;
   presets?: SchoolPreset[];
   /** Show the website scanner FOR THIS SCHOOL — see the mount below. */
   brandScan?: { slug: string; heading?: string; blurb?: React.ReactNode };
+  /**
+   * The production print-file export. An OPERATOR tool: it renders and downloads
+   * the four panel PNGs as a zip. On a parent's builder it was one tap from the
+   * front door, styled as if disabled while working perfectly, and handed a phone
+   * a zip nobody asked for. Only the /lab routes pass this; a parent's design
+   * reaches production through "Send my design", which carries the same files.
+   */
+  operatorTools?: boolean;
+  /** The key this design persists under — the store's own (see the wrapper
+   *  below). Read to tell a restored design from a first visit. */
+  persistKey?: string;
 } = {}) {
   // This school's own crest/mascot badges. Memoised on the kit so the palette
   // isn't handed a fresh array on every render of a page that never changes kit.
@@ -145,6 +185,22 @@ export function SchoolDesigner({
   // Whether the section editor is on screen — it is what the pinned frame has to
   // make room for. See STAGE_EDITING_SHARE.
   const editorOpen = useDesignStore((s) => s.selectedSectionId) != null;
+  // A tile is armed for tap-to-place: the phone's pinned status line says so.
+  const armed = usePaletteStore((s) => s.selectedPieceId) != null;
+
+  // The header's real height, so the phone's pinned frame sits exactly under it
+  // whatever the header wraps to — measured, not a second copy of its padding.
+  const headerRef = useRef<HTMLElement | null>(null);
+  const [headerH, setHeaderH] = useState(0);
+  useEffect(() => {
+    const el = headerRef.current;
+    if (!el) return;
+    const measure = () => setHeaderH(el.offsetHeight);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   // The frame's fixed width:height. The pinned stage is capped by HEIGHT (it must
   // fit the window) but sized by WIDTH, so this is what converts one into the other.
@@ -201,14 +257,26 @@ export function SchoolDesigner({
     try { localStorage.setItem("msf-buyer", id); } catch {}
   };
 
+  const savedAtLoadRef = useRef<boolean | null>(null);
+  /** Whether this browser held a design when the page LOADED — read once, before
+   *  anything on the page has written the blob. */
+  const savedAtLoad = () => (savedAtLoadRef.current ??= hasSavedDesign(persistKey));
+
   // THE GRADUATE PLATE IS THE PRIMARY PATH. Open by default and dismissed for
   // good once someone chooses to customize, because the builder is what they
   // wanted at that point and re-offering the shortcut is noise.
+  //
+  // NEVER over a restored design. Opening the card lays the graduate preset, so a
+  // parent who had built a frame and never tapped "customize" lost it on every
+  // reload — a phone reopening an evicted tab, Safari restoring one. A browser
+  // that already holds a design has chosen its frame; the card is for arrivals.
   const [expressOpen, setExpressOpen] = useState(false);
   useEffect(() => {
     try {
-      if (!localStorage.getItem("msf-express-done")) setExpressOpen(true);
+      if (!localStorage.getItem("msf-express-done") && !savedAtLoad()) setExpressOpen(true);
     } catch {}
+    // Mount only; `savedAtLoad` is fixed for the page's life.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const leaveExpress = () => {
     setExpressOpen(false);
@@ -216,43 +284,109 @@ export function SchoolDesigner({
   };
 
   const [activePreset, setActivePreset] = useState<string | null>(null);
+  // "What they do" was tapped before an activity was chosen. The tap cannot build
+  // the frame yet (it will not guess an activity), so it waits: picking one in the
+  // activity menu finishes the job. Without this the tap only focused a select,
+  // which a phone does not even open, and the frame never changed.
+  const [awaitingActivity, setAwaitingActivity] = useState(false);
   const [kidName, setKidName] = useState("");
   const [kidActivity, setKidActivity] = useState("");
-  const [kidYear, setKidYear] = useState("");
-  // Jersey number. Belongs to the STUDENT alongside the name and the year, not to
-  // whichever design is picked, so it lives here and rides the buyer's tagline.
-  const [kidNumber, setKidNumber] = useState("");
-
-  // Welcome-band chips deep-link presets via #preset=<pieceId>. On arrival or
-  // click: compose the symmetric layout, preselect the activity, and put the
-  // cursor in the name field — the preset-lover flow in one tap.
+  // A restored design keeps its activity: read it back off the badges once the
+  // (synchronously hydrated) store is there, so the menu and "What they do" agree
+  // with the frame after a reload. Never overrides a choice made this visit.
   useEffect(() => {
-    const applyFromHash = () => {
+    const found = activityOnFrame(Object.values(storeApi.getState().slots).map((t) => t?.pieceId));
+    if (found) setKidActivity((a) => a || found);
+  }, [storeApi]);
+  const [kidYear, setKidYear] = useState("");
+  // Jersey (or chair, or roster) number. Belongs to the STUDENT alongside the year,
+  // not to whichever design is picked, so it lives here and rides the tagline.
+  const [kidNumber, setKidNumber] = useState("");
+  // THE BANNER LINE — "CLASS OF 2027", "SENIOR", "#12", "PROUD PARENT", or their
+  // own words — one tap each. Null means the buyer's default (its first line),
+  // and a choice the new buyer does not offer falls back to it too.
+  const [lineChoice, setLineChoice] = useState<BannerLineId | null>(null);
+  const [lineText, setLineText] = useState("");
+  const line: BannerLineId | null =
+    lineChoice && buyer.lines.includes(lineChoice) ? lineChoice : (buyer.lines[0] ?? null);
+  /** The tagline the intake currently describes, with any field overridden — the
+   *  ONE place the intake's fields become words on the banner. */
+  const taglineNow = (
+    over: { line?: BannerLineId | null; year?: string; number?: string; text?: string } = {},
+  ) => {
+    const id = over.line !== undefined ? over.line : line;
+    return bannerTagline(id, {
+      year: buyer.yearLabel ? (over.year ?? kidYear) : undefined,
+      // Only a line that ASKS for a number prints one: a number typed under "#12"
+      // and then left behind by tapping "Senior" must not ride along unseen.
+      number: id && BANNER_LINES[id].asks === "number" ? (over.number ?? kidNumber).trim() : undefined,
+      text: over.text ?? lineText,
+    });
+  };
+
+  // Welcome-band chips deep-link presets via #preset=<pieceId>. On a tap: lay the
+  // frame's own activity design (or the school design for a "generic" chip),
+  // preselect the activity, and show the frame it built.
+  //
+  // It used to place a hard-coded list of slot ids from the retired 14 x 8 grid
+  // at a hard-coded 2x2, so on the flush frame most ids did not exist and were
+  // silently dropped: a lopsided frame with the parent's activity nowhere on it.
+  // The preset is computed against the variant's own grid, and placement asks
+  // the square rule for every span.
+  //
+  // THE HASH IS CONSUMED. It used to stay in the URL, so every reload — a phone
+  // reopening an evicted tab, Safari restoring one, back/forward — laid the chip
+  // again over the saved design and silently wiped the parent's edits and
+  // photos. And because the hash never changed, tapping the same chip a second
+  // time fired no hashchange and did nothing. Clearing it fixes both: a reload
+  // has nothing to replay, and the next tap on any chip is a real change.
+  //
+  // A chip changes the BADGES; the banner line stays the parent's. Laying a
+  // preset replaces badges only, and the intake's line (when it has one) is
+  // written through the same `writePerson` + `taglineNow` every other preset
+  // uses. After a reload the intake is empty and writes nothing, so a restored
+  // design keeps its own line.
+  const applyChipRef = useRef<(pieceId: string) => void>(() => {});
+  useEffect(() => {
+    applyChipRef.current = (pieceId) => {
+      const generic = pieceId === "generic";
+      const preset = getPreset(generic ? "school" : "athlete", presets);
+      if (preset) {
+        layPreset(preset, generic ? null : pieceId);
+        writePerson(storeApi.getState(), { name: kidName, tagline: taglineNow() });
+        setActivePreset(preset.id);
+        setAwaitingActivity(false);
+      }
+      if (!generic) setKidActivity(pieceId);
+      // The chip chose the customize path, so the graduate card steps aside for
+      // this visit (not for good — that is `leaveExpress`, the parent's own tap)
+      // and the intake below shows the activity it just picked.
+      setExpressOpen(false);
+      // Show the FRAME the tap just built. It used to focus the name field, which
+      // on a phone threw the keyboard over the very frame the chip had built — and
+      // the name is optional now.
+      document
+        .querySelector<HTMLElement>(".ff-stage")
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+    };
+  });
+  useEffect(() => {
+    const fromHash = (arriving: boolean) => {
       const m = /#preset=([^&]+)/.exec(window.location.hash);
       if (!m) return;
-      const pieceId = decodeURIComponent(m[1]);
-      const api = storeApi.getState();
-      const SPAN = { cols: 2, rows: 2 };
-      const corners = pieceId === "generic" ? "hs:crest" : pieceId;
-      const layout: Array<[string, string]> = [
-        ["frame:wing-left-0", corners],
-        ["frame:top-11", corners],
-        ["frame:wing-left-2", "hs:honor-star"],
-        ["frame:right-1", "hs:honor-star"],
-        ["frame:wing-left-4", "hs:trophy"],
-        ["frame:right-3", "hs:trophy"],
-        ["frame:wing-left-6", corners],
-        ["frame:bottom-11", corners],
-      ];
-      for (const [slot, pc] of layout) api.placeTile(slot, pc, "hs", SPAN);
-      if (pieceId !== "generic") setKidActivity(pieceId);
-      const nameInput = document.querySelector<HTMLInputElement>("input[name=kid-name]");
-      nameInput?.scrollIntoView({ behavior: "smooth", block: "center" });
-      nameInput?.focus({ preventScroll: true });
+      window.history.replaceState(null, "", window.location.pathname + window.location.search);
+      // A hash present on ARRIVAL came from outside the page (an old link, a
+      // restored tab from before the hash was consumed). It may lay a frame on a
+      // first visit, never over a design this browser already holds.
+      if (arriving && savedAtLoad()) return;
+      applyChipRef.current(decodeURIComponent(m[1]));
     };
-    applyFromHash();
-    window.addEventListener("hashchange", applyFromHash);
-    return () => window.removeEventListener("hashchange", applyFromHash);
+    fromHash(true);
+    const onHashChange = () => fromHash(false);
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+    // Mount only: `savedAtLoad` is fixed for the page's life, and the applier is
+    // read through its ref so the listener always runs the current one.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const [exporting, setExporting] = useState(false);
@@ -308,15 +442,8 @@ export function SchoolDesigner({
     }
     try {
       const s = storeApi.getState();
-      const design = {
-        frameConfig: s.frameConfig,
-        frameColor: s.frameColor,
-        slots: s.slots,
-        textBars: s.textBars,
-        qrCode: s.qrCode,
-        plateState: s.plateState,
-        sections: s.sections,
-      };
+      // Every brand colour the screen paints with — see `schoolDesignOf`.
+      const design = schoolDesignOf(s);
       const [overview, panelPngs] = await Promise.all([
         composeSchoolFrame(design),
         composeSchoolPanels(design),
@@ -375,33 +502,61 @@ export function SchoolDesigner({
   // panel-grouped parts list, and POSTs both to /api/school/submit. The server owns
   // the recipient; this only reports back which of the three outcomes happened
   // (sent / email-not-configured-yet / error) so the button never lies.
-  const handleSubmit = async () => {
+  //
+  // NOTHING SENDS FROM ONE TAP. Every Send (the header's and the graduate card's)
+  // opens the send sheet, which renders the frame, asks who to reply to, and has
+  // the one button that posts. The render starts the moment the sheet opens, so
+  // the preview the parent approves IS the file that is sent — the design cannot
+  // change behind a modal sheet.
+  const [sendSheet, setSendSheet] = useState<
+    | null
+    | {
+        rendered: { printPng: string; panels: { name: string; dataUrl: string }[] } | null;
+        failed: boolean;
+        error: string | null;
+      }
+  >(null);
+  const sendRun = useRef(0);
+
+  const openSend = async () => {
     if (!artworkRightsSettled("submit")) return;
-    if (submitting || exporting) return;
-    setSubmitting(true);
+    if (submitting || exporting || sendSheet) return;
     setSubmitState(null);
+    const run = ++sendRun.current;
+    setSendSheet({ rendered: null, failed: false, error: null });
     try {
-      const s = storeApi.getState();
-      const design = {
-        frameConfig: s.frameConfig,
-        frameColor: s.frameColor,
-        slots: s.slots,
-        textBars: s.textBars,
-        qrCode: s.qrCode,
-        plateState: s.plateState,
-        sections: s.sections,
-      };
+      // Every brand colour the screen paints with — see `schoolDesignOf`.
+      const design = schoolDesignOf(storeApi.getState());
       // The assembled sheet is the OVERVIEW; the 4 panel PNGs are the print files
       // (each positioned separately on the bed — the seams are hard to hit assembled).
       const [printPng, panelPngs] = await Promise.all([
         composeSchoolFrame(design),
         composeSchoolPanels(design),
       ]);
-      if (!printPng) {
-        setSubmitState({ kind: "error", msg: "Couldn't render the print file. Try again." });
-        return;
-      }
-      const panels = panelPngs.map((p) => ({ name: p.id, dataUrl: p.dataUrl }));
+      if (run !== sendRun.current) return; // closed (and maybe reopened) meanwhile
+      setSendSheet((cur) =>
+        cur && printPng
+          ? { ...cur, rendered: { printPng, panels: panelPngs.map((p) => ({ name: p.id, dataUrl: p.dataUrl })) } }
+          : cur && { ...cur, failed: true },
+      );
+    } catch {
+      if (run === sendRun.current) setSendSheet((cur) => cur && { ...cur, failed: true });
+    }
+  };
+
+  const closeSend = () => {
+    sendRun.current++;
+    setSendSheet(null);
+  };
+
+  const handleSubmit = async (contact: OrderContact) => {
+    const rendered = sendSheet?.rendered;
+    if (!rendered || submitting) return;
+    setSubmitting(true);
+    setSendSheet((cur) => cur && { ...cur, error: null });
+    try {
+      const s = storeApi.getState();
+      const { printPng, panels } = rendered;
       const partsList = buildPanelPartsList({
         slots: s.slots,
         textBars: s.textBars,
@@ -426,21 +581,26 @@ export function SchoolDesigner({
           school: kit?.slug,
           artUploaded: designHasUploadedArt(s.slots),
           artworkRights: s.artworkRights,
+          // Who to reply to — required, and checked again by the route.
+          contact,
         }),
       });
-      const data = (await res.json().catch(() => ({}))) as { ok?: boolean; reason?: string };
+      const data = (await res.json().catch(() => ({}))) as { ok?: boolean; reason?: string; error?: string };
       if (res.ok && data.ok) {
-        setSubmitState({ kind: "ok", msg: "Your design is on its way to our team." });
+        closeSend();
+        setSubmitState({ kind: "ok", msg: `Your design is on its way to our team. We'll reply to ${contact.email}.` });
       } else if (data.reason === "email-not-configured") {
+        closeSend();
         setSubmitState({
           kind: "not-configured",
           msg: "Sending is not switched on yet, so nothing was sent.",
         });
       } else {
-        setSubmitState({ kind: "error", msg: "Couldn't send your design right now. Please try again." });
+        // Stays in the sheet, with what they typed, so a retry is one tap.
+        setSendSheet((cur) => cur && { ...cur, error: data.error || "Couldn't send your design right now. Please try again." });
       }
     } catch {
-      setSubmitState({ kind: "error", msg: "Something went wrong sending your design. Please try again." });
+      setSendSheet((cur) => cur && { ...cur, error: "Something went wrong sending your design. Please try again." });
     } finally {
       setSubmitting(false);
     }
@@ -456,123 +616,77 @@ export function SchoolDesigner({
   // the class year as its tagline. All ordinary store writes — undoable,
   // editable, persisted like anything hand-placed.
   /**
-   * Put the PERSON on the bottom banner and move the SCHOOL up to the top.
+   * Put the PERSON on the bottom banner and move the SCHOOL up to the top —
+   * `writePersonOnBanner` (lib/utils/school-banner.ts), shared with the pilot
+   * sample sheets so a sample can never say what a parent's frame would not.
    *
-   * The two halves are one operation, because doing only the first breaks the
-   * frame. The kit ships reading "HOME OF THE / JR. BILLS / ST. LOUIS UNIVERSITY
-   * HIGH" — one sentence over three lines. The student replaces the mascot and
-   * the school name, so the frame was left saying "HOME OF THE OKAFOR" with the
-   * school nowhere on it. Promoting the school to the top strip fixes both, and
-   * gives the layout every personalized plate frame uses: school, then name,
-   * then year. See lib/utils/school-banner.ts for when the top is left alone.
+   * It writes through setSectionText, not setSectionMode: setSectionMode is the
+   * EDITOR's switch — it selects the banner, so every chip tap and every
+   * keystroke in the express opened the section editor under the frame
+   * (shrinking it on a phone) and drew the gold selection ring round a banner
+   * nobody tapped.
    */
   const writePerson = (
     api: ReturnType<typeof storeApi.getState>,
     person: { name?: string; tagline?: string },
-  ) => {
-    const name = (person.name ?? "").trim().toUpperCase();
-    const tagline = person.tagline ?? "";
-    if (!name && !tagline) return;
-    if (name) {
-      const promoted = schoolTopLine({
-        kit,
-        currentTop: api.sections?.top?.text?.text,
-        currentBottom: api.sections?.bottom?.text?.text,
-        personName: name,
-      });
-      if (promoted) {
-        api.setSectionMode("top", "text");
-        api.setSectionText("top", { text: promoted });
-      }
-    }
-    api.setSectionMode("bottom", "text");
-    api.setSectionText("bottom", {
-      ...(name ? { text: name } : {}),
-      ...(tagline ? { tagline } : {}),
-    });
-  };
+  ) => writePersonOnBanner(api, kit, person);
 
   const applyKidIntake = () => {
-    const api = storeApi.getState();
-    writePerson(api, {
-      name: kidName,
-      tagline: kidYear ? buyer.taglineFor(kidYear, kidNumber.trim() || undefined) : "",
-    });
     if (kidActivity) {
-      // PRESET, not a sprinkle: picking an activity composes the whole frame
-      // as a symmetric layout — activity patches in all four corners, laurel
-      // and trophy on the mid rails — so the preset-lover customer is one
-      // name + one tap from a finished, orderable design. Mirror pairs:
-      // (wing-left-0, top-11), (wing-left-2, right-1), (wing-left-4,
-      // right-3), (wing-left-6, bottom-11).
-      const SPAN = { cols: 2, rows: 2 };
-      const layout: Array<[string, string]> = [
-        ["frame:wing-left-0", kidActivity],
-        ["frame:top-11", kidActivity],
-        ["frame:wing-left-2", "hs:honor-star"],
-        ["frame:right-1", "hs:honor-star"],
-        ["frame:wing-left-4", "hs:trophy"],
-        ["frame:right-3", "hs:trophy"],
-        ["frame:wing-left-6", kidActivity],
-        ["frame:bottom-11", kidActivity],
-      ];
-      for (const [slot, pieceId] of layout) api.placeTile(slot, pieceId, "hs", SPAN);
+      // PRESET, not a sprinkle: picking an activity composes the whole frame as
+      // the variant's own activity design (activity and mascot alternating down
+      // both sides), so the preset-lover customer is one name + one tap from a
+      // finished, orderable design. Laid by the frame — the old hard-coded slot
+      // ids belonged to a grid the shipping frame does not have. Laid BEFORE the
+      // banner is written, so the line is the last word on the frame.
+      const athlete = getPreset("athlete", presets);
+      if (athlete) {
+        layPreset(athlete, kidActivity);
+        setActivePreset(athlete.id);
+        setAwaitingActivity(false);
+      }
     }
+    writePerson(storeApi.getState(), { name: kidName, tagline: taglineNow() });
   };
 
-  /**
-   * THE SCHOOL'S TWO MARKS: the mascot (its character) and the crest (its shield).
-   *
-   * Presets alternate between them rather than repeating one, so a school with
-   * real artwork gets a frame made entirely of its own marks instead of one made
-   * of stock trophies. The mascot is whichever badge is NOT a crest — SLUH has
-   * both a Billiken and a shield, and the Billiken is the one a parent recognises
-   * across a car park. Either may be null; `presetTiles` handles that.
-   */
-  const schoolMarks = useMemo(() => {
-    const badges = kit?.marks?.badges;
-    if (!badges?.length || !kit) return { mascot: null, alt: null };
-    const isCrest = (b: { key: string; name: string }) => /crest|shield|seal/i.test(`${b.key} ${b.name}`);
-    const mascot = badges.find((b) => !isCrest(b)) ?? badges[0];
-    const alt = badges.find((b) => b !== mascot && isCrest(b)) ?? badges.find((b) => b !== mascot);
-    return {
-      mascot: markPieceId(kit.slug, mascot.key),
-      alt: alt ? markPieceId(kit.slug, alt.key) : null,
-    };
-  }, [kit]);
+  // The school's mascot and crest as badge ids — see `kitMarkIds`.
+  const schoolMarks = useMemo(() => kitMarkIds(kit), [kit]);
   const mascotPieceId = schoolMarks.mascot;
 
   /**
    * APPLY A FINISHED DESIGN. The one-tap path, and the one most people will use.
    *
    * Clears first: a preset is a whole frame, not a sprinkle, and leaving the
-   * previous badges underneath produces a hybrid nobody chose. Uses the intake's
-   * activity when there is one, so "Graduate" still carries their sport.
+   * previous badges underneath produces a hybrid nobody chose. The intake's
+   * activity fills a preset's ACTIVITY positions — on the shipping (flush) frame
+   * only "What they do" has any, so "Graduate" and "Just the school" lay their own
+   * badges and the chosen activity is NOT on them. (The retired live frame's
+   * graduate run carried it; the flush one does not.)
    */
   const activityRef = useRef<HTMLSelectElement>(null);
 
-  const applyFramePreset = (preset: SchoolPreset) => {
+  /** Clear the frame and lay a preset's badges on it — the shared `layPreset`
+   *  every one-tap path uses, with this school's marks. */
+  const layPreset = (preset: SchoolPreset, activity: string | null) =>
+    layPresetOn(storeApi.getState(), preset, activity, schoolMarks);
+
+  const applyFramePreset = (preset: SchoolPreset, activity: string = kidActivity) => {
     // A design that is ABOUT the sport must not guess one. Applying it with
     // nothing chosen used to drop a stock trophy in, which is the generic result
-    // the preset exists to avoid.
-    if (preset.needsActivity && !kidActivity) {
+    // the preset exists to avoid. It waits for the activity menu instead.
+    if (preset.needsActivity && !activity) {
+      setAwaitingActivity(true);
       activityRef.current?.focus();
       activityRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
       return;
     }
+    setAwaitingActivity(false);
+    layPreset(preset, activity || null);
     const api = storeApi.getState();
-    api.clearAll();
-    const SPAN = { cols: 2, rows: 2 };
-    for (const [slot, pieceId, span] of presetTiles(preset, kidActivity || null, schoolMarks.mascot, schoolMarks.alt)) {
-      api.placeTile(slot, pieceId, pieceId.split(":")[0], span ?? SPAN);
-    }
     // The BUYER owns this line, not the preset: a grandparent applying
     // "Graduate" wants their relationship on it, which is the whole reason
     // they are buying a second frame for a student who already has one.
-    writePerson(api, {
-      name: kidName,
-      tagline: kidYear ? buyer.taglineFor(kidYear, kidNumber.trim() || undefined) : "",
-    });
+    writePerson(api, { name: kidName, tagline: taglineNow() });
     setActivePreset(preset.id);
   };
 
@@ -581,31 +695,43 @@ export function SchoolDesigner({
     if (!expressOpen) return;
     const preset = getPreset("graduate", presets);
     if (!preset) return;
-    const api = storeApi.getState();
-    api.clearAll();
-    for (const [slot, pieceId, span] of presetTiles(preset, null, schoolMarks.mascot, schoolMarks.alt)) {
-      api.placeTile(slot, pieceId, pieceId.split(":")[0], span ?? { cols: 2, rows: 2 });
-    }
+    layPreset(preset, null);
     if (!kidYear) setKidYear(String(gradYears[0]));
     // Once, on open. Deliberately not keyed on the name or the year: those only
     // move the banner, handled below.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [expressOpen, mascotPieceId]);
 
-  // The banner follows the two fields live, so the frame on screen is always the
-  // frame the Order button will buy.
+  // The banner follows the fields live, so the frame on screen is always the
+  // frame the Send button will send.
+  //
+  // THE NAME IS OPTIONAL. Left blank, the big line is the school's mascot — the
+  // kit's own seed — so "WILDCATS / CLASS OF 2027" is a finished frame. That also
+  // covers a name typed and then erased: the banner goes back to the mascot
+  // rather than keeping the last letter that was there.
   useEffect(() => {
     if (!expressOpen) return;
     const api = storeApi.getState();
-    writePerson(api, {
-      name: kidName,
-      tagline: kidYear ? buyer.taglineFor(kidYear) : "",
-    });
-    // writePerson is recreated every render and depending on it would run this
-    // on every keystroke of every other field; the two values it reads that are
-    // not passed in (the kit, the live sections) are stable or read fresh.
+    const name = kidName.trim();
+    writePerson(api, { name, tagline: taglineNow() });
+    if (!name && kit) api.setSectionText("bottom", { text: kit.banners.bottom });
+    // writePerson and taglineNow are recreated every render and depending on them
+    // would run this on every keystroke of every other field; everything they read
+    // is listed here or is stable.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [expressOpen, kidName, kidYear, buyer, storeApi]);
+  }, [expressOpen, kidName, kidYear, kidNumber, line, lineText, buyer, storeApi]);
+
+  /**
+   * ONE TAP on a banner line puts it on the frame — PROUD PARENT, SENIOR, #12 —
+   * with no second "See it on the frame" step. Also used as the year, number and
+   * own-words fields change, so the banner follows them the way it follows the
+   * express card. A line with nothing to say yet (the number chip before a number
+   * is typed, with no year) leaves the banner as it is.
+   */
+  const writeLine = (over: Parameters<typeof taglineNow>[0]) => {
+    const tagline = taglineNow(over);
+    if (tagline) writePerson(storeApi.getState(), { tagline });
+  };
 
   const handleBuy = async () => {
     if (!artworkRightsSettled("buy")) return;
@@ -614,15 +740,8 @@ export function SchoolDesigner({
     setSubmitState(null);
     try {
       const s = storeApi.getState();
-      const design = {
-        frameConfig: s.frameConfig,
-        frameColor: s.frameColor,
-        slots: s.slots,
-        textBars: s.textBars,
-        qrCode: s.qrCode,
-        plateState: s.plateState,
-        sections: s.sections,
-      };
+      // Every brand colour the screen paints with — see `schoolDesignOf`.
+      const design = schoolDesignOf(s);
       const [printPng, panelPngs] = await Promise.all([
         composeSchoolFrame(design),
         composeSchoolPanels(design),
@@ -701,18 +820,10 @@ export function SchoolDesigner({
   //
   // useSyncExternalStore rather than an effect because the answer is fixed for the
   // life of the page — there is nothing to subscribe to — and it gives a correct
-  // SSR value (false) instead of rendering the banner then taking it away.
-  const wasRestored = useSyncExternalStore(
-    () => () => {},
-    () => {
-      try {
-        return localStorage.getItem(SCHOOL_PERSIST_KEY) != null;
-      } catch {
-        return false;
-      }
-    },
-    () => false,
-  );
+  // SSR value (false) instead of rendering the banner then taking it away. Fixed
+  // means MEMOISED (`savedAtLoad`): the store writes its blob on the first edit of
+  // a first visit, and a live read would then announce a restore that never was.
+  const wasRestored = useSyncExternalStore(() => () => {}, savedAtLoad, () => false);
   const restoredNotice = wasRestored && !restoredDismissed;
 
   // NOTE — there is deliberately no "seed the school frame" effect here.
@@ -731,7 +842,10 @@ export function SchoolDesigner({
   // no effect can clobber it.
 
   return (
-    <div className="workbench-bg min-h-screen flex flex-col">
+    <div
+      className="workbench-bg min-h-screen flex flex-col"
+      style={{ "--ff-header-h": `${headerH}px` } as React.CSSProperties}
+    >
       {/* Header — school context + the plate state picker (the real StateSelector,
           wired to the shared store). No storefront/order flow.
 
@@ -742,43 +856,68 @@ export function SchoolDesigner({
           The "Internal prototype · fork of the live builder" strapline is gone
           rather than restyled: it is dev scaffolding, and this page is shown to
           parents deciding whether to spend money. */}
-      <header className="ff-app-header sticky top-0 z-40 flex flex-nowrap items-center justify-between gap-2 border-b border-[var(--ff-line)] bg-[var(--ff-card)] px-3 py-2 sm:gap-3 sm:px-4 sm:py-2.5">
-        <h1 className="ff-h1 min-w-0 truncate">
-          MySchoolFrame
-          {kit && <span className="ff-h1-school"> · {kit.shortName} {kit.mascot}</span>}
+      <header
+        ref={headerRef}
+        className="ff-app-header sticky top-0 z-40 flex flex-nowrap items-center justify-between gap-2 border-b border-[var(--ff-line)] bg-[var(--ff-card)] px-3 py-1.5 sm:gap-3 sm:px-4 sm:py-2.5"
+        // A notch or a landscape phone's sensor housing never sits on the controls.
+        style={{
+          paddingTop: "max(6px, env(safe-area-inset-top))",
+          paddingLeft: "max(12px, env(safe-area-inset-left))",
+          paddingRight: "max(12px, env(safe-area-inset-right))",
+        }}
+      >
+        <h1 className="ff-h1 flex min-w-0 items-center gap-1.5">
+          {/* The owner's logo, REVERSED (paper + brass) for the dark glass header —
+              the same file as the /school hero. The alt text is the heading. */}
+          <Image
+            src="/brand/msf-logo-reverse.png"
+            alt="MySchoolFrame"
+            width={800}
+            height={410}
+            priority
+            // 30px tall on a phone (crisp at 3x), 40px from sm up, where a 1x
+            // screen drew "FRAME" about 6px tall from a 64px source.
+            sizes="(min-width: 640px) 160px, 64px"
+            className="h-[30px] w-auto shrink-0 sm:h-10"
+          />
+          {kit && <span className="ff-h1-school min-w-0 truncate"> · {kit.shortName} {kit.mascot}</span>}
         </h1>
         <div className="flex shrink-0 flex-nowrap items-center justify-end gap-1.5 sm:gap-2">
           <span className="ff-label hidden sm:block">Plate</span>
           <StateSelector theme="header" />
           {/* Two actions, ONE of them primary. Exporting a file is the power-user
               path; sending the design to be made is the thing this page is for. */}
-          {/* Production tool, not a customer action: now that the builder is
-              live, the print-file export hides behind a quiet gear. The result
-              banner still carries the real download link (iOS needs a tappable
-              <a>), so the flow past this button is unchanged. */}
-          <button
+          {/* Production tool, not a customer action: on the lab routes only (see
+              `operatorTools`). The result banner still carries the real download
+              link (iOS needs a tappable <a>), so the flow past this button is
+              unchanged. Labelled, and never dimmed as if it were disabled. */}
+          {operatorTools && <button
             type="button"
             onClick={handleExportPrint}
             disabled={exporting}
             title="Export print files (production)"
             aria-label="Export print files"
-            className="ff-btn ff-btn-secondary ff-btn-sm shrink-0 !px-2 opacity-45 hover:opacity-100"
+            className="ff-btn ff-btn-secondary ff-btn-sm shrink-0 whitespace-nowrap max-lg:min-h-11"
           >
             {exporting ? (
               <span className="animate-spin inline-block" aria-hidden>⚙</span>
             ) : (
-              <span aria-hidden>⚙</span>
+              <>
+                <span aria-hidden>⚙</span>
+                <span className="hidden sm:inline"> Print files</span>
+              </>
             )}
-          </button>
+          </button>}
           {/* Send is the PRIMARY action while checkout is parked, and steps back to
               secondary the moment Buy exists. Derived from the one switch, so
               opening checkout is never a second edit someone forgets to make. */}
           <button
             type="button"
-            onClick={handleSubmit}
+            onClick={() => void openSend()}
             disabled={submitting || exporting || buying}
             title="Send your finished design to our team without ordering"
-            className={`ff-btn ${SCHOOL_CHECKOUT_OPEN ? "ff-btn-secondary" : "ff-btn-primary"} ff-btn-sm shrink-0 whitespace-nowrap`}
+            aria-haspopup="dialog"
+            className={`ff-btn ${SCHOOL_CHECKOUT_OPEN ? "ff-btn-secondary" : "ff-btn-primary"} ff-btn-sm shrink-0 whitespace-nowrap max-lg:min-h-11`}
           >
             {submitting ? (
               "Sending..."
@@ -798,7 +937,7 @@ export function SchoolDesigner({
               onClick={handleBuy}
               disabled={buying || submitting || exporting}
               title="Order this frame, secure checkout"
-              className="ff-btn ff-btn-primary ff-btn-sm shrink-0 whitespace-nowrap"
+              className="ff-btn ff-btn-primary ff-btn-sm shrink-0 whitespace-nowrap max-lg:min-h-11"
             >
               {buying ? "Starting checkout..." : <>Buy<span className="hidden sm:inline"> this frame</span></>}
             </button>
@@ -822,7 +961,7 @@ export function SchoolDesigner({
           }`}
         >
           <p className="text-[13px] leading-snug">{submitState.msg}</p>
-          <button type="button" onClick={() => setSubmitState(null)} className="ff-chip shrink-0">
+          <button type="button" onClick={() => setSubmitState(null)} className="ff-chip shrink-0 max-lg:min-h-11">
             Dismiss
           </button>
         </div>
@@ -877,7 +1016,9 @@ export function SchoolDesigner({
         <div className="ff-banner ff-banner-error flex items-start justify-between gap-3 px-4 py-2.5">
           <p className="text-[13px] leading-snug">
             This browser&apos;s storage is full, so your latest change may not be saved
-            for next time. Try a smaller image, or finish and order this design now.
+            for next time. A smaller image may help, or you&apos;re welcome to{" "}
+            {SCHOOL_CHECKOUT_OPEN ? "order this design now" : "send us this design now"} so
+            nothing gets lost.
           </p>
           <button type="button" onClick={() => setStorageFull(false)} className="ff-chip shrink-0">
             Dismiss
@@ -946,7 +1087,13 @@ export function SchoolDesigner({
             column: tools rail (1) -> frame + editor (2). */}
         {/* `pt-0` deliberately: the frame is the subject of this page and should meet
             the chrome above it, not float below a band of dead space. */}
-        <main className="flex-1 grid grid-cols-1 lg:grid-cols-[340px_minmax(0,1fr)] gap-4 px-4 pb-4 pt-0 mx-auto w-full max-w-[1560px] items-start">
+        {/* A FLEX column on a phone, the two-column grid on a desktop. The
+            difference matters for one reason: a sticky element can only stick
+            within its containing block, and a one-column grid gives every item a
+            row of its own — the pinned frame would have unstuck the moment its
+            own row scrolled past. In a flex column the containing block is all of
+            <main>, so the frame stays pinned while every tool below it scrolls. */}
+        <main className="flex-1 flex flex-col lg:grid lg:grid-cols-[340px_minmax(0,1fr)] gap-4 px-4 pb-4 pt-0 mx-auto w-full max-w-[1560px] lg:items-start">
           {/* LEFT tools rail. The PALETTE leads: it is the thing you reach for first
               and on every subsequent action, so it gets the top of the rail. Upload and
               the section pickers follow, because you touch them once per design.
@@ -1034,7 +1181,10 @@ export function SchoolDesigner({
                 A parent could not tap a badge on a first visit — the core loop
                 was blocked on the one device the QR is for. Pinning is the
                 desktop column's job (`lg:sticky` on the parent). */}
-            <div className="ff-frame-dock order-1 min-w-0 flex flex-col gap-3 -mx-4 px-4 pt-2 pb-2 lg:static lg:order-none lg:w-full lg:mx-0 lg:px-0 lg:pt-0 lg:pb-0 lg:shrink-0">
+            {/* `contents` on a phone: its children become items of <main>'s flex
+                column, so the pinned stage below is stuck against <main> and not
+                against this box, which ends right under the frame. */}
+            <div className="contents lg:flex lg:flex-col lg:gap-3 lg:order-none lg:w-full lg:min-w-0 lg:shrink-0">
               {/* Make-it-theirs intake: the first thing a parent touches. Three
                   quick fields -> the frame is suddenly about THEIR kid. Writes
                   ordinary store state via applyKidIntake. */}
@@ -1042,7 +1192,13 @@ export function SchoolDesigner({
                   is describing. The builder's own intake is the "or customize"
                   route and stays out of the way until asked for — offering both
                   at once is offering a choice nobody came to make. */}
+              {/* On a phone the card comes AFTER the frame (`max-lg:order-1`: past
+                  the order-0 stage, before the order-2 tray). Above it, a parent
+                  arriving from a QR scrolled 1.7 screens before seeing any frame,
+                  and the card's fields now sit under the pinned frame they edit.
+                  Desktop keeps it above the stage in the pinned column. */}
               {expressOpen && (
+                <div className="max-lg:order-1">
                 <GraduateExpress
                   schoolLabel={kit?.shortName ?? null}
                   name={kidName}
@@ -1050,11 +1206,11 @@ export function SchoolDesigner({
                   year={kidYear}
                   onYear={setKidYear}
                   years={gradYears}
-                  onSend={handleSubmit}
+                  onSend={() => void openSend()}
                   onCustomize={leaveExpress}
                   busy={buying || submitting || exporting}
-                  disabled={!kidName.trim()}
                 />
+                </div>
               )}
 
               <div data-intake hidden={expressOpen} className="flex flex-wrap items-end gap-2 rounded-xl border border-stone-300 bg-white px-3 py-2.5 shadow-sm">
@@ -1073,7 +1229,7 @@ export function SchoolDesigner({
                         aria-checked={b.id === buyerId}
                         onClick={() => chooseBuyer(b.id)}
                         className={
-                          "min-h-[32px] rounded-full border px-3 text-[13px] font-semibold transition-colors " +
+                          "min-h-[44px] rounded-full border px-3 text-[13px] font-semibold transition-colors sm:min-h-[32px] " +
                           (b.id === buyerId
                             ? "border-stone-900 bg-stone-900 text-white"
                             : "border-stone-300 bg-white text-stone-700 hover:border-stone-400")
@@ -1091,7 +1247,7 @@ export function SchoolDesigner({
                     first, an alum sees the crest. */}
                 <div className="flex w-full flex-col gap-1">
                   <span className="text-[12px] font-medium text-stone-700">
-                    Start from a design <span className="font-normal text-stone-500">— or build your own below</span>
+                    Start from one of our designs<span className="font-normal text-stone-500">, or build your own below</span>
                   </span>
                   <div className="flex flex-wrap gap-1.5">
                     {presetsFor(buyerId, presets).map((preset) => (
@@ -1100,9 +1256,9 @@ export function SchoolDesigner({
                         type="button"
                         onClick={() => applyFramePreset(preset)}
                         aria-pressed={activePreset === preset.id}
-                        title={preset.blurb}
+                        title={presetBlurb(preset, kidActivity || null, schoolMarks, (id) => getPiece(id)?.name)}
                         className={
-                          "flex min-h-[38px] items-center gap-1.5 rounded-lg border px-2.5 text-[13px] font-semibold transition-colors " +
+                          "flex min-h-[44px] items-center gap-1.5 rounded-lg border px-2.5 text-[13px] font-semibold transition-colors sm:min-h-[38px] " +
                           (activePreset === preset.id
                             ? "border-amber-500 bg-amber-50 text-stone-900"
                             : "border-stone-300 bg-white text-stone-800 hover:border-stone-400")
@@ -1113,20 +1269,15 @@ export function SchoolDesigner({
                       </button>
                     ))}
                   </div>
+                  {awaitingActivity && !kidActivity && (
+                    <p role="status" className="text-[12px] text-stone-600">
+                      Pick what they do just below, and we&apos;ll build the frame around it.
+                    </p>
+                  )}
                 </div>
-                <label className="flex flex-col gap-1 text-[12px] font-medium text-stone-700 grow basis-32">
-                  {buyer.nameLabel}
-                  <input
-                    type="text"
-                    name="kid-name"
-                    value={kidName}
-                    onChange={(e) => setKidName(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === "Enter") applyKidIntake(); }}
-                    placeholder={buyer.namePlaceholder}
-                    maxLength={14}
-                    className="h-9 rounded-lg border border-stone-300 px-2.5 text-[14px] uppercase text-stone-900 placeholder:text-stone-400"
-                  />
-                </label>
+                {/* ACTIVITY AND YEAR FIRST, the name last and optional. The
+                    owner's call: a frame leads with Class of 2027, #12, Senior,
+                    Orchestra or Proud Parent, not the student's full name. */}
                 <label className="flex flex-col gap-1 text-[12px] font-medium text-stone-700 grow basis-32">
                   {buyer.activityLabel}
                   <select
@@ -1134,14 +1285,18 @@ export function SchoolDesigner({
                     name="kid-activity"
                     value={kidActivity}
                     onChange={(e) => {
-                      setKidActivity(e.target.value);
-                      // Football 12 then Swim & Dive would otherwise keep the 12
-                      // and print it, from a field no longer on screen.
-                      if (!hasJerseyNumber(e.target.value)) setKidNumber("");
+                      const next = e.target.value;
+                      setKidActivity(next);
+                      // Finish a "What they do" tap that was waiting for this. Any
+                      // other change waits for "See it on the frame": the parent may
+                      // have rearranged the badges since, and a menu is not a
+                      // place to lose that.
+                      const athlete = getPreset("athlete", presets);
+                      if (next && athlete && awaitingActivity) applyFramePreset(athlete, next);
                     }}
-                    className="h-9 rounded-lg border border-stone-300 bg-white px-2 text-[14px] text-stone-900"
+                    className="h-11 rounded-lg border border-stone-300 bg-white px-2 text-[16px] text-stone-900 sm:h-9 sm:text-[14px]"
                   >
-                    <option value="">Pick one…</option>
+                    <option value="">Choose an activity…</option>
                     {/* Grouped rather than one flat run of forty. A native
                         select on a phone shows the group headers, which is the
                         difference between scanning and scrolling. */}
@@ -1156,32 +1311,17 @@ export function SchoolDesigner({
                     ))}
                   </select>
                 </label>
-                {/* JERSEY NUMBER. Only for the sports that actually wear one.
-                    It used to appear for any activity at all, which asked the
-                    parent of a swimmer, a wrestler or a cellist a question with
-                    no answer. See data/activities.ts for the call on each. */}
-                {hasJerseyNumber(kidActivity) && (
-                  <label className="flex flex-col gap-1 text-[12px] font-medium text-stone-700 basis-20">
-                    Jersey #
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      name="kid-number"
-                      value={kidNumber}
-                      onChange={(e) => setKidNumber(e.target.value.replace(/\D/g, "").slice(0, 2))}
-                      placeholder="12"
-                      className="h-9 w-full rounded-lg border border-stone-300 px-2.5 text-[14px] text-stone-900 placeholder:text-stone-400"
-                    />
-                  </label>
-                )}
                 {buyer.yearLabel && (
                   <label className="flex flex-col gap-1 text-[12px] font-medium text-stone-700 basis-28">
                     {buyer.yearLabel}
                     <select
                       name="kid-year"
                       value={kidYear}
-                      onChange={(e) => setKidYear(e.target.value)}
-                      className="h-9 rounded-lg border border-stone-300 bg-white px-2 text-[14px] text-stone-900"
+                      onChange={(e) => {
+                        setKidYear(e.target.value);
+                        writeLine({ year: e.target.value });
+                      }}
+                      className="h-11 rounded-lg border border-stone-300 bg-white px-2 text-[16px] text-stone-900 sm:h-9 sm:text-[14px]"
                     >
                       <option value="">Year…</option>
                       {/* The RANGE follows the buyer. Current students only for a
@@ -1193,11 +1333,94 @@ export function SchoolDesigner({
                     </select>
                   </label>
                 )}
+                {/* THE BANNER LINE, one tap each. The list is the buyer's own
+                    (data/frame-buyers.ts), so a grandparent is offered PROUD
+                    GRANDPARENT first and staff only their own words. */}
+                <div className="flex w-full flex-col gap-1">
+                  <span className="text-[12px] font-medium text-stone-700">Banner line</span>
+                  <div role="radiogroup" aria-label="Line on the banner" className="flex flex-wrap gap-1.5">
+                    {buyer.lines.map((id) => {
+                      const option = BANNER_LINES[id];
+                      const label = id === "class" && kidYear ? `Class of ${kidYear}` : option.chip;
+                      return (
+                        <button
+                          key={id}
+                          type="button"
+                          role="radio"
+                          aria-checked={line === id}
+                          onClick={() => {
+                            setLineChoice(id);
+                            writeLine({ line: id });
+                          }}
+                          className={
+                            "min-h-[44px] rounded-full border px-3 text-[13px] font-semibold transition-colors sm:min-h-[32px] " +
+                            (line === id
+                              ? "border-stone-900 bg-stone-900 text-white"
+                              : "border-stone-300 bg-white text-stone-700 hover:border-stone-400")
+                          }
+                        >
+                          {label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+                {/* THE NUMBER, for ANY activity. It used to appear only for the
+                    jersey sports; a cellist has a chair and a runner a bib, and
+                    "#12" is one of the lines the owner wants to lead with. */}
+                {line && BANNER_LINES[line].asks === "number" && (
+                  <label className="flex flex-col gap-1 text-[12px] font-medium text-stone-700 basis-20">
+                    Number
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      name="kid-number"
+                      value={kidNumber}
+                      onChange={(e) => {
+                        const n = e.target.value.replace(/\D/g, "").slice(0, 2);
+                        setKidNumber(n);
+                        writeLine({ number: n });
+                      }}
+                      placeholder="12"
+                      className="h-11 w-full rounded-lg border border-stone-300 px-2.5 text-[16px] text-stone-900 placeholder:text-stone-400 sm:h-9 sm:text-[14px]"
+                    />
+                  </label>
+                )}
+                {line && BANNER_LINES[line].asks === "text" && (
+                  <label className="flex flex-col gap-1 text-[12px] font-medium text-stone-700 grow basis-40">
+                    Your line
+                    <input
+                      type="text"
+                      name="kid-line"
+                      value={lineText}
+                      onChange={(e) => {
+                        setLineText(e.target.value);
+                        writeLine({ text: e.target.value });
+                      }}
+                      placeholder="e.g. GO CATS"
+                      maxLength={24}
+                      className="h-11 rounded-lg border border-stone-300 px-2.5 text-[16px] uppercase text-stone-900 placeholder:normal-case placeholder:text-stone-400 sm:h-9 sm:text-[14px]"
+                    />
+                  </label>
+                )}
+                <label className="flex flex-col gap-1 text-[12px] font-medium text-stone-700 grow basis-32">
+                  {buyer.nameLabel}
+                  <input
+                    type="text"
+                    name="kid-name"
+                    value={kidName}
+                    onChange={(e) => setKidName(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") applyKidIntake(); }}
+                    placeholder={buyer.namePlaceholder}
+                    maxLength={14}
+                    className="h-11 rounded-lg border border-stone-300 px-2.5 text-[16px] uppercase text-stone-900 placeholder:normal-case placeholder:text-stone-400 sm:h-9 sm:text-[14px]"
+                  />
+                </label>
                 <button
                   type="button"
                   onClick={applyKidIntake}
                   disabled={!kidName.trim() && !kidActivity && !kidYear}
-                  className="ff-btn ff-btn-primary ff-btn-sm h-9"
+                  className="ff-btn ff-btn-primary ff-btn-sm h-11 sm:h-9"
                 >
                   See it on the frame
                 </button>
@@ -1212,6 +1435,17 @@ export function SchoolDesigner({
 
                   `relative` MUST stay: the frame-side ArmedBanner is absolutely
                   positioned against this element. */}
+              {/* THE PINNED PREVIEW (phones). "I can't see the design because I
+                  scroll" — Bill. The frame sticks under the header while the
+                  tray, the colours and the editor scroll beneath it, so every tap
+                  lands where the parent can see it. Only the frame and one status
+                  line are pinned (about a third of an iPhone screen); the intake
+                  and the graduate card above it scroll away as usual, so nothing
+                  pinned sits over a control. Desktop pins the whole column instead
+                  (`lg:sticky` on the parent) and this is static there. */}
+              <div
+                className="sticky top-[var(--ff-header-h,0px)] z-30 -mx-4 pt-2 pb-1 pl-[max(16px,env(safe-area-inset-left))] pr-[max(16px,env(safe-area-inset-right))] max-lg:bg-[var(--ff-room,var(--ff-canvas))] max-lg:shadow-[0_8px_14px_-10px_rgba(0,0,0,0.6)] lg:static lg:z-auto lg:mx-0 lg:p-0"
+              >
               <div
                 className="ff-stage ff-stage-cap relative mx-auto w-full"
                 style={
@@ -1226,7 +1460,12 @@ export function SchoolDesigner({
                   } as React.CSSProperties
                 }
               >
-                <ArmedBanner placement="frame" />
+                {/* Desktop: the callout floats over the plate. On a phone that
+                    covered the middle side badges — the very targets — so there it
+                    moves to the status line under the frame instead. */}
+                <div className="hidden lg:contents">
+                  <ArmedBanner placement="frame" />
+                </div>
                 <FrameCanvas
                   ref={canvasRef}
                   frameConfig={frameConfig}
@@ -1234,10 +1473,9 @@ export function SchoolDesigner({
                   bottomBar={bottomBar}
                   qrCode={qrCode}
                   plateState={plateState}
-                  // Only while the picker is on the state this photo actually is.
-                  plateImageOverride={
-                    kit?.plate && kit.plate.state === plateState ? kit.plate.src : undefined
-                  }
+                  // The kit's own plate while the picker is on its state, else the
+                  // school stock plate — never the FESTIVE stock photo.
+                  plateImageOverride={schoolPlatePhoto(kit, plateState)}
                   overSlotId={overSlotId}
                   snappetPreview={snappetPreview}
                   bannerPreview={bannerPreview}
@@ -1248,8 +1486,19 @@ export function SchoolDesigner({
                   under the frame rather than in a list restating what is already
                   on screen. Hidden once a section is open, since by then the user
                   has plainly found it. */}
+              {/* The phone's pinned STATUS LINE: the armed-tile callout when a
+                  tile is armed, the how-to otherwise. One fixed-height slot, so
+                  arming a tile never pushes the tray the parent just tapped. */}
+              <div className="flex min-h-11 items-center justify-center lg:hidden">
+                {armed ? (
+                  <ArmedBanner placement="dock" />
+                ) : (
+                  <p className="ff-stage-hint !m-0">Tap a badge or a banner on the frame to change it.</p>
+                )}
+              </div>
+              </div>
               {!editorOpen && (
-                <p className="ff-stage-hint">
+                <p className="ff-stage-hint hidden lg:block">
                   Tap a banner or a side panel on the frame to edit it.
                 </p>
               )}
@@ -1278,6 +1527,18 @@ export function SchoolDesigner({
           a resize requests it. */}
       <SnappetRecropModal />
 
+      {sendSheet && (
+        <SendDesignSheet
+          preview={sendSheet.rendered?.printPng ?? null}
+          renderFailed={sendSheet.failed}
+          initialFor={buyerId}
+          sending={submitting}
+          error={sendSheet.error}
+          onSend={(contact) => void handleSubmit(contact)}
+          onClose={closeSend}
+        />
+      )}
+
       {/* Floating size control for the selected tile/snappet — grow/shrink any placed
           tile (photos re-crop on aspect change). Portaled to <body> internally. */}
       <SnappetSizeControl />
@@ -1290,7 +1551,7 @@ export function SchoolDesigner({
             const what = rightsFor;
             acceptArtworkRights();
             setRightsFor(null);
-            if (what === "submit") void handleSubmit();
+            if (what === "submit") void openSend();
             else void handleBuy();
           }}
           onCancel={() => setRightsFor(null)}
@@ -1309,6 +1570,7 @@ export function SchoolBuilder({
   hero,
   variant,
   brandScan,
+  operatorTools = false,
   frameConfig = schoolVariant(variant).config,
 }: {
   kit?: SchoolKit;
@@ -1322,54 +1584,32 @@ export function SchoolBuilder({
    * frame, byte for byte. A fork route names its variant and nothing else.
    */
   variant?: SchoolVariantId;
+  /** The production print-file export (lab routes only). See SchoolDesigner. */
+  operatorTools?: boolean;
   /** Override the variant's geometry. Tests and the odd experiment only; a route
    *  should name a variant. */
   frameConfig?: typeof SCHOOL_FRAME_CONFIG;
 }) {
-  const { presets, badgeStack } = schoolVariant(variant);
-  // The school store is configured two ways:
-  //  - `frameConfig`: the school frame is ONE printable geometry (it must fit the
-  //    eufyMake E1 bed), so the store owns it outright — initial state, and it wins
-  //    over any stale persisted copy on hydrate. No component seeds it.
-  //  - `migrateExtra`: a school-ONLY persist migration. The wing trim (3 tile columns
-  //    per side → 1, for the E1 bed) invalidated slot ids that remain perfectly valid
-  //    on /build, so it cannot live in the shared migration.
+  const { presets } = schoolVariant(variant);
+  // The store is configured by `schoolStoreOptions` (data/school-store.ts): the
+  // frame geometry the store OWNS, the school-only persist migration, and the
+  // kit's initial-state seeds. The node renders build their stores from the same
+  // function, so a sample cannot seed a frame the builder would not.
   //
-  // A KIT parameterizes, never forks: same engine, same geometry, same migrations —
-  // the kit only supplies seeds (colors, banner text) and a per-school persist key.
-  // The scoped key is what lets a family with kids at two schools hold two designs,
-  // and it keeps /lab/school's original key untouched for existing users.
-  const [store] = useState(() =>
-    createDesignStore(
-      [SCHOOL_PERSIST_KEY, variant, kit?.slug].filter(Boolean).join(":"),
-      {
-      frameConfig,
-      migrateExtra: migrateSchoolDesign,
-      // Top/bottom start as TEXT banners — kit-branded when there is a kit. Initial
-      // state only; a returning user's persisted sections still win.
-      sections: kit ? kitSections(kit) : SCHOOL_DEFAULT_SECTIONS,
-      // The seed is DERIVED from the kit's signature badges against this
-      // variant's own side column (data/kit-seed.ts), so a school lands on a
-      // finished frame whichever geometry it is wearing. Kits name no slot ids.
-      initialSlots: kit ? kitSeedTiles(kit, frameConfig, badgeStack) : undefined,
-      // The plate under the frame is part of the mockup. It was hard-coded to
-      // Missouri, so a school in any other state opened on a car that could not
-      // be in its own parking lot. Read off the kit's city, initial state only —
-      // a visitor who picks their own state keeps it.
-      initialPlateState: kitPlateState(kit) ?? undefined,
-      initialBrand: kit
-        ? {
-            frameColor: kit.colors.frame,
-            tileFieldColor: kit.colors.tileField,
-            rimColor: kit.colors.rim,
-          }
-        : undefined,
-      },
-    )
-  );
+  // The persist key is scoped by variant and kit: a family with kids at two
+  // schools holds two designs, and /lab/school's original key is untouched.
+  const persistKey = [SCHOOL_PERSIST_KEY, variant, kit?.slug].filter(Boolean).join(":");
+  const [store] = useState(() => createDesignStore(persistKey, schoolStoreOptions({ kit, variant, frameConfig })));
   return (
     <DesignStoreProvider store={store}>
-      <SchoolDesigner kit={kit} hero={hero} presets={presets} brandScan={brandScan} />
+      <SchoolDesigner
+        kit={kit}
+        hero={hero}
+        presets={presets}
+        brandScan={brandScan}
+        operatorTools={operatorTools}
+        persistKey={persistKey}
+      />
     </DesignStoreProvider>
   );
 }

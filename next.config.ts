@@ -38,8 +38,16 @@ const nextConfig: NextConfig = {
     // tuned by eye against, and re-tuning quality is a LOOKING change, not a config
     // change — it belongs with a render in front of it, not in a perf pass.
     imageSizes: [16, 32, 48, 64, 96, 128, 192, 256, 384],
-    // Once optimized, keep the result cached a long time so re-optimization is rare.
-    minimumCacheTTL: 31536000,
+    // One day. This number is BOTH the optimizer's disk-cache lifetime and the
+    // browser's `max-age` on every /_next/image response, and badge art is
+    // replaced under the same URL (orchestra.png, torch.png, the ivory twins that
+    // scripts/light-enamel.mjs rewrites). At a year, a phone that had seen the old
+    // violin kept it for a year after the deploy that replaced it. At a day, a
+    // replacement reaches everyone within two (Next serves one stale copy while it
+    // re-optimizes in the background), unchanged images revalidate as a 304 on
+    // their ETag, and re-optimizing a few hundred variants once a day is noise on
+    // the host. Static `import`s are content-hashed and stay immutable regardless.
+    minimumCacheTTL: 86400,
   },
   // The business is now custom-first: the interactive builder at /build is the
   // single purchase path. The old kit-purchase page /buy is retired. Permanently

@@ -9,7 +9,9 @@ import "../../lab/school/school-skin.css";
 import { SchoolKitPage } from "@/components/designer/SchoolKitPage";
 import { SCHOOL_SHIPPING_VARIANT } from "@/data/school-variants";
 import type { SchoolKit } from "@/data/school-kits";
-import { resolveSchoolSlug } from "@/data/school-resolve";
+import { resolveSchoolSlug, type SchoolResolution } from "@/data/school-resolve";
+import { isBuilderOpen } from "@/data/school-pilot";
+import { SchoolNotReady } from "@/components/school/SchoolNotReady";
 import { getCachedBrand } from "@/lib/school-brand/cache";
 import { assignSurfaces } from "@/lib/school-brand/apply-brand";
 
@@ -24,6 +26,10 @@ import { assignSurfaces } from "@/lib/school-brand/apply-brand";
 // the federal school directories, turned into a neutral thin kit), then 404. A
 // roster slug for a school that already HAS an authored kit redirects to the
 // authored one, so no school is ever served two pages of itself.
+//
+// DURING THE PILOT (2026-09-23) only the six pilot schools get the builder; every
+// other resolved school gets `SchoolNotReady` — see `isBuilderOpen`, which flips
+// back with the finder's own switch.
 //
 // NOTHING IS PRE-RENDERED. `generateStaticParams` used to list the 27 kits; with
 // the roster behind the same route, keeping it would have meant a build that
@@ -51,6 +57,17 @@ export async function generateMetadata(
   }
 
   const kit = r.kit;
+  // Not building this school yet (the pilot): say that, in the link preview too.
+  if (!isBuilderOpen(kit.slug)) {
+    const title = `${kit.shortName} — MySchoolFrame`;
+    const description = `MySchoolFrame isn't open for ${kit.schoolName} yet, but you're welcome to let us know you'd like it.`;
+    return {
+      title: { absolute: title },
+      description,
+      openGraph: { siteName: "MySchoolFrame", title, description },
+      robots: { index: false, follow: false },
+    };
+  }
   // A thin kit has no mascot — we do not know it, and "Lincoln  — MySchoolFrame"
   // with the gap where a guess would go is what naive interpolation produces.
   const title = kit.mascot
@@ -108,6 +125,14 @@ async function withCachedBrand(kit: SchoolKit): Promise<SchoolKit> {
   };
 }
 
+/** Town and state for the request form's prefill. A roster row carries them
+ *  separately; an authored kit's `city` is "Kirkwood, MO". */
+function place(r: Extract<SchoolResolution, { kind: "authored" | "roster" }>): { city: string; state: string } {
+  if (r.kind === "roster") return { city: r.entry.city, state: r.entry.state };
+  const m = /^(.*?),\s*([A-Za-z]{2})\s*$/.exec(r.kit.city);
+  return m ? { city: m[1], state: m[2].toUpperCase() } : { city: r.kit.city, state: "" };
+}
+
 export default async function SchoolKitBuilderPage(
   { params }: { params: Promise<{ slug: string }> },
 ) {
@@ -116,6 +141,14 @@ export default async function SchoolKitBuilderPage(
   if (r.kind === "missing") notFound();
   // The school has a researched page already; this slug is its other name.
   if (r.kind === "redirect") redirect(`/s/${r.to}`);
+
+  // THE PILOT GATE. Outside the six, no builder: a working frame in a school's
+  // name claims a relationship we do not have. One switch reverts it — see
+  // `isBuilderOpen`. Checked after the redirect, so a roster slug for an authored
+  // school lands on that school's own URL first and is judged there.
+  if (!isBuilderOpen(r.kit.slug)) {
+    return <SchoolNotReady schoolName={r.kit.schoolName} {...place(r)} />;
+  }
 
   const kit = r.kind === "roster" ? await withCachedBrand(r.kit) : r.kit;
 
@@ -147,7 +180,7 @@ export default async function SchoolKitBuilderPage(
               heading: "Know your school's website?",
               blurb: (
                 <>
-                  Paste it and we&apos;ll pull {kit.shortName}&apos;s colours in — for
+                  Paste it and we&apos;ll pull {kit.shortName}&apos;s colors in — for
                   you and for everyone from {kit.shortName} after you. Nothing is added
                   to the frame until you pick it.
                 </>

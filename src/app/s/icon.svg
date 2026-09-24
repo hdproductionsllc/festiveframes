@@ -1,16 +1,24 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <!-- MySchoolFrame favicon, for /s/<school> and everything under it — the DARK treatment, the owner's pick: a school-navy
-       tile carrying the plate-frame mark in paper with the brass chenille bar.
-       Self-contained tile instead of a transparent glyph + media query, so the
-       same dark look holds on light and dark tab strips alike.
-
-       A COPY of src/app/school/icon.svg on purpose: Next resolves icons per
-       route SEGMENT, and /s is a different segment from /school. Without this
-       file the per-school builder — the page a parent lands on from a QR code in
-       the bleachers — served the Festive Frames star from the app root. -->
-  <rect width="64" height="64" rx="14" fill="#1b2a4a" />
-  <path fill="#f6f3ec" fill-rule="evenodd"
-    d="M12 15 h40 a6.5 6.5 0 0 1 6.5 6.5 v21 a6.5 6.5 0 0 1 -6.5 6.5 h-40 a6.5 6.5 0 0 1 -6.5 -6.5 v-21 a6.5 6.5 0 0 1 6.5 -6.5 Z
-       M13 19.5 a3 3 0 0 0 -3 3 v12 a3 3 0 0 0 3 3 h38 a3 3 0 0 0 3 -3 v-12 a3 3 0 0 0 -3 -3 Z" />
-  <rect x="23" y="41" width="18" height="4.6" rx="2.3" fill="#f8c53b" />
+  <!-- MySchoolFrame mark: the cap over the plate frame from the MySchoolFrame
+       logo (public/brand/msf-logo.png), redrawn as a vector so it holds at 16px.
+       Reversed onto a school-navy tile, as the logo is on the landing hero:
+       paper cap and plate, brass tassel. -->
+  <rect width="64" height="64" rx="14" fill="#1b2a4a"/>
+  <!-- plate frame: rounded ring, open at the top where the cap sits -->
+  <path fill="none" stroke="#f6f3ec" stroke-width="4" stroke-linejoin="round"
+    d="M21 31 H11 a4.5 4.5 0 0 0 -4.5 4.5 V50.5 a4.5 4.5 0 0 0 4.5 4.5 H53 a4.5 4.5 0 0 0 4.5 -4.5 V35.5 a4.5 4.5 0 0 0 -4.5 -4.5 H49.5"/>
+  <!-- bolt tabs under the top rail, with their holes -->
+  <circle cx="14" cy="34" r="3" fill="#f6f3ec"/>
+  <circle cx="53" cy="34" r="3" fill="#f6f3ec"/>
+  <circle cx="14" cy="34.3" r="1.2" fill="#1b2a4a"/>
+  <circle cx="53" cy="34.3" r="1.2" fill="#1b2a4a"/>
+  <!-- mortarboard -->
+  <path fill="#f6f3ec" d="M32 8.5 L52.5 18.5 L32 26.5 L11.5 18.5 Z"/>
+  <!-- skull, parted from the board by a navy line as in the logo -->
+  <path fill="#f6f3ec" stroke="#1b2a4a" stroke-width="1.6" stroke-linejoin="round"
+    d="M22.5 22.5 L32 19.4 L41.5 22.5 L41 35 L32 39.5 L23 35 Z"/>
+  <!-- tassel: cord across the board, the drop, the skirt -->
+  <path fill="none" stroke="#f8c53b" stroke-width="1.8" stroke-linecap="round" d="M36.5 16.3 L45.5 15.9 V30"/>
+  <circle cx="45.5" cy="30.5" r="1.9" fill="#f8c53b"/>
+  <path fill="#f8c53b" d="M44.2 31.5 H46.8 L48.3 40 H42.7 Z"/>
 </svg>

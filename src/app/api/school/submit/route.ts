@@ -4,8 +4,8 @@
 // "Design done" → an ORDER by EMAIL. No payment (owner: no payment flow needed).
 // The client renders the assembled frame to a print-ready PNG (composeSchoolFrame)
 // and POSTs { printPng, designName, partsList? }. This handler emails the print
-// file + a parts summary to a SERVER-FIXED production inbox (SCHOOL_ORDERS_EMAIL,
-// default orders@festiveframes.co) via the existing Resend stack.
+// file + a parts summary to a SERVER-FIXED production inbox (MSF_ORDER_EMAIL,
+// default bill@myschoolframe.com — lib/email-msf) via the existing Resend stack.
 //
 // Trust boundary: EVERYTHING here is untrusted input.
 //   - printPng must be a data:image/(png|jpeg) URL, size-bounded.
@@ -21,7 +21,9 @@
 import { NextResponse } from "next/server";
 import { sendSchoolOrderEmail } from "@/lib/email-production";
 import { artworkRightsLine, coerceArtworkRights } from "@/lib/order/artwork-rights";
+import { CONTACT_PROBLEM_COPY, coerceOrderContact, orderContactLine } from "@/lib/order/order-contact";
 import type { PartsList, PartsRow, PartsBar } from "@/lib/order/parts-list";
+import { nonSquareBadgeRows, SCHOOL_BADGES_ARE_SQUARE, SQUARE_RULE_MESSAGE } from "@/lib/order/square-badges";
 import type { TileSpan } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -119,8 +121,20 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json({ ok: false, error: "Invalid request." }, { status: 400 });
   }
 
-  const { printPng, panels, designName, partsList, school, artUploaded, artworkRights } =
+  const { printPng, panels, designName, partsList, school, artUploaded, artworkRights, contact } =
     (body ?? {}) as Record<string, unknown>;
+
+  // ── WHO TO ANSWER. A sent design with no way to reach its sender cannot be
+  //    followed up, which is the whole promise of "Send design". Required, and
+  //    checked here whatever the send sheet did. The address is text in the email
+  //    for a person to reply to — it is never handed to Resend as a recipient. ──
+  const who = coerceOrderContact(contact);
+  if (!who.ok) {
+    return NextResponse.json(
+      { ok: false, error: CONTACT_PROBLEM_COPY[who.problem], field: who.problem.split("-")[0] },
+      { status: 400 },
+    );
+  }
 
   // ── Validate the print image (type + size). ──
   if (typeof printPng !== "string" || !DATA_URL_RE.test(printPng)) {
@@ -141,6 +155,25 @@ export async function POST(request: Request): Promise<NextResponse> {
   // the whole donation-attribution trail until real tracking exists.
   if (typeof school === "string" && /^[a-z0-9-]{1,60}$/.test(school)) {
     name = `[${school}] ${name}`;
+  }
+
+  // ── THE SQUARE RULE. The builder cannot seat a non-square badge, so a parts list
+  //    carrying one came from a builder older than the rule or from somewhere else.
+  //    Refuse it with a message a parent can act on, rather than emailing
+  //    production a part that does not fit the frame. ──
+  const parts = coercePartsList(partsList);
+  if (parts && SCHOOL_BADGES_ARE_SQUARE) {
+    const bad = nonSquareBadgeRows(parts.rows);
+    if (bad.length > 0) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: SQUARE_RULE_MESSAGE,
+          nonSquare: bad.slice(0, 12),
+        },
+        { status: 400 },
+      );
+    }
   }
 
   // ── Validate the optional per-panel print files (left/right/top/bottom + a little
@@ -167,13 +200,18 @@ export async function POST(request: Request): Promise<NextResponse> {
   //    operator who cannot tell is an operator who prints it. ──
   const artworkNote = artworkRightsLine(artUploaded === true, coerceArtworkRights(artworkRights));
 
-  const result = await sendSchoolOrderEmail({
+  // Only the formatted `contactNote` rides along, for the production email to
+  // print under the design name (see lib/order/order-contact). The parsed address
+  // stays here: printed, never a recipient, and never on the email's input.
+  const order = {
     designName: name,
     printPng: { name: `${safeName(name)}-OVERVIEW`, dataUrl: printPng },
     panels: panelImages,
-    partsList: coercePartsList(partsList),
+    partsList: parts,
     artworkNote,
-  });
+    contactNote: orderContactLine(who.contact),
+  };
+  const result = await sendSchoolOrderEmail(order);
 
   if (result.ok) return NextResponse.json({ ok: true }, { status: 200 });
 
