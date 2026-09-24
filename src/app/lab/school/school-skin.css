@@ -812,8 +812,10 @@
   text-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
 }
 
+/* Wide enough that each welcome sentence sits on ONE line on a laptop (owner,
+   2026-09-24: "keep it readable"). A phone wraps, as it must. */
 .school-skin .msf-kit-line {
-  max-width: 720px;
+  max-width: min(1080px, 100%);
   margin: 16px auto 0;
   font-size: clamp(15.5px, 1.6vw, 17.5px);
   line-height: 1.6;
@@ -830,14 +832,24 @@
   }
 }
 
+/* ONE ROW of chips, never two (owner, 2026-09-24). Centred when the row fits;
+   when it doesn't (a phone, or a school with many activities), it scrolls
+   sideways with a snap instead of wrapping. `safe center` keeps the first chip
+   reachable when the row overflows. */
 .school-skin .msf-kit-chips {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 9px;
-  justify-content: center;
+  justify-content: safe center;
   margin: clamp(22px, 3vw, 32px) auto 0;
-  max-width: 780px;
+  max-width: min(1180px, 100%);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+  padding: 2px 4px 6px;
 }
+.school-skin .msf-kit-chips::-webkit-scrollbar { display: none; }
 /* Glass pills. They are BUTTONS — each composes a whole layout — so they get a
    real hover and a lit edge rather than a flat outline. */
 .school-skin .msf-kit-chip {
@@ -851,6 +863,9 @@
   text-decoration: none;
   background: rgba(255, 255, 255, 0.07);
   backdrop-filter: blur(6px);
+  flex: none;
+  white-space: nowrap;
+  scroll-snap-align: start;
   transition: background 0.15s ease, border-color 0.15s ease, transform 0.12s ease;
 }
 .school-skin .msf-kit-chip:focus-visible {

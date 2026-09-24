@@ -525,6 +525,13 @@ const KITS: SchoolKit[] = [
       ordering:
         "When you're happy with your frame, send it to us and we'll follow up with ordering details. A set donation from every frame goes back to Ladue.",
     },
+    // Official mark from the school's own website (sources: MySchoolFrame Pilot
+    // Kit/school-brand/ladue-rams/sources.md). Owner's call, 2026-09-24: live on the
+    // pilot builder for Bill's demos; taken down the day the school objects.
+    marks: {
+      crest: "/kits/ladue-rams/mascot.png",
+      badges: [{ key: "mascot", name: "Rams", artworkUrl: "/kits/ladue-rams/mascot.png", emoji: "🐏", field: "navy" }],
+    },
     status: "demo",
     colorSource: "MEASURED from the school's own ram logo (lhwhs.ladueschools.net): blue #00599C (56.1%), white (42.6%). Blue and white have been the school's colours since 1952 (school history page). The school website's theme navy #003087 is darker than the logo blue, so confirm which blue the school treats as primary. No Ladue colour clears merrowThread's gap against white type as-is; the renderer now falls back to a deeper shade of the banner blue (a near-black navy keyline) before brass.",
   },
@@ -608,6 +615,13 @@ const KITS: SchoolKit[] = [
       ordering:
         "When you're happy with your frame, send it to us and we'll follow up with ordering details. A set donation from every frame goes back to Parkway West.",
     },
+    // Official mark from the school's own website (sources: MySchoolFrame Pilot
+    // Kit/school-brand/parkway-west-longhorns/sources.md). Owner's call, 2026-09-24: live on the
+    // pilot builder for Bill's demos; taken down the day the school objects.
+    marks: {
+      crest: "/kits/parkway-west-longhorns/mascot.png",
+      badges: [{ key: "mascot", name: "Longhorns", artworkUrl: "/kits/parkway-west-longhorns/mascot.png", emoji: "🐂", field: "navy" }],
+    },
     status: "demo",
     colorSource: "Body is Parkway West's district-standard colour (Parkway Brand Standards: West = PANTONE 278 C; the school site's CSS carries its web value #8BB8E8), taken at the deeper blue the school's athletic W is actually filled with, #5199CD — the official 278 C is too pale for white type (2.1:1). That blue was MEASURED alongside the W's red outline #A40925 from the school's own marks (westhigh.parkwayschools.net wordmark; Bound athletic logo). White type on #5199CD is 3.2:1 — large-text only. Raster sources; get vectors before a print run.",
   },
@@ -637,6 +651,13 @@ const KITS: SchoolKit[] = [
       chips: ["Swim & Dive", "Speech & Debate", "Scholar Bowl", "Soccer", "Water Polo", "Basketball", "Service"],
       ordering:
         "When you're happy with your frame, send it to us and we'll follow up with ordering details. A set donation from every frame goes back to Parkway Central.",
+    },
+    // Official mark from the school's own website (sources: MySchoolFrame Pilot
+    // Kit/school-brand/parkway-central-colts/sources.md). Owner's call, 2026-09-24: live on the
+    // pilot builder for Bill's demos; taken down the day the school objects.
+    marks: {
+      crest: "/kits/parkway-central-colts/mascot.png",
+      badges: [{ key: "mascot", name: "Colts", artworkUrl: "/kits/parkway-central-colts/mascot.png", emoji: "🐎", field: "navy" }],
     },
     status: "demo",
     colorSource: "MEASURED from the school's own COLTS wordmark (centralhigh.parkwayschools.net primary logo): red #AB1E38 (58.2%), grey #99A1A5 (37.8%). The district's standard colour for Central is PANTONE 485 C (web #DA291C, on the school site), a brighter red than the athletic mark. Black is a named school colour but is not on the current mark. 256px raster only; get the vector before print. Trim is WHITE by owner call (2026-09-23): the measured grey read as no border on red.",
@@ -672,6 +693,13 @@ const KITS: SchoolKit[] = [
       chips: ["Volleyball", "Marching Band", "Softball", "Cross Country", "Wrestling", "Field Hockey", "Water Polo", "Service"],
       ordering:
         "When you're happy with your frame, send it to us and we'll follow up with ordering details. A set donation from every frame goes back to Lafayette.",
+    },
+    // Official mark from the school's own website (sources: MySchoolFrame Pilot
+    // Kit/school-brand/lafayette-lancers/sources.md). Owner's call, 2026-09-24: live on the
+    // pilot builder for Bill's demos; taken down the day the school objects.
+    marks: {
+      crest: "/kits/lafayette-lancers/mascot.png",
+      badges: [{ key: "mascot", name: "Lancers", artworkUrl: "/kits/lafayette-lancers/mascot.png", emoji: "🛡️", field: "navy" }],
     },
     status: "demo",
     colorSource: "MEASURED black #231F20 from the school's own logo (Rockwood SD, High_Lafayette_BW_Outline.png, lafayette.rsdmo.org), which is black and white only. Gold #FFCC00 is the school website's --secondary-color. It is not on the mark and matches Eureka's value exactly (possibly a shared district template), so confirm Lafayette's gold with the school. One source describes the palette as black and white, often accented with gold — check whether the school says 'black and gold' before print (the welcome copy deliberately names no colours until it does).",
@@ -710,6 +738,13 @@ const KITS: SchoolKit[] = [
       ordering:
         "When you're happy with your frame, send it to us and we'll follow up with ordering details. A set donation from every frame goes back to Eureka.",
     },
+    // Official mark from the school's own website (sources: MySchoolFrame Pilot
+    // Kit/school-brand/eureka-wildcats/sources.md). Owner's call, 2026-09-24: live on the
+    // pilot builder for Bill's demos; taken down the day the school objects.
+    marks: {
+      crest: "/kits/eureka-wildcats/mascot.png",
+      badges: [{ key: "mascot", name: "Wildcats", artworkUrl: "/kits/eureka-wildcats/mascot.png", emoji: "🐾", field: "navy" }],
+    },
     status: "demo",
     colorSource: "MEASURED from the school's own logo (Rockwood SD, High_Eureka_Color_Outline.png, eurekahs.rsdmo.org): purple #462E8D (83.7%), gold #FFCC00 (15.3%). The gold is corroborated exactly by the school website's --secondary-color #FFCC00. The site's primary #4B09A1 is a web-theme purple; we use the ink on the mark. Raster source; get the vector before a print run.",
   },
@@ -743,6 +778,13 @@ const KITS: SchoolKit[] = [
       chips: ["Hockey", "Journalism", "Band", "Robotics", "Softball", "Field Hockey", "Dance"],
       ordering:
         "When you're happy with your frame, send it to us and we'll follow up with ordering details. A set donation from every frame goes back to Marquette.",
+    },
+    // Official mark from the school's own website (sources: MySchoolFrame Pilot
+    // Kit/school-brand/marquette-mustangs/sources.md). Owner's call, 2026-09-24: live on the
+    // pilot builder for Bill's demos; taken down the day the school objects.
+    marks: {
+      crest: "/kits/marquette-mustangs/mascot.png",
+      badges: [{ key: "mascot", name: "Mustangs", artworkUrl: "/kits/marquette-mustangs/mascot.png", emoji: "🐎", field: "navy" }],
     },
     status: "demo",
     colorSource: "MEASURED from the school's own logo (Rockwood SD, High_Marquette_Color.png, marquette.rsdmo.org) by sampling decoded pixels: navy #0D293F (51.6%), green #068950 (18.5%). The school website's theme colours are the Rockwood district default, so no published hex corroborates them. Raster source; get the vector before a print run.",

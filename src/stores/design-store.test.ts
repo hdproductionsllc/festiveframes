@@ -2,6 +2,9 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { SCHOOL_SHIPPING_VARIANT, schoolVariant } from "@/data/school-variants";
 import { getSchoolKit, kitSections } from "@/data/school-kits";
 import { kitSeedTiles } from "@/data/kit-seed";
+import { schoolStoreOptions } from "@/data/school-store";
+import { TILE_BG, tileField } from "@/lib/utils/tile-theme";
+import { schoolDesignOf } from "@/lib/utils/compose-school-frame";
 import type { FrameConfig, PlacedTile } from "@/lib/types";
 import {
   DEFAULT_FRAME_CONFIG,
@@ -947,49 +950,85 @@ describe("uploads as reusable palette pieces", () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-describe("the background override reaches the BANNERS too", () => {
-  // It is one background colour as far as anyone looking at the frame is concerned.
-  // Recolouring the badges while the two text bars kept their old colour made the
-  // frame read as two products bolted together.
-  it("writes the colour into every section's banner", () => {
-    const store = makeStore(SCHOOL_FRAME_CONFIG);
-    store.getState().setSectionMode("bottom", "text");
-    store.getState().setSectionText("bottom", { text: "WILDCATS" });
-    store.getState().setTileFieldColor("#8C1D40");
-    expect(store.getState().sections.bottom?.text?.backgroundColor).toBe("#8C1D40");
-    expect(store.getState().tileFieldColor).toBe("#8C1D40");
+describe("ONE frame colour: body, badge fields and both banners in one tap", () => {
+  // The owner, on /s/marquette-mustangs: "I'm clicking the frame colors and the
+  // design does not auto update!" "Frame color" wrote only the BODY, which the flush
+  // frame's badges and banners cover completely. The owner's rule is one background
+  // for the badges and the banners, so one control writes all of it.
+  const marquette = () => {
+    const kit = getSchoolKit("marquette-mustangs")!;
+    return {
+      kit,
+      store: createDesignStore(`test-key-${storeSeq++}`, schoolStoreOptions({ kit, variant: SCHOOL_SHIPPING_VARIANT })),
+    };
+  };
+
+  it("a swatch tap changes the tile field AND both banner backgrounds, not just the body", () => {
+    const { kit, store } = marquette();
+    const before = store.getState();
+    expect(before.tileFieldColor).toBe(kit.colors.tileField);
+    expect(before.sections.top?.text?.backgroundColor).toBe(kit.colors.tileField);
+    expect(before.sections.bottom?.text?.backgroundColor).toBe(kit.colors.tileField);
+
+    store.getState().setFrameColor("#9E1B32");
+    const s = store.getState();
+    expect(s.frameColor).toBe("#9E1B32");
+    expect(s.tileFieldColor).toBe("#9E1B32");
+    expect(s.sections.top?.text?.backgroundColor).toBe("#9E1B32");
+    expect(s.sections.bottom?.text?.backgroundColor).toBe("#9E1B32");
+    // What the badges actually paint, through the one rule both renderers ask.
+    expect(tileField({ backgroundColor: TILE_BG.navy, artworkUrl: "/x.png" }, s.tileFieldColor)).toBe("#9E1B32");
+    // ...and what print is handed.
+    const print = schoolDesignOf(s);
+    expect(print.frameColor).toBe("#9E1B32");
+    expect(print.tileFieldColor).toBe("#9E1B32");
+    expect(print.sections.top?.text?.backgroundColor).toBe("#9E1B32");
+  });
+
+  it("Reset returns the kit's colours — surface, banners and rim", () => {
+    const { kit, store } = marquette();
+    store.getState().setFrameColor("#9E1B32");
+    store.getState().setRimColor(null);
+    store.getState().resetColors();
+    const s = store.getState();
+    expect(s.frameColor).toBe(kit.colors.frame);
+    expect(s.tileFieldColor).toBe(kit.colors.tileField);
+    expect(s.rimColor).toBe(kit.colors.rim);
+    expect(s.sections.top?.text?.backgroundColor).toBe(kit.colors.tileField);
+    expect(s.sections.bottom?.text?.backgroundColor).toBe(kit.colors.tileField);
+    expect(s.sections.bottom?.text?.textColor).toBe(kit.banners.text);
+    // Reset changes colours only — the words stay.
+    expect(s.sections.bottom?.text?.text).toBe(kit.banners.bottom.toUpperCase());
+  });
+
+  it("flips banner lettering only when the new colour would swallow it", () => {
+    const { store } = marquette();
+    store.getState().setFrameColor("#FFFFFF");
+    expect(store.getState().sections.top?.text?.textColor).toBe("#1e1b17");
+    // A readable pick the parent made on purpose survives a colour change.
+    store.getState().setSectionText("top", { textColor: "#C00000" });
+    store.getState().setFrameColor("#F5F5F5");
+    expect(store.getState().sections.top?.text?.textColor).toBe("#C00000");
   });
 
   it("sets the DRAFT banner too, so a bar added later matches", () => {
     const store = makeStore(SCHOOL_FRAME_CONFIG);
-    store.getState().setTileFieldColor("#8C1D40");
+    store.getState().setFrameColor("#8C1D40");
     expect(store.getState().bottomBar.backgroundColor).toBe("#8C1D40");
-  });
-
-  it("leaves the banners alone on RESET — there is no prior value to restore", () => {
-    // Reverting to a colour the user may since have chosen by hand is worse than
-    // leaving what is there; the section editor's own picker still wins either way.
-    const store = makeStore(SCHOOL_FRAME_CONFIG);
-    store.getState().setSectionMode("bottom", "text");
-    store.getState().setTileFieldColor("#8C1D40");
-    store.getState().setTileFieldColor(null);
-    expect(store.getState().tileFieldColor).toBeNull();
-    expect(store.getState().sections.bottom?.text?.backgroundColor).toBe("#8C1D40");
   });
 
   it("is a no-op on the sections object when nothing changes", () => {
     const store = makeStore(SCHOOL_FRAME_CONFIG);
     store.getState().setSectionMode("bottom", "text");
-    store.getState().setTileFieldColor("#8C1D40");
+    store.getState().setFrameColor("#8C1D40");
     const before = store.getState().sections;
-    store.getState().setTileFieldColor("#8C1D40");
+    store.getState().setFrameColor("#8C1D40");
     expect(store.getState().sections).toBe(before); // same object → no render churn
   });
 
   it("survives CLEAR — the reseeded banners wear the badges' colour, not the kit's", () => {
     // Every preset tap clears first. The banners came back in the kit's seed colour
-    // while every badge kept the colour the parent picked: two colours on one frame,
-    // where the owner's rule is that the badge background IS the banner colour.
+    // while every badge kept the colour the parent picked: two colours on one frame.
     const store = createDesignStore(`test-key-${storeSeq++}`, {
       frameConfig: SCHOOL_FRAME_CONFIG,
       sections: {
@@ -997,10 +1036,41 @@ describe("the background override reaches the BANNERS too", () => {
       },
       initialBrand: { frameColor: "#462E8D", tileFieldColor: "#462E8D", rimColor: "#FFCC00" },
     });
-    store.getState().setTileFieldColor("#8C1D40");
+    store.getState().setFrameColor("#8C1D40");
     store.getState().clearAll();
     expect(store.getState().sections.bottom?.text?.backgroundColor).toBe("#8C1D40");
     expect(store.getState().sections.bottom?.text?.text).toBe("WILDCATS");
+  });
+
+  it("repairs, on hydrate, a saved design whose body drifted from its badges", () => {
+    // The owner's own blob from the bug: body crimson (invisible), badges and banners
+    // navy. In MERGE, because the blob is already at the current version.
+    const KEY = "festive-frames-school-drift-test";
+    const kit = getSchoolKit("marquette-mustangs")!;
+    memoryStorage.setItem(
+      KEY,
+      JSON.stringify({
+        state: { frameColor: "#9E1B32", tileFieldColor: "#0D293F", rimColor: "#068950" },
+        version: 7,
+      }),
+    );
+    const store = createDesignStore(KEY, schoolStoreOptions({ kit, variant: SCHOOL_SHIPPING_VARIANT }));
+    const s = store.getState();
+    expect(s.frameColor).toBe("#0D293F");
+    expect(s.tileFieldColor).toBe("#0D293F");
+    // Configuration, not design: the kit's defaults are the store's, not the blob's.
+    expect(s.brandDefaults.tileFieldColor).toBe(kit.colors.tileField);
+    store.getState().setRimColor(null); // forces a persist write
+    const saved = JSON.parse(memoryStorage.getItem(KEY) ?? "{}").state;
+    expect(saved.rimColor).toBeNull();
+    expect(saved.brandDefaults).toBeUndefined();
+  });
+
+  it("leaves /build alone: no field override, so each piece keeps its own", () => {
+    const store = makeStore();
+    expect(store.getState().tileFieldColor).toBeNull();
+    store.persist.rehydrate();
+    expect(store.getState().tileFieldColor).toBeNull();
   });
 });
 

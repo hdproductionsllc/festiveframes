@@ -1,170 +1,168 @@
 "use client";
 
 import { DEFAULT_FRAME_COLOR, useDesignStore } from "@/stores/design-store";
-import { TILE_BG, brassGradientCss, luminance, solidFill } from "@/lib/utils/tile-theme";
+import { TILE_BG, brassGradientCss, luminance } from "@/lib/utils/tile-theme";
 import { ColorSwatch, HexInput } from "./ColorField";
 
-// ─── The frame BODY colour, as a global override ─────────────────────────────
+// ─── The frame's colours: ONE background, and the rim ────────────────────────
 //
-// The body is the largest single area of the product — the material every badge
-// sits on — and it was a hard-coded `#111111` in the on-screen renderer and a
-// hard-coded black in the print one. That meant the school-branding scan could
-// recolour the two banners and nothing else, which is not what "make it their
-// school's frame" means to anyone looking at it.
+// This panel used to offer three colours — "Frame color" (the body), "Background"
+// (behind the badges and banners) and "Rim". On the flush frame the badges and the
+// banners cover the body completely, so the biggest, first control on the panel
+// changed nothing you could see: a parent tapped swatches and the frame sat still.
 //
-// This is the manual override that sits beside the automatic one. The scan proposes
-// a colour; this is where a human disagrees, and it is deliberately a plain
-// `<input type="color">` plus a few presets rather than a bespoke picker: the native
-// control is the one every parent already knows, works on a phone, and is accessible
+// The owner's rule is that the badge background IS the banner colour, so there is
+// one background decision, not two. "Frame color" now sets it — body, every badge
+// field and both banners, on screen and in print (`setFrameColor`) — and the rim is
+// the only other colour. The native `<input type="color">` stays the custom picker:
+// it is the control every parent already knows, works on a phone, and is accessible
 // for free.
 
-/** Presets: the product's own field palette, plus the shipping default. Offered
- *  because a free-form picker with no anchors invites a colour that fights every
- *  badge on the frame — these four are the ones the tiles were designed against. */
-const PRESETS: ReadonlyArray<[string, string]> = [
+/** The stock anchors offered beside the school's own colour. A free-form picker with
+ *  no anchors invites a colour that fights every badge; these are the fields the
+ *  tiles were designed against. */
+const STOCK: ReadonlyArray<[string, string]> = [
   [DEFAULT_FRAME_COLOR, "Matte black"],
   [TILE_BG.navy, "Navy"],
   [TILE_BG.blue, "Blue"],
   [TILE_BG.crimson, "Crimson"],
 ];
 
+const same = (a: string | null | undefined, b: string | null | undefined) =>
+  (a ?? "").toLowerCase() === (b ?? "").toLowerCase();
+
 export function FrameColorPicker() {
   const frameColor = useDesignStore((s) => s.frameColor);
-  const setFrameColor = useDesignStore((s) => s.setFrameColor);
   const tileFieldColor = useDesignStore((s) => s.tileFieldColor);
-  const setTileFieldColor = useDesignStore((s) => s.setTileFieldColor);
   const rimColor = useDesignStore((s) => s.rimColor);
+  const brandDefaults = useDesignStore((s) => s.brandDefaults);
+  const topBg = useDesignStore((s) => s.sections.top?.text?.backgroundColor);
+  const bottomBg = useDesignStore((s) => s.sections.bottom?.text?.backgroundColor);
+  const setFrameColor = useDesignStore((s) => s.setFrameColor);
   const setRimColor = useDesignStore((s) => s.setRimColor);
-  const current = frameColor || DEFAULT_FRAME_COLOR;
+  const resetColors = useDesignStore((s) => s.resetColors);
+
+  // What the parent SEES: the badge field when there is one (it is also the banner
+  // colour), else the body. Never the body over the field — that was the bug.
+  const current = tileFieldColor || frameColor || DEFAULT_FRAME_COLOR;
+
+  // The school's own colours, offered first. Without a kit there is no "school"
+  // swatch, and Reset returns the stock defaults.
+  const schoolSurface = brandDefaults.tileFieldColor ?? null;
+  const surfaces: Array<[string, string]> = [
+    ...(schoolSurface ? [[schoolSurface, "School color"] as [string, string]] : []),
+    ...STOCK.filter(([hex]) => !same(hex, schoolSurface)),
+  ];
+
+  const surfaceAtDefault = same(current, brandDefaults.tileFieldColor ?? brandDefaults.frameColor);
+  const bannersAtDefault = [topBg, bottomBg].every((bg) => bg === undefined || same(bg, current));
+  const atDefaults = surfaceAtDefault && bannersAtDefault && same(rimColor, brandDefaults.rimColor);
 
   return (
     <div className="ff-panel p-4">
-      <h3 className="ff-h2 mb-1">Frame color</h3>
-      <p className="ff-help mb-3">
-        The body every badge sits on. Set it to your school&apos;s color, or pick your
-        own.
-      </p>
+      <div className="mb-1 flex items-center justify-between gap-2">
+        <h3 className="ff-h2">Frame color</h3>
+        <button
+          type="button"
+          onClick={resetColors}
+          disabled={atDefaults}
+          className="ff-btn ff-btn-secondary shrink-0 px-2 py-1 text-[11px] max-lg:min-h-11 disabled:opacity-40"
+        >
+          {schoolSurface ? "Reset to school colors" : "Reset colors"}
+        </button>
+      </div>
+      <p className="ff-help mb-3">Behind every badge and both banners.</p>
 
       <div className="flex items-center gap-2">
         {/* The swatch IS the input. A separate preview would be one more thing that
             can disagree with the truth. */}
         <ColorSwatch value={current} onChange={setFrameColor} label="Frame color" size={36} />
         <HexInput value={current} onChange={setFrameColor} label="Frame color" />
-
         <div className="flex min-w-0 flex-1 flex-wrap gap-1.5">
-          {PRESETS.map(([hex, label]) => {
-            const active = current.toLowerCase() === hex.toLowerCase();
-            return (
-              <button
-                key={hex}
-                type="button"
-                onClick={() => setFrameColor(hex)}
-                aria-label={label}
-                aria-pressed={active}
-                title={label}
-                className="h-11 w-11 rounded-[var(--ff-radius-sm,6px)] border transition-transform active:translate-y-0.5 lg:h-7 lg:w-7"
-                style={{
-                  background: hex,
-                  // The ACTIVE ring has to be legible on both a near-black and a
-                  // near-white swatch, so it flips with the swatch's own luminance
-                  // rather than being one fixed colour that vanishes on half of them.
-                  borderColor: active
-                    ? luminance(hex) > 0.5
-                      ? "#1e1b17"
-                      : "#ffffff"
-                    : "var(--ff-line, rgba(30,27,23,0.25))",
-                  borderWidth: active ? 2 : 1,
-                }}
-              />
-            );
-          })}
+          {surfaces.map(([hex, label]) => (
+            <PresetChip
+              key={hex}
+              label={label}
+              paint={hex}
+              ring={hex}
+              active={same(current, hex)}
+              onClick={() => setFrameColor(hex)}
+            />
+          ))}
         </div>
       </div>
 
-      {/* THE OTHER TWO SURFACES. Kept in one panel rather than three scattered
-          controls, because they are one decision: a frame whose body, badges and rim
-          disagree does not read as a scheme, it reads as a mistake. */}
-      <div className="mt-3 space-y-2 border-t pt-3" style={{ borderColor: "var(--ff-line, rgba(30,27,23,0.15))" }}>
-        <SwatchRow
-          label="Background"
-          hint="Behind every badge, and the banners"
-          value={tileFieldColor}
-          onChange={setTileFieldColor}
-          fallback={solidFill(TILE_BG.navy)}
-          fallbackLabel="Each tile's own"
-        />
-        <SwatchRow
-          label="Rim"
-          hint="The edge around every badge and banner"
-          value={rimColor}
-          onChange={setRimColor}
-          fallback={brassGradientCss()}
-          fallbackLabel="Gold"
-        />
+      <div className="mt-3 border-t pt-3" style={{ borderColor: "var(--ff-line, rgba(30,27,23,0.15))" }}>
+        <div className="flex items-center gap-2">
+          <ColorSwatch
+            value={rimColor ?? "#C9A227"}
+            onChange={setRimColor}
+            label="Rim color"
+            background={rimColor ? undefined : brassGradientCss()}
+          />
+          <div className="min-w-0 flex-1">
+            <p className="text-[12px] font-semibold leading-tight text-[var(--ff-ink,#1e1b17)]">Rim</p>
+            <p className="ff-help leading-tight">The edge around every badge and banner</p>
+          </div>
+          <div className="flex shrink-0 gap-1.5">
+            {brandDefaults.rimColor && (
+              <PresetChip
+                label="School rim"
+                paint={brandDefaults.rimColor}
+                ring={brandDefaults.rimColor}
+                active={same(rimColor, brandDefaults.rimColor)}
+                onClick={() => setRimColor(brandDefaults.rimColor)}
+              />
+            )}
+            <PresetChip
+              label="Gold"
+              paint={brassGradientCss()}
+              ring="#C9A227"
+              active={rimColor === null}
+              onClick={() => setRimColor(null)}
+            />
+          </div>
+        </div>
       </div>
     </div>
   );
 }
 
-/**
- * One overridable colour, showing WHAT IS IN EFFECT.
- *
- * `null` is a real state here, not an empty string: it means "keep the designed
- * default" — each tile's own field, or the brass. It used to be drawn as a
- * transparency checkerboard, which is the universal symbol for *nothing here*, so
- * two working controls read as two broken ones. The swatch now paints the actual
- * default it is standing in for (the brass ramp, the designed navy) and says so, so
- * the control shows its current value the way the frame-colour swatch above it does.
- */
-function SwatchRow({
+/** One tap-to-apply colour. `paint` is the CSS background (a gradient for gold);
+ *  `ring` is the hex its active ring is legible against. */
+function PresetChip({
   label,
-  hint,
-  value,
-  onChange,
-  fallback,
-  fallbackLabel,
+  paint,
+  ring,
+  active,
+  onClick,
 }: {
   label: string;
-  hint: string;
-  value: string | null;
-  onChange: (hex: string | null) => void;
-  /** A CSS background painting the default this row falls back to. */
-  fallback: string;
-  /** What that default is called, shown beside the swatch while it is in force. */
-  fallbackLabel: string;
+  paint: string;
+  ring: string;
+  active: boolean;
+  onClick: () => void;
 }) {
   return (
-    <div className="flex items-center gap-2">
-      <ColorSwatch
-        value={value ?? "#1B2A4A"}
-        onChange={onChange}
-        label={`${label} color`}
-        background={value ? undefined : fallback}
-      />
-      <HexInput
-        value={value ?? "#1B2A4A"}
-        onChange={onChange}
-        label={`${label} color`}
-        className="hidden sm:block"
-      />
-      <div className="min-w-0 flex-1">
-        <p className="text-[12px] font-semibold leading-tight text-[var(--ff-ink,#1e1b17)]">{label}</p>
-        <p className="ff-help leading-tight">{hint}</p>
-      </div>
-      {value ? (
-        <button
-          type="button"
-          onClick={() => onChange(null)}
-          title={`Back to ${fallbackLabel.toLowerCase()}`}
-          className="ff-btn ff-btn-secondary shrink-0 px-2 py-1 text-[11px] max-lg:min-h-11"
-        >
-          Reset
-        </button>
-      ) : (
-        // Not a button: there is nothing to undo yet. It names what the swatch is
-        // currently showing, so a gold chip reads as "gold, on purpose".
-        <span className="ff-help shrink-0 text-[11px]">{fallbackLabel}</span>
-      )}
-    </div>
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      aria-pressed={active}
+      title={label}
+      className="h-11 w-11 rounded-[var(--ff-radius-sm,6px)] border transition-transform active:translate-y-0.5 lg:h-7 lg:w-7"
+      style={{
+        background: paint,
+        // The ACTIVE ring has to be legible on both a near-black and a near-white
+        // swatch, so it flips with the swatch's own luminance.
+        borderColor: active
+          ? luminance(ring) > 0.5
+            ? "#1e1b17"
+            : "#ffffff"
+          : "var(--ff-line, rgba(30,27,23,0.25))",
+        borderWidth: active ? 2 : 1,
+        boxShadow: active ? "0 0 0 2px var(--ff-accent, #1e1b17)" : undefined,
+      }}
+    />
   );
 }

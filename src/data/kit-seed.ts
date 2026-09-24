@@ -66,7 +66,12 @@ function kitMarks(kit: SchoolKit): [string, string] {
   // one), but the fallback is one line and the alternative is a silent hole.
   const pool = generic.length >= 2 ? generic : GENERIC_MARKS;
   const first = own[0] ?? pool[0];
-  const second = own[1] ?? pool.find((id) => id !== first)!;
+  // A school with ONE mark wears it in both mark positions rather than pairing it
+  // with a generic navy shield that belongs to no school (owner, 2026-09-24). The
+  // two positions are never adjacent — opposite columns on the flush frame, and
+  // an activity between them on the four-high column — so this is symmetry, not
+  // a repeat. Only a school with no marks at all falls back to the generic pair.
+  const second = own[1] ?? own[0] ?? pool.find((id) => id !== first)!;
   return [first, second];
 }
 

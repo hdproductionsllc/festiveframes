@@ -48,14 +48,13 @@ export function SchoolSpotlight() {
             className="m-0 mb-3.5 text-[clamp(32px,5vw,42px)] font-bold leading-none tracking-[-1px] text-[#fff9ec]"
             style={{ textShadow: `3px 3px 0 ${INK}` }}
           >
-            Their school,
+            A letterman jacket
             <br />
-            and their story on it.
+            for the car.
           </h2>
           <p className="m-0 mb-1 max-w-[440px] text-lg font-bold leading-[1.5] text-[#c9d0e2]">
-            A frame in your school&apos;s colors with their class year, their
-            number and a badge for the things they do, from orchestra to varsity
-            soccer. Every frame sends a set donation back to the school.
+            Their school. Their class year. The things they actually did there,
+            from orchestra to varsity soccer.
           </p>
 
           <FindMySchool schools={SCHOOLS} tone="dark" national={NATIONAL} />
@@ -92,22 +91,24 @@ export function SchoolSpotlight() {
           className="relative z-[1] rounded-[18px] border-[3px] border-[#f8c53b]/45 bg-[#16233d] p-6 sm:p-7"
         >
           <h3 className="m-0 mb-3 text-[26px] font-bold leading-tight tracking-[-0.5px] text-[#fff9ec]">
-            Running a fundraiser?
+            For PTOs and booster clubs
           </h3>
           <p className="m-0 mb-5 text-base font-bold leading-[1.55] text-[#c9d0e2]">
-            There&apos;s no minimum and nothing to buy up front. Every frame is
-            printed after a parent orders it, so there&apos;s no case pack to
-            buy and nothing left over at the end of the season.
+            A fundraiser with nothing to buy and nothing to run.
           </p>
+          {/* The same three facts, in the same order, as /school#fundraise. */}
           <ul className="m-0 mb-6 list-none space-y-3 p-0">
             {[
-              ["A set amount per frame", "A fixed dollar figure, not a percentage of profit after costs."],
+              ["Parents order directly", "Families design their own frame, and we print and ship it straight to their door."],
+              ["The school buys no inventory", "Every frame is printed after it's ordered: no minimum, nothing up front, nothing left over."],
               // The club page only counts orders paid through checkout, so the
               // "running total" claim waits for checkout to open.
-              SCHOOL_CHECKOUT_OPEN
-                ? ["A running total", "Your club gets its own page, and we send you the total with each payout."]
-                : ["The total in writing", "We send your club the total with each payout."],
-              ["You approve the design", "We only put your school's own logos and mascot art on frames with your written permission, and we'd love your help getting the colors exactly right."],
+              [
+                "A fixed amount on every frame",
+                SCHOOL_CHECKOUT_OPEN
+                  ? "A set dollar amount, not a percentage after costs, with a club page that keeps a running total."
+                  : "A set dollar amount, not a percentage after costs, with the total sent to you in writing at each payout.",
+              ],
             ].map(([title, body]) => (
               <li key={title} className="text-[#c9d0e2]">
                 <strong className="block text-[15px] font-extrabold text-[#f8c53b]">

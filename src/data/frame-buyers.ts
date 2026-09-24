@@ -29,7 +29,7 @@ export type BuyerId = "parent" | "self" | "grandparent" | "alum" | "staff";
 // offers, and the buyer's own default tagline is simply its first line — so the
 // chips and the buyer's wording cannot drift into two lists.
 
-export type BannerLineId = "class" | "number" | "senior" | "parent" | "grandparent" | "custom";
+export type BannerLineId = "class" | "number" | "senior" | "parent" | "grandparent" | "alum" | "staff" | "custom";
 
 export interface BannerLineInput {
   year?: string;
@@ -75,6 +75,15 @@ export const BANNER_LINES: Record<BannerLineId, BannerLine> = {
   // number is deliberately not carried: "#12 · PROUD GRANDPARENT" reads as the
   // grandparent's own number.
   grandparent: { id: "grandparent", chip: "Proud Grandparent", tagline: roleLine("PROUD GRANDPARENT") },
+  // "I went here" and "I work here" each get a line that says so. Before these,
+  // tapping either buyer changed the form's labels and nothing on the frame
+  // (owner, 2026-09-24: "these don't seem to do anything").
+  alum: {
+    id: "alum",
+    chip: "Alumni",
+    tagline: ({ year }) => (year ? `ALUMNI · CLASS OF ${year}` : "ALUMNI"),
+  },
+  staff: { id: "staff", chip: "Faculty & Staff", tagline: () => "FACULTY & STAFF" },
   custom: {
     id: "custom",
     chip: "Your own words",
@@ -135,7 +144,9 @@ export const BUYERS: Buyer[] = [
     namePlaceholder: "e.g. #12 or GO TEAM",
     activityLabel: "What they do",
     yearLabel: "Class year",
-    lines: ["class", "number", "senior", "parent", "custom"],
+    // PROUD PARENT first: this buyer's frame goes on the PARENT's car, and the
+    // "Who's it for?" tap should say so on the banner (owner, 2026-09-24).
+    lines: ["parent", "class", "number", "senior", "custom"],
     yearRange: "upcoming",
   }),
   buyer({
@@ -165,7 +176,7 @@ export const BUYERS: Buyer[] = [
     namePlaceholder: "e.g. ALUMNI or #7",
     activityLabel: "What you did",
     yearLabel: "Class year",
-    lines: ["class", "number", "custom"],
+    lines: ["alum", "class", "number", "custom"],
     yearRange: "past",
   }),
   buyer({
@@ -175,8 +186,8 @@ export const BUYERS: Buyer[] = [
     namePlaceholder: "e.g. COACH",
     activityLabel: "What you coach or teach",
     yearLabel: null,
-    // No class year, so nothing to default to — only the words they choose.
-    lines: ["custom"],
+    // No class year. FACULTY & STAFF by default, or their own words (COACH).
+    lines: ["staff", "custom"],
     yearRange: "upcoming",
   }),
 ];

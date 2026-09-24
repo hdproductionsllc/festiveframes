@@ -19,6 +19,9 @@ import {
 } from "@/lib/utils/compose-school-frame";
 import { registerNodeFonts, registeredFamilies } from "@/lib/utils/node-fonts";
 import { badgeArtworkUrls } from "@/lib/utils/tile-theme";
+import { bannerLogoFromUpload, sectionSupportsLogo } from "@/lib/utils/banner-logo";
+import { tmpdir } from "node:os";
+import type { SectionId } from "@/lib/types";
 
 // ─── LOOK AT THE SCHOOL, not at a test fixture ───────────────────────────────
 //
@@ -57,13 +60,25 @@ async function bundleFor(design: SchoolDesign): Promise<SchoolImageBundle> {
       if (!pieces.has(url)) pieces.set(url, await loadImage(await readFile(join(PUBLIC, url))));
     }
   }
+  // The banner crest, as the real loader does (compose's logo loader). This used to
+  // be an empty map, so every sample printed WITHOUT the crest a kit seeds — a
+  // render that looks finished and is missing the school's mark. A site path is
+  // read from public/; anything else is a file on disk (a stand-in for an upload,
+  // whose original the browser reads from IndexedDB by `fullResId`).
+  const logos = new Map<SectionId, Image>();
+  for (const [id, sec] of Object.entries(design.sections) as [SectionId, (typeof design.sections)[SectionId]][]) {
+    const logo = sec?.mode === "text" && sectionSupportsLogo(id) ? sec.text?.logo : undefined;
+    if (!logo?.url) continue;
+    const file = logo.url.startsWith("/") && !logo.url.startsWith(tmpdir()) ? join(PUBLIC, logo.url) : logo.url;
+    logos.set(id, await loadImage(await readFile(file)));
+  }
   return {
     plate: null,
     pieces: pieces as SchoolImageBundle["pieces"],
     snappets: new Map(),
     sections: new Map(),
     qr: null,
-    logos: new Map(),
+    logos: logos as SchoolImageBundle["logos"],
   };
 }
 
@@ -74,8 +89,17 @@ async function bundleFor(design: SchoolDesign): Promise<SchoolImageBundle> {
  * by hand, and once passed only `frameColor`, which rendered every school's badges
  * on stock navy: a sample built any other way than the builder's is not a sample.
  */
-function designFor(kit: SchoolKit, variant: SchoolVariantId): SchoolDesign {
+function designFor(kit: SchoolKit, variant: SchoolVariantId, frameColor?: string, crest?: string): SchoolDesign {
   const store = createDesignStore(`kit-sample:${kit.slug}:${variant}`, schoolStoreOptions({ kit, variant }));
+  // A parent's "Frame color" tap, through the store action the picker calls — so a
+  // sample with a changed colour is exactly what that tap sends to print.
+  if (frameColor) store.getState().setFrameColor(frameColor);
+  // A crest uploaded from the banner editor, landed exactly as the upload flow
+  // lands it (`bannerLogoFromUpload` through `setSectionText`).
+  if (crest) {
+    const current = store.getState().sections.bottom?.text?.logo;
+    store.getState().setSectionText("bottom", { logo: bannerLogoFromUpload({ url: crest }, current) });
+  }
   return schoolDesignOf(store.getState());
 }
 
@@ -135,6 +159,81 @@ describe("every kit renders on the frame it ships on", () => {
   }
 });
 
+describe("a Frame color tap reaches PRINT: badge fields and both banners", () => {
+  // The owner tapped "Frame color" swatches and saw nothing: the control wrote only
+  // the body, which the flush frame covers. It now writes one surface colour; this
+  // pins that the PRINT file wears it where a parent looks — a side badge's field,
+  // the top runner and the bottom bar — not just the body under the plate.
+  it("paints #9E1B32 on a badge field, the top runner and the bottom bar", async () => {
+    const kit = allSchoolKits().find((k) => k.slug === "marquette-mustangs")!;
+    const design = designFor(kit, SCHOOL_SHIPPING_VARIANT, "#9E1B32");
+    const images = await bundleFor(design);
+    const { width, height } = schoolCanvasSize(design.frameConfig, SCHOOL_PRINT_DPI);
+    const canvas = createCanvas(width, height);
+    drawSchoolFrame(canvas.getContext("2d") as unknown as CanvasRenderingContext2D, design, images, width);
+    const ctx = canvas.getContext("2d");
+    const at = (fx: number, fy: number) => {
+      const d = ctx.getImageData(Math.round(fx * width), Math.round(fy * height), 1, 1).data;
+      return [d[0], d[1], d[2]];
+    };
+    const want = [0x9e, 0x1b, 0x32];
+    for (const [name, fx, fy] of [
+      ["left side badge field", 0.02, 0.35],
+      ["top runner", 0.2, 0.05],
+      ["bottom bar", 0.2, 0.93],
+    ] as const) {
+      const got = at(fx, fy);
+      for (let c = 0; c < 3; c++) expect(Math.abs(got[c] - want[c]), `${name}: ${got}`).toBeLessThanOrEqual(3);
+    }
+  }, 30_000);
+});
+
+describe("a crest uploaded from the banner editor PRINTS", () => {
+  // The owner: "Mascot or crest" had nowhere to upload one. It does now, and the
+  // crest lands as the bottom banner's logo — this pins that the PRINT file draws
+  // it, at both ends of the bar, and that it is drawn SQUARE.
+  it("draws a red test crest at both ends of Marquette's bottom bar", async () => {
+    const side = 600;
+    const c = createCanvas(side, side);
+    const g = c.getContext("2d");
+    g.fillStyle = "#E0102E";
+    g.fillRect(0, 0, side, side);
+    const crest = join(tmpdir(), `kit-sample-crest-${process.pid}.png`);
+    writeFileSync(crest, c.toBuffer("image/png"));
+
+    const kit = allSchoolKits().find((k) => k.slug === "marquette-mustangs")!;
+    const design = designFor(kit, SCHOOL_SHIPPING_VARIANT, undefined, crest);
+    expect(design.sections.bottom?.text?.logo?.url).toBe(crest);
+    const images = await bundleFor(design);
+    const { width, height } = schoolCanvasSize(design.frameConfig, SCHOOL_PRINT_DPI);
+    const canvas = createCanvas(width, height);
+    drawSchoolFrame(canvas.getContext("2d") as unknown as CanvasRenderingContext2D, design, images, width);
+    const ctx = canvas.getContext("2d");
+    // The bottom 1.2" of the sheet, split at the centre: red must appear in both
+    // halves (placement "both"), and its bounding box on the left must be square.
+    const y0 = Math.round(height - 1.2 * SCHOOL_PRINT_DPI);
+    const band = ctx.getImageData(0, y0, width, height - y0).data;
+    const bw = width;
+    let left = 0, right = 0;
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    for (let i = 0; i < band.length; i += 4) {
+      if (!(band[i] > 200 && band[i + 1] < 60 && band[i + 2] < 80)) continue;
+      const x = (i / 4) % bw;
+      const y = Math.floor(i / 4 / bw);
+      if (x < bw / 2) {
+        left++;
+        minX = Math.min(minX, x); maxX = Math.max(maxX, x);
+        minY = Math.min(minY, y); maxY = Math.max(maxY, y);
+      } else right++;
+    }
+    expect(left, "red crest pixels, left end").toBeGreaterThan(5000);
+    expect(right, "red crest pixels, right end").toBeGreaterThan(5000);
+    const w = maxX - minX + 1, h = maxY - minY + 1;
+    expect(Math.abs(w - h), `crest box ${w} x ${h}`).toBeLessThanOrEqual(2);
+    if (process.env.KIT_CREST_OUT) writeFileSync(process.env.KIT_CREST_OUT, canvas.toBuffer("image/png"));
+  }, 30_000);
+});
+
 describe("contact sheet", () => {
   it("writes EVERY kit to KIT_SAMPLE_ALL_DIR", async () => {
     const dir = process.env.KIT_SAMPLE_ALL_DIR;
@@ -167,7 +266,9 @@ describe("sample artifact", () => {
     const kit = resolveSchoolKit(process.env.KIT_SAMPLE_SLUG ?? "sluh-jr-bills");
     expect(kit, "KIT_SAMPLE_SLUG names no school, authored or on the roster").toBeDefined();
     const variant = (process.env.KIT_SAMPLE_VARIANT ?? "flush") as SchoolVariantId;
-    const design = designFor(kit!, variant);
+    // KIT_SAMPLE_FRAME_COLOR=#9E1B32 renders the frame after a "Frame color" tap.
+    // KIT_SAMPLE_CREST=<png> renders it with that crest uploaded on the bottom banner.
+    const design = designFor(kit!, variant, process.env.KIT_SAMPLE_FRAME_COLOR, process.env.KIT_SAMPLE_CREST);
     const images = await bundleFor(design);
     const { width, height } = schoolCanvasSize(design.frameConfig, SCHOOL_PRINT_DPI);
     const canvas = createCanvas(width, height);

@@ -6,12 +6,13 @@
 //   • {year} / {yy}  — resolved to the UPCOMING graduating class at tap time. NEVER
 //                      hardcode a year; `getGradYear()` computes it from the date so a
 //                      2026-built frame that sells into 2027 defaults to 2027.
-//   • [MASCOT] / [#]  — bracketed placeholders the user overwrites in the textarea
-//                      after tapping (e.g. "GO [MASCOT]" → "GO WILDCATS"). Kept literal
-//                      here; the free-typed textarea + tap-to-fill flow is unchanged.
+//   • [MASCOT] / [#]  — placeholders. [MASCOT] is filled with the school's own
+//                      mascot when the page knows it (`withMascot`), so a Marquette
+//                      parent sees "GO MUSTANGS"; otherwise it stays literal for the
+//                      parent to overwrite, as [#] always does.
 //
-// `\n` = a line break — stacks nicely in the tall vertical side panels. Every resolved
-// phrase stays within SectionEditor's MAX_CHARS (60).
+// Every phrase is ONE line (see the templates below) and every resolved phrase stays
+// within SectionEditor's MAX_CHARS.
 
 /**
  * The upcoming graduating class year. A U.S. school year that starts in the fall
@@ -37,6 +38,17 @@ export function resolvePhrase(template: string, year: number = getGradYear()): s
     .replace(/\{yy\}/g, `'${shortYear(year)}`);
 }
 
+/** The longest banner line the editor accepts. One line on an 11" bar; the
+ *  renderers auto-fit, so this is a ceiling on legibility, not on layout. */
+export const BANNER_MAX_CHARS = 60;
+
+/** Fill [MASCOT] with this school's mascot ("MUSTANGS"). A blank mascot (a roster
+ *  school we know nothing about) leaves the placeholder for the parent to type over. */
+export function withMascot(phrase: string, mascot?: string | null): string {
+  const m = mascot?.trim().toUpperCase();
+  return m ? phrase.replace(/\[MASCOT\]/g, m) : phrase;
+}
+
 export interface SchoolPhraseGroup {
   /** Short UPPERCASE category label shown above its chips. */
   category: string;
@@ -45,30 +57,34 @@ export interface SchoolPhraseGroup {
 }
 
 // ─── Templates (raw, with {year}/{yy}/[MASCOT]/[#] tokens) ──────────────────────
+// ONE LINE EACH. The banners are single-line parts (the top runner, and the bottom
+// bar / keystone on the flush frame), and a phrase with a break in it printed as a
+// cramped second row. The store flattens any break that reaches it (see `oneLine`
+// in utils/sections), and school-phrases.test.ts fails on a template carrying one.
 const PHRASE_TEMPLATES: { category: string; phrases: string[] }[] = [
   {
-    category: "Class / Grad",
-    phrases: ["CLASS OF\n{year}", "SENIOR\n{year}", "CLASS OF {yy}", "GRADUATE", "FUTURE\nGRAD"],
+    category: "Class",
+    phrases: ["CLASS OF {year}", "SENIOR {year}", "CLASS OF {yy}", "GRADUATE", "FUTURE GRAD"],
   },
   {
     category: "Spirit",
-    phrases: ["GO\n[MASCOT]", "[MASCOT]\nPRIDE", "HOME OF\nTHE [MASCOT]", "SCHOOL\nSPIRIT", "GO BIG\nOR GO HOME"],
+    phrases: ["GO [MASCOT]", "[MASCOT] PRIDE", "HOME OF THE [MASCOT]", "SCHOOL SPIRIT", "GO BIG OR GO HOME"],
   },
   {
-    category: "Achievement",
-    phrases: ["HONOR\nROLL", "SCHOLAR\nATHLETE", "STATE\nCHAMPS", "ALL-STATE", "VARSITY", "HONOR\nSOCIETY"],
+    category: "Honors",
+    phrases: ["HONOR ROLL", "SCHOLAR ATHLETE", "STATE CHAMPS", "ALL-STATE", "VARSITY", "HONOR SOCIETY"],
   },
   {
     category: "Roles",
-    phrases: ["CAPTAIN", "SENIOR", "DRUM\nMAJOR", "#[#]"],
+    phrases: ["CAPTAIN", "SENIOR", "DRUM MAJOR", "#[#]"],
   },
   {
     category: "Family",
-    phrases: ["PROUD\nPARENT", "PROUD\nMOM", "PROUD\nDAD", "#1 FAN"],
+    phrases: ["PROUD PARENT", "PROUD MOM", "PROUD DAD", "#1 FAN"],
   },
   {
     category: "Alumni",
-    phrases: ["ALUMNI", "ONCE A [MASCOT]\nALWAYS A [MASCOT]", "CLASS OF {yy}\nALUMNI"],
+    phrases: ["ALUMNI", "[MASCOT] FOR LIFE", "CLASS OF {yy} ALUMNI"],
   },
 ];
 

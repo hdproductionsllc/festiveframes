@@ -57,7 +57,12 @@ function partsOf(kit: SchoolKit) {
     directParts: list.rows.filter((r) => r.pieceId.startsWith("panel:")).map((r) => [r.pieceId, r.size]).sort(),
     // Every badge part's size: the seeds land on the same anchors for every kit,
     // so the multiset of sizes must match even though the pieces differ.
-    badgeSizes: list.rows.filter((r) => !r.pieceId.startsWith("panel:")).map((r) => r.size).sort(),
+    // Expanded by quantity: a school wearing its one mark in both mark positions
+    // prints ONE row with qty 2, which is the same six parts as six rows of one.
+    badgeSizes: list.rows
+      .filter((r) => !r.pieceId.startsWith("panel:"))
+      .flatMap((r) => Array.from({ length: r.qty }, () => r.size))
+      .sort(),
     seedSlots: Object.keys(slots).sort(),
   };
 }

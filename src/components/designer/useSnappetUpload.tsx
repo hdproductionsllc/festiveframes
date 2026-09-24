@@ -20,12 +20,17 @@ import { placedPreviewPx, thumbnailDataUrl } from "@/lib/utils/uploads";
 import { ImageCropModal, type ImageCropResult } from "./ImageCropModal";
 import { UploadRightsGate } from "./UploadRightsGate";
 import { UPLOAD_RIGHTS, UPLOAD_RIGHTS_VERSION } from "@/content/upload-rights";
+import { bannerLogoCropInches, bannerLogoFromUpload, sectionSupportsLogo } from "@/lib/utils/banner-logo";
 
 // The one upload → crop → snappet flow, shared by the per-section "Add art" button
 // (SectionEditor) and the prominent "Upload a photo" button (UploadPhotoButton), so
 // the two can never disagree on crop-aspect math or placement. Given a target panel
 // and a file, it sizes the crop to where a native-aspect snappet would land, opens
 // the crop modal, and on confirm stores the full-res original and drops the art in.
+//
+// The bottom banner's crest comes through here too (`{ bannerLogo }`): same gate,
+// same crop (square, at the crest's printed size), same tray, and it lands as the
+// banner's `logo` instead of on a badge.
 //
 // IT IS ALSO WHERE THE RIGHTS GATE LIVES. Every upload entry point in the product
 // funnels through `begin`, so the one place a parent can be asked whether they
@@ -94,7 +99,11 @@ export function uploadableSections(
  * the one that matters: it is the difference between "put it on the middle-left
  * badge" and "put it somewhere on the left".
  */
-export type UploadTarget = SectionId | { anchorSlotId: string };
+export type UploadTarget = SectionId | { anchorSlotId: string } | { bannerLogo: SectionId };
+
+/** Where a confirmed crop lands: a badge on the frame, or the crest beside a
+ *  banner's words (`BottomBarConfig.logo`). Decided in `begin`, read on confirm. */
+type Destination = "badge" | "logo";
 
 /** "Left side · top badge" — a badge position in words, for the crop header and
  *  the picker's labels. Derived from the positions themselves, so a frame with a
@@ -136,6 +145,7 @@ export function useSnappetUpload(): SnappetUpload {
   // crop window previews the badge the parent will actually get.
   const tileFieldColor = useDesignStore((s) => s.tileFieldColor);
   const addUpload = useDesignStore((s) => s.addUpload);
+  const setSectionText = useDesignStore((s) => s.setSectionText);
   const artworkRights = useDesignStore((s) => s.artworkRights);
   const acceptArtworkRights = useDesignStore((s) => s.acceptArtworkRights);
 
@@ -156,15 +166,45 @@ export function useSnappetUpload(): SnappetUpload {
   // approved instead of guessing a new one from the aspect.
   const pendingSpan = useRef<TileSpan>({ cols: 1, rows: 1 });
   const pendingName = useRef<string>("Upload");
+  const [destination, setDestination] = useState<Destination>("badge");
   // An upload held at the rights gate: everything the crop step needs, waiting on
   // one tap. Held rather than re-derived so accepting does not redo the decode.
   const [gated, setGated] = useState<
-    { file: File; section: SectionId; label: string; cropTarget: { width: number; height: number } } | null
+    {
+      file: File;
+      section: SectionId;
+      label: string;
+      cropTarget: { width: number; height: number };
+      destination: Destination;
+    } | null
   >(null);
 
   const begin = async (file: File, to: UploadTarget, knownAspect?: number) => {
     const aspect = knownAspect ?? (await readImageAspect(file));
     pendingAspect.current = aspect;
+    pendingName.current = file.name.replace(/\.[^.]+$/, "").slice(0, 40) || "Upload";
+
+    // THE BANNER CREST. Same gate, same crop, same tray — it just lands beside the
+    // banner's words instead of on a badge. Cropped SQUARE at the crest's printed
+    // size, so the sharpness meter measures what the print will ask of it.
+    if (typeof to === "object" && "bannerLogo" in to) {
+      const sectionId = to.bannerLogo;
+      if (!sectionSupportsLogo(sectionId)) return;
+      pendingPlacement.current = null;
+      pendingSpan.current = frameConfig.minTileSpan ?? { cols: 1, rows: 1 };
+      const crop = bannerLogoCropInches(sectionId, frameConfig);
+      const label = `${SECTION_LABELS[sectionId]} · crest`;
+      if (artworkRights?.version !== UPLOAD_RIGHTS_VERSION) {
+        setGated({ file, section: sectionId, label, cropTarget: crop, destination: "logo" });
+        return;
+      }
+      setDestination("logo");
+      setCropTarget(crop);
+      setTargetLabel(label);
+      setTarget(sectionId);
+      setCropFile(file);
+      return;
+    }
     const ctx = placementContext(frameConfig, { slots, sections, textBars });
     // ONE BADGE, named. Its footprint is the badge that is there (or the square
     // the frame seats there), never a size the photo's shape suggests.
@@ -190,7 +230,6 @@ export function useSnappetUpload(): SnappetUpload {
       : SECTION_LABELS[sectionId];
     const span = placement?.span ?? frameConfig.minTileSpan ?? { cols: 1, rows: 1 };
     pendingSpan.current = span;
-    pendingName.current = file.name.replace(/\.[^.]+$/, "").slice(0, 40) || "Upload";
     // The footprint's PHYSICAL size at the cell it will land on — the crop's
     // aspect target and the DPI gate's denominator. `span x tile` assumed every
     // column is one tile wide; on the 15.5" frame a side badge is 2.25 x 2.25 and
@@ -214,10 +253,11 @@ export function useSnappetUpload(): SnappetUpload {
     // record made under older wording does not count: `UPLOAD_RIGHTS_VERSION` is
     // compared, not mere presence.
     if (artworkRights?.version !== UPLOAD_RIGHTS_VERSION) {
-      setGated({ file, section: sectionId, label, cropTarget: cropInches });
+      setGated({ file, section: sectionId, label, cropTarget: cropInches, destination: "badge" });
       return;
     }
 
+    setDestination("badge");
     setCropTarget(cropInches);
     setTargetLabel(label);
     setTarget(sectionId);
@@ -273,14 +313,25 @@ export function useSnappetUpload(): SnappetUpload {
     // pushed it straight past localStorage's quota, and the design then failed to
     // save at all. Print is unaffected: it reads the full-res original from IndexedDB
     // by `fullResId`, which every tile placed from this entry carries.
+    const thumb = await thumbnailDataUrl(result.previewUrl);
     addUpload({
       name: pendingName.current,
-      url: await thumbnailDataUrl(result.previewUrl),
+      url: thumb,
       fullResId: id,
       aspect: pendingAspect.current,
       span: pendingSpan.current,
       field,
     });
+    if (destination === "logo") {
+      // The crest beside the banner's words. Screen draws `url`; print reads the
+      // full-res original by `fullResId` (compose-school-frame's logo loader).
+      const current = sections[target]?.text?.logo;
+      setSectionText(target, { logo: bannerLogoFromUpload({ url: thumb, fullResId: id }, current) });
+      setCropFile(null);
+      setCropTarget(null);
+      setTarget(null);
+      return;
+    }
     placeImageSnappet(
       target,
       {
@@ -310,6 +361,7 @@ export function useSnappetUpload(): SnappetUpload {
             onAccept={() => {
               acceptArtworkRights();
               // Straight on to the crop step with the work `begin` already did.
+              setDestination(gated.destination);
               setCropTarget(gated.cropTarget);
               setTargetLabel(gated.label);
               setTarget(gated.section);
@@ -329,7 +381,9 @@ export function useSnappetUpload(): SnappetUpload {
             file={cropFile}
             targetInches={cropTarget}
             panelLabel={targetLabel || SECTION_LABELS[target]}
-            fieldColor={tileFieldColor ?? undefined}
+            fieldColor={
+              (destination === "logo" ? sections[target]?.text?.backgroundColor : tileFieldColor) ?? undefined
+            }
             note={UPLOAD_RIGHTS.reminder}
             onCancel={() => {
               setCropFile(null);

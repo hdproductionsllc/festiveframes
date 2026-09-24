@@ -49,13 +49,22 @@ export const DEFAULT_QR_CODE: QRCodeConfig = {
 export const SCHOOL_HEADLINE_FONT = "'Graduate', 'Rockwell', serif";
 
 /**
- * The TAGLINE face — a condensed athletic sans, the modern uniform-nameplate look.
+ * The TAGLINE face — the SAME letterman face as the headline (owner, 2026-09-24).
  *
- * Real banners are set in two voices: a heavy block headline over a condensed
- * secondary line. Setting the tagline in the headline's face at a smaller size just
- * looks like the headline shrank.
+ * It used to be a condensed athletic sans (Oswald), on the theory that real
+ * banners are set in two voices. On the frame it read as two products: the school
+ * name and CLASS OF 2027 in one face, the mascot in another. One varsity face
+ * across every line is what makes it read as a letterman jacket. The constant
+ * stays so the role is still named in one place; `LEGACY_SEEDED_TAGLINE_FONTS`
+ * moves saved designs over.
  */
-export const SCHOOL_TAGLINE_FONT = "'Oswald', 'Saira Condensed', sans-serif";
+export const SCHOOL_TAGLINE_FONT = SCHOOL_HEADLINE_FONT;
+
+/** The condensed face this builder SEEDED for taglines and the top runner before
+ *  2026-09-24. Matched exactly, so a deliberate font-picker choice is left alone. */
+export const LEGACY_SEEDED_TAGLINE_FONTS: readonly string[] = [
+  "'Oswald', 'Saira Condensed', sans-serif",
+];
 
 /**
  * Exact family strings this builder has SEEDED in the past and no longer wants.

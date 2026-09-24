@@ -607,7 +607,7 @@ describe("pilot sample set", () => {
       // Measured, on the field it will actually sit on: a mark over the line gets
       // its own card (scripts/card-mark.mjs), never a renderer override.
       if (marks.mascot) {
-        const art = await loadImage(await readFile(getPiece(marks.mascot!)!.artworkUrl));
+        const art = await loadImage(await artBytes(getPiece(marks.mascot!)!.artworkUrl));
         const cv = createCanvas(128, 128);
         cv.getContext("2d").drawImage(art, 0, 0, 128, 128);
         const lost = artFieldCollision(cv.getContext("2d").getImageData(0, 0, 128, 128).data, kit.colors.tileField ?? kit.colors.frame);

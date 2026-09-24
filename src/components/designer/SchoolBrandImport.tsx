@@ -190,7 +190,6 @@ export function SchoolBrandImport({
   const setSectionText = useDesignStore((s) => s.setSectionText);
   const setSectionMode = useDesignStore((s) => s.setSectionMode);
   const setFrameColor = useDesignStore((s) => s.setFrameColor);
-  const setTileFieldColor = useDesignStore((s) => s.setTileFieldColor);
   const setRimColor = useDesignStore((s) => s.setRimColor);
 
   // The EXISTING upload flow, untouched. `begin` opens the aspect-locked crop modal
@@ -334,14 +333,10 @@ export function SchoolBrandImport({
 
   // ── apply the WHOLE brand in one stroke ──
   const applyKit = (k: SchoolBrandKit) => {
-    // The BODY first, because it is the change you actually see: it is the largest
-    // area of the product, and recolouring only the banners was the gap that made
-    // "use this school" feel like it had barely done anything.
-    setFrameColor(k.frameColor);
-    // The BADGE fields and the RIM too. Recolouring the body alone left every tile on
-    // its own navy chip and the rim still gold, so the frame was the school's colour
-    // everywhere except the parts you actually look at.
-    setTileFieldColor(k.tileFieldColor);
+    // The frame colour first — ONE write covers the body, every badge field and both
+    // banners (`setFrameColor`; the kit's frame and field colours are the same
+    // surface by `assignSurfaces`). Then the rim.
+    setFrameColor(k.tileFieldColor);
     setRimColor(k.rimColor);
     // Mode before text: the top bar cannot hold tiles, so `sectionSupportsTiles` has
     // to have run before the write rather than after it.
@@ -875,7 +870,6 @@ function CandidateCard({ candidate, onAdd }: { candidate: ScanCandidate; onAdd: 
  */
 function ColorStrip({ colors }: { colors: ColorCandidate[] }) {
   const setFrameColor = useDesignStore((s) => s.setFrameColor);
-  const setTileFieldColor = useDesignStore((s) => s.setTileFieldColor);
   const setRimColor = useDesignStore((s) => s.setRimColor);
   const [applied, setApplied] = useState<string | null>(null);
 
@@ -886,9 +880,8 @@ function ColorStrip({ colors }: { colors: ColorCandidate[] }) {
   const auto = assignSurfaces(shown.map((c) => c.hex));
 
   const apply = (hexes: string[], label: string) => {
-    const { frameColor, tileFieldColor, rimColor } = assignSurfaces(hexes);
-    setFrameColor(frameColor);
-    setTileFieldColor(tileFieldColor);
+    const { tileFieldColor, rimColor } = assignSurfaces(hexes);
+    setFrameColor(tileFieldColor); // body, badge fields and banners, one write
     setRimColor(rimColor);
     setApplied(label);
   };

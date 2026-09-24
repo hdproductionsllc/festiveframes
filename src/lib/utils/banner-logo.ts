@@ -1,4 +1,6 @@
-import type { BottomBarConfig, SectionId } from "@/lib/types";
+import type { BottomBarConfig, FrameConfig, SectionId } from "@/lib/types";
+import { panelRects } from "@/lib/utils/panels";
+import { rowHeightInchesIn } from "@/lib/utils/rows";
 
 // ─── A crest set INTO the banner ─────────────────────────────────────────────
 //
@@ -62,6 +64,42 @@ export function sectionSupportsLogo(id: SectionId): boolean {
 export function bannerConfigFor(id: SectionId, config: BottomBarConfig): BottomBarConfig {
   if (!config.logo || sectionSupportsLogo(id)) return config;
   return { ...config, logo: undefined };
+}
+
+/**
+ * The crest's printed size on this banner, in inches — the SQUARE a crest upload is
+ * cropped to and the print-sharpness meter measures against.
+ *
+ * The bar's own height (its rows, not the keystone rise, which the crest never
+ * enters) times LOGO_HEIGHT_RATIO. It ignores the chrome inset, so it is a touch
+ * larger than the box `bannerLogoLayout` draws: the meter asks for slightly more
+ * pixels than print needs, which is the safe direction.
+ */
+export function bannerLogoInches(id: SectionId, config: FrameConfig): number {
+  const rect = panelRects(config)[id];
+  let h = 0;
+  for (let r = rect.row0; r <= rect.row1; r++) h += rowHeightInchesIn(config, false, r);
+  return h * LOGO_HEIGHT_RATIO;
+}
+
+/** The crop an uploaded crest is cut to: a SQUARE at the crest's printed size.
+ *  Square because the crest box is square — the same rule every badge follows —
+ *  and a wide crop would only letterbox down to a smaller mark. */
+export function bannerLogoCropInches(id: SectionId, config: FrameConfig): { width: number; height: number } {
+  const side = bannerLogoInches(id, config);
+  return { width: side, height: side };
+}
+
+/**
+ * The banner logo an uploaded crest becomes. Keeps the placement the parent already
+ * chose; a first crest goes at BOTH ends, the arrangement a kit's own crest seeds
+ * (school-kits), so the name stays centred between two marks.
+ */
+export function bannerLogoFromUpload(
+  art: { url: string; fullResId?: string },
+  current?: BottomBarConfig["logo"],
+): NonNullable<BottomBarConfig["logo"]> {
+  return { url: art.url, fullResId: art.fullResId, placement: current?.placement ?? "both" };
 }
 
 export interface BannerLogoLayout {

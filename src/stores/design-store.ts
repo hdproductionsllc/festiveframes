@@ -24,6 +24,7 @@ import {
   LEGACY_SEEDED_BANNER_FONTS,
   SCHOOL_HEADLINE_FONT,
   SCHOOL_TAGLINE_FONT,
+  LEGACY_SEEDED_TAGLINE_FONTS,
 } from "@/lib/constants/defaults";
 import { buildGrid, getAllSlotIds, wingRowCount, wingSlotIndex } from "@/lib/utils/slot-generator";
 import {
@@ -68,14 +69,60 @@ import { UPLOAD_RIGHTS_VERSION } from "@/content/upload-rights";
 // opened by someone who never accepted anything, and copying an attestation onto a
 // new reader would put words in their mouth. A reload keeps it; a restore asks again.
 import type { ArtworkRights } from "@/lib/order/artwork-rights";
-import { repairSections, sectionSupportsText, sectionSupportsTiles } from "@/lib/utils/sections";
+import { oneLine, oneLineSections, repairSections, sectionSupportsText, sectionSupportsTiles } from "@/lib/utils/sections";
 import { repairDanglingTopLine } from "@/lib/utils/school-banner";
 import { dropRelocatedSlots } from "@/lib/utils/school-migration";
 import { MAX_HISTORY_DEPTH } from "@/lib/constants/frame";
+import { legibleBannerText } from "@/lib/utils/tile-theme";
 
 /** The frame body's colour before any school branding is applied — the matte black
  *  the product ships as. Exported so both renderers and the reset path agree. */
 export const DEFAULT_FRAME_COLOR = "#111111";
+
+/**
+ * A banner config wearing `bg`: its background set, and its lettering flipped only
+ * if `bg` would swallow it (see `legibleBannerText`). The SAME object back when
+ * nothing changes, so a tap on the colour already in force does not churn renders.
+ */
+function recolourBanner<T extends Pick<BottomBarConfig, "backgroundColor" | "textColor">>(cfg: T, bg: string): T {
+  const textColor = legibleBannerText(cfg.textColor, bg);
+  if (cfg.backgroundColor === bg && cfg.textColor === textColor) return cfg;
+  return { ...cfg, backgroundColor: bg, textColor };
+}
+
+/** `recolourBanner` over every text section; the SAME record back when none changed. */
+function recolourSections(
+  sections: Partial<Record<SectionId, SectionState>>,
+  bgFor: (id: SectionId, text: BottomBarConfig) => { bg: string; textColor?: string },
+): Partial<Record<SectionId, SectionState>> {
+  let out = sections;
+  for (const [id, sec] of Object.entries(sections) as [SectionId, SectionState | undefined][]) {
+    if (!sec?.text) continue;
+    const { bg, textColor } = bgFor(id, sec.text);
+    const text =
+      textColor === undefined
+        ? recolourBanner(sec.text, bg)
+        : sec.text.backgroundColor === bg && sec.text.textColor === textColor
+          ? sec.text
+          : { ...sec.text, backgroundColor: bg, textColor };
+    if (text === sec.text) continue;
+    if (out === sections) out = { ...sections };
+    out[id] = { ...sec, text };
+  }
+  return out;
+}
+
+/** `recolourBanner` over the free text bars; the SAME array back when none changed. */
+function recolourTextBars(bars: PlacedTextBar[], bg: string): PlacedTextBar[] {
+  let changed = false;
+  const next = bars.map((b) => {
+    const config = recolourBanner(b.config, bg);
+    if (config === b.config) return b;
+    changed = true;
+    return { ...b, config };
+  });
+  return changed ? next : bars;
+}
 import { useUIStore } from "@/stores/ui-store";
 
 /**
@@ -364,6 +411,13 @@ interface DesignState {
    */
   rimColor: string | null;
   /**
+   * The colours this builder OPENS wearing (the kit's, else the stock defaults) —
+   * what Reset returns to and what the picker offers as "School". Configuration, not
+   * design: never persisted (not in `partialize`), so a kit colour change reaches
+   * the Reset of every returning visitor while leaving their design alone.
+   */
+  brandDefaults: { frameColor: string; tileFieldColor: string | null; rimColor: string | null };
+  /**
    * Art the customer uploaded, kept as REUSABLE palette pieces.
    *
    * Uploading used to place the art once and forget it, so a crest on both wings
@@ -549,12 +603,18 @@ interface DesignState {
   // Actions — meta
   setDesignName: (name: string) => void;
   setPlateState: (abbr: string) => void;
-  /** Recolour the frame body. `#rrggbb`. */
+  /**
+   * THE frame colour, `#rrggbb`: the body, every badge's field and both banners'
+   * backgrounds, in one stroke (the owner's rule — one background for the badges
+   * and the banners). Banner lettering the new colour would swallow flips to a
+   * readable one; lettering that stays readable is left alone.
+   */
   setFrameColor: (hex: string) => void;
-  /** Recolour every badge's field. `null` restores each piece's own. */
-  setTileFieldColor: (hex: string | null) => void;
   /** Replace the brass rim's colour. `null` restores the gold. */
   setRimColor: (hex: string | null) => void;
+  /** Every colour back to what this builder OPENED wearing: the kit's frame colour,
+   *  rim and seeded banner colours (or the stock defaults without a kit). */
+  resetColors: () => void;
   /** Replace the ENTIRE design in one shot (restoring a saved design). Resets
    *  history so undo doesn't cross the load boundary. */
   loadDesign: (design: LoadableDesign) => void;
@@ -786,6 +846,11 @@ export interface DesignStoreOptions {
 function createDesignStore(persistName: string, options: DesignStoreOptions = {}) {
   const { migrateExtra, frameConfig: ownedFrameConfig, sections: initialSections, initialBrand, initialSlots, initialPlateState, initialQrUrl } = options;
   const baseFrameConfig = ownedFrameConfig ?? DEFAULT_FRAME_CONFIG;
+  const brandDefaults: DesignState["brandDefaults"] = {
+    frameColor: initialBrand?.frameColor ?? DEFAULT_FRAME_COLOR,
+    tileFieldColor: initialBrand?.tileFieldColor ?? null,
+    rimColor: initialBrand?.rimColor ?? null,
+  };
   return createStore<DesignState>()(
   persist(
     (set, get) => {
@@ -824,9 +889,8 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
         // Initial state
         designName: "My Frame Design",
         plateState: initialPlateState ?? "MO",
-        frameColor: initialBrand?.frameColor ?? DEFAULT_FRAME_COLOR,
-        tileFieldColor: initialBrand?.tileFieldColor ?? null,
-        rimColor: initialBrand?.rimColor ?? null,
+        ...brandDefaults,
+        brandDefaults,
         uploads: [],
         artworkRights: null,
         slots: initialSlots ? structuredClone(initialSlots) : {},
@@ -835,7 +899,7 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
         frameConfig: { ...baseFrameConfig },
         textBars: [],
         selectedBarId: null,
-        sections: initialSections ? structuredClone(initialSections) : {},
+        sections: initialSections ? oneLineSections(structuredClone(initialSections)) : {},
         selectedSectionId: null,
         dieCut: false,
         updatedAt: Date.now(),
@@ -1221,21 +1285,20 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
             // `initialSections` is the same value the store was constructed with, so
             // this cannot drift from first-run. /build passes none, so sections stay
             // empty there exactly as before.
-            const sections = initialSections
-              ? (structuredClone(initialSections) as typeof state.sections)
+            const seeded = initialSections
+              ? (oneLineSections(structuredClone(initialSections)) as typeof state.sections)
               : {};
             // ...wearing the colour the badges wear. The banners come back as
             // SEEDED, and the seed carries the kit's colour, but the school colour
             // the user picked (`tileFieldColor`) is still on every badge — so each
             // preset tap after a colour change left the banners in one colour and
             // the badges in another. The owner's rule is that the badge background
-            // IS the banner colour; `setTileFieldColor` writes it through, and so
-            // does this.
-            if (state.tileFieldColor) {
-              for (const sec of Object.values(sections)) {
-                if (sec?.text) sec.text.backgroundColor = state.tileFieldColor;
-              }
-            }
+            // IS the banner colour; `setFrameColor` writes it through, and so
+            // does this (lettering included, via the same legibility rule).
+            const fieldColour = state.tileFieldColor;
+            const sections = fieldColour
+              ? recolourSections(seeded, () => ({ bg: fieldColour }))
+              : seeded;
             return withHistory(state, {
               // START FRESH returns a kit page to its dressed frame; CLEAR empties
               // it. The banners come back either way (see `sections` above) — a
@@ -1556,49 +1619,49 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
         },
 
         setFrameColor: (hex) => {
-          set({ frameColor: hex, updatedAt: Date.now() });
-        },
-
-        setTileFieldColor: (hex) => {
-          // The banners take it TOO. It is one background colour as far as anyone
-          // looking at the frame is concerned, and applying it to the badges while the
-          // two text bars kept their old colour made the frame read as two products.
+          // ONE colour, every surface. The frame used to have three: the body
+          // (`frameColor`), the badge fields (`tileFieldColor`) and each banner's own
+          // background. On the flush frame the badges and banners cover the body
+          // completely, so the control labelled "Frame color" wrote the one surface
+          // nobody could see — a parent tapped swatches and nothing changed. The
+          // owner's rule is that the badge background IS the banner colour, so there
+          // is one decision here, and one writer for it.
           //
-          // WRITTEN THROUGH rather than layered as another live override: a banner's
-          // colour is a real, editable field in the section editor, so overriding it
-          // at render time would leave that control looking broken. This sets it, and
-          // a later edit there simply wins. Clearing the override (`null`) therefore
-          // leaves the banners where they are — there is no prior value to restore,
-          // and silently reverting a colour the user may since have chosen is worse
-          // than leaving it.
-          set((state) => {
-            if (!hex) return { tileFieldColor: hex, updatedAt: Date.now() };
-            let touched = false;
-            const sections = { ...state.sections };
-            for (const [id, sec] of Object.entries(sections)) {
-              if (!sec?.text || sec.text.backgroundColor === hex) continue;
-              sections[id as SectionId] = { ...sec, text: { ...sec.text, backgroundColor: hex } };
-              touched = true;
-            }
-            const textBars = state.textBars.map((b) =>
-              b.config.backgroundColor === hex
-                ? b
-                : { ...b, config: { ...b.config, backgroundColor: hex } },
-            );
-            const barsTouched = textBars.some((b, i) => b !== state.textBars[i]);
-            return {
-              tileFieldColor: hex,
-              ...(touched ? { sections } : {}),
-              ...(barsTouched ? { textBars } : {}),
-              // The draft config for the NEXT banner, so a bar added later matches.
-              bottomBar: { ...state.bottomBar, backgroundColor: hex },
-              updatedAt: Date.now(),
-            };
-          });
+          // The banners are WRITTEN THROUGH rather than overridden at render time:
+          // a banner's colour is a real field in the section editor, so this sets it
+          // and a later edit there simply wins.
+          set((state) => ({
+            frameColor: hex,
+            tileFieldColor: hex,
+            sections: recolourSections(state.sections, () => ({ bg: hex })),
+            textBars: recolourTextBars(state.textBars, hex),
+            // The draft config for the NEXT banner, so a bar added later matches.
+            bottomBar: recolourBanner(state.bottomBar, hex),
+            updatedAt: Date.now(),
+          }));
         },
 
         setRimColor: (hex) => {
           set({ rimColor: hex, updatedAt: Date.now() });
+        },
+
+        resetColors: () => {
+          set((state) => {
+            // Back to the colours the page OPENED wearing. The banners take their
+            // SEEDED background and lettering colour (the kit's), falling back to the
+            // kit's frame colour for a banner the seed did not have.
+            const surface = brandDefaults.tileFieldColor ?? brandDefaults.frameColor;
+            return {
+              ...brandDefaults,
+              sections: recolourSections(state.sections, (id) => {
+                const seed = initialSections?.[id]?.text;
+                return seed ? { bg: seed.backgroundColor, textColor: seed.textColor } : { bg: surface };
+              }),
+              textBars: recolourTextBars(state.textBars, surface),
+              bottomBar: recolourBanner(state.bottomBar, surface),
+              updatedAt: Date.now(),
+            };
+          });
         },
 
         setPlateState: (abbr) => {
@@ -1680,7 +1743,12 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
         setSectionText: (id, updates) => {
           set((state) => {
             const cur = state.sections[id];
-            const text = { ...DEFAULT_BOTTOM_BAR, ...cur?.text, ...updates };
+            // Banner text is ONE line, whoever writes it: a typed or pasted break,
+            // a phrase, a scan, a preset. See `oneLine` (utils/sections).
+            const flat = { ...updates };
+            if (typeof flat.text === "string") flat.text = oneLine(flat.text);
+            if (typeof flat.tagline === "string") flat.tagline = oneLine(flat.tagline);
+            const text = { ...DEFAULT_BOTTOM_BAR, ...cur?.text, ...flat };
             return {
               sections: { ...state.sections, [id]: { ...cur, mode: "text", text } },
               updatedAt: Date.now(),
@@ -1892,6 +1960,24 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
         ) {
           merged.artworkRights = null;
         }
+        // ONE frame colour. A design saved while "Frame color" wrote only the body
+        // (hidden under the badges on the flush frame) can hold a body that differs
+        // from the badge fields it never showed through — the owner's own test blob
+        // did: body crimson, badges and banners navy. The badge field is the colour
+        // that was actually on screen, so the body follows it, and the picker now
+        // shows the colour the parent sees. `tileFieldColor` null (every /build
+        // design) is untouched. In MERGE, not migrate: these blobs are already at
+        // the current version. Assigned only when they differ.
+        if (
+          typeof merged.tileFieldColor === "string" &&
+          merged.tileFieldColor &&
+          merged.frameColor !== merged.tileFieldColor
+        ) {
+          merged.frameColor = merged.tileFieldColor;
+        }
+        // Configuration, never persisted — but a blob from a devtools session or a
+        // future bug could carry one; the store's own always wins.
+        merged.brandDefaults = current.brandDefaults;
         // Text belongs to the top/bottom banners only. A design saved while the side
         // panels still allowed text keeps a wing in text mode, and the Tiles/Text
         // toggle no longer renders there — so the panel reads as locked to text with
@@ -1942,8 +2028,14 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
           for (const sec of Object.values(merged.sections)) {
             if (!sec?.text) continue;
             let next = sec.text;
-            if (LEGACY_SEEDED_BANNER_FONTS.includes(next.fontFamily)) {
+            if (
+              LEGACY_SEEDED_BANNER_FONTS.includes(next.fontFamily) ||
+              LEGACY_SEEDED_TAGLINE_FONTS.includes(next.fontFamily)
+            ) {
               next = { ...next, fontFamily: SCHOOL_HEADLINE_FONT };
+            }
+            if (next.taglineFontFamily && LEGACY_SEEDED_TAGLINE_FONTS.includes(next.taglineFontFamily)) {
+              next = { ...next, taglineFontFamily: SCHOOL_TAGLINE_FONT };
             }
             // A two-tier banner saved before the tagline had its own face: give it
             // the condensed one rather than leaving it as the headline shrunk.

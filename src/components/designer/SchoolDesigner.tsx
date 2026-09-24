@@ -65,7 +65,7 @@ import {
 } from "@/lib/constants/frame";
 import { writePersonOnBanner } from "@/lib/utils/school-banner";
 import { ACTIVITIES, ACTIVITY_GROUPS, activityOnFrame } from "@/data/activities";
-import { schoolPlatePhoto, type SchoolKit } from "@/data/school-kits";
+import { KIT_BOTTOM_TAGLINE, schoolPlatePhoto, type SchoolKit } from "@/data/school-kits";
 import type { BannerPreview } from "@/lib/types";
 import type { SnappetPreview } from "@/lib/utils/snappet";
 
@@ -250,10 +250,24 @@ export function SchoolDesigner({
   }, []);
   const buyer = getBuyer(buyerId);
   const chooseBuyer = (id: BuyerId) => {
+    const next = getBuyer(id);
     setBuyerId(id);
     // A year picked from one range is meaningless in another: 2029 is not an
     // alumni class and 1994 is not an upcoming one.
-    if (getBuyer(id).yearRange !== buyer.yearRange) setKidYear("");
+    const year = next.yearRange !== buyer.yearRange ? "" : kidYear;
+    if (year !== kidYear) setKidYear("");
+    // The tap puts the buyer's own line on the frame AT ONCE — PROUD PARENT,
+    // PROUD GRANDPARENT, ALUMNI, FACULTY & STAFF. It used to change only the
+    // form's labels, so "Who's it for?" looked like it did nothing (owner,
+    // 2026-09-24). A line with nothing to say yet (Me, before a class year is
+    // picked) puts the kit's own tagline back rather than leaving another
+    // buyer's words on the frame.
+    setLineChoice(null);
+    const tagline =
+      bannerTagline(next.lines[0], { year: next.yearLabel ? year : undefined }) ||
+      kit?.banners.tagline ||
+      KIT_BOTTOM_TAGLINE;
+    writePerson(storeApi.getState(), { tagline });
     try { localStorage.setItem("msf-buyer", id); } catch {}
   };
 
@@ -1509,7 +1523,7 @@ export function SchoolDesigner({
                 of scrolling — the clipped-editor bug in a new costume. `-mx-1 px-1`
                 keeps panel focus rings from being shaved off by the overflow. */}
             <div className="order-2 min-w-0 relative z-10 lg:order-none lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:-mx-1 lg:px-1">
-              <SectionEditor />
+              <SectionEditor schoolCrest={kit?.marks?.crest} mascot={kit?.mascot} />
             </div>
           </div>
         </main>

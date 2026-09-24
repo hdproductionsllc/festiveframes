@@ -46,7 +46,7 @@ describe("who the frame is for", () => {
 
   it("drops the class year for staff, who have none", () => {
     expect(getBuyer("staff").yearLabel).toBeNull();
-    expect(getBuyer("staff").taglineFor("2027")).toBe("");
+    expect(bannerTagline("staff", {})).toBe("FACULTY & STAFF");
   });
 });
 

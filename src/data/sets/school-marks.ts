@@ -42,7 +42,7 @@ export function markPieceId(slug: string, key: string): string {
  * school's. Now there is one.
  */
 export function kitMarkIds(
-  kit: Pick<SchoolKit, "slug" | "marks"> | null | undefined,
+  kit: Pick<SchoolKit, "slug" | "marks" | "signature"> | null | undefined,
 ): { mascot: string | null; alt: string | null } {
   const badges = kit?.marks?.badges;
   if (!kit || !badges?.length) return { mascot: null, alt: null };
@@ -51,7 +51,12 @@ export function kitMarkIds(
   const alt = badges.find((b) => b !== mascot && isCrest(b)) ?? badges.find((b) => b !== mascot);
   return {
     mascot: markPieceId(kit.slug, mascot.key),
-    alt: alt ? markPieceId(kit.slug, alt.key) : null,
+    // A school with ONE mark alternates it with the most distinctive thing it
+    // does (the kit's first signature badge), not with a generic navy shield
+    // that belongs to no school — the stand-in that made "Just the school" read
+    // as fake (owner, 2026-09-24). Only a school with no signature falls back to
+    // the generic shapes, inside presetTiles.
+    alt: alt ? markPieceId(kit.slug, alt.key) : (kit.signature?.[0] ?? null),
   };
 }
 

@@ -1,13 +1,15 @@
 import { describe, it, expect } from "vitest";
 import {
+  BANNER_MAX_CHARS,
   getGradYear,
+  withMascot,
   resolvePhrase,
   SCHOOL_PHRASES,
   SCHOOL_PHRASE_GROUPS,
 } from "./school-phrases";
 import { SCHOOL_FONT_IDS, BOTTOM_BAR_FONTS } from "@/lib/constants/frame";
 
-const MAX_CHARS = 60; // must match SectionEditor's cap
+const MAX_CHARS = BANNER_MAX_CHARS;
 
 describe("school phrase library", () => {
   it("has no hardcoded past/stale year (every embedded year is >= current year)", () => {
@@ -43,6 +45,20 @@ describe("school phrase library", () => {
     for (const phrase of SCHOOL_PHRASES) {
       expect(phrase.length).toBeLessThanOrEqual(MAX_CHARS);
     }
+  });
+
+  it("every phrase is ONE line — the banners are single-line parts", () => {
+    for (const phrase of SCHOOL_PHRASES) {
+      expect(phrase, JSON.stringify(phrase)).not.toMatch(/[\r\n\v\f\x85]|\p{Zl}|\p{Zp}/u);
+    }
+  });
+
+  it("fills [MASCOT] with the school's mascot, and leaves it for a school we don't know", () => {
+    expect(withMascot("GO [MASCOT]", "Mustangs")).toBe("GO MUSTANGS");
+    expect(withMascot("HOME OF THE [MASCOT]", "Jr. Bills")).toBe("HOME OF THE JR. BILLS");
+    expect(withMascot("GO [MASCOT]", "")).toBe("GO [MASCOT]");
+    expect(withMascot("GO [MASCOT]", undefined)).toBe("GO [MASCOT]");
+    expect(withMascot("#[#]", "Mustangs")).toBe("#[#]");
   });
 
   it("has non-empty categorized groups and a matching flat list", () => {

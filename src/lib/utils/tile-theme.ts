@@ -161,10 +161,10 @@ export function tileField(
   // of swatches into identical squares and makes the tile unusable for the one
   // thing it does. (Solids are the pieces with no artwork.)
   if (piece.artworkUrl === "") return own;
-  // The override is the whole background, uniformly. No exceptions, because the
-  // control that sets it says so in as many words: "Behind every badge, and the
-  // banners", with "each tile's own" as the SEPARATE choice for keeping per-piece
-  // fields. Two states, and the user picks which one.
+  // The override is the whole background, uniformly. No exceptions: on a school
+  // frame it is THE frame colour (`setFrameColor` writes body, every badge field and
+  // both banners in one stroke — the owner's rule), and `null` (each piece's own
+  // field) is what /build, which never sets it, keeps.
   //
   // This used to keep a third, unasked-for state: a light-field piece got a pale
   // WASH of the school colour instead of the colour, on the theory that dark line
@@ -191,6 +191,35 @@ export function contrastRatio(a: string, b: string): number {
   };
   const [la, lb] = [rel(a), rel(b)];
   return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+}
+
+/**
+ * Text colour for a banner on `bg`: white on dark, near-black on light. The same
+ * luminance split the tile edges use, so a banner follows the rule the rest of the
+ * frame already obeys. (Lives here, not in the brand scanner, because the store's
+ * colour picker needs it too, and the store must not import a school-data module.)
+ */
+export function bannerTextOn(bg: string): string {
+  return luminance(bg) > 0.55 ? "#1e1b17" : "#FFFFFF";
+}
+
+/** Below this WCAG ratio a banner's lettering is no longer reliably readable. 3:1 is
+ *  WCAG's floor for large text, and banner lettering is the largest text we set. */
+export const BANNER_TEXT_MIN_CONTRAST = 3;
+
+/**
+ * The banner text colour to keep when the banner's background becomes `bg`.
+ *
+ * The current colour survives whenever it is still readable, so a text colour the
+ * parent picked on purpose is never overridden by a background change. Only lettering
+ * the new background would swallow (white text on a white frame) flips, to
+ * `bannerTextOn`.
+ */
+export function legibleBannerText(current: string | undefined, bg: string): string {
+  if (current && /^#[0-9a-f]{6}$/i.test(current) && /^#[0-9a-f]{6}$/i.test(bg)) {
+    if (contrastRatio(current, bg) >= BANNER_TEXT_MIN_CONTRAST) return current;
+  }
+  return bannerTextOn(bg);
 }
 
 /**

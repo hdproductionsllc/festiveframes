@@ -1,6 +1,6 @@
 import type { BottomBarConfig } from "@/lib/types";
 import { KIT_BOTTOM_TAGLINE } from "@/data/school-kits";
-import { luminance, shift } from "@/lib/utils/tile-theme";
+import { bannerTextOn, luminance, shift } from "@/lib/utils/tile-theme";
 import type { ColorCandidate, SchoolProfile, TextCandidate } from "./types";
 
 /**
@@ -90,14 +90,9 @@ function best(list: TextCandidate[]): TextCandidate | null {
   return top && top.confidence >= AUTO_CONFIDENCE ? top : null;
 }
 
-/**
- * Text colour for a banner on `bg` — white on dark, near-black on light. The same
- * luminance split the tile edges use, so the reskinned banners follow the exact rule
- * the rest of the frame already obeys.
- */
-export function bannerTextOn(bg: string): string {
-  return luminance(bg) > 0.55 ? "#1e1b17" : "#FFFFFF";
-}
+/** Text colour for a banner on `bg` — defined in tile-theme (the store's colour
+ *  picker applies the same rule) and re-exported here for the kit builder. */
+export { bannerTextOn };
 
 /**
  * Decide the whole kit, or decline.

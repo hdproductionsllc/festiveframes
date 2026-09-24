@@ -30,6 +30,51 @@ export function sectionSupportsText(id: SectionId): boolean {
   return id === "top" || id === "bottom";
 }
 
+// ─── Banner text is ONE line ─────────────────────────────────────────────────
+//
+// The top runner and the bottom bar (the keystone on the flush frame) are single-
+// line parts: a headline, and on the bottom an optional tagline tier, each one
+// line. Both renderers still split on "\n" (a leftover of the tall side-panel text
+// they once drew), so a break that reaches the store prints as a squashed second
+// row. The rule therefore lives at the STORE's doors — every write
+// (`setSectionText`), every seed, every hydrate and every restored design — rather
+// than on one input a paste or a future control could go around.
+
+/** Any line break, with the spaces hugging it. Zl/Zp are the Unicode line and
+ *  paragraph separators some apps put on the clipboard. */
+const LINE_BREAK = /[ \t]*(?:\r\n|[\r\n\v\f\x85\p{Zl}\p{Zp}])+[ \t]*/gu;
+
+/** One line: every break becomes a single space. Deliberately NOT trimmed — this
+ *  runs on each keystroke, and a trailing space is the user mid-word. */
+export function oneLine(s: string): string {
+  return s.replace(LINE_BREAK, " ");
+}
+
+/** A banner config with its headline and tagline flattened. The SAME object back
+ *  when neither carries a break, so render paths and hydrate do not churn. */
+export function oneLineBanner<T extends { text?: string; tagline?: string }>(cfg: T): T {
+  const text = cfg.text != null ? oneLine(cfg.text) : cfg.text;
+  const tagline = cfg.tagline != null ? oneLine(cfg.tagline) : cfg.tagline;
+  if (text === cfg.text && tagline === cfg.tagline) return cfg;
+  return { ...cfg, text, tagline };
+}
+
+/** Every section's banner text flattened. Same object when nothing changed. */
+export function oneLineSections<T extends Partial<Record<SectionId, SectionState | undefined>>>(sections: T): T {
+  let changed = false;
+  const out: Record<string, unknown> = {};
+  for (const [id, sec] of Object.entries(sections)) {
+    const text = sec?.text ? oneLineBanner(sec.text) : sec?.text;
+    if (sec && text !== sec.text) {
+      out[id] = { ...sec, text };
+      changed = true;
+    } else {
+      out[id] = sec;
+    }
+  }
+  return changed ? (out as T) : sections;
+}
+
 /**
  * Can this panel hold BADGES?
  *
@@ -122,6 +167,11 @@ export function repairSections<T extends Partial<Record<SectionId, { mode?: stri
       changed = true;
     }
   }
+  // Banner text is one line (see `oneLine`). Hydrate and restore both come through
+  // here, so a design saved while the phrase chips still carried breaks is
+  // flattened on its next load.
+  const flat = oneLineSections(out as Partial<Record<SectionId, SectionState>>);
+  if (flat !== (out as unknown)) return flat as unknown as T;
   return changed ? (out as T) : sections;
 }
 
