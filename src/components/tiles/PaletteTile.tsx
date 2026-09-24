@@ -192,7 +192,11 @@ export function PaletteTile({ piece, size = "md", demo = false, upload, onRemove
             alt={piece.name}
             width={artW}
             height={artH}
-            className="rounded-md"
+            // CONTAIN inside a margin, like the frame's badges: the art is cut
+            // square and runs to its corners (a palette's brushes, crossed
+            // sticks), so filling the rounded swatch edge to edge clipped exactly
+            // those tips (owner, 2026-09-24).
+            style={{ objectFit: "contain", padding: "9%" }}
           />
         ) : hasArt ? (
           <TileArtwork pieceId={piece.id} size={Math.min(artW, artH) - 4} />

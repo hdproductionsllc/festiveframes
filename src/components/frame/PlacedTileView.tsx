@@ -136,7 +136,7 @@ export function PlacedTileView({
   // three rings the nested boxes above already account for.
   const artAir = Math.max(
     0,
-    artInset(width, height, field, unit ?? size) - edge.rimInset - edge.rimWidth - edge.bevelWidth,
+    artInset(width, height, field, unit ?? size, radii) - edge.rimInset - edge.rimWidth - edge.bevelWidth,
   );
   const rimRadii = insetRadii(radii, edge.rimInset);
   const bevelRadii = insetRadii(rimRadii, edge.rimWidth);

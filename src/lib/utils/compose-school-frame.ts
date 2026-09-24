@@ -1037,7 +1037,7 @@ export function drawSchoolFrame(
           // its own bounding box — a rounded-square patch, a crest with a border —
           // met the shaded band with nothing between them and read as cut into.
           // `artInset` is the one answer both renderers ask for, so they cannot drift.
-          const chrome = artInset(w, h, field, m.tileSize);
+          const chrome = artInset(w, h, field, m.tileSize, radii);
           drawFit(ctx, art, slot.x + chrome, slot.y + chrome, w - chrome * 2, h - chrome * 2, "contain", 1);
           ctx.restore();
         }

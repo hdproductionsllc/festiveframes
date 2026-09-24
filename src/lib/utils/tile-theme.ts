@@ -643,10 +643,23 @@ export function artInset(
   h: number,
   background: string = TILE_BG.navy,
   unit: number = Math.min(w, h),
+  radii?: CornerRadii,
 ): number {
   const rim = rimMetrics(w, h, unit);
   const bevel = bevelMetrics(w, h, background, unit);
-  return rim.inset + rim.width + bevel.thickness + Math.max(1, Math.round(unit * ART_AIR_RATIO));
+  const base = rim.inset + rim.width + bevel.thickness + Math.max(1, Math.round(unit * ART_AIR_RATIO));
+  // CORNER-SAFE. Art is drawn `contain` into a square, so art that reaches its own
+  // corners (paint brushes, crossed sticks, a violin's scroll) sits exactly where
+  // a badge's ROUNDED corner clips it. An ordinary badge corner is tighter than
+  // the chrome, so nothing is lost; the four badges in the FRAME's outer corners
+  // carry the wide radius and cut the brushes off the palette (owner,
+  // 2026-09-24). The art box's corner clears a rounded corner of radius r once it
+  // is inset r·(1 − 1/√2) past where that corner's straight edges begin, so the
+  // widest corner beyond the chrome sets the extra margin, all round, so the art
+  // stays centred.
+  if (!radii) return base;
+  const widest = Math.max(radii.tl, radii.tr, radii.br, radii.bl);
+  return base + Math.ceil(Math.max(0, widest - base) * (1 - Math.SQRT1_2));
 }
 
 /** The brass run as a CSS gradient, on the same upper-left light axis as the canvas. */
