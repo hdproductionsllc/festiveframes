@@ -11,7 +11,7 @@ import { SECTION_IDS, sectionBounds, slotSuppressed } from "@/lib/utils/sections
 import { bannerConfigFor } from "@/lib/utils/banner-logo";
 import { buildGrid } from "@/lib/utils/slot-generator";
 import { coveredSlotIds } from "@/lib/utils/text-bar";
-import { badgeRule, badgeSpots, coveredBySnappets, hasAnySpan, isMultiCell, occupiedCoords, resolveSnappetResize, snappetRect, squareSpansAt, tileSpan, visibleAnchorSlots, type PlacementContext, type SnappetPreview } from "@/lib/utils/snappet";
+import { badgeRule, badgeSpots, canvasGutterTiles, coveredBySnappets, hasAnySpan, isMultiCell, occupiedCoords, resolveSnappetResize, snappetRect, squareSpansAt, tileSpan, visibleAnchorSlots, type PlacementContext, type SnappetPreview } from "@/lib/utils/snappet";
 import { RailSlot } from "./RailSlot";
 import { SnappetResizeHandles } from "./SnappetResizeHandles";
 import { LicensePlateArea } from "./LicensePlateArea";
@@ -207,7 +207,8 @@ export const FrameCanvas = forwardRef<FrameCanvasHandle, FrameCanvasProps>(
     // gives the fraction below, which depends only on the config — a fixed point,
     // not a loop. (Percentage padding resolves against width on all four sides, and
     // cells are square, so one value gives an equal gutter all round.)
-    const overhangTiles = Math.max(0, frameConfig.overhangTiles ?? 0);
+    // A square-rule frame keeps only a sliver of it — see `canvasGutterTiles`.
+    const overhangTiles = canvasGutterTiles(frameConfig);
     const tileFraction = frameConfig.tileSizeInches / totalWidthInches;
     const gutterFraction =
       overhangTiles > 0

@@ -102,16 +102,37 @@ export function SchoolKitPage({
               // eslint-disable-next-line @next/next/no-img-element
               <img className="msf-kit-lockup" src={kit.marks.lockup} alt={`${kit.schoolName} logo`} />
             ))}
-            <p className={`msf-kit-headline ${graduate.className}`}>{w.headline}</p>
+            {/* THE SCHOOL'S OWN MARK beside its welcome, for the kits that have a
+                crest and no lockup (all six pilot schools). A parent arriving from a
+                QR recognises the mustang before reading a word, and it sits BESIDE
+                the headline rather than above it, so it costs the first screen no
+                height: on a phone the whole band has to stay short enough that the
+                frame is on screen too. */}
+            <div className="msf-kit-title">
+              {!kit.marks?.lockup && kit.marks?.crest?.startsWith("/") && (
+                <Image
+                  className="msf-kit-crest"
+                  src={kit.marks.crest}
+                  alt=""
+                  width={160}
+                  height={160}
+                  sizes="(max-width: 639px) 64px, 88px"
+                  priority
+                />
+              )}
+              <p className={`msf-kit-headline ${graduate.className}`}>{w.headline}</p>
+            </div>
+            {/* The school's story. On a phone it waits at the foot of the builder
+                (SchoolDesigner reads the same kit), because up here its three lines
+                were what kept the frame off the first screen. */}
             {w.message.map((m) => (
-              <p className="msf-kit-line" key={m.slice(0, 24)}>
+              <p className="msf-kit-line msf-kit-roomy" key={m.slice(0, 24)}>
                 {m}
               </p>
             ))}
-            {/* Say what they ARE. They were styled as pills and read as a list of
-                facts about the school, so nobody knew a whole frame was one tap
-                away. The label names the action, the arrow marks them as controls,
-                and the hover lifts them. */}
+            {/* Say what the chips ARE: styled as pills they read as a list of facts
+                about the school, so the label names the action and the arrow marks
+                each one as a control. */}
             <p className="msf-kit-chips-label">
               Tap an activity and we&apos;ll build the frame around it:
             </p>
@@ -130,7 +151,8 @@ export function SchoolKitPage({
                 ] : [];
               })}
             </div>
-            <p className="msf-kit-ordering">{w.ordering}</p>
+            {/* On a phone this sentence sits beside the Send button instead. */}
+            <p className="msf-kit-ordering msf-kit-roomy">{w.ordering}</p>
           </section>
         ) : null}
       />

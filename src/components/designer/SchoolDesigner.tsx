@@ -14,7 +14,6 @@
 
 import Image from "next/image";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import { FirstRunTour } from "./FirstRunTour";
 import {
   BANNER_LINES,
   BUYERS,
@@ -29,7 +28,8 @@ import { SCHOOL_CHECKOUT_OPEN } from "@/config/offers";
 import { presetsFor, presetBlurb, getPreset, layPreset as layPresetOn, SCHOOL_PRESETS, type SchoolPreset } from "@/data/school-presets";
 import { schoolVariant, type SchoolVariantId } from "@/data/school-variants";
 import { schoolStoreOptions } from "@/data/school-store";
-import { GraduateExpress } from "./GraduateExpress";
+import { NOTHING_PRINTS_UNTIL_YES } from "@/content/msf-pages";
+import "./school-builder-flow.css";
 import { SendDesignSheet } from "./SendDesignSheet";
 import type { OrderContact } from "@/lib/order/order-contact";
 import {
@@ -58,6 +58,7 @@ import { SnappetSizeControl } from "./SnappetSizeControl";
 import { ArmedBanner } from "@/components/tiles/ArmedBanner";
 import { usePaletteStore } from "@/stores/palette-store";
 import { StateSelector } from "@/components/frame/StateSelector";
+import { plateDesigns } from "@/data/plates";
 import {
   SCHOOL_FRAME_CONFIG,
   getRenderHeightInches,
@@ -181,10 +182,12 @@ export function SchoolDesigner({
   const bottomBar = useDesignStore((s) => s.bottomBar);
   const qrCode = useDesignStore((s) => s.qrCode);
   const plateState = useDesignStore((s) => s.plateState);
+  const setPlateState = useDesignStore((s) => s.setPlateState);
   const clearAll = useDesignStore((s) => s.clearAll);
   // Whether the section editor is on screen — it is what the pinned frame has to
   // make room for. See STAGE_EDITING_SHARE.
-  const editorOpen = useDesignStore((s) => s.selectedSectionId) != null;
+  const selectedSectionId = useDesignStore((s) => s.selectedSectionId);
+  const editorOpen = selectedSectionId != null;
   // A tile is armed for tap-to-place: the phone's pinned status line says so.
   const armed = usePaletteStore((s) => s.selectedPieceId) != null;
 
@@ -201,6 +204,56 @@ export function SchoolDesigner({
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
+
+  // The phone's pinned frame, measured the same way, so anything scrolled to on a
+  // phone lands BELOW it (`scroll-margin-top` in school-builder-flow.css) instead
+  // of underneath it.
+  const dockRef = useRef<HTMLDivElement | null>(null);
+  const [dockH, setDockH] = useState(0);
+  useEffect(() => {
+    const el = dockRef.current;
+    if (!el) return;
+    const measure = () => setDockH(el.offsetHeight);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  // The intake's height, for the desktop stage cap — see --ff-stage-full.
+  const intakeRef = useRef<HTMLDivElement | null>(null);
+  const [intakeH, setIntakeH] = useState(0);
+  useEffect(() => {
+    const el = intakeRef.current;
+    if (!el) return;
+    const measure = () => setIntakeH(window.matchMedia("(min-width: 1024px)").matches ? el.offsetHeight : 0);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  // Colours and plate: closed on a phone until asked for (always open on a
+  // desktop, in CSS). One decision each, made once — not a screen of swatches
+  // between the badges and Send.
+  const [colorsOpen, setColorsOpen] = useState(false);
+
+  // Tapping a banner on the frame opens its editor directly under the pinned
+  // frame on a phone. When the tap came from further down the page — the parent
+  // was in the badge tray — the editor would open above the fold, out of sight,
+  // so bring it to her. Desktop has its own pane beside the frame and never moves.
+  const editorRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!selectedSectionId) return;
+    if (!window.matchMedia("(max-width: 1023px)").matches) return;
+    const el = editorRef.current;
+    if (!el) return;
+    const top = el.getBoundingClientRect().top;
+    const below = (headerRef.current?.offsetHeight ?? 0) + (dockRef.current?.offsetHeight ?? 0);
+    // Already in view under the dock: leave the page where it is.
+    if (top >= below - 1 && top < window.innerHeight - 120) return;
+    el.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [selectedSectionId]);
 
   // The frame's fixed width:height. The pinned stage is capped by HEIGHT (it must
   // fit the window) but sized by WIDTH, so this is what converts one into the other.
@@ -221,21 +274,11 @@ export function SchoolDesigner({
   // "Make it theirs" intake — the about-ME moment. Three fields that seed the
   // design through the same store actions the editors use, so everything the
   // intake writes is ordinary, fully editable state.
-  // First-visit tour: three beats, dismissible, remembered. Starts false on
-  // both server and client, then flips on after mount if not yet dismissed —
-  // hydration-safe by construction. Rendered as a FIXED first-run sheet (see
-  // FirstRunTour), not an inline band: as a band it cost three lines at the top
-  // of a phone screen, on the one view where vertical space is the whole budget.
-  const [tourOpen, setTourOpen] = useState(false);
-  useEffect(() => {
-    try {
-      if (!localStorage.getItem("msf-tour-done")) setTourOpen(true);
-    } catch {}
-  }, []);
-  const dismissTour = () => {
-    setTourOpen(false);
-    try { localStorage.setItem("msf-tour-done", "1"); } catch {}
-  };
+  // There is no first-run tour any more. It was a sheet over the bottom half of
+  // the first screen, on the one view where a parent should be looking at her
+  // school's frame; its three steps are now the page's own section headings
+  // (Start with a design / Make it theirs / Add badges / Send it to us), so the
+  // instructions sit beside the controls they describe instead of in front of them.
   // WHO IS BUYING. The intake used to be third-person throughout, which assumed
   // a parent buying for a student — one real case out of several. See
   // data/frame-buyers.ts for why the wording, the year range and the tagline all
@@ -276,27 +319,14 @@ export function SchoolDesigner({
    *  anything on the page has written the blob. */
   const savedAtLoad = () => (savedAtLoadRef.current ??= hasSavedDesign(persistKey));
 
-  // THE GRADUATE PLATE IS THE PRIMARY PATH. Open by default and dismissed for
-  // good once someone chooses to customize, because the builder is what they
-  // wanted at that point and re-offering the shortcut is noise.
-  //
-  // NEVER over a restored design. Opening the card lays the graduate preset, so a
-  // parent who had built a frame and never tapped "customize" lost it on every
-  // reload — a phone reopening an evicted tab, Safari restoring one. A browser
-  // that already holds a design has chosen its frame; the card is for arrivals.
-  const [expressOpen, setExpressOpen] = useState(false);
-  useEffect(() => {
-    try {
-      if (!localStorage.getItem("msf-express-done") && !savedAtLoad()) setExpressOpen(true);
-    } catch {}
-    // Mount only; `savedAtLoad` is fixed for the page's life.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-  const leaveExpress = () => {
-    setExpressOpen(false);
-    try { localStorage.setItem("msf-express-done", "1"); } catch {}
-  };
+  // THE GRADUATE DESIGN IS WHERE A FIRST VISIT OPENS — see the arrival effect
+  // below. It used to be a separate card with its own year and name fields that
+  // had to be dismissed ("Or make it your own") before the builder's own intake
+  // appeared: two forms asking the same questions, one hidden behind the other.
+  // Now there is one intake, and Graduate is simply its first design, pre-picked.
 
+  /** The class years a current student can have — the Graduate design's default. */
+  const gradYears = yearsFor("upcoming");
   const [activePreset, setActivePreset] = useState<string | null>(null);
   // "What they do" was tapped before an activity was chosen. The tap cannot build
   // the frame yet (it will not guess an activity), so it waits: picking one in the
@@ -372,10 +402,6 @@ export function SchoolDesigner({
         setAwaitingActivity(false);
       }
       if (!generic) setKidActivity(pieceId);
-      // The chip chose the customize path, so the graduate card steps aside for
-      // this visit (not for good — that is `leaveExpress`, the parent's own tap)
-      // and the intake below shows the activity it just picked.
-      setExpressOpen(false);
       // Show the FRAME the tap just built. It used to focus the name field, which
       // on a phone threw the keyboard over the very frame the chip had built — and
       // the name is optional now.
@@ -384,6 +410,23 @@ export function SchoolDesigner({
         ?.scrollIntoView({ behavior: "smooth", block: "center" });
     };
   });
+  // ARRIVAL: a browser holding no design opens on the Graduate design, this
+  // year's class on the banner. It runs BEFORE the hash effect below (effects run
+  // in order), so a chip link that arrives with the page still wins: that parent
+  // asked for an activity. Never over a restored design — a phone reopening an
+  // evicted tab must get back the frame it left, not a fresh graduate one.
+  useEffect(() => {
+    if (savedAtLoad()) return;
+    const preset = getPreset("graduate", presets);
+    if (!preset) return;
+    const year = String(gradYears[0]);
+    layPreset(preset, null);
+    setKidYear(year);
+    setActivePreset(preset.id);
+    writePerson(storeApi.getState(), { tagline: taglineNow({ year }) });
+    // Mount only; `savedAtLoad` is fixed for the page's life.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   useEffect(() => {
     const fromHash = (arriving: boolean) => {
       const m = /#preset=([^&]+)/.exec(window.location.hash);
@@ -648,7 +691,6 @@ export function SchoolDesigner({
 
   // The school's mascot and crest as badge ids — see `kitMarkIds`.
   const schoolMarks = useMemo(() => kitMarkIds(kit), [kit]);
-  const mascotPieceId = schoolMarks.mascot;
 
   /**
    * APPLY A FINISHED DESIGN. The one-tap path, and the one most people will use.
@@ -687,36 +729,6 @@ export function SchoolDesigner({
     setActivePreset(preset.id);
   };
 
-  const gradYears = yearsFor("upcoming");
-  useEffect(() => {
-    if (!expressOpen) return;
-    const preset = getPreset("graduate", presets);
-    if (!preset) return;
-    layPreset(preset, null);
-    if (!kidYear) setKidYear(String(gradYears[0]));
-    // Once, on open. Deliberately not keyed on the name or the year: those only
-    // move the banner, handled below.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [expressOpen, mascotPieceId]);
-
-  // The banner follows the fields live, so the frame on screen is always the
-  // frame the Send button will send.
-  //
-  // THE NAME IS OPTIONAL. Left blank, the big line is the school's mascot — the
-  // kit's own seed — so "WILDCATS / CLASS OF 2027" is a finished frame. That also
-  // covers a name typed and then erased: the banner goes back to the mascot
-  // rather than keeping the last letter that was there.
-  useEffect(() => {
-    if (!expressOpen) return;
-    const api = storeApi.getState();
-    const name = kidName.trim();
-    writePerson(api, { name, tagline: taglineNow() });
-    if (!name && kit) api.setSectionText("bottom", { text: kit.banners.bottom });
-    // writePerson and taglineNow are recreated every render and depending on them
-    // would run this on every keystroke of every other field; everything they read
-    // is listed here or is stable.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [expressOpen, kidName, kidYear, kidNumber, line, lineText, buyer, storeApi]);
 
   /**
    * ONE TAP on a banner line puts it on the frame — PROUD PARENT, SENIOR, #12 —
@@ -841,7 +853,7 @@ export function SchoolDesigner({
   return (
     <div
       className="workbench-bg min-h-screen flex flex-col"
-      style={{ "--ff-header-h": `${headerH}px` } as React.CSSProperties}
+      style={{ "--ff-header-h": `${headerH}px`, "--ff-dock-h": `${dockH}px` } as React.CSSProperties}
     >
       {/* Header — school context + the plate state picker (the real StateSelector,
           wired to the shared store). No storefront/order flow.
@@ -881,7 +893,11 @@ export function SchoolDesigner({
         </h1>
         <div className="flex shrink-0 flex-nowrap items-center justify-end gap-1.5 sm:gap-2">
           <span className="ff-label hidden sm:block">Plate</span>
-          <StateSelector theme="header" />
+          {/* On a phone the plate picker lives under "Colors and plate": the bar
+              keeps its width for the school's name and Send. */}
+          <div className="hidden sm:block">
+            <StateSelector theme="header" />
+          </div>
           {/* Two actions, ONE of them primary. Exporting a file is the power-user
               path; sending the design to be made is the thing this page is for. */}
           {/* Production tool, not a customer action: on the lab routes only (see
@@ -1090,35 +1106,33 @@ export function SchoolDesigner({
             row of its own — the pinned frame would have unstuck the moment its
             own row scrolled past. In a flex column the containing block is all of
             <main>, so the frame stays pinned while every tool below it scrolls. */}
-        <main className="flex-1 flex flex-col lg:grid lg:grid-cols-[340px_minmax(0,1fr)] gap-4 px-4 pb-4 pt-0 mx-auto w-full max-w-[1560px] lg:items-start">
-          {/* LEFT tools rail. The PALETTE leads: it is the thing you reach for first
-              and on every subsequent action, so it gets the top of the rail. Upload and
-              the section pickers follow, because you touch them once per design.
-              (It used to sit last, which put the most-used control furthest from the
-              top on desktop and buried it under two panels you rarely revisit.)
+        <main className="flex-1 flex flex-col lg:grid lg:grid-cols-[340px_minmax(0,1fr)] gap-4 px-4 pb-6 pt-0 mx-auto w-full max-w-[1560px] lg:items-start">
+          {/* LEFT tools rail on a desktop; on a phone its blocks follow the intake,
+              in the order a parent uses them (see the `max-lg:order-*` on each):
+              badges, then a photo, then colours, then Send.
+
+              Desktop keeps its own order — upload, palette, colours — because there
+              the palette is a tall scrolling grid and the photo would sink under it.
+              On a phone the tray is one short row, and badges come first because
+              "tap a badge, then tap the frame" is the thing everyone does.
 
               The side-panel width toggle is gone from the UI. The builder is locked to
               2 tiles per side panel — the roomy-margin option — so the control only
               ever offered a worse answer. `PanelWidthToggle` and the underlying
               `setWingColumns` are intact for when a second size is a real product. */}
           <div className="order-3 lg:order-none min-w-0 flex flex-col gap-4">
-            {/* Brand import leads the rail, ABOVE the palette. It is the once-per-design
-                first move — paste the school's website, take the crest and the name —
-                and everything below it is what you reach for repeatedly afterwards. It
-                would be invisible under a 42vh scrolling palette, and a step you take
-                first should not be the one you have to scroll to find.
-
-                It PLACES NOTHING itself: an "Add to frame" tap builds a File from the
-                candidate's full-res PNG and hands it to the same `useSnappetUpload.begin`
-                that UploadPhotoButton calls, so the aspect-locked crop, the live DPI
-                gate and the 2x2 minTileSpan floor all still apply. */}
             {/* Brand scan is the GENERIC builder's school picker. An AUTHORED kit
                 page already IS the school — showing "paste your school's website"
                 there undercuts the whole personalized pitch.
                 A THIN kit is the third case and the reason `brandScan` exists: the
                 page knows which school it is and does NOT know its colours, so the
                 ask is neither generic nor redundant, and what it finds is kept for
-                every parent from that school after this one. */}
+                every parent from that school after this one.
+
+                It PLACES NOTHING itself: an "Add to frame" tap builds a File from the
+                candidate's full-res PNG and hands it to the same `useSnappetUpload.begin`
+                that UploadPhotoButton calls, so the aspect-locked crop, the live DPI
+                gate and the square rule all still apply. */}
             {brandScan ? (
               <SchoolBrandImport
                 slug={brandScan.slug}
@@ -1128,23 +1142,99 @@ export function SchoolDesigner({
             ) : (
               !kit && <SchoolBrandImport />
             )}
-            {/* Their own photo sits ABOVE the badge library: for a parent the
-                picture of their kid is the most personal thing they can put on
-                this frame, and it was buried under a long scrolling palette. */}
-            <UploadPhotoButton />
+            {/* Their own photo: above the badge library on a desktop (the picture
+                of their kid is the most personal thing on the frame, and it was
+                buried under a long scrolling palette), after the one-row tray on
+                a phone. */}
+            <section className="flex flex-col gap-2 max-lg:order-2" aria-labelledby="msf-step-photo">
+              <h2 id="msf-step-photo" className="msf-step-head msf-step-head--phone">
+                Add a photo <span className="msf-step-aside">optional</span>
+              </h2>
+              <UploadPhotoButton />
+            </section>
             {/* The school's own marks lead its palette — a SLUH parent finds the
                 Billiken before the generic badges. Empty for the kitless builder. */}
-            <TilePalette
-              surfacedSetIds={SCHOOL_SURFACED_SET_IDS}
-              extraPieces={kitMarks}
-            />
-            <FrameColorPicker />
-            {/* The "Sections" panel that used to sit here is GONE. It listed the
-                four panels with a Select button each and a paragraph explaining
-                which could hold what — a table of contents for a thing already
-                fully visible on screen. The frame itself is the control: tapping
-                a banner or panel selects it, which the frame now says out loud
-                (see the hint under the stage) instead of a panel restating it. */}
+            <section className="flex min-w-0 flex-col gap-2 max-lg:order-1" aria-labelledby="msf-step-badges">
+              <h2 id="msf-step-badges" className="msf-step-head msf-step-head--phone">Add badges</h2>
+              <TilePalette
+                surfacedSetIds={SCHOOL_SURFACED_SET_IDS}
+                extraPieces={kitMarks}
+                // The pinned status line under the frame already says what to do
+                // with a tapped badge, and Fill / Random / Mirror are rarely what a
+                // parent is after — they wait behind the tray's Tools button.
+                mobileHint="Tap a badge, then tap the frame."
+                mobileToolsOpen={false}
+              />
+            </section>
+            {/* Colours and the plate's state: one decision each, made once, so on a
+                phone they wait behind a heading instead of filling a screen. Always
+                open on a desktop, where the rail has the room. */}
+            <section className="flex flex-col gap-2 max-lg:order-3" aria-labelledby="msf-step-colors">
+              <h2 id="msf-step-colors" className="msf-step-head msf-step-head--phone">
+                <button
+                  type="button"
+                  className="msf-step-toggle"
+                  aria-expanded={colorsOpen}
+                  aria-controls="msf-colors-body"
+                  onClick={() => setColorsOpen((o) => !o)}
+                >
+                  <span>
+                    Colors and plate <span className="msf-step-aside">optional</span>
+                  </span>
+                  <svg aria-hidden width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="msf-step-chevron">
+                    <path d="M6 9l6 6 6-6" />
+                  </svg>
+                </button>
+              </h2>
+              <div id="msf-colors-body" className={`flex flex-col gap-3 ${colorsOpen ? "" : "max-lg:hidden"}`}>
+                <FrameColorPicker />
+                {/* The header carries the plate picker from a small tablet up; a
+                    phone's header keeps its room for the school's name and Send. */}
+                <div className="sm:hidden">
+                <label className="ff-panel msf-field p-4">
+                  <span className="ff-h2">License plate</span>
+                  <span className="ff-help">The state on the plate in the picture.</span>
+                  <select
+                    name="plate-state"
+                    value={plateState}
+                    onChange={(e) => setPlateState(e.target.value)}
+                    className="msf-input mt-1"
+                  >
+                    {plateDesigns.map((plate) => (
+                      <option key={plate.abbr} value={plate.abbr}>
+                        {plate.state}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                </div>
+              </div>
+            </section>
+            {/* SEND, at the end of the path on a phone — the header's Send is always
+                there too, but this is where a parent who has worked down the page
+                arrives, and it says what happens next before she taps. */}
+            <section className="flex flex-col gap-2 max-lg:order-4 lg:hidden" aria-labelledby="msf-step-send">
+              <h2 id="msf-step-send" className="msf-step-head msf-step-head--phone">Send it to us</h2>
+              <div className="ff-panel flex flex-col gap-3 p-4">
+                {kit?.welcome?.ordering && <p className="msf-send-copy">{kit.welcome.ordering}</p>}
+                <button
+                  type="button"
+                  onClick={() => void openSend()}
+                  disabled={submitting || exporting || buying}
+                  aria-haspopup="dialog"
+                  className="ff-btn ff-btn-primary ff-btn-block min-h-12 !text-base"
+                >
+                  {submitting ? "Sending..." : "Send my design"}
+                </button>
+                <p className="ff-help text-center">{NOTHING_PRINTS_UNTIL_YES}</p>
+              </div>
+            </section>
+            {/* The school's story, which the hero shows on a wider screen. At the
+                foot of the page on a phone, where it no longer keeps the frame off
+                the first screen. */}
+            {kit?.welcome && kit.welcome.message.length > 0 && (
+              <p className="msf-about max-lg:order-5 sm:hidden">{kit.welcome.message[0]}</p>
+            )}
           </div>
 
           {/* RIGHT column — the frame, pinned, with the editor in its own pane below.
@@ -1167,86 +1257,30 @@ export function SchoolDesigner({
                  and sized from its WIDTH, so the height cap is expressed as the
                  max-width below, derived from the live geometry rather than guessed.
 
-              Mobile keeps ordinary flow: one column, no pinning, no nested scroll — a
-              pinned frame on a phone leaves nowhere to type. */}
-          <div className="contents lg:flex lg:order-none lg:flex-col lg:gap-6 lg:min-w-0 lg:sticky lg:top-3 lg:h-[calc(100vh-1.5rem)]">
-            {/* NOT sticky on a phone. The comment above promises "Mobile keeps
-                ordinary flow: one column, no pinning" and this element pinned
-                anyway: with the graduate card inside it the dock measured 702px
-                of an 844px viewport, so the badge tray rendered UNDERNEATH it and
-                `elementFromPoint` on every badge returned the card's own button.
-                A parent could not tap a badge on a first visit — the core loop
-                was blocked on the one device the QR is for. Pinning is the
-                desktop column's job (`lg:sticky` on the parent). */}
+              On a phone this column dissolves (`contents`) into <main>'s flex column,
+              so only the frame's own dock pins (see it below). */}
+          <div className="contents lg:flex lg:order-none lg:flex-col lg:gap-6 lg:min-w-0 lg:sticky lg:top-[calc(var(--ff-header-h,0px)+12px)] lg:h-[calc(100vh-var(--ff-header-h,0px)-1.5rem)]">
             {/* `contents` on a phone: its children become items of <main>'s flex
                 column, so the pinned stage below is stuck against <main> and not
                 against this box, which ends right under the frame. */}
             <div className="contents lg:flex lg:flex-col lg:gap-3 lg:order-none lg:w-full lg:min-w-0 lg:shrink-0">
-              {/* Make-it-theirs intake: the first thing a parent touches. Three
-                  quick fields -> the frame is suddenly about THEIR kid. Writes
-                  ordinary store state, live: every control updates the frame as it changes. */}
-              {/* THE PRIMARY PATH. Two fields and a button, above the frame it
-                  is describing. The builder's own intake is the "or customize"
-                  route and stays out of the way until asked for — offering both
-                  at once is offering a choice nobody came to make. */}
-              {/* On a phone the card comes AFTER the frame (`max-lg:order-1`: past
-                  the order-0 stage, before the order-2 tray). Above it, a parent
-                  arriving from a QR scrolled 1.7 screens before seeing any frame,
-                  and the card's fields now sit under the pinned frame they edit.
-                  Desktop keeps it above the stage in the pinned column. */}
-              {expressOpen && (
-                <div className="max-lg:order-1">
-                <GraduateExpress
-                  schoolLabel={kit?.shortName ?? null}
-                  name={kidName}
-                  onName={setKidName}
-                  year={kidYear}
-                  onYear={setKidYear}
-                  years={gradYears}
-                  onSend={() => void openSend()}
-                  onCustomize={leaveExpress}
-                  busy={buying || submitting || exporting}
-                />
-                </div>
-              )}
+              {/* THE INTAKE — one form, in the order a parent decides: a design,
+                  then who it is for and what goes on the banner. Every control
+                  writes the frame at once; there is nothing to apply.
 
-              <div data-intake hidden={expressOpen} className="flex flex-wrap items-end gap-2 rounded-xl border border-stone-300 bg-white px-3 py-2.5 shadow-sm">
-                {/* WHO IS BUYING. One row, five answers, and it rewords everything
-                    below it. A senior buying for their own car, a grandparent, an
-                    alum and a coach were all being asked for "their last name" and
-                    a class year from the next four. */}
-                <div className="flex w-full flex-col gap-1">
-                  <span className="text-[12px] font-medium text-stone-700">Who&apos;s it for?</span>
-                  <div role="radiogroup" aria-label="Who is this frame for?" className="flex flex-wrap gap-1.5">
-                    {BUYERS.map((b) => (
-                      <button
-                        key={b.id}
-                        type="button"
-                        role="radio"
-                        aria-checked={b.id === buyerId}
-                        onClick={() => chooseBuyer(b.id)}
-                        className={
-                          "min-h-[44px] rounded-full border px-3 text-[13px] font-semibold transition-colors sm:min-h-[32px] " +
-                          (b.id === buyerId
-                            ? "border-stone-900 bg-stone-900 text-white"
-                            : "border-stone-300 bg-white text-stone-700 hover:border-stone-400")
-                        }
-                      >
-                        {b.chip}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                {/* START FROM A DESIGN. The path most people take, and until now
-                    the only "preset" was an invisible #preset= deep link while the
-                    first-run copy promised one you could pick. Ordered for the
-                    buyer: a grandparent shopping a graduation gift sees Graduate
-                    first, an alum sees the crest. */}
-                <div className="flex w-full flex-col gap-1">
-                  <span className="text-[12px] font-medium text-stone-700">
-                    Start from one of our designs<span className="font-normal text-stone-500">, or build your own below</span>
-                  </span>
-                  <div className="flex flex-wrap gap-1.5">
+                  On a phone it comes AFTER the frame (`max-lg:order-2`: past the
+                  pinned dock and the section editor), so the first screen is the
+                  school and its frame, and these fields scroll under the frame
+                  they edit. On a desktop it sits above the stage in the pinned
+                  column, as one panel. */}
+              <div ref={intakeRef} data-intake className="msf-intake max-lg:order-2">
+                <section className="msf-intake-step" aria-labelledby="msf-step-design">
+                  {/* START FROM A DESIGN. Ordered for the buyer: a grandparent
+                      shopping a graduation gift sees Graduate first, an alum sees
+                      the crest. */}
+                  <h2 id="msf-step-design" className="msf-step-head">Start with a design</h2>
+                  <div className="ff-panel msf-intake-card">
+                  <div className="msf-presets">
                     {presetsFor(buyerId, presets).map((preset) => (
                       <button
                         key={preset.id}
@@ -1254,197 +1288,218 @@ export function SchoolDesigner({
                         onClick={() => applyFramePreset(preset)}
                         aria-pressed={activePreset === preset.id}
                         title={presetBlurb(preset, kidActivity || null, schoolMarks, (id) => getPiece(id)?.name)}
-                        className={
-                          "flex min-h-[44px] items-center gap-1.5 rounded-lg border px-2.5 text-[13px] font-semibold transition-colors sm:min-h-[38px] " +
-                          (activePreset === preset.id
-                            ? "border-amber-500 bg-amber-50 text-stone-900"
-                            : "border-stone-300 bg-white text-stone-800 hover:border-stone-400")
-                        }
+                        className="msf-preset"
                       >
-                        <span aria-hidden="true">{preset.icon}</span>
-                        {preset.name}
+                        <span aria-hidden="true" className="msf-preset-icon">{preset.icon}</span>
+                        <span className="msf-preset-name">{preset.name}</span>
                       </button>
                     ))}
                   </div>
                   {awaitingActivity && !kidActivity && (
-                    <p role="status" className="text-[12px] text-stone-600">
+                    <p role="status" className="msf-intake-note">
                       Pick what they do just below, and we&apos;ll build the frame around it.
                     </p>
                   )}
-                </div>
-                {/* ACTIVITY AND YEAR FIRST, the name last and optional. The
-                    owner's call: a frame leads with Class of 2027, #12, Senior,
-                    Orchestra or Proud Parent, not the student's full name. */}
-                <label className="flex flex-col gap-1 text-[12px] font-medium text-stone-700 grow basis-32">
-                  {buyer.activityLabel}
-                  <select
-                    ref={activityRef}
-                    name="kid-activity"
-                    value={kidActivity}
-                    onChange={(e) => {
-                      const next = e.target.value;
-                      setKidActivity(next);
-                      // LIVE: picking an activity builds the "What they do" frame
-                      // around it at once — no "See it on the frame" step, which the
-                      // owner found clunky (2026-09-24). Laying a preset is ONE undo
-                      // step, so a parent who had rearranged badges gets them back
-                      // with a single Undo.
-                      const athlete = getPreset("athlete", presets);
-                      if (next && athlete) applyFramePreset(athlete, next);
-                    }}
-                    className="h-11 rounded-lg border border-stone-300 bg-white px-2 text-[16px] text-stone-900 sm:h-9 sm:text-[14px]"
-                  >
-                    <option value="">Choose an activity…</option>
-                    {/* Grouped rather than one flat run of forty. A native
-                        select on a phone shows the group headers, which is the
-                        difference between scanning and scrolling. */}
-                    {ACTIVITY_GROUPS.map((group) => (
-                      <optgroup key={group} label={group}>
-                        {ACTIVITIES.filter((a) => a.group === group).map((a) => (
-                          <option key={a.id} value={a.id}>
-                            {a.label}
-                          </option>
-                        ))}
-                      </optgroup>
-                    ))}
-                  </select>
-                </label>
-                {buyer.yearLabel && (
-                  <label className="flex flex-col gap-1 text-[12px] font-medium text-stone-700 basis-28">
-                    {buyer.yearLabel}
-                    <select
-                      name="kid-year"
-                      value={kidYear}
-                      onChange={(e) => {
-                        setKidYear(e.target.value);
-                        writeLine({ year: e.target.value });
-                      }}
-                      className="h-11 rounded-lg border border-stone-300 bg-white px-2 text-[16px] text-stone-900 sm:h-9 sm:text-[14px]"
-                    >
-                      <option value="">Year…</option>
-                      {/* The RANGE follows the buyer. Current students only for a
-                          parent or a senior; sixty years back for an alum, who
-                          previously could not enter their own class at all. */}
-                      {yearsFor(buyer.yearRange).map((y) => (
-                        <option key={y}>{y}</option>
-                      ))}
-                    </select>
-                  </label>
-                )}
-                {/* THE BANNER LINE, one tap each. The list is the buyer's own
-                    (data/frame-buyers.ts), so a grandparent is offered PROUD
-                    GRANDPARENT first and staff only their own words. */}
-                <div className="flex w-full flex-col gap-1">
-                  <span className="text-[12px] font-medium text-stone-700">Banner line</span>
-                  <div role="radiogroup" aria-label="Line on the banner" className="flex flex-wrap gap-1.5">
-                    {buyer.lines.map((id) => {
-                      const option = BANNER_LINES[id];
-                      const label = id === "class" && kidYear ? `Class of ${kidYear}` : option.chip;
-                      return (
+                  </div>
+                </section>
+
+                <section className="msf-intake-step" aria-labelledby="msf-step-theirs">
+                  <h2 id="msf-step-theirs" className="msf-step-head">Make it theirs</h2>
+                  <div className="ff-panel msf-intake-card">
+                  {/* WHO IS BUYING. Five answers, and it rewords everything below
+                      it. A senior buying for their own car, a grandparent, an alum
+                      and a coach were all being asked for "their last name" and a
+                      class year from the next four. */}
+                  <div className="msf-field">
+                    <span className="msf-label" id="msf-who">Who&apos;s it for?</span>
+                    <div role="radiogroup" aria-labelledby="msf-who" className="msf-pills">
+                      {BUYERS.map((b) => (
                         <button
-                          key={id}
+                          key={b.id}
                           type="button"
                           role="radio"
-                          aria-checked={line === id}
-                          onClick={() => {
-                            setLineChoice(id);
-                            writeLine({ line: id });
-                          }}
-                          className={
-                            "min-h-[44px] rounded-full border px-3 text-[13px] font-semibold transition-colors sm:min-h-[32px] " +
-                            (line === id
-                              ? "border-stone-900 bg-stone-900 text-white"
-                              : "border-stone-300 bg-white text-stone-700 hover:border-stone-400")
-                          }
+                          aria-checked={b.id === buyerId}
+                          onClick={() => chooseBuyer(b.id)}
+                          className="msf-pill"
                         >
-                          {label}
+                          {b.chip}
                         </button>
-                      );
-                    })}
+                      ))}
+                    </div>
                   </div>
-                </div>
-                {/* THE NUMBER, for ANY activity. It used to appear only for the
-                    jersey sports; a cellist has a chair and a runner a bib, and
-                    "#12" is one of the lines the owner wants to lead with. */}
-                {line && BANNER_LINES[line].asks === "number" && (
-                  <label className="flex flex-col gap-1 text-[12px] font-medium text-stone-700 basis-20">
-                    Number
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      name="kid-number"
-                      value={kidNumber}
-                      onChange={(e) => {
-                        const n = e.target.value.replace(/\D/g, "").slice(0, 2);
-                        setKidNumber(n);
-                        writeLine({ number: n });
-                      }}
-                      placeholder="12"
-                      className="h-11 w-full rounded-lg border border-stone-300 px-2.5 text-[16px] text-stone-900 placeholder:text-stone-400 sm:h-9 sm:text-[14px]"
-                    />
-                  </label>
-                )}
-                {line && BANNER_LINES[line].asks === "text" && (
-                  <label className="flex flex-col gap-1 text-[12px] font-medium text-stone-700 grow basis-40">
-                    Your line
-                    <input
-                      type="text"
-                      name="kid-line"
-                      value={lineText}
-                      onChange={(e) => {
-                        setLineText(e.target.value);
-                        writeLine({ text: e.target.value });
-                      }}
-                      placeholder="e.g. GO CATS"
-                      maxLength={24}
-                      className="h-11 rounded-lg border border-stone-300 px-2.5 text-[16px] uppercase text-stone-900 placeholder:normal-case placeholder:text-stone-400 sm:h-9 sm:text-[14px]"
-                    />
-                  </label>
-                )}
-                <label className="flex flex-col gap-1 text-[12px] font-medium text-stone-700 grow basis-32">
-                  {buyer.nameLabel}
-                  <input
-                    type="text"
-                    name="kid-name"
-                    value={kidName}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      setKidName(value);
-                      // LIVE, like every other control here. Blank puts the mascot
-                      // back on the banner rather than leaving the last letter.
-                      const api = storeApi.getState();
-                      const name = value.trim();
-                      if (name) writePerson(api, { name, tagline: taglineNow() });
-                      else if (kit) api.setSectionText("bottom", { text: kit.banners.bottom });
-                    }}
-                    onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
-                    placeholder={buyer.namePlaceholder}
-                    maxLength={14}
-                    className="h-11 rounded-lg border border-stone-300 px-2.5 text-[16px] uppercase text-stone-900 placeholder:normal-case placeholder:text-stone-400 sm:h-9 sm:text-[14px]"
-                  />
-                </label>
+                  {/* ACTIVITY AND YEAR FIRST, the name last and optional. The
+                      owner's call: a frame leads with Class of 2027, #12, Senior,
+                      Orchestra or Proud Parent, not the student's full name. */}
+                  <div className="msf-row">
+                    <label className="msf-field msf-grow">
+                      <span className="msf-label">{buyer.activityLabel}</span>
+                      <select
+                        ref={activityRef}
+                        name="kid-activity"
+                        value={kidActivity}
+                        onChange={(e) => {
+                          const next = e.target.value;
+                          setKidActivity(next);
+                          // LIVE: picking an activity builds the "What they do" frame
+                          // around it at once — no "See it on the frame" step, which the
+                          // owner found clunky (2026-09-24). Laying a preset is ONE undo
+                          // step, so a parent who had rearranged badges gets them back
+                          // with a single Undo.
+                          const athlete = getPreset("athlete", presets);
+                          if (next && athlete) applyFramePreset(athlete, next);
+                        }}
+                        className="msf-input"
+                      >
+                        <option value="">Choose an activity…</option>
+                        {/* Grouped rather than one flat run of forty. A native
+                            select on a phone shows the group headers, which is the
+                            difference between scanning and scrolling. */}
+                        {ACTIVITY_GROUPS.map((group) => (
+                          <optgroup key={group} label={group}>
+                            {ACTIVITIES.filter((a) => a.group === group).map((a) => (
+                              <option key={a.id} value={a.id}>
+                                {a.label}
+                              </option>
+                            ))}
+                          </optgroup>
+                        ))}
+                      </select>
+                    </label>
+                    {buyer.yearLabel && (
+                      <label className="msf-field msf-year">
+                        <span className="msf-label">{buyer.yearLabel}</span>
+                        <select
+                          name="kid-year"
+                          value={kidYear}
+                          onChange={(e) => {
+                            setKidYear(e.target.value);
+                            writeLine({ year: e.target.value });
+                          }}
+                          className="msf-input"
+                        >
+                          <option value="">Year…</option>
+                          {/* The RANGE follows the buyer. Current students only for a
+                              parent or a senior; sixty years back for an alum, who
+                              previously could not enter their own class at all. */}
+                          {yearsFor(buyer.yearRange).map((y) => (
+                            <option key={y}>{y}</option>
+                          ))}
+                        </select>
+                      </label>
+                    )}
+                  </div>
+                  {/* THE BANNER LINE, one tap each. The list is the buyer's own
+                      (data/frame-buyers.ts), so a grandparent is offered PROUD
+                      GRANDPARENT first and staff only their own words. */}
+                  <div className="msf-field">
+                    <span className="msf-label" id="msf-line">Line on the banner</span>
+                    <div role="radiogroup" aria-labelledby="msf-line" className="msf-pills">
+                      {buyer.lines.map((id) => {
+                        const option = BANNER_LINES[id];
+                        const label = id === "class" && kidYear ? `Class of ${kidYear}` : option.chip;
+                        return (
+                          <button
+                            key={id}
+                            type="button"
+                            role="radio"
+                            aria-checked={line === id}
+                            onClick={() => {
+                              setLineChoice(id);
+                              writeLine({ line: id });
+                            }}
+                            className="msf-pill"
+                          >
+                            {label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <div className="msf-row">
+                    {/* THE NUMBER, for ANY activity. It used to appear only for the
+                        jersey sports; a cellist has a chair and a runner a bib, and
+                        "#12" is one of the lines the owner wants to lead with. */}
+                    {line && BANNER_LINES[line].asks === "number" && (
+                      <label className="msf-field msf-year">
+                        <span className="msf-label">Number</span>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          name="kid-number"
+                          value={kidNumber}
+                          onChange={(e) => {
+                            const n = e.target.value.replace(/\D/g, "").slice(0, 2);
+                            setKidNumber(n);
+                            writeLine({ number: n });
+                          }}
+                          placeholder="12"
+                          className="msf-input"
+                        />
+                      </label>
+                    )}
+                    {line && BANNER_LINES[line].asks === "text" && (
+                      <label className="msf-field msf-grow">
+                        <span className="msf-label">Your line</span>
+                        <input
+                          type="text"
+                          name="kid-line"
+                          value={lineText}
+                          onChange={(e) => {
+                            setLineText(e.target.value);
+                            writeLine({ text: e.target.value });
+                          }}
+                          placeholder="e.g. GO CATS"
+                          maxLength={24}
+                          className="msf-input msf-caps"
+                        />
+                      </label>
+                    )}
+                    <label className="msf-field msf-grow">
+                      <span className="msf-label">{buyer.nameLabel}</span>
+                      <input
+                        type="text"
+                        name="kid-name"
+                        value={kidName}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setKidName(value);
+                          // LIVE, like every other control here. Blank puts the mascot
+                          // back on the banner rather than leaving the last letter.
+                          const api = storeApi.getState();
+                          const name = value.trim();
+                          if (name) writePerson(api, { name, tagline: taglineNow() });
+                          else if (kit) api.setSectionText("bottom", { text: kit.banners.bottom });
+                        }}
+                        onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+                        placeholder={buyer.namePlaceholder}
+                        maxLength={14}
+                        autoComplete="off"
+                        className="msf-input msf-caps"
+                      />
+                    </label>
+                  </div>
+                  </div>
+                </section>
               </div>
-              <FirstRunTour open={tourOpen} onClose={dismissTour} />
-              {/* THE STAGE. The one zone on the page darker than its neighbours
-                  (1.19:1 below the canvas, 1.28:1 below the cards) — everything else
-                  is white or near-white, so the eye goes to the single tonal break
-                  and finds the frame sitting in it. Frame navy on this mat is
-                  11.10:1, which makes the product the highest-contrast large object
-                  in view now that the ink header and the 3px outlines are gone.
-
-                  `relative` MUST stay: the frame-side ArmedBanner is absolutely
-                  positioned against this element. */}
               {/* THE PINNED PREVIEW (phones). "I can't see the design because I
                   scroll" — Bill. The frame sticks under the header while the
-                  tray, the colours and the editor scroll beneath it, so every tap
-                  lands where the parent can see it. Only the frame and one status
-                  line are pinned (about a third of an iPhone screen); the intake
-                  and the graduate card above it scroll away as usual, so nothing
-                  pinned sits over a control. Desktop pins the whole column instead
-                  (`lg:sticky` on the parent) and this is static there. */}
+                  intake, the tray, the colours and the editor scroll beneath it, so
+                  every tap lands where the parent can see it. Only the frame and one
+                  status line are pinned; nothing pinned sits over a control, because
+                  everything else scrolls UNDER the dock rather than beside it.
+
+                  It runs nearly edge to edge (an 8px gutter, wider only where a
+                  notch or rounded corner needs it) — the frame is the product, and
+                  on a 390px phone every pixel of width is a pixel of badge.
+
+                  Desktop pins the whole column instead (`lg:sticky` on the parent)
+                  and this is static there. */}
               <div
-                className="sticky top-[var(--ff-header-h,0px)] z-30 -mx-4 pt-2 pb-1 pl-[max(16px,env(safe-area-inset-left))] pr-[max(16px,env(safe-area-inset-right))] max-lg:bg-[var(--ff-room,var(--ff-canvas))] max-lg:shadow-[0_8px_14px_-10px_rgba(0,0,0,0.6)] lg:static lg:z-auto lg:mx-0 lg:p-0"
+                ref={dockRef}
+                className="msf-dock sticky top-[var(--ff-header-h,0px)] z-30 -mx-4 pt-2 pb-0.5 pl-[max(8px,env(safe-area-inset-left))] pr-[max(8px,env(safe-area-inset-right))] max-lg:bg-[var(--ff-room,var(--ff-canvas))] max-lg:shadow-[0_8px_14px_-10px_rgba(0,0,0,0.6)] lg:static lg:z-auto lg:mx-0 lg:p-0"
               >
+              {/* THE STAGE. `relative` MUST stay: the frame-side ArmedBanner is
+                  absolutely positioned against this element. */}
               <div
                 className="ff-stage ff-stage-cap relative mx-auto w-full"
                 style={
@@ -1454,7 +1509,11 @@ export function SchoolDesigner({
                     // yields while editing. Kept as two values so CSS can decide
                     // whether the yield is needed at all — on a tall window both
                     // fit and the frame should not move. See .ff-stage-cap.
-                    "--ff-stage-full": `calc(100vh - ${STAGE_VIEWPORT_RESERVE_PX}px)`,
+                    // The intake shares the pinned desktop column, ABOVE the
+                    // stage, so its measured height comes out of the room too —
+                    // without it the frame's bottom banner hung off a laptop screen.
+                    // (A phone caps the stage in CSS and ignores this.)
+                    "--ff-stage-full": `calc(100vh - ${STAGE_VIEWPORT_RESERVE_PX + intakeH}px)`,
                     "--ff-share-editing": editorOpen ? STAGE_EDITING_SHARE : 1,
                   } as React.CSSProperties
                 }
@@ -1480,11 +1539,6 @@ export function SchoolDesigner({
                   bannerPreview={bannerPreview}
                 />
               </div>
-              {/* Replaces the old Sections panel. Same information, at the place
-                  it applies: the frame is the control, so the instruction belongs
-                  under the frame rather than in a list restating what is already
-                  on screen. Hidden once a section is open, since by then the user
-                  has plainly found it. */}
               {/* The phone's pinned STATUS LINE: the armed-tile callout when a
                   tile is armed, the how-to otherwise. One fixed-height slot, so
                   arming a tile never pushes the tray the parent just tapped. */}
@@ -1502,12 +1556,20 @@ export function SchoolDesigner({
                 </p>
               )}
             </div>
-            {/* The editor's OWN scroll pane. `min-h-0` is load-bearing: a flex child
-                defaults to `min-height: auto`, which refuses to shrink below its
-                content, and the pane would push the column past the viewport instead
-                of scrolling — the clipped-editor bug in a new costume. `-mx-1 px-1`
-                keeps panel focus rings from being shaved off by the overflow. */}
-            <div className="order-2 min-w-0 relative z-10 lg:order-none lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:-mx-1 lg:px-1">
+            {/* The editor's OWN scroll pane on a desktop. `min-h-0` is load-bearing:
+                a flex child defaults to `min-height: auto`, which refuses to shrink
+                below its content, and the pane would push the column past the
+                viewport instead of scrolling. `-mx-1 px-1` keeps panel focus rings
+                from being shaved off by the overflow.
+
+                On a phone it sits DIRECTLY under the pinned frame (order-1, before
+                the intake): tapping a banner opens its editor right where the eye
+                already is, and the effect above scrolls it into view when the tap
+                came from further down the page. */}
+            <div
+              ref={editorRef}
+              className="msf-editor order-1 min-w-0 relative z-10 lg:order-none lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:-mx-1 lg:px-1"
+            >
               <SectionEditor schoolCrest={kit?.marks?.crest} mascot={kit?.mascot} />
             </div>
           </div>

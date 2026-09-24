@@ -297,6 +297,30 @@ export function badgeRule(config: Pick<FrameConfig, "badgeShape" | "minTileSpan"
 }
 
 /**
+ * The canvas gutter a square-rule frame keeps, in tiles. See `canvasGutterTiles`.
+ * Big enough for what can still reach past the frame's edge there: the resize nubs
+ * (14px, centred on the badge edge) and the selection glow, at phone and desktop
+ * tile sizes alike.
+ */
+export const SQUARE_RULE_GUTTER_TILES = 0.35;
+
+/**
+ * How many tiles of bleed the builder's canvas reserves round the frame.
+ *
+ * `overhangTiles` exists so a footprint that legally hangs past the outer edge is
+ * painted inside the canvas rather than over the page. A square-rule frame has no
+ * such footprint: canPlace refuses any covered cell off the grid ("offgrid") and the
+ * square rule leaves only whole side-column badges, so the full tile of gutter was
+ * dead space — on a phone it cost an eighth of the frame's width on every school
+ * page, on the device the page is for. Such a frame keeps only enough room for the
+ * selection chrome. Every other frame keeps exactly what it declares.
+ */
+export function canvasGutterTiles(config: Pick<FrameConfig, "badgeShape" | "overhangTiles">): number {
+  const declared = Math.max(0, config.overhangTiles ?? 0);
+  return config.badgeShape === "square" ? Math.min(declared, SQUARE_RULE_GUTTER_TILES) : declared;
+}
+
+/**
  * How far a footprint's width and height may differ and still be one square, as a
  * fraction of its side. The grid is exact arithmetic on inch values, so a true
  * square differs by float noise only; a thousandth of the side (0.002" on a 2.25"

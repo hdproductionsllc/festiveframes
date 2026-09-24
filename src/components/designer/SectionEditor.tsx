@@ -68,6 +68,7 @@ export function SectionEditor({
   const frameConfig = useDesignStore((s) => s.frameConfig);
   const setSectionText = useDesignStore((s) => s.setSectionText);
   const setSectionMode = useDesignStore((s) => s.setSectionMode);
+  const selectSection = useDesignStore((s) => s.selectSection);
   // Upload → rights gate → crop. THE one chokepoint, for badge art and crests alike.
   const upload = useSnappetUpload();
 
@@ -89,15 +90,28 @@ export function SectionEditor({
         {/* Top and bottom are text banners by default and usually stay that way, so
             the switch to badges sits here with the panel's settings, not on the
             frame where it would be the loudest thing in sight. */}
-        {sectionSupportsText(selectedSectionId) && sectionSupportsTiles(selectedSectionId, frameConfig) && (
+        <div className="flex flex-wrap items-center gap-2">
+          {sectionSupportsText(selectedSectionId) && sectionSupportsTiles(selectedSectionId, frameConfig) && (
+            <button
+              type="button"
+              onClick={() => setSectionMode(selectedSectionId, isText ? "tiles" : "text")}
+              className="ff-btn ff-btn-secondary min-h-11 !text-sm"
+            >
+              {isText ? "Use badges instead" : "Use a text banner"}
+            </button>
+          )}
+          {/* Every change here is already on the frame, so this closes the editor
+              and nothing more. There was no way out before but tapping somewhere
+              else on the frame, and on a phone the open editor sits between the
+              frame and everything below it. */}
           <button
             type="button"
-            onClick={() => setSectionMode(selectedSectionId, isText ? "tiles" : "text")}
-            className="ff-btn ff-btn-secondary min-h-11 !text-sm"
+            onClick={() => selectSection(null)}
+            className="ff-btn ff-btn-primary min-h-11 !text-sm"
           >
-            {isText ? "Use badges instead" : "Use a text banner"}
+            Done
           </button>
-        )}
+        </div>
       </div>
 
       {isText ? (

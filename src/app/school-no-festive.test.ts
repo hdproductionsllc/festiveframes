@@ -51,7 +51,7 @@ const SURFACE_FILES = [
   "src/components/designer/SendDesignSheet.tsx",
   "src/components/designer/SchoolBrandImport.tsx",
   "src/components/designer/UploadRightsGate.tsx",
-  "src/components/designer/GraduateExpress.tsx",
+  "src/components/designer/school-builder-flow.css",
   "src/content/school-contact.ts",
   "src/content/upload-rights.ts",
   "src/content/school-activity-count.ts",

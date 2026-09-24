@@ -23,6 +23,8 @@ import {
   anchorIdFor,
   panelSnappetPlacement,
   FREE_BADGES,
+  canvasGutterTiles,
+  SQUARE_RULE_GUTTER_TILES,
   type PlacementContext,
 } from "./snappet";
 import { buildGrid } from "./slot-generator";
@@ -30,6 +32,7 @@ import {
   DEFAULT_FRAME_CONFIG,
   SCHOOL_FRAME_CONFIG,
   SCHOOL_SLIM_FRAME_CONFIG,
+  SCHOOL_FLUSH_FRAME_CONFIG,
   getWingFrameConfig,
 } from "@/lib/constants/frame";
 import type { PlacedTile, TileSpan } from "@/lib/types";
@@ -337,6 +340,18 @@ describe("bleed gutter (FrameConfig.overhangTiles)", () => {
     // no padding and no clip — the layout it has always had.
     expect(SCHOOL_FRAME_CONFIG.overhangTiles).toBe(1);
     expect(DEFAULT_FRAME_CONFIG.overhangTiles).toBeUndefined();
+  });
+
+  it("a square-rule frame keeps only the selection sliver; other frames keep what they declare", () => {
+    // Nothing on a square-rule frame can hang past the edge (canPlace refuses
+    // offgrid cells, and every legal badge sits inside a side column), so a full
+    // tile of gutter was dead space round the frame on every school page.
+    expect(SCHOOL_FLUSH_FRAME_CONFIG.badgeShape).toBe("square");
+    expect(canvasGutterTiles(SCHOOL_FLUSH_FRAME_CONFIG)).toBe(SQUARE_RULE_GUTTER_TILES);
+    expect(canvasGutterTiles({ ...SCHOOL_FRAME_CONFIG, badgeShape: undefined })).toBe(1);
+    expect(canvasGutterTiles(DEFAULT_FRAME_CONFIG)).toBe(0);
+    // Never MORE than the frame declares.
+    expect(canvasGutterTiles({ badgeShape: "square", overhangTiles: 0 })).toBe(0);
   });
 
   it("the gutter fraction resolves to exactly `overhangTiles` cells", () => {

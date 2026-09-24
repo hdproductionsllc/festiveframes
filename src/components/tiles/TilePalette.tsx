@@ -25,9 +25,16 @@ interface TilePaletteProps {
   /** The active school kit's own crest/mascot badges, shown ahead of the set.
    *  Kit-scoped by design — see TileGrid's extraPieces. */
   extraPieces?: readonly TilePiece[];
+  /** The phone tray's one-line instruction. /build keeps its own wording; the
+   *  school builder calls them badges. */
+  mobileHint?: string;
+  /** Whether the phone tray opens with Fill / Random / Mirror / Clear / Undo
+   *  showing. /build keeps them open; the school builder, whose parents mostly
+   *  place a badge or two, starts with just the badges. */
+  mobileToolsOpen?: boolean;
 }
 
-export function TilePalette({ surfacedSetIds, extraPieces }: TilePaletteProps = {}) {
+export function TilePalette({ surfacedSetIds, extraPieces, mobileHint, mobileToolsOpen }: TilePaletteProps = {}) {
   return (
     <>
       {/* Desktop / Tablet — palette panel (left side of the tools row) */}
@@ -39,7 +46,12 @@ export function TilePalette({ surfacedSetIds, extraPieces }: TilePaletteProps = 
       </aside>
 
       {/* Mobile — stacked tile tray (tiles always visible, no hunting) */}
-      <MobileTileTray surfacedSetIds={surfacedSetIds} extraPieces={extraPieces} />
+      <MobileTileTray
+        surfacedSetIds={surfacedSetIds}
+        extraPieces={extraPieces}
+        mobileHint={mobileHint}
+        mobileToolsOpen={mobileToolsOpen}
+      />
     </>
   );
 }
@@ -69,11 +81,16 @@ function DesktopPaletteContent({ surfacedSetIds, extraPieces }: TilePaletteProps
 
 /* ─────────────────────────────── Mobile ────────────────────────────── */
 
-function MobileTileTray({ surfacedSetIds, extraPieces }: TilePaletteProps) {
-  // Tools start EXPANDED so the quick actions are visible on first render without
-  // tapping the gear. The toggle still collapses them when the user wants the
-  // tray focused purely on tiles.
-  const [optionsOpen, setOptionsOpen] = useState(true);
+function MobileTileTray({
+  surfacedSetIds,
+  extraPieces,
+  mobileHint = "Tap a tile, then tap your frame to drop it.",
+  mobileToolsOpen = true,
+}: TilePaletteProps) {
+  // Tools start EXPANDED on /build so the quick actions are visible on first
+  // render without tapping the gear. The toggle still collapses them when the
+  // user wants the tray focused purely on tiles.
+  const [optionsOpen, setOptionsOpen] = useState(mobileToolsOpen);
 
   return (
     <div
@@ -87,7 +104,7 @@ function MobileTileTray({ surfacedSetIds, extraPieces }: TilePaletteProps) {
         <div className="flex items-center gap-2">
           <p className="flex-1 rounded-full border-2 border-brand-gold/60 bg-brand-gold/15 px-3 py-1.5
             text-center text-[13px] font-extrabold leading-snug text-[#1e1b17]">
-            Tap a tile, then tap your frame to drop it.
+            {mobileHint}
           </p>
           <button
             onClick={() => setOptionsOpen((v) => !v)}

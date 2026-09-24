@@ -322,11 +322,11 @@ error of 49/255 where the real figure was under 1/255.
 - **Two kits are only partly researched** (Kirkwood, MICDS): their last two
   signature badges are deliberately non-claiming (honor roll, service) because we
   could not source programme facts. Do not "improve" them by guessing.
-- **The graduate express leads, and it overrides the kit seed.** Opening a kit page
-  applies the `graduate` preset, so the first frame a parent sees is cap / crest /
-  diploma — the signature badges appear on "Or customize it". For a school with no
-  marks of its own that middle badge is the generic crest, so the graduate frame is
-  the LEAST school-specific view we have. Owner's call whether that stays.
+- **Graduate is the pre-selected first design** (2026-09-24 mobile pass). The
+  separate graduate card and the first-run tour were removed: on a phone they hid
+  the frame. First visit opens on the Graduate preset with this year's class; a
+  chip link still wins and a restored design is never overwritten. Every intake
+  control updates the frame live; there are no apply buttons.
 - `src/lib/utils/kit-sample.test.ts` renders any kit on any variant with the real
   badge PNGs (`KIT_SAMPLE_OUT`, `KIT_SAMPLE_SLUG`, `KIT_SAMPLE_VARIANT`). Use it
   before reporting anything about how a school's frame looks. It must carry ALL

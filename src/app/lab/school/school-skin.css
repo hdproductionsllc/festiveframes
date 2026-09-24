@@ -1078,9 +1078,13 @@
     font-size: 14px;
     letter-spacing: -0.01em;
   }
-  /* The school name is context, not identity — first to go when space is tight. */
+  /* The school's name stays in the bar on a phone: it is what the pinned header
+     says once the welcome has scrolled away. The plate picker that used to crowd
+     it out now lives under "Colors and plate". It truncates before anything else
+     in the bar gives way. */
   .build-skin.school-skin .ff-app-header .ff-h1-school {
-    display: none;
+    font-size: 14px;
+    font-weight: 700;
   }
   .build-skin.school-skin .ff-app-header select {
     max-width: 92px;
@@ -1096,8 +1100,108 @@
   /* The wordmark is the brand and must not be shown half-spelled. Everything
      else in the bar gives up a few pixels first so it can be read whole. */
   .build-skin.school-skin .ff-app-header .ff-h1 {
-    flex: 0 0 auto;
-    overflow: visible;
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+  }
+}
+
+/* The mark beside the headline, on every width: a medallion in the school's own
+   light rather than a sticker pasted on the dark. */
+.school-skin .msf-kit-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(12px, 2vw, 22px);
+}
+.school-skin .msf-kit-crest {
+  flex: none;
+  width: clamp(56px, 7vw, 88px);
+  height: auto;
+  aspect-ratio: 1;
+  border-radius: 999px;
+  filter:
+    drop-shadow(0 0 18px color-mix(in srgb, var(--ff-glow) 70%, transparent))
+    drop-shadow(0 4px 10px rgba(0, 0, 0, 0.5));
+}
+
+/* ── THE FIRST SCREEN ON A PHONE ─────────────────────────────────────────────
+   A parent scans a QR at a table and has about ten seconds. What has to be on the
+   first screen of a 390 x 844 iPhone: her school (its mark and its welcome), the
+   activities as one row of one-tap chips, and the FRAME, big. So the welcome band
+   is compressed to exactly that — the school's story and the ordering sentence
+   wait further down the page (SchoolDesigner shows them there) — and the frame's
+   dock runs nearly edge to edge. */
+@media (max-width: 639px) {
+  .school-skin .msf-kit-hero {
+    padding: 14px 16px 12px;
+  }
+  .school-skin .msf-kit-roomy {
+    display: none;
+  }
+  .school-skin .msf-kit-lockup {
+    width: min(260px, 66vw);
+    margin-bottom: 10px;
+  }
+  .school-skin .msf-kit-title {
+    justify-content: flex-start;
+    gap: 12px;
+    text-align: left;
+  }
+  .school-skin .msf-kit-crest {
+    width: 56px;
+    height: 56px;
+  }
+  .school-skin .msf-kit-headline {
+    font-size: clamp(20px, 6vw, 25px);
+    line-height: 1.12;
+    letter-spacing: 0.02em;
+  }
+  /* The label reads as a sentence, not a shouted caption over two lines. */
+  .school-skin .msf-kit-chips-label {
+    margin-top: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0;
+    text-transform: none;
+    text-align: left;
+  }
+  /* The row bleeds to the screen edges, so the chip cut off at the right says
+     "there is more this way" instead of looking clipped. */
+  .school-skin .msf-kit-chips {
+    justify-content: flex-start;
+    max-width: none;
+    margin: 8px -16px 0;
+    padding: 2px 16px 6px;
+    scroll-padding-inline: 16px;
+  }
+  .school-skin .msf-kit-chip {
+    font-size: 14.5px;
+    padding: 0 16px;
+  }
+}
+
+/* Phones and small tablets: the type the tools are set in grows to a size a
+   parent can read at arm's length. The desktop rail keeps its compact scale. */
+@media (max-width: 1023px) {
+  .school-skin .ff-help {
+    font-size: 13.5px;
+  }
+  .school-skin .ff-panel .ff-h2 {
+    font-size: 15px;
+  }
+  /* The dock's mat goes thinner still: the frame is the product. */
+  .school-skin .ff-stage {
+    padding: 4px;
+  }
+  /* The badge tray at arm's length: its one instruction and the names under the
+     badges were 12px and 11px. */
+  .build-skin.school-skin [data-tour="tiles"] p {
+    font-size: 14px !important;
+  }
+  .build-skin.school-skin [data-tour="tiles"] .line-clamp-2 {
+    width: 4.75rem;
+    font-size: 12.5px;
   }
 }
 

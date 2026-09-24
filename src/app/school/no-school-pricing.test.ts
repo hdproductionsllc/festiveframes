@@ -34,7 +34,7 @@ const SURFACES = [
   "src/app/s",
   "src/app/(home)/_components/SchoolSpotlight.tsx",
   "src/components/school",
-  "src/components/designer/GraduateExpress.tsx",
+  "src/components/designer/school-builder-flow.css",
 ];
 
 function filesUnder(rel: string): string[] {
@@ -77,12 +77,12 @@ describe("school surfaces carry no price", () => {
     }
   });
 
-  it("the graduate express sends the design and never starts checkout", () => {
+  it("the builder's own Send sends the design and never starts checkout", () => {
     const src = readFileSync(path.join(ROOT, "src/components/designer/SchoolDesigner.tsx"), "utf8");
     // handleBuy still exists for the flip back once pricing is confirmed, but
     // nothing user-reachable may call it while the header's guard is `false`.
-    // The express opens the send sheet (contact first); the sheet sends.
-    expect(src).toContain("onSend={() => void openSend()}");
+    // Every Send on the page opens the send sheet (contact first); the sheet sends.
+    expect(src).toContain("onClick={() => void openSend()}");
     expect(src).toContain("onSend={(contact) => void handleSubmit(contact)}");
     expect(src).not.toContain("onSend={handleBuy}");
     expect(src).not.toContain("onOrder={handleBuy}");

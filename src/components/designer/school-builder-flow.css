@@ -1,0 +1,366 @@
+/* ── The school builder's flow: intake, section heads, send ────────────────────
+   One file for the pieces SchoolDesigner lays out itself, so the order a parent
+   works down the page (a design, make it theirs, badges, a photo, colours, send)
+   reads as one designed sequence rather than a stack of differently-styled
+   widgets.
+
+   PHONE FIRST. Below 1024px the builder is one column under a pinned frame:
+   every section gets a heading on the dark room above its white card, every
+   target is at least 44px, and every field is 16px type (iOS zooms the page into
+   anything smaller and does not zoom back out). From 1024px the intake folds
+   back into the single compact panel above the stage that the desktop has
+   always had — there the frame and the controls sit side by side and height is
+   what is scarce.
+
+   Colours come from the school skin's variables with literal fallbacks, so the
+   generic builder (no kit) still renders sensibly. */
+
+/* Anything the page scrolls to on a phone lands UNDER the pinned frame, not
+   behind it. --ff-dock-h is measured by SchoolDesigner. */
+.msf-editor,
+.msf-intake,
+.msf-intake .msf-input {
+  scroll-margin-top: calc(var(--ff-header-h, 0px) + var(--ff-dock-h, 0px) + 12px);
+}
+
+/* No editor open: no box, and no second gap between the frame and the intake. */
+.msf-editor:empty {
+  display: none;
+}
+
+/* ── Section heads ──────────────────────────────────────────────────────────── */
+.msf-step-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 6px 2px 0;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--ff-on-dark, #ffffff);
+}
+/* A short bar in the school's lit colour: the one accent the heads share. */
+.msf-step-head::before {
+  content: "";
+  flex: none;
+  width: 4px;
+  height: 16px;
+  border-radius: 2px;
+  background: var(--ff-lit, #f8c53b);
+}
+.msf-step-aside {
+  margin-left: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  text-transform: none;
+  color: var(--ff-on-dark-2, rgba(255, 255, 255, 0.74));
+}
+/* The colours head is its own disclosure button: the whole row is the target. */
+.msf-step-head:has(.msf-step-toggle)::before {
+  display: none;
+}
+.msf-step-toggle {
+  appearance: none;
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 48px;
+  margin: 0 -2px;
+  padding: 0 14px;
+  border: 1px solid color-mix(in srgb, var(--ff-lit, #ffffff) 35%, transparent);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  cursor: pointer;
+}
+.msf-step-toggle:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 2px;
+}
+.msf-step-chevron {
+  flex: none;
+  transition: transform 0.18s ease;
+}
+.msf-step-toggle[aria-expanded="true"] .msf-step-chevron {
+  transform: rotate(180deg);
+}
+
+/* ── The intake ─────────────────────────────────────────────────────────────── */
+.msf-intake {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.msf-intake-step {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.msf-intake-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+}
+
+.msf-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.msf-label {
+  font-size: 14px;
+  font-weight: 650;
+  color: var(--ff-ink-2, #4b5058);
+}
+.msf-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.msf-row:empty {
+  display: none;
+}
+.msf-grow {
+  flex: 1 1 180px;
+}
+.msf-year {
+  flex: 0 1 120px;
+}
+
+.msf-input {
+  width: 100%;
+  min-height: 48px;
+  padding: 0 12px;
+  border: 1.5px solid #c9cedb;
+  border-radius: 10px;
+  background-color: #ffffff;
+  color: var(--ff-ink, #16181c);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 600;
+}
+.msf-input:focus {
+  outline: none;
+  border-color: var(--ff-school, #1b2a4a);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ff-school, #1b2a4a) 22%, transparent);
+}
+.msf-caps {
+  text-transform: uppercase;
+}
+.msf-caps::placeholder {
+  /* The examples are prose ("e.g. a nickname"); upper-cased they read "E.G.". */
+  text-transform: none;
+  font-weight: 500;
+  color: #9aa1b1;
+}
+
+/* Pills: one tap each (who it's for, the banner line). */
+.msf-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.msf-pill {
+  appearance: none;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1.5px solid #cfd3dc;
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--ff-ink, #16181c);
+  font: inherit;
+  font-size: 14.5px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+/* Selected wears the school, darkened enough that white type clears AA on every
+   pilot colour (Parkway West's light blue included). */
+.msf-pill[aria-checked="true"] {
+  border-color: color-mix(in srgb, var(--ff-school, #1b2a4a) 72%, #000000);
+  background: color-mix(in srgb, var(--ff-school, #1b2a4a) 72%, #000000);
+  color: #ffffff;
+}
+.msf-pill:focus-visible,
+.msf-preset:focus-visible {
+  outline: 2px solid var(--ff-school, #1b2a4a);
+  outline-offset: 2px;
+}
+
+/* The ready-made designs: three equal cards, the way a parent compares them. */
+.msf-presets {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  gap: 8px;
+}
+.msf-preset {
+  appearance: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 72px;
+  padding: 8px 6px;
+  border: 1.5px solid #cfd3dc;
+  border-radius: 12px;
+  background: #ffffff;
+  color: var(--ff-ink, #16181c);
+  font: inherit;
+  cursor: pointer;
+  transition: background-color 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
+}
+.msf-preset-icon {
+  font-size: 22px;
+  line-height: 1;
+}
+.msf-preset-name {
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
+}
+.msf-preset[aria-pressed="true"] {
+  border-color: var(--ff-school, #1b2a4a);
+  background: color-mix(in srgb, var(--ff-school, #1b2a4a) 9%, #ffffff);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ff-school, #1b2a4a) 35%, transparent);
+}
+@media (hover: hover) {
+  .msf-pill:hover:not([aria-checked="true"]),
+  .msf-preset:hover:not([aria-pressed="true"]) {
+    border-color: #9aa1b1;
+  }
+}
+
+.msf-intake-note {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--ff-ink-2, #4b5058);
+}
+
+/* ── Send and the school's story, at the foot of a phone's page ─────────────── */
+.msf-send-copy {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--ff-ink-2, #4b5058);
+}
+.msf-about {
+  margin: 4px 8px 0;
+  font-size: 14px;
+  line-height: 1.55;
+  text-align: center;
+  color: var(--ff-on-dark-2, rgba(255, 255, 255, 0.74));
+}
+
+/* ── Desktop: the intake folds back into one compact panel over the stage ─── */
+@media (min-width: 1024px) {
+  .msf-intake {
+    gap: 12px;
+    padding: 14px 16px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-top: 3px solid var(--ff-glow, var(--ff-school, #1b2a4a));
+    border-radius: var(--ff-radius, 10px);
+    background: var(--ff-card, #ffffff);
+    box-shadow: var(--ff-elev-dark, 0 10px 28px -18px rgba(16, 22, 40, 0.55));
+  }
+  .msf-intake-step {
+    gap: 6px;
+  }
+  .msf-intake .msf-step-head {
+    margin: 0;
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    color: var(--ff-school, #1b2a4a);
+  }
+  .msf-intake .msf-step-head::before {
+    height: 12px;
+    background: var(--ff-school, #1b2a4a);
+  }
+  .msf-intake-card {
+    gap: 10px;
+    padding: 0;
+    border: 0 !important;
+    background: none;
+    box-shadow: none !important;
+  }
+  .msf-field {
+    gap: 4px;
+  }
+  .msf-label {
+    font-size: 12.5px;
+  }
+  .msf-row {
+    gap: 10px;
+  }
+  .msf-input {
+    min-height: 38px;
+    font-size: 14px;
+  }
+  .msf-pills {
+    gap: 6px;
+  }
+  .msf-pill {
+    min-height: 34px;
+    padding: 0 11px;
+    font-size: 13px;
+  }
+  .msf-presets {
+    display: flex;
+    flex-wrap: wrap;
+  }
+  .msf-preset {
+    flex-direction: row;
+    gap: 6px;
+    min-height: 40px;
+    padding: 0 12px;
+  }
+  .msf-preset-icon {
+    font-size: 15px;
+  }
+  .msf-preset-name {
+    font-size: 13px;
+  }
+}
+
+/* The rail's own heads are a phone's signposts; a desktop rail is short enough
+   to read at a glance, and its panels carry their own titles. (Set here rather
+   than with a Tailwind `lg:hidden`, which this file's `display: flex` would
+   out-order.) */
+@media (min-width: 1024px) {
+  .msf-step-head--phone {
+    display: none;
+  }
+}
+
+/* Desktop: "Make it theirs" runs in two columns — who and what on the left, the
+   banner's words on the right — so the intake costs the pinned column as little
+   height as possible and the whole frame fits under it on a laptop screen. */
+@media (min-width: 1024px) {
+  .msf-intake-step + .msf-intake-step .msf-intake-card {
+    display: grid;
+    /* The pills take the width they need to sit on one line (up to 64%); the
+       two fields share what is left. */
+    grid-template-columns: fit-content(64%) minmax(0, 1fr);
+    column-gap: 24px;
+    row-gap: 10px;
+    align-items: start;
+  }
+  .msf-intake-step + .msf-intake-step .msf-grow {
+    flex-basis: 140px;
+  }
+  .msf-intake-step + .msf-intake-step .msf-year {
+    flex-basis: 100px;
+  }
+}
