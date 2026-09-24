@@ -1362,3 +1362,51 @@ describe("THE SQUARE RULE on the shipping frame", () => {
     });
   });
 });
+
+describe("a design saved before its school had marks gets them once (owner, 2026-09-24)", () => {
+  const { config } = schoolVariant(SCHOOL_SHIPPING_VARIANT);
+  const kit = getSchoolKit("parkway-central-colts")!;
+  const opts = () => schoolStoreOptions({ kit, variant: SCHOOL_SHIPPING_VARIANT });
+
+  /** What a Parkway Central frame saved on 2026-09-23 looked like: the generic
+   *  shield and star in the school's positions, and no crest on the banner. */
+  function oldBlob(extra: Record<string, unknown> = {}) {
+    const seeds = kitSeedTiles(kit, config);
+    const slots: Record<string, PlacedTile> = {};
+    let n = 0;
+    for (const [id, t] of Object.entries(seeds)) {
+      slots[id] = t.pieceId.startsWith("mark:")
+        ? { ...t, pieceId: n++ % 2 ? "hs:star" : "hs:crest", setId: "high-school" }
+        : t;
+    }
+    const sections = structuredClone(kitSections(kit));
+    delete sections.bottom!.text!.logo;
+    return { state: { slots, sections, frameConfig: { ...config }, ...extra }, version: 7 };
+  }
+
+  it("brings in the banner crest and swaps the generic stand-ins for the school's logo", () => {
+    const KEY = "marks-upgrade-a";
+    memoryStorage.setItem(KEY, JSON.stringify(oldBlob()));
+    const s = createDesignStore(KEY, opts()).getState();
+    expect(s.sections.bottom?.text?.logo?.url).toBe(kit.marks!.crest);
+    const pieces = Object.values(s.slots).map((t) => t.pieceId);
+    expect(pieces).not.toContain("hs:crest");
+    expect(pieces).not.toContain("hs:star");
+    expect(pieces).toContain("mark:parkway-central-colts:mascot");
+    expect(s.kitMarksApplied).toBe(true);
+  });
+
+  it("runs ONCE: a crest the parent removed afterwards stays removed", () => {
+    const KEY = "marks-upgrade-b";
+    memoryStorage.setItem(KEY, JSON.stringify(oldBlob({ kitMarksApplied: true })));
+    const s = createDesignStore(KEY, opts()).getState();
+    expect(s.sections.bottom?.text?.logo).toBeUndefined();
+    expect(Object.values(s.slots).map((t) => t.pieceId)).toContain("hs:crest");
+  });
+
+  it("a brand-new visitor is born with the marks and the flag", () => {
+    const s = createDesignStore("marks-upgrade-c", opts()).getState();
+    expect(s.kitMarksApplied).toBe(true);
+    expect(s.sections.bottom?.text?.logo?.url).toBe(kit.marks!.crest);
+  });
+});

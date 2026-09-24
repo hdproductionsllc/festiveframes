@@ -6,6 +6,9 @@ import { migrateSchoolDesign } from "@/lib/utils/school-migration";
 import type { DesignStoreOptions } from "@/stores/design-store";
 import type { FrameConfig } from "@/lib/types";
 import { SITE_URL } from "@/config/season";
+import { kitMarkIds } from "@/data/sets/school-marks";
+import { getPiece } from "@/data/sets";
+import type { KitMarkUpgrade } from "@/lib/utils/kit-marks-upgrade";
 
 /**
  * THE options a school builder's store is created with — the one definition.
@@ -42,6 +45,8 @@ export function schoolStoreOptions({
     // DERIVED from the kit's signature badges against this frame's own side
     // column (data/kit-seed.ts). Kits name no slot ids.
     initialSlots: kit ? kitSeedTiles(kit, frameConfig) : undefined,
+    // A design saved before this school had its own marks gets them once.
+    markUpgrade: kit ? kitMarkUpgrade(kit) : undefined,
     // Read off the kit's city, so a school outside Missouri opens on its own plate.
     initialPlateState: kitPlateState(kit) ?? undefined,
     // A banner QR (latent: the school builder has no QR toggle yet) points at
@@ -56,5 +61,23 @@ export function schoolStoreOptions({
           rimColor: kit.colors.rim,
         }
       : undefined,
+  };
+}
+
+/**
+ * What a saved design needs to catch up with this school's own marks: the
+ * banner crest a fresh design seeds, and the school's pieces in place of the
+ * generic stand-ins a mark-less kit used to lay (crest → the mascot, star → the
+ * school's second mark, which kitMarkIds resolves). Undefined when the kit has
+ * no marks: there is nothing to bring in.
+ */
+function kitMarkUpgrade(kit: SchoolKit): KitMarkUpgrade | undefined {
+  const { mascot, alt } = kitMarkIds(kit);
+  if (!mascot) return undefined;
+  const tile = (id: string) => ({ pieceId: id, setId: getPiece(id)?.setId ?? "" });
+  const second = alt ?? mascot;
+  return {
+    crestLogo: kitSections(kit).bottom?.text?.logo,
+    replace: { "hs:crest": tile(mascot), "hs:star": tile(second) },
   };
 }

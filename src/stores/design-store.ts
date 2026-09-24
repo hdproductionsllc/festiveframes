@@ -1,3 +1,4 @@
+import { upgradeKitMarks, type KitMarkUpgrade } from "@/lib/utils/kit-marks-upgrade";
 import { createStore, useStore, type StoreApi } from "zustand";
 import { persist, createJSONStorage, type StateStorage } from "zustand/middleware";
 import { createContext, useContext, createElement, type ReactNode } from "react";
@@ -418,6 +419,13 @@ interface DesignState {
    */
   brandDefaults: { frameColor: string; tileFieldColor: string | null; rimColor: string | null };
   /**
+   * Whether this design has had its school's own marks brought in (see
+   * lib/utils/kit-marks-upgrade). True for a design born with them; a design
+   * saved before a kit had marks is upgraded ONCE on load, then this is set, so
+   * a parent who removes the crest later keeps it removed.
+   */
+  kitMarksApplied?: boolean;
+  /**
    * Art the customer uploaded, kept as REUSABLE palette pieces.
    *
    * Uploading used to place the art once and forget it, so a crest on both wings
@@ -821,6 +829,8 @@ export interface DesignStoreOptions {
    * frame, but a returning customer's persisted layout always wins on hydrate.
    */
   initialSlots?: Record<string, PlacedTile>;
+  /** The school's marks, for bringing a design saved before them up to date. */
+  markUpgrade?: KitMarkUpgrade;
   /**
    * The state whose plate the frame OPENS showing. Initial state only, like
    * everything above it: a visitor who picks their own state keeps it.
@@ -844,7 +854,7 @@ export interface DesignStoreOptions {
 // (own state + own localStorage key). /build uses `defaultDesignStore`; the school
 // builder creates its own instance and provides it via `DesignStoreProvider`.
 function createDesignStore(persistName: string, options: DesignStoreOptions = {}) {
-  const { migrateExtra, frameConfig: ownedFrameConfig, sections: initialSections, initialBrand, initialSlots, initialPlateState, initialQrUrl } = options;
+  const { migrateExtra, frameConfig: ownedFrameConfig, sections: initialSections, initialBrand, initialSlots, initialPlateState, initialQrUrl, markUpgrade } = options;
   const baseFrameConfig = ownedFrameConfig ?? DEFAULT_FRAME_CONFIG;
   const brandDefaults: DesignState["brandDefaults"] = {
     frameColor: initialBrand?.frameColor ?? DEFAULT_FRAME_COLOR,
@@ -894,6 +904,8 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
         uploads: [],
         artworkRights: null,
         slots: initialSlots ? structuredClone(initialSlots) : {},
+        // Born with the kit's marks already in the seed.
+        kitMarksApplied: true,
         bottomBar: { ...DEFAULT_BOTTOM_BAR },
         qrCode: { ...DEFAULT_QR_CODE, url: initialQrUrl ?? DEFAULT_QR_CODE.url },
         frameConfig: { ...baseFrameConfig },
@@ -1910,6 +1922,7 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
         frameConfig: state.frameConfig,
         dieCut: state.dieCut,
         sections: state.sections,
+        kitMarksApplied: state.kitMarksApplied,
         updatedAt: state.updatedAt,
       }),
       // v6 is the first version to persist slots/textBars/qrCode/bottomBar. Any
@@ -2021,6 +2034,26 @@ function createDesignStore(persistName: string, options: DesignStoreOptions = {}
           // design saved before the intake was fixed still reads that way, and
           // hydrate is the only place they can be reached.
           merged.sections = repairDanglingTopLine(merged.sections, initialSections);
+          // A design saved before its school had marks gets them ONCE — the
+          // crest on the bottom banner and the school's badges in place of the
+          // generic stand-ins. The flag keeps a later deliberate removal removed.
+          if (markUpgrade) {
+            const up = upgradeKitMarks(
+              // Read off the SAVED blob, not `merged`: a blob from before the flag
+              // has no key, and the spread would hand it the fresh store's `true`.
+              {
+                slots: merged.slots ?? {},
+                sections: merged.sections,
+                kitMarksApplied: (persisted as { kitMarksApplied?: boolean } | undefined)?.kitMarksApplied,
+              },
+              markUpgrade,
+            );
+            if (up.slots !== merged.slots || up.sections !== merged.sections || !(persisted as { kitMarksApplied?: boolean } | undefined)?.kitMarksApplied) {
+              merged.slots = up.slots;
+              merged.sections = up.sections;
+              merged.kitMarksApplied = true;
+            }
+          }
           // Refresh the SEEDED banner fonts. A section's font is persisted, so a
           // new default would otherwise only ever reach brand-new users. Only the
           // exact previously-seeded value is replaced — a deliberate pick from the
