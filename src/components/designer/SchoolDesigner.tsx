@@ -645,23 +645,6 @@ export function SchoolDesigner({
     person: { name?: string; tagline?: string },
   ) => writePersonOnBanner(api, kit, person);
 
-  const applyKidIntake = () => {
-    if (kidActivity) {
-      // PRESET, not a sprinkle: picking an activity composes the whole frame as
-      // the variant's own activity design (activity and mascot alternating down
-      // both sides), so the preset-lover customer is one name + one tap from a
-      // finished, orderable design. Laid by the frame — the old hard-coded slot
-      // ids belonged to a grid the shipping frame does not have. Laid BEFORE the
-      // banner is written, so the line is the last word on the frame.
-      const athlete = getPreset("athlete", presets);
-      if (athlete) {
-        layPreset(athlete, kidActivity);
-        setActivePreset(athlete.id);
-        setAwaitingActivity(false);
-      }
-    }
-    writePerson(storeApi.getState(), { name: kidName, tagline: taglineNow() });
-  };
 
   // The school's mascot and crest as badge ids — see `kitMarkIds`.
   const schoolMarks = useMemo(() => kitMarkIds(kit), [kit]);
@@ -1201,7 +1184,7 @@ export function SchoolDesigner({
             <div className="contents lg:flex lg:flex-col lg:gap-3 lg:order-none lg:w-full lg:min-w-0 lg:shrink-0">
               {/* Make-it-theirs intake: the first thing a parent touches. Three
                   quick fields -> the frame is suddenly about THEIR kid. Writes
-                  ordinary store state via applyKidIntake. */}
+                  ordinary store state, live: every control updates the frame as it changes. */}
               {/* THE PRIMARY PATH. Two fields and a button, above the frame it
                   is describing. The builder's own intake is the "or customize"
                   route and stays out of the way until asked for — offering both
@@ -1301,12 +1284,13 @@ export function SchoolDesigner({
                     onChange={(e) => {
                       const next = e.target.value;
                       setKidActivity(next);
-                      // Finish a "What they do" tap that was waiting for this. Any
-                      // other change waits for "See it on the frame": the parent may
-                      // have rearranged the badges since, and a menu is not a
-                      // place to lose that.
+                      // LIVE: picking an activity builds the "What they do" frame
+                      // around it at once — no "See it on the frame" step, which the
+                      // owner found clunky (2026-09-24). Laying a preset is ONE undo
+                      // step, so a parent who had rearranged badges gets them back
+                      // with a single Undo.
                       const athlete = getPreset("athlete", presets);
-                      if (next && athlete && awaitingActivity) applyFramePreset(athlete, next);
+                      if (next && athlete) applyFramePreset(athlete, next);
                     }}
                     className="h-11 rounded-lg border border-stone-300 bg-white px-2 text-[16px] text-stone-900 sm:h-9 sm:text-[14px]"
                   >
@@ -1423,21 +1407,22 @@ export function SchoolDesigner({
                     type="text"
                     name="kid-name"
                     value={kidName}
-                    onChange={(e) => setKidName(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === "Enter") applyKidIntake(); }}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setKidName(value);
+                      // LIVE, like every other control here. Blank puts the mascot
+                      // back on the banner rather than leaving the last letter.
+                      const api = storeApi.getState();
+                      const name = value.trim();
+                      if (name) writePerson(api, { name, tagline: taglineNow() });
+                      else if (kit) api.setSectionText("bottom", { text: kit.banners.bottom });
+                    }}
+                    onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
                     placeholder={buyer.namePlaceholder}
                     maxLength={14}
                     className="h-11 rounded-lg border border-stone-300 px-2.5 text-[16px] uppercase text-stone-900 placeholder:normal-case placeholder:text-stone-400 sm:h-9 sm:text-[14px]"
                   />
                 </label>
-                <button
-                  type="button"
-                  onClick={applyKidIntake}
-                  disabled={!kidName.trim() && !kidActivity && !kidYear}
-                  className="ff-btn ff-btn-primary ff-btn-sm h-11 sm:h-9"
-                >
-                  See it on the frame
-                </button>
               </div>
               <FirstRunTour open={tourOpen} onClose={dismissTour} />
               {/* THE STAGE. The one zone on the page darker than its neighbours
