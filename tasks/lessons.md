@@ -112,3 +112,12 @@ A pasted outreach draft signed "Bill Larkin"; his name is **Bill Laupan**, and I
 ## 2026-09-23 — Marketing voice: offer, don't pronounce
 
 The landing copy read as "weirdly AI — strangely confident, tone deaf, bossy" (Henry). Clipped verdicts ("That is the whole thing."), orders to the parent ("Order by the ceremony"), and put-downs of other gifts. **Write customer copy as a friendly neighbour explaining: warm, plain, offering choices, never disparaging what parents already do.**
+
+## 2026-09-25 — A saved design must not point at anything that lives on one device
+
+The first cut of saved school designs stored `fullResId` references to uploaded photos
+whose originals live in the uploader's IndexedDB. Reopened on another phone, the photo
+came back as its preview and printed soft. Separately, the server returned the saved
+link on a failed send and the screen showed only the error. **Before persisting anything
+server-side, walk every reference in it and ask "does the server hold what this points
+to?"; and when the server returns something on a failure path, render it on that path.**

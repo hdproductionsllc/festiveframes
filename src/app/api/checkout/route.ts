@@ -19,7 +19,9 @@ import type Stripe from "stripe";
 import { getStripe } from "@/lib/stripe";
 import { nonSquareBadgeRows, SCHOOL_BADGES_ARE_SQUARE, SQUARE_RULE_MESSAGE } from "@/lib/order/square-badges";
 import { offer, priceForFramesCents, MAX_CART_FRAMES, schoolOffer, SCHOOL_CHECKOUT_OPEN } from "@/config/offers";
-import { artworkOrderMetadata, coerceArtworkRights } from "@/lib/order/artwork-rights";
+import { artworkOrderMetadata, coerceArtworkRights, designHasUploadedArt } from "@/lib/order/artwork-rights";
+import { getRevisionByToken } from "@/lib/school-designs/store";
+import { createSchoolOrder } from "@/lib/school-designs/orders";
 import { SITE_URL, season } from "@/config/season";
 import { MSF_THANKS_PATH } from "@/content/msf-pages";
 import { getDraft, saveCartDraft, type CartLineRef } from "@/lib/order/store";
@@ -128,34 +130,49 @@ export async function POST(request: Request): Promise<NextResponse> {
         { status: 409 },
       );
     }
-    const orderId = (rawBody as Record<string, unknown>).orderId;
-    if (typeof orderId !== "string" || !orderId) {
-      return badRequest("Missing orderId for school order.");
-    }
-    const draft = await getDraft(orderId);
-    if (!draft) {
+    // WHAT is being bought: one APPROVED revision of a saved design, named by the
+    // token that proves this browser holds it. Never a browser-supplied order id
+    // or files — the order is created here, pointing at an immutable revision, so
+    // there is nothing to replace once checkout starts (lib/school-designs/orders).
+    const body = rawBody as Record<string, unknown>;
+    const rev = await getRevisionByToken(String(body.token ?? ""), Number(body.revision));
+    if (!rev) {
       return NextResponse.json(
-        { error: "Your design didn't finish uploading. Please try Buy again." },
+        { error: "We couldn't find your saved design. Please try Buy again." },
         { status: 409 },
       );
     }
-    // THE SQUARE RULE, on the list the builder stashed with the draft — the same
-    // check /api/school/submit runs. A paid order is the one that reaches a
-    // printer, so a draft with no parts list at all is refused too: there is
-    // nothing to produce it from.
+    if (!rev.approval) {
+      return NextResponse.json({ error: "Please check and approve your proof first." }, { status: 409 });
+    }
+    // THE SQUARE RULE, on the parts list saved with the revision — the same check
+    // the save ran. A paid order is the one that reaches a printer, so a revision
+    // with no parts list at all is refused too: there is nothing to produce it from.
+    const parts = rev.parts as { rows?: unknown; designName?: unknown } | null;
     if (SCHOOL_BADGES_ARE_SQUARE) {
-      const rows = draft.parts?.rows;
+      const rows = parts?.rows;
       const bad = Array.isArray(rows) ? nonSquareBadgeRows(rows) : ["no parts list"];
       if (bad.length > 0) {
         return NextResponse.json({ error: SQUARE_RULE_MESSAGE, nonSquare: bad.slice(0, 12) }, { status: 400 });
       }
     }
-    const rawName = (rawBody as Record<string, unknown>).designName;
     const designName =
-      typeof rawName === "string" && rawName.trim() ? rawName.trim().slice(0, 80) : "MySchoolFrame";
-    const rawSchool = (rawBody as Record<string, unknown>).school;
-    const school =
-      typeof rawSchool === "string" && /^[a-z0-9-]{1,60}$/.test(rawSchool) ? rawSchool : "";
+      typeof parts?.designName === "string" && parts.designName.trim()
+        ? parts.designName.trim().slice(0, 80)
+        : "MySchoolFrame";
+    const school = rev.school ?? "";
+    let orderId: string;
+    try {
+      orderId = (await createSchoolOrder({
+        designId: rev.designId,
+        revision: rev.n,
+        proofSha256: rev.proof.sha256,
+        school: rev.school,
+      })).orderId;
+    } catch (err) {
+      console.error("[checkout] school order could not be created:", err);
+      return NextResponse.json({ error: "Could not start checkout. Please try again." }, { status: 503 });
+    }
     try {
       const session = await stripe.checkout.sessions.create({
         mode: "payment",
@@ -190,14 +207,19 @@ export async function POST(request: Request): Promise<NextResponse> {
         metadata: {
           kind: "school-frame",
           orderId,
+          // The exact proof being paid for: production refuses anything else.
+          design: rev.code,
+          revision: String(rev.n),
+          proofSha256: rev.proof.sha256,
           designName,
           school,
           donationCents: String(schoolOffer.schoolDonationCents),
-          // Who said they had the right to print this. The payment record is the
-          // one artifact that certainly survives, so the attestation rides on it.
+          // Who said they had the right to print this — read off the SAVED design,
+          // not the request. The payment record is the one artifact that certainly
+          // survives, so the attestation rides on it.
           ...artworkOrderMetadata(
-            (rawBody as Record<string, unknown>).artUploaded === true,
-            coerceArtworkRights((rawBody as Record<string, unknown>).artworkRights),
+            designHasUploadedArt(rev.design as Parameters<typeof designHasUploadedArt>[0]),
+            coerceArtworkRights(rev.artworkRights),
           ),
         },
       });

@@ -14,6 +14,7 @@ import type Stripe from "stripe";
 
 import { getStripe } from "@/lib/stripe";
 import { fulfillOrder, fulfillCart } from "@/lib/order/fulfill";
+import { fulfillSchoolOrder } from "@/lib/order/fulfill-school";
 import { recordSchoolOrder } from "@/lib/order/school-ledger";
 import type { PartsList } from "@/lib/order/parts-list";
 import type { OrderArtifacts } from "@/lib/order/store";
@@ -95,6 +96,13 @@ export async function POST(request: Request): Promise<NextResponse> {
       school: meta.school,
       donationCents: Number(meta.donationCents ?? 0),
     });
+  }
+
+  // A school order is produced from its approved revision only; nothing in this
+  // request body is read for it.
+  if (meta.kind === "school-frame") {
+    const result = await fulfillSchoolOrder(session);
+    return NextResponse.json({ ok: true, result }, { status: 200 });
   }
 
   const payload =

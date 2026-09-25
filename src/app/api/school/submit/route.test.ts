@@ -9,6 +9,7 @@ vi.mock("resend", () => ({
 }));
 
 import { POST } from "./route";
+import { __memSchoolDesignsForTest } from "@/lib/school-designs/store";
 
 // A tiny but VALID png data URL (matches the route's data:image/(png|jpeg) rule).
 const TINY_PNG = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M8AAAMBAQDJ/pLvAAAAAElFTkSuQmCC";
@@ -429,12 +430,37 @@ describe("POST /api/school/submit — saves the design and hands back its link",
     expect(arg.text).toContain(`Saved as: ${json.saved.code} · revision 1`);
   });
 
-  it("a send carrying the design's link is revision 2 of the same design", async () => {
+  it("a CHANGED design sent with its link is revision 2 of the same design", async () => {
     process.env.RESEND_API_KEY = "test-key";
     const first = (await (await POST(req(body()))).json()).saved;
-    const second = (await (await POST(req(body({ link: { id: first.id, token: first.token } })))).json()).saved;
+    const second = (
+      await (await POST(req(body({ link: { id: first.id, token: first.token }, design: { ...DESIGN, designName: "Emma v2" } })))).json()
+    ).saved;
     expect(second.id).toBe(first.id);
     expect(second.revision).toBe(2);
+  });
+
+  it("the SAME design sent again (Try again, a double tap) reuses its revision", async () => {
+    process.env.RESEND_API_KEY = "test-key";
+    const first = (await (await POST(req(body()))).json()).saved;
+    const again = (await (await POST(req(body({ link: { id: first.id, token: first.token } })))).json()).saved;
+    expect(again).toMatchObject({ id: first.id, code: first.code, revision: 1 });
+  });
+
+  it("stores an uploaded photo's original, but only one the design references", async () => {
+    process.env.RESEND_API_KEY = "test-key";
+    const design = { ...DESIGN, slots: { a: { image: { url: "data:x", fullResId: "photo-1" } } } };
+    const json = await (
+      await POST(req(body({
+        design,
+        originals: [
+          { fullResId: "photo-1", dataUrl: TINY_PNG },
+          { fullResId: "not-in-the-design", dataUrl: TINY_PNG },
+        ],
+      })))
+    ).json();
+    const stored = __memSchoolDesignsForTest.get(json.saved.id)!.revisions[0].originals;
+    expect(stored.map((o) => o.fullResId)).toEqual(["photo-1"]);
   });
 
   it("emails the parent their link ONLY when asked — link and code, no files, replies to us", async () => {

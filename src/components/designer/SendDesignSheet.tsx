@@ -32,6 +32,7 @@ export function SendDesignSheet({
   initialFor,
   sending,
   error,
+  savedOnError = null,
   offerLinkEmail = false,
   onSend,
   onClose,
@@ -44,6 +45,9 @@ export function SendDesignSheet({
   sending: boolean;
   /** The last send's failure, shown in the sheet so the parent can retry. */
   error: string | null;
+  /** The design WAS saved though delivery failed: its code and link, shown with
+   *  the error so a failed send never hides them. Sending again reuses it. */
+  savedOnError?: { code: string; url: string | null } | null;
   /** Offer "Email me a link to this design" — only while MySchoolFrame's own
    *  sender is configured (`designLinkEmailAvailable`, lib/email-msf). */
   offerLinkEmail?: boolean;
@@ -229,6 +233,7 @@ export function SendDesignSheet({
             {error}
           </p>
         )}
+        {error && savedOnError && <SavedButUndelivered saved={savedOnError} />}
 
         <div className="mt-4 flex gap-2">
           <button
@@ -244,7 +249,7 @@ export function SendDesignSheet({
             disabled={sending || !preview}
             className="ff-btn ff-btn-primary min-h-11 flex-[2]"
           >
-            {sending ? "Sending…" : "Send design"}
+            {sending ? "Sending…" : savedOnError ? "Try again" : "Send design"}
           </button>
         </div>
         <p className="ff-micro mt-2">
@@ -259,5 +264,37 @@ export function SendDesignSheet({
       </form>
     </div>,
     document.body,
+  );
+}
+
+/**
+ * "Saved, not delivered": the reassurance a failed send owes the parent. Their
+ * design is on our server (with a code) even though our team's email did not go —
+ * so they get the code and the link now, and "Try again" resends the SAME
+ * revision (the server reuses unchanged content).
+ */
+function SavedButUndelivered({ saved }: { saved: { code: string; url: string | null } }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <div className="mt-2 rounded-lg border border-[var(--ff-line-strong)] bg-white p-3 text-[13px] leading-snug text-[var(--ff-ink)]">
+      <p>
+        Your design is saved as <strong className="whitespace-nowrap">{saved.code}</strong>, so nothing is lost.
+        {saved.url ? " Keep this link to open it again:" : ""}
+      </p>
+      {saved.url && (
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <span className="min-w-0 flex-1 break-all text-[12px] opacity-80">{saved.url}</span>
+          <button
+            type="button"
+            onClick={() => {
+              navigator.clipboard?.writeText(saved.url!).then(() => setCopied(true), () => {});
+            }}
+            className="ff-btn ff-btn-secondary ff-btn-sm max-lg:min-h-11"
+          >
+            {copied ? "Link copied" : "Copy link"}
+          </button>
+        </div>
+      )}
+    </div>
   );
 }

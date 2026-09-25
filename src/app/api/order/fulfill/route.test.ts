@@ -25,6 +25,8 @@ vi.mock("@/lib/order/fulfill", () => ({
   fulfillOrder: (...a: unknown[]) => fulfillOrder(...a),
   fulfillCart: (...a: unknown[]) => fulfillCart(...a),
 }));
+const fulfillSchoolOrder = vi.fn().mockResolvedValue("sent");
+vi.mock("@/lib/order/fulfill-school", () => ({ fulfillSchoolOrder: (...a: unknown[]) => fulfillSchoolOrder(...a) }));
 
 import { POST } from "./route";
 
@@ -46,6 +48,7 @@ beforeEach(() => {
   __memOrdersForTest.clear();
   fulfillOrder.mockClear();
   fulfillCart.mockClear();
+  fulfillSchoolOrder.mockClear();
 });
 
 describe("POST /api/order/fulfill", () => {
@@ -76,14 +79,15 @@ describe("POST /api/order/fulfill", () => {
     expect(fulfillOrder).not.toHaveBeenCalled();
   });
 
-  it("fulfils a paid school order, records the ledger, and forwards the client's print payload", async () => {
+  it("fulfils a paid school order from its saved revision — the body's files are never read", async () => {
     session = school("paid");
     const parts = { items: [] };
-    const artifacts = { overview: "data:x" };
+    const artifacts = { overview: "data:forged" };
     const res = await POST(req({ sessionId: "cs_1", orderId: "o-1", parts, artifacts }));
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ ok: true, result: "sent" });
-    expect(fulfillOrder).toHaveBeenCalledWith("o-1", session, { parts, artifacts });
+    expect(fulfillSchoolOrder).toHaveBeenCalledWith(session);
+    expect(fulfillOrder).not.toHaveBeenCalled();
     const t = await schoolTotals("sluh-jr-bills");
     expect(t.frames).toBe(1);
     expect(t.raisedCents).toBe(1000);
@@ -92,8 +96,7 @@ describe("POST /api/order/fulfill", () => {
   it("fulfils a $0 (no_payment_required) order but records NO donation", async () => {
     session = school("no_payment_required");
     expect((await POST(req({ sessionId: "cs_1", orderId: "o-1" }))).status).toBe(200);
-    expect(fulfillOrder).toHaveBeenCalledTimes(1);
-    expect(fulfillOrder).toHaveBeenCalledWith("o-1", session, undefined); // half a payload is no payload
+    expect(fulfillSchoolOrder).toHaveBeenCalledTimes(1); // the free frame still ships
     expect((await schoolTotals("sluh-jr-bills")).frames).toBe(0);
   });
 

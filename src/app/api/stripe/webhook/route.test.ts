@@ -26,6 +26,9 @@ vi.mock("@/lib/stripe", () => ({
 }));
 const fulfillOrder = vi.fn().mockResolvedValue("sent");
 vi.mock("@/lib/order/fulfill", () => ({ fulfillOrder: (...a: unknown[]) => fulfillOrder(...a), fulfillCart: vi.fn() }));
+// A school order has its own path (lib/order/fulfill-school).
+const fulfillSchoolOrder = vi.fn().mockResolvedValue("sent");
+vi.mock("@/lib/order/fulfill-school", () => ({ fulfillSchoolOrder: (...a: unknown[]) => fulfillSchoolOrder(...a) }));
 
 import { POST } from "./route";
 
@@ -50,6 +53,7 @@ beforeEach(() => {
   process.env.STRIPE_WEBHOOK_SECRET = "whsec_test";
   __memOrdersForTest.clear();
   fulfillOrder.mockClear();
+  fulfillSchoolOrder.mockClear();
   sessionsByIntent = {};
 });
 afterEach(() => {
@@ -64,14 +68,15 @@ describe("POST /api/stripe/webhook — the fundraiser ledger", () => {
     const t = await schoolTotals("sluh-jr-bills");
     expect(t.frames).toBe(1);
     expect(t.raisedCents).toBe(1000);
-    expect(fulfillOrder).toHaveBeenCalledWith("o-1", expect.anything());
+    expect(fulfillSchoolOrder).toHaveBeenCalledTimes(1);
+    expect(fulfillOrder).not.toHaveBeenCalled(); // never the holiday path
   });
 
   it("fulfils a $0 (no_payment_required) order but records NO donation", async () => {
     event = completed(schoolSession("no_payment_required"));
     const res = await POST(req());
     expect(res.status).toBe(200);
-    expect(fulfillOrder).toHaveBeenCalledTimes(1); // the free frame still ships
+    expect(fulfillSchoolOrder).toHaveBeenCalledTimes(1); // the free frame still ships
     const t = await schoolTotals("sluh-jr-bills");
     expect(t.frames).toBe(0); // ...but the club is not told it earned money nobody paid
     expect(t.raisedCents).toBe(0);
@@ -80,14 +85,16 @@ describe("POST /api/stripe/webhook — the fundraiser ledger", () => {
   it("neither fulfils nor records an UNPAID session", async () => {
     event = completed(schoolSession("unpaid"));
     await POST(req());
-    expect(fulfillOrder).not.toHaveBeenCalled();
+    expect(fulfillSchoolOrder).not.toHaveBeenCalled();
     expect((await schoolTotals("sluh-jr-bills")).frames).toBe(0);
   });
 });
 
 describe("POST /api/stripe/webhook — an order that did not reach the printer is redelivered", () => {
-  it.each(["failed", "no-payload"])("answers 500 when fulfilment returns %s, so Stripe retries", async (result) => {
-    fulfillOrder.mockResolvedValueOnce(result);
+  // "in-progress": another attempt holds the claim — possibly a crashed one whose
+  // claim will expire — so Stripe must come back rather than be told "done".
+  it.each(["failed", "in-progress"])("answers 500 when fulfilment returns %s, so Stripe retries", async (result) => {
+    fulfillSchoolOrder.mockResolvedValueOnce(result);
     event = completed(schoolSession("paid"));
     const res = await POST(req());
     expect(res.status).toBe(500);
@@ -96,14 +103,16 @@ describe("POST /api/stripe/webhook — an order that did not reach the printer i
     expect((await schoolTotals("sluh-jr-bills")).frames).toBe(1);
   });
 
-  it.each(["sent", "already"])("answers 200 when fulfilment returns %s", async (result) => {
-    fulfillOrder.mockResolvedValueOnce(result);
+  // "held" waits for a person and "no-order" cannot be fixed by retrying; both
+  // have alerted a human already.
+  it.each(["sent", "already", "held", "no-order"])("answers 200 when fulfilment returns %s", async (result) => {
+    fulfillSchoolOrder.mockResolvedValueOnce(result);
     event = completed(schoolSession("paid"));
     expect((await POST(req())).status).toBe(200);
   });
 
   it("answers 500 when fulfilment throws", async () => {
-    fulfillOrder.mockRejectedValueOnce(new Error("db down"));
+    fulfillSchoolOrder.mockRejectedValueOnce(new Error("db down"));
     event = completed(schoolSession("paid"));
     expect((await POST(req())).status).toBe(500);
   });

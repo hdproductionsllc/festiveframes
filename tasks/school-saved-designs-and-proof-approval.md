@@ -196,12 +196,12 @@ email is enough for the pilot; no login system). **Phase 3, not required first.*
 - Found on the way: production `SITE_URL` is still the holiday domain, so parent
   links are built on MySchoolFrame's own origin instead (tested).
 
-**Phase 2 — Recorded proof approval** (fixes the payment gap). Must land BEFORE
-`SCHOOL_CHECKOUT_OPEN` flips; it's harmless to build now since checkout is parked.
-- [ ] Proof sheet (print render + lettering read-back), versioned wording
-- [ ] approval columns + approve route; checkout requires an approved revision
-- [ ] `fulfillOrder` school gate: approval + hash match or hold + alert
-- [ ] Tests: paid+approved → sends; paid+unapproved → held; tampered panel → held;
+**Phase 2 — Recorded proof approval** — DONE 2026-09-25 (with the review fixes:
+photo originals, crash-safe claims, immutable order files, no memory in production)
+- [x] Proof sheet (print render + lettering read-back), versioned wording
+- [x] approval columns + approve route; checkout requires an approved revision
+- [x] School fulfilment gate (lib/order/fulfill-school): approval + hash match or hold + alert
+- [x] Tests: paid+approved → sends; paid+unapproved → held; tampered panel → held;
       100%-off (`no_payment_required`) path behaves the same
 - [ ] Owner's end-to-end test payment (100%-off coupon, live) exercises it
 

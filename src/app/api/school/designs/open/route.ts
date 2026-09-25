@@ -39,6 +39,9 @@ export async function POST(request: Request): Promise<NextResponse> {
       revision: opened.revision,
       school: opened.school,
       design: opened.design,
+      // Uploaded photos' originals, fetched one by one from /original and put
+      // back in this device's IndexedDB under the same ids.
+      originals: opened.originals,
     },
     { status: 200, headers: { "Cache-Control": "no-store" } },
   );

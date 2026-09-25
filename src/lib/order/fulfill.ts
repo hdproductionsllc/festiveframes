@@ -112,22 +112,17 @@ export async function fulfillOrder(
   // we have the SAVED design JSON to render the eufy print sheet from (the client
   // payload carries parts + artifacts, but not the design).
   const draft = await getDraft(orderId);
-  // A school frame is a MySchoolFrame order: its header, subject, sender and inbox
-  // (lib/email-msf) — including the alert when something goes wrong with it.
-  const isSchool = session.metadata?.kind === "school-frame";
-  const brand = isSchool ? "myschoolframe" : undefined;
-  // A school order is produced from the SERVER draft only. Its builder never
-  // sends a payload here, and accepting one would let anybody holding a valid
-  // session (a 100%-off coupon session included) swap in their own print files.
-  const trusted = isSchool ? undefined : payload;
-  const data = trusted ?? (draft ? { parts: draft.parts, artifacts: draft.artifacts } : undefined);
+  // School frames never come here: they are produced from an approved, immutable
+  // revision by lib/order/fulfill-school. This path is the (defunct) holiday
+  // builder's, kept only for orders already in flight.
+  const data = payload ?? (draft ? { parts: draft.parts, artifacts: draft.artifacts } : undefined);
 
   const customerEmail = session.customer_details?.email ?? null;
 
   if (!data) {
     // No design/artifacts available yet. Don't burn the idempotency claim.
     console.error(`[fulfill] no payload for paid order ${orderId} (session ${session.id}).`);
-    await sendFulfillmentFailureAlert(orderId, session.id, customerEmail, "Paid, but no design/artifacts were available to generate production files.", brand);
+    await sendFulfillmentFailureAlert(orderId, session.id, customerEmail, "Paid, but no design/artifacts were available to generate production files.");
     return "no-payload";
   }
 
@@ -137,13 +132,7 @@ export async function fulfillOrder(
   // Auto-render the consolidated eufy sheet (tiles + banners) from the saved
   // design. When the banners all land on the sheet, drop the now-redundant
   // separate banner attachments so the founders get ONE file to print.
-  //
-  // Not for a school frame: its panels ARE the print files (rendered by the
-  // builder's own composer), and its saved design is the school shape, kept as a
-  // record for a reprint — the /build sheet renderer would misread it.
-  const eufy = isSchool
-    ? { sheets: [], bannersIncluded: false }
-    : await renderEufyPrintSheets(draft?.design, data.artifacts.banners, data.parts.designName ?? "");
+  const eufy = await renderEufyPrintSheets(draft?.design, data.artifacts.banners, data.parts.designName ?? "");
 
   const input: ProductionOrderInput = {
     orderId,
@@ -156,7 +145,6 @@ export async function fulfillOrder(
     proof: data.artifacts.proof,
     printSheets: eufy.sheets.length ? eufy.sheets : data.artifacts.printSheets,
     banners: eufy.bannersIncluded ? [] : data.artifacts.banners,
-    brand,
     order: orderFacts(session),
   };
 
@@ -169,7 +157,7 @@ export async function fulfillOrder(
     await unmarkFulfilled(orderId);
     const reason = err instanceof Error ? err.message : "unknown error";
     console.error(`[fulfill] sending failed for order ${orderId}:`, err);
-    await sendFulfillmentFailureAlert(orderId, session.id, customerEmail, reason, brand);
+    await sendFulfillmentFailureAlert(orderId, session.id, customerEmail, reason);
     return "failed";
   }
 }

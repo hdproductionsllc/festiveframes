@@ -710,12 +710,23 @@ case the repair was written for. Put repairs in `merge`, and make them return th
   Bill a picture and kept nothing, so neither side could reopen the design they
   were discussing. Architecture, alternatives weighed and the phase plan:
   `tasks/school-saved-designs-and-proof-approval.md`.
-- **`lib/school-designs/store.ts`**: `school_designs` (what a link points at),
-  `school_design_revisions` (IMMUTABLE, numbered per design — an edit is a new
-  revision, never an update), `school_artifacts` (print files as bytea, keyed by
-  sha256, stored once). Memory fallback on `globalThis` (a module-scope Map split
-  across routes on a `next dev` hot reload and 404'd a fresh link). Retention 18
-  months after the last revision (owner), swept at most daily.
+- **`lib/school-designs/`**: `db.ts` (one pool, one schema, `storageMode()`),
+  `store.ts` — `school_designs` (what a link points at), `school_design_revisions`
+  (content IMMUTABLE, numbered per design; the one write is its approval, set
+  once), `school_artifacts` (print files AND uploaded originals, bytea by sha256,
+  stored once) — and `orders.ts` (`school_orders`). Memory fallback on
+  `globalThis` (a module-scope Map split across routes on a `next dev` hot reload).
+  **Production with no DATABASE_URL stores NOTHING** and says so — never a "saved"
+  link that dies at the next deploy. Retention 18 months after the last revision;
+  a design with an order is never swept.
+- **Unchanged content reuses its revision** (`fingerprint`): "Try again" after a
+  failed email or a double tap is not a new version.
+- **Uploaded photos travel with the design.** Every `fullResId` in the design
+  (`collectFullResIds`, found by WALKING the design, not a list of where uploads
+  live) is sent as its original and stored; opening the link fetches each one
+  (`/api/school/designs/original`, token-scoped to that design's originals only)
+  back into the new device's IndexedDB under the SAME id, so print reads it as on
+  the first device. Verified in Edge: 420,021-byte original, identical on device B.
 - **Names vs keys**: the id, and the short code DERIVED from it (`designCode`,
   `MSF-7K3Q-X2PA`, Crockford base32, never stored), name a design and unlock
   nothing — they may go to Bill's inbox, Stripe, logs. The link's 256-bit token is
@@ -726,9 +737,10 @@ case the repair was written for. Put repairs in `merge`, and make them return th
   holds a design is ASKED before it is replaced; one that doesn't opens it.
   A link opened on another school's page moves to its own.
 - **`/api/school/submit` saves FIRST, then emails**: a failed save still emails
-  Bill (his email says "NOT SAVED"); a failed email still returns the saved ref so
-  the browser adopts it and the retry is the next revision. Bill's subject and
-  body name `<code> r<n>`. A builder that sends no `design` behaves as before.
+  Bill (his email says "NOT SAVED"); a failed email still returns the saved ref,
+  and the send sheet SHOWS it ("saved as MSF-…, so nothing is lost" + link + Try
+  again). Checking and saving live in `lib/school-designs/submission.ts`, shared
+  with Buy's `/api/school/designs/save`. Bill's email names `<code> r<n>`.
 - **The browser remembers its design's link** (`link-memory.ts`,
   `<persistKey>:saved-link`), so a second Send is revision 2. "Start fresh" forgets it.
 - **Parent links are built on MySchoolFrame's origin, NOT `SITE_URL` env** —
@@ -741,9 +753,22 @@ case the repair was written for. Put repairs in `merge`, and make them return th
   lib/email-msf). Only when the parent ticked the box, only after the team's
   email succeeded, only while `designLinkEmailAvailable()` (key + `MSF_EMAIL_FROM`),
   link + code only, replies to `MSF_ORDER_EMAIL`. Never reuse it for anything else.
-- **Phase 2 (before `SCHOOL_CHECKOUT_OPEN` flips)**: recorded proof approval. The
-  `approved_*` columns already exist on revisions, null. Checkout must require an
-  approved revision and `fulfillOrder` must re-hash the panels against it or hold
-  the order. Today the paid path still sends files with no approval on record.
+- **A school ORDER is an approved revision** (2026-09-25). Buy = save →
+  `ProofSheet` (the PRINT render + every line of lettering from
+  `designLettering`, which reads the SECTIONS — school banner words are not in the
+  parts list's bars) → `/api/school/designs/approve` (records
+  `PROOF_APPROVAL_VERSION`, content/proof-approval.ts) → `/api/checkout {token,
+  revision}`, which refuses an unapproved revision and creates the order ID
+  itself. School orders no longer touch `order_drafts`.
+- **`lib/order/fulfill-school.ts`** (webhook + /school/thanks relay): record
+  payment → EXPIRING claim (`CLAIM_LEASE_MS`, 10 min) → check approval, proof hash
+  and re-hash every stored file → send with Resend idempotency keys
+  (`msf-order/<id>/production|production-no-sheets|customer` — one key per exact
+  message) → mark sent. A killed process's claim expires and Stripe's redelivery
+  finishes it; "in-progress" → webhook 500 (retry), "held"/"no-order" → 200 (a
+  human was alerted). No approval / wrong proof / tampered file = HELD, never sent.
+  The order row IS the retry job; there is no second queue.
+- `fulfillOrder` (lib/order/fulfill) is now holiday-only and the holiday shop is
+  defunct; its school branches were removed.
 - Verify locally with `DATABASE_URL= RESEND_API_KEY= npx next dev` — blank values
   win over `.env.local`, which holds the LIVE database and a live Resend key.

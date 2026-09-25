@@ -16,6 +16,7 @@ import type Stripe from "stripe";
 
 import { getStripe } from "@/lib/stripe";
 import { fulfillOrder, fulfillCart, type FulfillResult } from "@/lib/order/fulfill";
+import { fulfillSchoolOrder, type SchoolFulfillResult } from "@/lib/order/fulfill-school";
 import { markSchoolOrderRefunded, recordSchoolOrder } from "@/lib/order/school-ledger";
 
 export const runtime = "nodejs";
@@ -106,13 +107,27 @@ export async function POST(request: Request): Promise<NextResponse> {
       });
     }
 
+    // ── MySchoolFrame order: an approved, immutable revision (lib/order/
+    // fulfill-school). Its own path since 2026-09-25 — it never reads a draft.
+    if (metadata.kind === "school-frame" && metadata.orderId) {
+      try {
+        const full = await stripe.checkout.sessions.retrieve(session.id, {
+          expand: ["collected_information.shipping_details"],
+        });
+        const result = await fulfillSchoolOrder(full);
+        console.log(`[stripe-webhook] school order ${metadata.orderId} via webhook: ${result}`);
+        if (!schoolSettled(result)) return redeliver();
+      } catch (err) {
+        console.error("[stripe-webhook] school order fulfillment failed:", err);
+        return redeliver();
+      }
+      return NextResponse.json({ received: true }, { status: 200 });
+    }
+
     // ── Custom builder order: fulfill from the in-memory draft (backup to the
     // /thanks relay). fulfillOrder is idempotent, so whichever trigger fires
     // second is a no-op. Production/customer emails are handled there.
-    // school-frame rides the same single-order fulfillment as custom-frame: the
-    // draft's printSheets ARE the eufy-ready school panels, and fulfillOrder falls
-    // back to them when the saved design isn't a /build design to re-render.
-    if ((metadata.kind === "custom-frame" || metadata.kind === "school-frame") && metadata.orderId) {
+    if (metadata.kind === "custom-frame" && metadata.orderId) {
       try {
         // Expand the shipping address so fulfillOrder's emails get a real
         // "Ship to" block — it lives at collected_information.shipping_details
@@ -168,6 +183,17 @@ export async function POST(request: Request): Promise<NextResponse> {
  */
 function fulfilled(result: FulfillResult): boolean {
   return result === "sent" || result === "already";
+}
+
+/**
+ * Is there nothing more a redelivery could do for this school order? Sent, done
+ * by another trigger, HELD for a person (a retry would only hold it again), or
+ * naming no order at all (alerted; a retry cannot conjure one). "in-progress"
+ * (another attempt holds the claim — possibly a crashed one whose claim will
+ * expire) and "failed" come back later.
+ */
+function schoolSettled(result: SchoolFulfillResult): boolean {
+  return result === "sent" || result === "already" || result === "held" || result === "no-order";
 }
 
 /** Ask Stripe to deliver this event again (it retries non-2xx for up to 3 days). */

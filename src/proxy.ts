@@ -33,9 +33,16 @@ const RULES: Record<string, Rule> = {
   "/api/cartoonize": { windowMs: 5 * 60_000, max: 12, maxBytes: 12 * MB },
   "/api/pet-caption": { windowMs: 5 * 60_000, max: 20, maxBytes: 12 * MB },
   "/api/lab/pet-submit": { windowMs: 10 * 60_000, max: 6, maxBytes: 12 * MB },
-  // A full-frame 300-DPI print PNG is a few MB; base64 in the JSON body inflates it
-  // ~1.33x, so allow ~20MB encoded (the route enforces an 18MB DECODED ceiling).
-  "/api/school/submit": { windowMs: 10 * 60_000, max: 10, maxBytes: 32 * MB },
+  // A full-frame 300-DPI print PNG is a few MB and base64 inflates it ~1.33x; a
+  // send also carries the panels and any uploaded photos' originals (so the design
+  // survives on another device). Each image has its own decoded ceiling in
+  // lib/school-designs/submission. Save is the same body, for the Buy path.
+  "/api/school/submit": { windowMs: 10 * 60_000, max: 10, maxBytes: 64 * MB },
+  "/api/school/designs/save": { windowMs: 10 * 60_000, max: 10, maxBytes: 64 * MB },
+  // One approval per proof; a handful covers second thoughts and retries.
+  "/api/school/designs/approve": { windowMs: 10 * 60_000, max: 20, maxBytes: 4 * 1024 },
+  // A reopened design fetches each uploaded original once.
+  "/api/school/designs/original": { windowMs: 10 * 60_000, max: 60, maxBytes: 4 * 1024 },
   // Reopens a saved design from the token in a parent's link. The token is 256
   // random bits, so guessing is hopeless anyway; the gate keeps it that way and
   // stops a script hammering the database. A real parent opens a link a few times.
@@ -111,6 +118,9 @@ export const config = {
     "/api/pet-caption",
     "/api/lab/pet-submit",
     "/api/school/submit",
+    "/api/school/designs/save",
+    "/api/school/designs/approve",
+    "/api/school/designs/original",
     "/api/school/designs/open",
     "/api/school/brand-scan",
     "/api/school/brand-asset",

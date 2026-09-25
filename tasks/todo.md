@@ -1,3 +1,43 @@
+# Saved-design + school-order hardening (2026-09-25) — Henry's go: "fix 1-3 elegantly"
+
+Festive Frames is DEFUNCT (Henry, 2026-09-25): school orders only; the holiday paid
+path is not hardened. School checkout stays PARKED throughout. One push at the end.
+
+## 1. Photos survive on another device
+- [x] Send/Buy includes each upload's full-res ORIGINAL (every `fullResId` in the
+      design, found by walking it — not a hand list of where uploads live)
+- [x] Stored in `school_artifacts`; the revision maps fullResId -> sha256
+- [x] Opening a link re-fills this device's IndexedDB under the SAME fullResId
+      (token-checked artifact route), so print reads the original as before
+- [x] Verified in Edge: 420,021-byte original on device A is in device B's IndexedDB under the same id after opening the link
+
+## 2. A failed send still shows the saved link, and "Try again" reuses the version
+- [x] Unchanged content = same revision (fingerprint), so a retry or double tap never
+      makes version 2 of nothing
+- [x] Send sheet on failure: "Saved as MSF-… — we couldn't reach our team" + link + retry
+
+## 3. School orders: locked version, recorded approval, crash-safe sending
+- [x] `school_orders` table: order -> (design, revision) — files come from the
+      immutable revision, so there is nothing to replace (review #3) and nothing
+      a 24h sweep can delete (review #4); revisions with orders are never swept
+- [x] Proof sheet before pay: the PRINT render + every line of lettering as text;
+      "Approve and pay" records approval on the revision (versioned wording)
+- [x] Checkout requires an approved revision + the design's token; server makes
+      the order id; Stripe metadata carries order + revision + proof hash
+- [x] Fulfilment: record payment -> expiring processing claim -> verify approval and
+      re-hash files -> send with Resend idempotency keys -> mark sent. A killed
+      process's claim expires and Stripe's redelivery finishes it (review #2).
+      No approval / hash mismatch -> HELD + alert, never printed
+- [x] School orders stop using order_drafts entirely
+- [x] Memory storage refused in production (review #6) for designs and orders
+
+## Not in this batch (named so they are not forgotten)
+- Fundraiser ledger refund-before-purchase ordering (review #7) — before checkout opens
+- Lost-link recovery for parents (review #8)
+- Holiday checkout still accepts payment for a defunct shop — ask Henry to switch off
+
+---
+
 # MySchoolFrame pilot launch — the six-school batch (2026-09-23)
 
 **Owner's rule for this phase:** the goal is not a more complete product, it is getting

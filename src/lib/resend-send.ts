@@ -16,8 +16,20 @@ import type { Resend } from "resend";
 
 export type ResendMessage = Parameters<Resend["emails"]["send"]>[0];
 
-export async function sendOrThrow(resend: Resend, msg: ResendMessage): Promise<{ id: string }> {
-  const { data, error } = await resend.emails.send(msg);
+/**
+ * `idempotencyKey`: the same key within 24 hours sends at most once — Resend
+ * answers a repeat with the first result. The order path uses one per email per
+ * order, so an attempt that is retried after a crash cannot mail Bill twice. A
+ * key must name one exact message: the same key with DIFFERENT content is refused.
+ */
+export async function sendOrThrow(
+  resend: Resend,
+  msg: ResendMessage,
+  opts?: { idempotencyKey?: string },
+): Promise<{ id: string }> {
+  const { data, error } = opts?.idempotencyKey
+    ? await resend.emails.send(msg, { idempotencyKey: opts.idempotencyKey })
+    : await resend.emails.send(msg);
   if (error || !data) {
     throw new Error(`Resend ${error?.name ?? "error"}: ${error?.message ?? "no result returned"}`);
   }

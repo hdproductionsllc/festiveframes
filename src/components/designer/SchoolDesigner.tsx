@@ -43,7 +43,11 @@ import {
   type LoadableDesign,
 } from "@/stores/design-store";
 import { readDesignLink, tokenFromHash, writeDesignLink } from "@/lib/school-designs/link-memory";
+import { collectFullResIds } from "@/lib/school-designs/full-res-ids";
+import { designLettering } from "@/lib/school-designs/lettering";
+import { getFullRes, putFullRes } from "@/lib/utils/image-store";
 import { OpenSavedDesignPrompt, SavedDesignBanner, type SavedDesignInfo } from "./SavedDesignBanners";
+import { ProofSheet } from "./ProofSheet";
 import { composeSchoolFrame, composeSchoolPanels, schoolDesignOf } from "@/lib/utils/compose-school-frame";
 import { makeZip, dataUrlToBytes, type ZipEntry } from "@/lib/utils/zip";
 import { buildPanelPartsList } from "@/lib/order/parts-list";
@@ -148,6 +152,44 @@ function DownloadIcon() {
       <path d="M12 3.5v11M12 14.5l-4-4M12 14.5l4-4M4 19.5h16" />
     </svg>
   );
+}
+
+/** A Blob as a data URL — how an uploaded original travels in a JSON body. */
+function blobDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(String(r.result));
+    r.onerror = () => reject(r.error);
+    r.readAsDataURL(blob);
+  });
+}
+
+/**
+ * The print-resolution ORIGINALS of every uploaded photo this design uses, from
+ * this device's IndexedDB — sent with the design so it survives on another device.
+ * A photo whose original this device does not hold (IndexedDB was unavailable at
+ * upload) is simply absent; print then falls back to its preview, as it always has.
+ */
+async function originalsOf(design: unknown): Promise<{ fullResId: string; dataUrl: string }[]> {
+  const out: { fullResId: string; dataUrl: string }[] = [];
+  for (const fullResId of collectFullResIds(design)) {
+    try {
+      const blob = await getFullRes(fullResId);
+      if (blob && /^image\/(png|jpeg)$/.test(blob.type)) out.push({ fullResId, dataUrl: await blobDataUrl(blob) });
+    } catch {
+      // Unreadable here: the preview still prints.
+    }
+  }
+  return out;
+}
+
+/** What the server says it saved (lib/school-designs/submission `SavedOut`). */
+interface SavedOut {
+  id: string;
+  token: string;
+  code: string;
+  revision: number;
+  url: string | null;
 }
 
 export function SchoolDesigner({
@@ -288,7 +330,13 @@ export function SchoolDesigner({
   // page was opened with that waits for "Open it", and the note once one opened.
   const [savedInfo, setSavedInfo] = useState<SavedDesignInfo | null>(null);
   const [pendingOpen, setPendingOpen] = useState<
-    null | { token: string; id: string; code: string; design: LoadableDesign }
+    null | {
+      token: string;
+      id: string;
+      code: string;
+      design: LoadableDesign;
+      originals: { fullResId: string; sha256: string }[];
+    }
   >(null);
   const [openedCode, setOpenedCode] = useState<string | null>(null);
   const linkOpenRef = useRef(false);
@@ -503,12 +551,36 @@ export function SchoolDesigner({
   //
   // It replaces the design on this device, so it ASKS when this device already
   // holds one (`savedAtLoad`) and opens directly when it doesn't.
-  const openSaved = (found: { token: string; id: string; code: string; design: LoadableDesign }) => {
+  const openSaved = (found: {
+    token: string;
+    id: string;
+    code: string;
+    design: LoadableDesign;
+    originals: { fullResId: string; sha256: string }[];
+  }) => {
     storeApi.getState().loadDesign(found.design);
     writeDesignLink(persistKey, { id: found.id, token: found.token, code: found.code });
     setPendingOpen(null);
     setRestoredDismissed(true);
     setOpenedCode(found.code);
+    // The uploaded photos' print ORIGINALS, back into this device's IndexedDB under
+    // the design's own ids — so print reads them exactly as on the first device.
+    // The design is on screen already (it draws from previews); this only decides
+    // print quality, so it runs behind it.
+    void (async () => {
+      for (const o of found.originals) {
+        try {
+          const res = await fetch("/api/school/designs/original", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ token: found.token, sha256: o.sha256 }),
+          });
+          if (res.ok) await putFullRes(o.fullResId, await res.blob());
+        } catch {
+          // Not restored: that photo prints from its preview, as before this existed.
+        }
+      }
+    })();
   };
   useEffect(() => {
     const token = tokenFromHash(window.location.hash);
@@ -528,6 +600,7 @@ export function SchoolDesigner({
           code?: string;
           school?: string | null;
           design?: LoadableDesign;
+          originals?: { fullResId: string; sha256: string }[];
           error?: string;
         };
         if (!res.ok || !data.ok || !data.id || !data.code || !data.design) {
@@ -540,7 +613,7 @@ export function SchoolDesigner({
           window.location.replace(`/s/${data.school}#d=${token}`);
           return;
         }
-        const found = { token, id: data.id, code: data.code, design: data.design };
+        const found = { token, id: data.id, code: data.code, design: data.design, originals: data.originals ?? [] };
         if (savedAtLoad()) setPendingOpen(found);
         else openSaved(found);
       } catch {
@@ -675,6 +748,9 @@ export function SchoolDesigner({
         rendered: { printPng: string; panels: { name: string; dataUrl: string }[] } | null;
         failed: boolean;
         error: string | null;
+        /** Saved even though delivery failed — shown with the error, so the parent
+         *  keeps their code and link; "Try again" resends the same revision. */
+        saved: { code: string; url: string | null } | null;
       }
   >(null);
   const sendRun = useRef(0);
@@ -684,7 +760,7 @@ export function SchoolDesigner({
     if (submitting || exporting || sendSheet) return;
     setSubmitState(null);
     const run = ++sendRun.current;
-    setSendSheet({ rendered: null, failed: false, error: null });
+    setSendSheet({ rendered: null, failed: false, error: null, saved: null });
     try {
       // Every brand colour the screen paints with — see `schoolDesignOf`.
       const design = schoolDesignOf(storeApi.getState());
@@ -710,15 +786,21 @@ export function SchoolDesigner({
     setSendSheet(null);
   };
 
-  const handleSubmit = async (contact: OrderContact, opts: { emailLink: boolean }) => {
-    const rendered = sendSheet?.rendered;
-    if (!rendered || submitting) return;
-    setSubmitting(true);
-    setSendSheet((cur) => cur && { ...cur, error: null });
-    try {
-      const s = storeApi.getState();
-      const { printPng, panels } = rendered;
-      const partsList = buildPanelPartsList({
+  /**
+   * THE body Send and Buy both post (lib/school-designs/submission checks it the
+   * same way for both): the rendered files, the parts list, the school, the
+   * artwork's provenance, and THE SAVED DESIGN — the editable design itself, its
+   * uploaded photos' originals, which saved design this browser's design already
+   * is (so this is its next revision), and the frame it was drawn on.
+   */
+  const submissionBody = async (rendered: { printPng: string; panels: { name: string; dataUrl: string }[] }) => {
+    const s = storeApi.getState();
+    const design = loadableDesignOf(s);
+    return {
+      printPng: rendered.printPng,
+      panels: rendered.panels,
+      designName: s.designName,
+      partsList: buildPanelPartsList({
         slots: s.slots,
         textBars: s.textBars,
         qrCode: s.qrCode,
@@ -728,36 +810,35 @@ export function SchoolDesigner({
         dieCut: s.dieCut,
         frameConfig: s.frameConfig,
         sections: s.sections,
-      });
+      }),
+      school: kit?.slug,
+      artUploaded: designHasUploadedArt(s),
+      artworkRights: s.artworkRights,
+      design,
+      originals: await originalsOf(design),
+      link: readDesignLink(persistKey),
+      variant,
+    };
+  };
+
+  const handleSubmit = async (contact: OrderContact, opts: { emailLink: boolean }) => {
+    const rendered = sendSheet?.rendered;
+    if (!rendered || submitting) return;
+    setSubmitting(true);
+    setSendSheet((cur) => cur && { ...cur, error: null });
+    try {
       const res = await fetch("/api/school/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        // The artwork's provenance travels WITH the order, not in a separate
-        // ledger: the production inbox is where somebody decides to print this.
-        body: JSON.stringify({
-          printPng,
-          panels,
-          designName: s.designName,
-          partsList,
-          school: kit?.slug,
-          artUploaded: designHasUploadedArt(s),
-          artworkRights: s.artworkRights,
-          // Who to reply to — required, and checked again by the route.
-          contact,
-          // THE SAVED DESIGN: the editable design itself, which saved design this
-          // browser's design already is (so this Send is its next revision), the
-          // frame it was drawn on, and whether to email the parent their link.
-          design: loadableDesignOf(s),
-          link: readDesignLink(persistKey),
-          variant,
-          emailLink: opts.emailLink,
-        }),
+        // Who to reply to (required, checked again by the route) and whether to
+        // email the parent their link, on top of the shared body.
+        body: JSON.stringify({ ...(await submissionBody(rendered)), contact, emailLink: opts.emailLink }),
       });
       const data = (await res.json().catch(() => ({}))) as {
         ok?: boolean;
         reason?: string;
         error?: string;
-        saved?: { id: string; token: string; code: string; revision: number; url: string | null } | null;
+        saved?: SavedOut | null;
         linkEmailed?: boolean;
       };
       // Adopt what was saved whatever else happened, so a retry after a failed
@@ -789,8 +870,12 @@ export function SchoolDesigner({
           msg: "Sending is not switched on yet, so nothing was sent.",
         });
       } else {
-        // Stays in the sheet, with what they typed, so a retry is one tap.
-        setSendSheet((cur) => cur && { ...cur, error: data.error || "Couldn't send your design right now. Please try again." });
+        // Stays in the sheet, with what they typed, so a retry is one tap — and
+        // with what WAS saved, so a failed delivery never hides the parent's link.
+        const saved = data.saved ? { code: data.saved.code, url: data.saved.url } : null;
+        setSendSheet(
+          (cur) => cur && { ...cur, saved, error: data.error || "Couldn't send your design right now. Please try again." },
+        );
       }
     } catch {
       setSendSheet((cur) => cur && { ...cur, error: "Something went wrong sending your design. Please try again." });
@@ -912,80 +997,76 @@ export function SchoolDesigner({
       commit(before + fitAtWord(pasted, max - before.length - after.length) + after);
     };
 
+  // BUY — save the design as a revision, show its PROOF, record the parent's
+  // approval on that exact revision, then pay for it. Checkout starts only on an
+  // approved revision, and production sends only an approved, untouched one
+  // (lib/order/fulfill-school), so "nothing prints until you've said yes" is
+  // enforced end to end rather than promised.
+  const [proof, setProof] = useState<
+    null | { saved: SavedOut; image: string; lettering: string[]; error: string | null }
+  >(null);
+
   const handleBuy = async () => {
     if (!artworkRightsSettled("buy")) return;
     if (buying || submitting || exporting) return;
     setBuying(true);
     setSubmitState(null);
     try {
-      const s = storeApi.getState();
       // Every brand colour the screen paints with — see `schoolDesignOf`.
-      const design = schoolDesignOf(s);
-      const [printPng, panelPngs] = await Promise.all([
-        composeSchoolFrame(design),
-        composeSchoolPanels(design),
-      ]);
+      const design = schoolDesignOf(storeApi.getState());
+      const [printPng, panelPngs] = await Promise.all([composeSchoolFrame(design), composeSchoolPanels(design)]);
       if (!printPng) {
         setSubmitState({ kind: "error", msg: "Couldn't render your frame's print file. Try again." });
         return;
       }
-      const partsList = buildPanelPartsList({
-        slots: s.slots,
-        textBars: s.textBars,
-        qrCode: s.qrCode,
-        plateState: s.plateState,
-        designName: s.designName,
-        tileSizeInches: s.frameConfig.tileSizeInches,
-        dieCut: s.dieCut,
-        frameConfig: s.frameConfig,
-        sections: s.sections,
-      });
-      const orderId = crypto.randomUUID();
-      // Panels are the print files; the assembled sheet is the proof/overview.
-      // `design` rides along as the ORDER'S RECORD: a fulfilled draft is kept, and
-      // a remake or warranty claim needs the editable design, not only the PNGs.
-      // fulfillOrder never re-renders a school design (its panels are final).
-      const draftRes = await fetch("/api/order/draft", {
+      const body = await submissionBody({ printPng, panels: panelPngs.map((p) => ({ name: p.id, dataUrl: p.dataUrl })) });
+      const res = await fetch("/api/school/designs/save", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          orderId,
-          design,
-          parts: partsList,
-          artifacts: {
-            proof: { name: "OVERVIEW-do-not-print", dataUrl: printPng },
-            printSheets: panelPngs.map((p) => ({ name: p.id, dataUrl: p.dataUrl })),
-            banners: [],
-          },
-        }),
+        body: JSON.stringify(body),
       });
-      if (!draftRes.ok) {
-        setSubmitState({ kind: "error", msg: "Couldn't save your design for checkout. Please try again." });
+      const data = (await res.json().catch(() => ({}))) as { ok?: boolean; saved?: SavedOut; error?: string };
+      if (!res.ok || !data.saved) {
+        setSubmitState({ kind: "error", msg: data.error || "Couldn't save your design for checkout. Please try again." });
         return;
       }
+      writeDesignLink(persistKey, { id: data.saved.id, token: data.saved.token, code: data.saved.code });
+      // Every line of lettering, in reading order, for the parent to check.
+      const lettering = designLettering(storeApi.getState());
+      setProof({ saved: data.saved, image: printPng, lettering, error: null });
+    } catch {
+      setSubmitState({ kind: "error", msg: "Something went wrong starting checkout. Please try again." });
+    } finally {
+      setBuying(false);
+    }
+  };
+
+  const approveAndPay = async () => {
+    if (!proof || buying) return;
+    setBuying(true);
+    setProof((cur) => cur && { ...cur, error: null });
+    const fail = (msg: string) => setProof((cur) => cur && { ...cur, error: msg });
+    try {
+      const { token, revision } = proof.saved;
+      const approved = await fetch("/api/school/designs/approve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token, revision }),
+      });
+      if (!approved.ok) return fail("We couldn't record your approval. Please try again.");
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          kind: "school-frame",
-          orderId,
-          designName: s.designName,
-          school: kit?.slug,
-          artUploaded: designHasUploadedArt(s),
-          artworkRights: s.artworkRights,
-        }),
+        body: JSON.stringify({ kind: "school-frame", token, revision }),
       });
       const data = (await res.json().catch(() => ({}))) as { url?: string; error?: string };
       if (res.ok && data.url) {
         window.location.assign(data.url);
         return; // navigating away — leave the button in its busy state
       }
-      setSubmitState({
-        kind: "error",
-        msg: data.error || "Couldn't start checkout. Please try again.",
-      });
+      fail(data.error || "Couldn't start checkout. Please try again.");
     } catch {
-      setSubmitState({ kind: "error", msg: "Something went wrong starting checkout. Please try again." });
+      fail("Something went wrong starting checkout. Please try again.");
     } finally {
       setBuying(false);
     }
@@ -1801,9 +1882,23 @@ export function SchoolDesigner({
           initialFor={buyerId}
           sending={submitting}
           error={sendSheet.error}
+          savedOnError={sendSheet.saved}
           offerLinkEmail={offerLinkEmail}
           onSend={(contact, opts) => void handleSubmit(contact, opts)}
           onClose={closeSend}
+        />
+      )}
+
+      {proof && (
+        <ProofSheet
+          proof={proof.image}
+          code={proof.saved.code}
+          revision={proof.saved.revision}
+          lettering={proof.lettering}
+          busy={buying}
+          error={proof.error}
+          onApprove={() => void approveAndPay()}
+          onClose={() => setProof(null)}
         />
       )}
 

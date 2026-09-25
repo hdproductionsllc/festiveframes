@@ -119,6 +119,12 @@ export interface ProductionOrderInput {
   /** The money, the school and the artwork record, off the Stripe session
    *  (`orderFacts` in lib/order/fulfill). Absent on a cart line. */
   order?: OrderFacts;
+  /**
+   * Resend idempotency key for THIS order's emails. Each message gets its own
+   * suffix (production, production without sheets, customer), because Resend
+   * refuses one key reused with different content. Set by the school order path.
+   */
+  idempotencyKey?: string;
 }
 
 /** What the checkout recorded about an order, for the people who make it. */
@@ -133,6 +139,9 @@ export interface OrderFacts {
   donationCents: number;
   /** The artwork-rights line, and whether uploaded art has NO attestation. */
   artwork: { line: string; unattested: boolean } | null;
+  /** The proof the parent approved: design code, revision and when. School
+   *  orders only — an order without one is HELD and never reaches this email. */
+  approval?: string | null;
 }
 
 /**
@@ -163,6 +172,7 @@ function orderFactLines(o: ProductionOrderInput): Array<{ label: string; value: 
   if (f.school) out.push({ label: "School", value: f.school });
   if (f.discountCents > 0) out.push({ label: "Discount", value: `${usd(f.discountCents)} (promotion code)` });
   if (f.artwork) out.push({ label: "Artwork", value: f.artwork.line, alarm: f.artwork.unattested });
+  if (f.approval) out.push({ label: "Proof approved", value: f.approval });
   return out;
 }
 
@@ -466,16 +476,21 @@ export async function sendProductionEmails(
     c && c.total > 1
       ? `PRODUCTION [${c.index}/${c.total}] — ${o.customerName ?? o.customerEmail ?? o.orderId} — ${o.parts.designName || "Custom frame"} (order ${c.cartId})`
       : `${isNoChargeOrder(o) ? "PRODUCTION ($0 COUPON)" : "PRODUCTION"} — ${o.parts.designName || "Custom frame"} — ${o.customerName ?? o.customerEmail ?? o.orderId}`;
+  const key = (suffix: string) => (o.idempotencyKey ? { idempotencyKey: `${o.idempotencyKey}/${suffix}` } : undefined);
   const sendFounders = () =>
-    sendOrThrow(resend, {
-      from,
-      to: founderList,
-      replyTo: o.customerEmail ?? undefined,
-      subject,
-      html: productionHtml(o, droppedNote),
-      text: productionText(o, droppedNote),
-      attachments,
-    });
+    sendOrThrow(
+      resend,
+      {
+        from,
+        to: founderList,
+        replyTo: o.customerEmail ?? undefined,
+        subject,
+        html: productionHtml(o, droppedNote),
+        text: productionText(o, droppedNote),
+        attachments,
+      },
+      key(includeSheets ? "production" : "production-no-sheets"),
+    );
 
   try {
     await sendFounders();
@@ -512,15 +527,19 @@ export async function sendProductionEmails(
       ? [{ ...proofAttachment, contentId: "proof" }]
       : [];
     try {
-      await sendOrThrow(resend, {
-        from,
-        to: o.customerEmail,
-        bcc: founderList,
-        subject: `Your ${BRAND_NAME[brand]} order is confirmed`,
-        html: customerHtml(o),
-        text: customerText(o),
-        attachments: customerAttachments,
-      });
+      await sendOrThrow(
+        resend,
+        {
+          from,
+          to: o.customerEmail,
+          bcc: founderList,
+          subject: `Your ${BRAND_NAME[brand]} order is confirmed`,
+          html: customerHtml(o),
+          text: customerText(o),
+          attachments: customerAttachments,
+        },
+        key("customer"),
+      );
     } catch (err) {
       const reason = err instanceof Error ? err.message : "unknown error";
       console.error("[email-production] customer email failed:", err);
