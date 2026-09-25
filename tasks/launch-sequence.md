@@ -1,5 +1,8 @@
 # Launch sequence — MySchoolFrame (2026-08-20)
 
+> **Superseded for checkout (2026-09-25):** the current, ordered launch list is
+> `tasks/checkout-launch-checklist.md`. The geometry history below is still accurate.
+
 Written the morning of the Bill working session. Everything here is measured from
 source, not transcribed. Two companion docs were published as artifacts:
 readiness brief, geometry worksheet, SLUH pilot plan.

@@ -32,8 +32,8 @@ path is not hardened. School checkout stays PARKED throughout. One push at the e
 - [x] Memory storage refused in production (review #6) for designs and orders
 
 ## Not in this batch (named so they are not forgotten)
-- Fundraiser ledger refund-before-purchase ordering (review #7) — before checkout opens
-- Lost-link recovery for parents (review #8)
+- Fundraiser ledger refund-before-purchase ordering (review #7) — now in tasks/checkout-launch-checklist.md
+- Lost-link recovery for parents (review #8) — now in tasks/checkout-launch-checklist.md
 - Holiday checkout still accepts payment for a defunct shop — ask Henry to switch off
 
 ---
