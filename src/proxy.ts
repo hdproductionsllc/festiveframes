@@ -36,6 +36,10 @@ const RULES: Record<string, Rule> = {
   // A full-frame 300-DPI print PNG is a few MB; base64 in the JSON body inflates it
   // ~1.33x, so allow ~20MB encoded (the route enforces an 18MB DECODED ceiling).
   "/api/school/submit": { windowMs: 10 * 60_000, max: 10, maxBytes: 32 * MB },
+  // Reopens a saved design from the token in a parent's link. The token is 256
+  // random bits, so guessing is hopeless anyway; the gate keeps it that way and
+  // stops a script hammering the database. A real parent opens a link a few times.
+  "/api/school/designs/open": { windowMs: 10 * 60_000, max: 30, maxBytes: 4 * 1024 },
   // Both fetch an ARBITRARY user-supplied URL server-side (a school site, then
   // its stylesheets and logos — dozens of outbound requests per call, 22s
   // budget). An SSRF relay with no per-IP gate is a free proxy; the payloads
@@ -107,6 +111,7 @@ export const config = {
     "/api/pet-caption",
     "/api/lab/pet-submit",
     "/api/school/submit",
+    "/api/school/designs/open",
     "/api/school/brand-scan",
     "/api/school/brand-asset",
     "/api/school/request",

@@ -9,6 +9,10 @@ import { SCHOOL_CONTACT_EMAIL } from "@/content/school-contact";
 // the design saved in the parent's own browser. No analytics run on the school
 // pages. If any of that changes, this page changes with it.
 //
+// 2026-09-25: a sent design is now SAVED (lib/school-designs) and reopenable from
+// the parent's private link, kept 18 months after its last change; and a parent
+// may tick "Email me a link", the one automatic email to them (lib/email-msf).
+//
 // LEGAL NOTE: a plain-language starting point, not legal advice. For counsel to
 // review before SCHOOL_CHECKOUT_OPEN flips.
 
@@ -35,7 +39,10 @@ export default function MsfPrivacyPage() {
           <strong>When you send us a design:</strong> your email address, your
           phone number if you choose to give it, who the frame is for, and the
           design itself, including any photo you&apos;ve put on it. These go to our
-          team so a person can reply to you about that design.
+          team so a person can reply to you about that design. We also save the
+          design, so you can open it again from your private link on any device
+          and we both know exactly which version we&apos;re talking about. Anyone
+          you share that link with can open and change the design.
         </li>
         <li>
           <strong>When you ask us to add your school:</strong> the school&apos;s
@@ -68,8 +75,9 @@ export default function MsfPrivacyPage() {
       </ul>
       <p>
         We don&apos;t add you to a mailing list or newsletter, and we won&apos;t
-        email or text you automatically. The only emails our system sends are about
-        an order you placed.
+        text you. The only emails our system sends you are about an order you
+        placed, and the link to your saved design if you ask for it when you send
+        one.
       </p>
 
       <h2>Who we share it with</h2>
@@ -88,8 +96,10 @@ export default function MsfPrivacyPage() {
       <p>
         We keep order records for as long as we need them to make and support your
         frame and to meet our tax and legal obligations. We keep designs you send
-        and school requests while they&apos;re useful for replying to you, and
-        you&apos;re welcome to ask us to delete them.
+        for 18 months after you last change them, which covers our one-year
+        warranty, and then delete them. We keep school requests while they&apos;re
+        useful for replying to you. You&apos;re welcome to ask us to delete any of
+        it sooner.
       </p>
 
       <h2>Your choices</h2>

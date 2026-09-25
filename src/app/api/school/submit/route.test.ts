@@ -46,7 +46,7 @@ describe("POST /api/school/submit — graceful no-key path", () => {
     const res = await POST(req({ printPng: TINY_PNG, designName: "Lincoln HS" }));
     expect(res.status).toBe(200);
     const json = await res.json();
-    expect(json).toEqual({ ok: false, reason: "email-not-configured" });
+    expect(json).toEqual({ ok: false, reason: "email-not-configured", saved: null, linkEmailed: false });
     expect(sendMock).not.toHaveBeenCalled();
   });
 });
@@ -106,7 +106,7 @@ describe("POST /api/school/submit — panels", () => {
       }),
     );
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ ok: true });
+    expect(await res.json()).toEqual({ ok: true, saved: null, linkEmailed: false });
     const arg = sendMock.mock.calls[0][0];
     // 4 panels + 1 overview.
     expect(arg.attachments).toHaveLength(5);
@@ -156,7 +156,7 @@ describe("POST /api/school/submit — security", () => {
       }),
     );
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ ok: true });
+    expect(await res.json()).toEqual({ ok: true, saved: null, linkEmailed: false });
     expect(sendMock).toHaveBeenCalledTimes(1);
     const arg = sendMock.mock.calls[0][0];
     expect(arg.to).toEqual(["bill@myschoolframe.com"]);
@@ -391,5 +391,133 @@ describe("POST /api/school/submit — the sender's contact", () => {
     expect(sent.html).toContain("Reply to:");
     expect(sent.text).toContain(`Reply to: `);
     expect(sent.text).toContain(CONTACT.email);
+  });
+});
+
+// ── THE SAVED DESIGN (2026-09-25) ────────────────────────────────────────────
+// Every send stores a revision and answers with its code and the parent's link;
+// the link email is the ONE mail that may go to an address a parent typed, and
+// only when they asked, only once the team has the design.
+describe("POST /api/school/submit — saves the design and hands back its link", () => {
+  const DESIGN = { designName: "Emma's frame", slots: {}, textBars: [] };
+  const body = (over: Record<string, unknown> = {}) => ({
+    printPng: TINY_PNG,
+    panels: [{ name: "left", dataUrl: TINY_PNG }],
+    designName: "Emma's frame",
+    school: "ladue-rams",
+    variant: "flush",
+    design: DESIGN,
+    ...over,
+  });
+  const LINK_RE = /\/s\/ladue-rams#d=[A-Za-z0-9_-]{43}$/;
+
+  it("saves revision 1 and returns its code and a /s/<slug>#d= link", async () => {
+    process.env.RESEND_API_KEY = "test-key";
+    const json = await (await POST(req(body()))).json();
+    expect(json.ok).toBe(true);
+    expect(json.saved.code).toMatch(/^MSF-[0-9A-Z]{4}-[0-9A-Z]{4}$/);
+    expect(json.saved.revision).toBe(1);
+    expect(json.saved.url).toMatch(LINK_RE);
+    expect(json.linkEmailed).toBe(false);
+  });
+
+  it("names the saved code and revision in the team's email", async () => {
+    process.env.RESEND_API_KEY = "test-key";
+    const json = await (await POST(req(body()))).json();
+    const arg = sendMock.mock.calls[0][0];
+    expect(arg.subject).toContain(`${json.saved.code} r1`);
+    expect(arg.text).toContain(`Saved as: ${json.saved.code} · revision 1`);
+  });
+
+  it("a send carrying the design's link is revision 2 of the same design", async () => {
+    process.env.RESEND_API_KEY = "test-key";
+    const first = (await (await POST(req(body()))).json()).saved;
+    const second = (await (await POST(req(body({ link: { id: first.id, token: first.token } })))).json()).saved;
+    expect(second.id).toBe(first.id);
+    expect(second.revision).toBe(2);
+  });
+
+  it("emails the parent their link ONLY when asked — link and code, no files, replies to us", async () => {
+    process.env.RESEND_API_KEY = "test-key";
+    process.env.MSF_EMAIL_FROM = "MySchoolFrame <orders@myschoolframe.com>";
+    process.env.MSF_ORDER_EMAIL = "bill@myschoolframe.com";
+    const json = await (await POST(req(body({ emailLink: true })))).json();
+    expect(json.linkEmailed).toBe(true);
+    expect(sendMock).toHaveBeenCalledTimes(2);
+    const [team, link] = sendMock.mock.calls.map((c) => c[0]);
+    // The production email's rule is untouched: the parent is never on it.
+    expect(JSON.stringify([team.to, team.cc, team.bcc, team.replyTo])).not.toContain(CONTACT.email);
+    // The link email: to the parent alone, from our own sender, no attachments.
+    expect(link.to).toEqual([CONTACT.email]);
+    expect(link.from).toBe("MySchoolFrame <orders@myschoolframe.com>");
+    expect(link.replyTo).toEqual(["bill@myschoolframe.com"]);
+    expect(link.attachments).toBeUndefined();
+    expect(link.cc).toBeUndefined();
+    expect(link.bcc).toBeUndefined();
+    expect(link.text).toContain(json.saved.url);
+    expect(link.text).toContain(json.saved.code);
+  });
+
+  it("sends no link email when the box was not ticked", async () => {
+    process.env.RESEND_API_KEY = "test-key";
+    process.env.MSF_EMAIL_FROM = "MySchoolFrame <orders@myschoolframe.com>";
+    const json = await (await POST(req(body({ emailLink: false })))).json();
+    expect(json.linkEmailed).toBe(false);
+    expect(sendMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("sends no link email without MySchoolFrame's own sender configured", async () => {
+    process.env.RESEND_API_KEY = "test-key";
+    delete process.env.MSF_EMAIL_FROM;
+    const json = await (await POST(req(body({ emailLink: true })))).json();
+    expect(json.linkEmailed).toBe(false);
+    expect(sendMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("when the TEAM email fails: the design is still saved, and no link email goes out", async () => {
+    process.env.RESEND_API_KEY = "test-key";
+    process.env.MSF_EMAIL_FROM = "MySchoolFrame <orders@myschoolframe.com>";
+    sendMock.mockResolvedValueOnce({ data: null, error: { name: "validation_error", message: "nope" } });
+    const res = await POST(req(body({ emailLink: true })));
+    expect(res.status).toBe(502);
+    const json = await res.json();
+    expect(json.saved.url).toMatch(LINK_RE);
+    expect(json.linkEmailed).toBeUndefined();
+    expect(sendMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("a design drawn on a lab frame is saved but gets no parent link", async () => {
+    process.env.RESEND_API_KEY = "test-key";
+    process.env.MSF_EMAIL_FROM = "MySchoolFrame <orders@myschoolframe.com>";
+    const json = await (await POST(req(body({ variant: "slim", emailLink: true })))).json();
+    expect(json.saved.code).toMatch(/^MSF-/);
+    expect(json.saved.url).toBeNull();
+    expect(json.linkEmailed).toBe(false);
+  });
+
+  it("builds the link on MySchoolFrame's address even though production's SITE_URL is the holiday domain", async () => {
+    process.env.RESEND_API_KEY = "test-key";
+    const before = { site: process.env.SITE_URL, msf: process.env.MSF_SITE_URL };
+    process.env.SITE_URL = "https://www.festiveframes.co";
+    delete process.env.MSF_SITE_URL;
+    try {
+      const json = await (await POST(req(body()))).json();
+      expect(json.saved.url.startsWith("https://www.myschoolframe.com/s/ladue-rams#d=")).toBe(true);
+    } finally {
+      if (before.site === undefined) delete process.env.SITE_URL;
+      else process.env.SITE_URL = before.site;
+      if (before.msf !== undefined) process.env.MSF_SITE_URL = before.msf;
+    }
+  });
+
+  it("builds the link on the SERVER's origin, never the request's", async () => {
+    process.env.RESEND_API_KEY = "test-key";
+    const r = new Request("http://localhost:3000/api/school/submit", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: "https://evil.example" },
+      body: JSON.stringify({ ...body(), contact: CONTACT }),
+    });
+    const json = await (await POST(r)).json();
+    expect(json.saved.url).not.toContain("evil.example");
   });
 });

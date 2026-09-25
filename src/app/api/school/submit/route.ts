@@ -16,6 +16,13 @@
 //
 // When RESEND_API_KEY is unset the send no-ops and we answer honestly with
 // { ok:false, reason:"email-not-configured" } — never a false "sent".
+//
+// SAVE FIRST, EMAIL SECOND (2026-09-25). Every send now also stores a revision of
+// the design (lib/school-designs) and answers with its code and the parent's
+// link, so the design can be reopened on any device and Bill's email names the
+// exact frozen revision. A failed save never blocks the email — the team still
+// gets the design, and the answer says there is no link — and a failed email
+// never loses the save. Both outcomes are reported, never assumed.
 // ─────────────────────────────────────────────────────────────
 
 import { NextResponse } from "next/server";
@@ -25,6 +32,11 @@ import { CONTACT_PROBLEM_COPY, coerceOrderContact, orderContactLine } from "@/li
 import type { PartsList, PartsRow, PartsBar } from "@/lib/order/parts-list";
 import { nonSquareBadgeRows, SCHOOL_BADGES_ARE_SQUARE, SQUARE_RULE_MESSAGE } from "@/lib/order/square-badges";
 import type { TileSpan } from "@/lib/types";
+import { saveSchoolDesign, type SavedDesignRef } from "@/lib/school-designs/store";
+import { sendDesignLinkEmail } from "@/lib/email-production";
+import { SCHOOL_SHIPPING_VARIANT, SCHOOL_VARIANTS, type SchoolVariantId } from "@/data/school-variants";
+import { resolveSchoolKit } from "@/data/school-resolve";
+import { SITE_URL } from "@/config/season";
 
 export const runtime = "nodejs";
 
@@ -107,6 +119,16 @@ function coercePartsList(v: unknown): PartsList | null {
   };
 }
 
+/** The { id, token } a browser holds for a design it sent before, or null. The
+ *  store checks the token; this only refuses shapes that cannot be one. */
+function coerceLink(v: unknown): { id: string; token: string } | null {
+  if (!v || typeof v !== "object") return null;
+  const { id, token } = v as Record<string, unknown>;
+  return typeof id === "string" && typeof token === "string" && id.length <= 64 && token.length <= 64
+    ? { id, token }
+    : null;
+}
+
 /** Filesystem-safe attachment base name derived from the design name. */
 function safeName(designName: string): string {
   const s = designName.replace(/[^a-z0-9]+/gi, "-").replace(/^-+|-+$/g, "").toLowerCase();
@@ -121,8 +143,10 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json({ ok: false, error: "Invalid request." }, { status: 400 });
   }
 
-  const { printPng, panels, designName, partsList, school, artUploaded, artworkRights, contact } =
-    (body ?? {}) as Record<string, unknown>;
+  const {
+    printPng, panels, designName, partsList, school, artUploaded, artworkRights, contact,
+    design, link, variant, emailLink,
+  } = (body ?? {}) as Record<string, unknown>;
 
   // ── WHO TO ANSWER. A sent design with no way to reach its sender cannot be
   //    followed up, which is the whole promise of "Send design". Required, and
@@ -150,11 +174,12 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json({ ok: false, error: "Invalid design name." }, { status: 400 });
   }
   let name = designName.trim() || "Untitled";
+  const schoolSlug = typeof school === "string" && /^[a-z0-9-]{1,60}$/.test(school) ? school : null;
   // Optional school-kit slug from a /s/<slug> builder. Folded into the order name so
   // the production email says WHICH school's fundraiser this belongs to — that tag is
   // the whole donation-attribution trail until real tracking exists.
-  if (typeof school === "string" && /^[a-z0-9-]{1,60}$/.test(school)) {
-    name = `[${school}] ${name}`;
+  if (schoolSlug) {
+    name = `[${schoolSlug}] ${name}`;
   }
 
   // ── THE SQUARE RULE. The builder cannot seat a non-square badge, so a parts list
@@ -203,27 +228,84 @@ export async function POST(request: Request): Promise<NextResponse> {
   // Only the formatted `contactNote` rides along, for the production email to
   // print under the design name (see lib/order/order-contact). The parsed address
   // stays here: printed, never a recipient, and never on the email's input.
+  const overview = { name: `${safeName(name)}-OVERVIEW`, dataUrl: printPng };
+
+  // ── SAVE FIRST. The revision is stored before anything is emailed, so the code
+  //    in Bill's inbox names a design that exists. A builder too old to send its
+  //    `design` still emails exactly as before; it just gets no link. ──
+  const variantId: SchoolVariantId =
+    typeof variant === "string" && variant in SCHOOL_VARIANTS ? (variant as SchoolVariantId) : SCHOOL_SHIPPING_VARIANT;
+  const linkIn = coerceLink(link);
+  const saved: SavedDesignRef | null =
+    design && typeof design === "object"
+      ? await saveSchoolDesign({
+          link: linkIn,
+          school: schoolSlug,
+          contact: who.contact,
+          revision: {
+            design,
+            parts,
+            proof: overview,
+            panels: panelImages,
+            artworkRights: coerceArtworkRights(artworkRights),
+            variant: variantId,
+            createdBy: "parent",
+          },
+        })
+      : null;
+  // The parent's link reopens on /s/<slug>, which serves the SHIPPING frame. A
+  // design drawn on a lab fork is saved (Bill's email still names it) but gets no
+  // parent link: opening it would lay it on a frame it was never drawn against.
+  // The origin is SERVER-fixed — never the request's, or anyone could mint a
+  // MySchoolFrame email pointing anywhere. And it is MySchoolFrame's own: the
+  // SITE_URL env var is NOT read here, because production still sets it to the
+  // holiday domain (checked 2026-09-25), and a parent's link reading
+  // the holiday brand is the mix-up the MSF sender exists to prevent.
+  // MSF_SITE_URL overrides it for a local run only.
+  const kit = schoolSlug ? resolveSchoolKit(schoolSlug) : undefined;
+  const origin = (process.env.MSF_SITE_URL || SITE_URL).replace(/\/$/, "");
+  const url =
+    saved && kit && variantId === SCHOOL_SHIPPING_VARIANT ? `${origin}/s/${kit.slug}#d=${saved.token}` : null;
+  const savedOut = saved
+    ? { id: saved.id, token: saved.token, code: saved.code, revision: saved.revision, url }
+    : null;
+
   const order = {
     designName: name,
-    printPng: { name: `${safeName(name)}-OVERVIEW`, dataUrl: printPng },
+    printPng: overview,
     panels: panelImages,
     partsList: parts,
     artworkNote,
     contactNote: orderContactLine(who.contact),
+    saved: saved ? { code: saved.code, revision: saved.revision } : null,
   };
   const result = await sendSchoolOrderEmail(order);
 
-  if (result.ok) return NextResponse.json({ ok: true }, { status: 200 });
+  // The parent's own link, ONLY when they asked in this request — the one email
+  // that goes to an address a parent typed (lib/email-msf, the exception). Only
+  // once the team HAS the design: a failed team send is retried by the parent, and
+  // a link mailed on every attempt would land in their inbox twice.
+  const linkEmailed =
+    result.ok && emailLink === true && url && saved ? await sendDesignLinkEmail({
+      to: who.contact.email,
+      code: saved.code,
+      url,
+      schoolName: kit?.schoolName ?? null,
+    }) : false;
+
+  if (result.ok) return NextResponse.json({ ok: true, saved: savedOut, linkEmailed }, { status: 200 });
 
   switch (result.reason) {
     case "email-not-configured":
       // Not an error the client did wrong — the send path just isn't live yet.
-      return NextResponse.json({ ok: false, reason: "email-not-configured" }, { status: 200 });
+      return NextResponse.json({ ok: false, reason: "email-not-configured", saved: savedOut, linkEmailed }, { status: 200 });
+    // The failures still hand back what was SAVED, so the browser adopts the link
+    // and a retry becomes the next revision of this design, not a second design.
     case "invalid-attachment":
-      return NextResponse.json({ ok: false, error: "Could not read the print image." }, { status: 400 });
+      return NextResponse.json({ ok: false, error: "Could not read the print image.", saved: savedOut }, { status: 400 });
     case "attachment-too-large":
-      return NextResponse.json({ ok: false, error: "Print image is too large." }, { status: 413 });
+      return NextResponse.json({ ok: false, error: "Print image is too large.", saved: savedOut }, { status: 413 });
     default:
-      return NextResponse.json({ ok: false, error: "Could not send your order right now." }, { status: 502 });
+      return NextResponse.json({ ok: false, error: "Could not send your order right now.", saved: savedOut }, { status: 502 });
   }
 }

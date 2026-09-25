@@ -695,24 +695,35 @@ function cleanIntake(raw: unknown): SchoolIntake | null {
   return dirty || Object.keys(out).length !== Object.keys(r).length ? out : (raw as SchoolIntake);
 }
 
-export type LoadableDesign = Partial<
-  Pick<
-    DesignState,
-    | "designName"
-    | "plateState"
-    | "frameColor"
-    | "tileFieldColor"
-    | "rimColor"
-    | "uploads"
-    | "slots"
-    | "textBars"
-    | "bottomBar"
-    | "qrCode"
-    | "frameConfig"
-    | "dieCut"
-    | "sections"
-  >
->;
+/**
+ * What a saved design carries — THE one list. The type and the snapshot taken for
+ * a school design's saved revision (`loadableDesignOf`) both read it, so a field
+ * added here is saved and restored together, never one without the other.
+ */
+const LOADABLE_KEYS = [
+  "designName",
+  "plateState",
+  "frameColor",
+  "tileFieldColor",
+  "rimColor",
+  "uploads",
+  "slots",
+  "textBars",
+  "bottomBar",
+  "qrCode",
+  "frameConfig",
+  "dieCut",
+  "sections",
+] as const satisfies readonly (keyof DesignState)[];
+
+export type LoadableDesign = Partial<Pick<DesignState, (typeof LOADABLE_KEYS)[number]>>;
+
+/** The savable part of a design, picked off the live store state. */
+export function loadableDesignOf(s: DesignState): LoadableDesign {
+  const out: Record<string, unknown> = {};
+  for (const k of LOADABLE_KEYS) out[k] = s[k];
+  return out as LoadableDesign;
+}
 
 function createSnapshot(state: {
   slots: Record<string, PlacedTile>;

@@ -32,6 +32,7 @@ export function SendDesignSheet({
   initialFor,
   sending,
   error,
+  offerLinkEmail = false,
   onSend,
   onClose,
 }: {
@@ -43,12 +44,19 @@ export function SendDesignSheet({
   sending: boolean;
   /** The last send's failure, shown in the sheet so the parent can retry. */
   error: string | null;
-  onSend: (contact: OrderContact) => void;
+  /** Offer "Email me a link to this design" — only while MySchoolFrame's own
+   *  sender is configured (`designLinkEmailAvailable`, lib/email-msf). */
+  offerLinkEmail?: boolean;
+  onSend: (contact: OrderContact, opts: { emailLink: boolean }) => void;
   onClose: () => void;
 }) {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [forId, setForId] = useState<BuyerId>(initialFor);
+  // Ticked by default: the parent is typing their address right here, and the
+  // link is the one thing that lets them reopen this design somewhere else.
+  const [emailLink, setEmailLink] = useState(true);
+  const willEmailLink = offerLinkEmail && emailLink;
   // Errors show after the first Send attempt, not on the first keystroke.
   const [tried, setTried] = useState(false);
   const titleId = useId();
@@ -79,7 +87,7 @@ export function SendDesignSheet({
       return;
     }
     if (!preview || sending) return;
-    onSend(verdict.contact);
+    onSend(verdict.contact, { emailLink: willEmailLink });
   };
 
   if (typeof document === "undefined") return null;
@@ -199,6 +207,18 @@ export function SendDesignSheet({
           </div>
         </fieldset>
 
+        {offerLinkEmail && (
+          <label className="mt-3 flex min-h-11 items-center gap-2.5 text-[13px] font-semibold text-[var(--ff-ink)]">
+            <input
+              type="checkbox"
+              checked={emailLink}
+              onChange={(e) => setEmailLink(e.target.checked)}
+              className="h-5 w-5 shrink-0 accent-stone-900"
+            />
+            Email me a link to this design
+          </label>
+        )}
+
         {tried && problem && (
           <p role="alert" className="mt-3 text-[13px] font-semibold text-[var(--ff-danger)]">
             {CONTACT_PROBLEM_COPY[problem]}
@@ -229,7 +249,9 @@ export function SendDesignSheet({
         </div>
         <p className="ff-micro mt-2">
           Your email and phone go to our team with the design so a person can reply.
-          We won&apos;t email or text you automatically.{" "}
+          {willEmailLink
+            ? " The only email we'll send you automatically is your link."
+            : " We won't email or text you automatically."}{" "}
           <a href={MSF_PRIVACY_PATH} target="_blank" rel="noopener" className="underline">
             Privacy
           </a>

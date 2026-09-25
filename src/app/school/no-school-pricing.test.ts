@@ -83,7 +83,7 @@ describe("school surfaces carry no price", () => {
     // nothing user-reachable may call it while the header's guard is `false`.
     // Every Send on the page opens the send sheet (contact first); the sheet sends.
     expect(src).toContain("onClick={() => void openSend()}");
-    expect(src).toContain("onSend={(contact) => void handleSubmit(contact)}");
+    expect(src).toContain("onSend={(contact, opts) => void handleSubmit(contact, opts)}");
     expect(src).not.toContain("onSend={handleBuy}");
     expect(src).not.toContain("onOrder={handleBuy}");
   });

@@ -27,7 +27,7 @@ import { SITE_URL } from "@/config/season";
 import { copy } from "@/content/copy";
 import { SCHOOL_CONTACT_EMAIL } from "@/content/school-contact";
 import { MSF_WARRANTY_PATH } from "@/content/msf-pages";
-import { msfFrom, msfOrderRecipients } from "@/lib/email-msf";
+import { designLinkEmailAvailable, msfFrom, msfOrderRecipients } from "@/lib/email-msf";
 
 // Cartoon sticker palette (matches the homepage).
 const PAGE = "#fff9ec"; // warm cream page background
@@ -703,6 +703,13 @@ export interface SchoolOrderInput {
    * a to/cc/bcc/replyTo, which stay the production inbox and nothing else.
    */
   contactNote?: string;
+  /**
+   * The saved design this send stored (lib/school-designs), when the save worked:
+   * its code and revision number, so "MSF-7K3Q-X2PA, revision 2" in this inbox and
+   * the parent's link name the same frozen design. Absent = not stored; the email
+   * says so, because the parent was then told their link could not be made.
+   */
+  saved?: { code: string; revision: number } | null;
 }
 
 export type SchoolOrderResult =
@@ -724,7 +731,11 @@ function schoolOrderHtml(
   panelCount = 0,
   artworkNote = "",
   contactNote = "",
+  saved: SchoolOrderInput["saved"] = null,
 ): string {
+  const savedBlock = `<p style="margin:0 0 8px;color:${INK};font-size:14px;"><strong>Saved as:</strong> ${
+    saved ? `${esc(saved.code)} &middot; revision ${saved.revision}` : "NOT SAVED (storage failed) &mdash; these attachments are the only copy"
+  }</p>`;
   const contactBlock = contactNote
     ? `<p style="margin:0 0 12px;color:${INK};font-size:14px;"><strong>Reply to:</strong> ${esc(contactNote)}</p>`
     : "";
@@ -747,6 +758,7 @@ function schoolOrderHtml(
     <p style="margin:0 0 8px;color:${INK};font-size:14px;">
       <strong>Design:</strong> ${esc(designName || "Untitled")}
     </p>
+    ${savedBlock}
     ${contactBlock}
     <p style="margin:0 0 12px;color:${INK};font-size:13px;">${filesNote}</p>
     ${artworkBlock}
@@ -755,11 +767,18 @@ function schoolOrderHtml(
   );
 }
 
-function schoolOrderText(designName: string, panelCount = 0, artworkNote = "", contactNote = ""): string {
+function schoolOrderText(
+  designName: string,
+  panelCount = 0,
+  artworkNote = "",
+  contactNote = "",
+  saved: SchoolOrderInput["saved"] = null,
+): string {
   return [
     `NEW SCHOOL FRAME ORDER`,
     ``,
     `Design: ${designName || "Untitled"}`,
+    `Saved as: ${saved ? `${saved.code} · revision ${saved.revision}` : "NOT SAVED (storage failed) — these attachments are the only copy"}`,
     ...(contactNote ? [`Reply to: ${contactNote}`] : []),
     ...(artworkNote ? [``, artworkNote] : []),
     ``,
@@ -806,21 +825,77 @@ export async function sendSchoolOrderEmail(o: SchoolOrderInput): Promise<SchoolO
     await sendOrThrow(new Resend(apiKey), {
       from,
       to,
-      subject: `SCHOOL ORDER — ${subjectName}`,
+      subject: `SCHOOL ORDER — ${subjectName}${o.saved ? ` — ${o.saved.code} r${o.saved.revision}` : ""}`,
       html: schoolOrderHtml(
         o.designName,
         o.partsList ?? null,
         panelAttachments.length,
         o.artworkNote ?? "",
         o.contactNote ?? "",
+        o.saved ?? null,
       ),
-      text: schoolOrderText(o.designName, panelAttachments.length, o.artworkNote ?? "", o.contactNote ?? ""),
+      text: schoolOrderText(o.designName, panelAttachments.length, o.artworkNote ?? "", o.contactNote ?? "", o.saved ?? null),
       attachments,
     });
     return { ok: true };
   } catch (err) {
     console.error("[email-production] school order email failed:", err);
     return { ok: false, reason: "send-failed" };
+  }
+}
+
+/**
+ * The parent's link to their own saved design — THE ONE email that goes to an
+ * address a parent typed (see the rule and its exception in lib/email-msf).
+ *
+ * Only ever called when the parent ticked "Email me a link" in the same request,
+ * and only while `designLinkEmailAvailable()`. It carries the link and the code
+ * and nothing else — no print files, no marketing — and replies go to
+ * MySchoolFrame's inbox, never to a mailbox nobody reads. Never throws: failing
+ * to send the link must not fail the send it belongs to; the result says which.
+ */
+export async function sendDesignLinkEmail(o: {
+  to: string;
+  code: string;
+  url: string;
+  schoolName: string | null;
+}): Promise<boolean> {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey || !designLinkEmailAvailable()) return false;
+  const where = o.schoolName ? ` ${o.schoolName}` : "";
+  const html = shell(
+    "Your frame design is saved",
+    `
+    <p style="margin:0 0 12px;color:${INK};font-size:15px;line-height:1.6;">Here&rsquo;s the link to your${esc(where)} frame design. Open it on any phone or computer to see it or keep working on it.</p>
+    <p style="margin:18px 0;text-align:center;">
+      <a href="${esc(o.url)}" style="display:inline-block;padding:12px 22px;background:${MSF_NAVY};color:#ffffff;font-size:15px;font-weight:bold;text-decoration:none;border:3px solid ${INK};border-radius:99px;">Open my design</a>
+    </p>
+    <p style="margin:0 0 8px;color:${INK};font-size:14px;">Your design code is <strong>${esc(o.code)}</strong>. If you talk to us about it, that&rsquo;s the number we&rsquo;ll ask for.</p>
+    <p style="margin:0;color:${INK};font-size:13px;line-height:1.5;">Anyone with this link can open and change the design, so share it only with people you&rsquo;d like to help. Nothing prints until you&rsquo;ve seen it and said yes.</p>`,
+    "myschoolframe",
+  );
+  const text = [
+    `Your${where} frame design is saved.`,
+    ``,
+    `Open it on any phone or computer: ${o.url}`,
+    ``,
+    `Your design code is ${o.code}.`,
+    `Anyone with this link can open and change the design, so share it only with people you'd like to help.`,
+    `Nothing prints until you've seen it and said yes.`,
+  ].join("\n");
+  try {
+    await sendOrThrow(new Resend(apiKey), {
+      from: senderFor("myschoolframe"),
+      to: [o.to],
+      replyTo: msfOrderRecipients(),
+      subject: `Your MySchoolFrame design (${o.code})`,
+      html,
+      text,
+    });
+    return true;
+  } catch (err) {
+    console.error("[email-production] design link email failed:", err);
+    return false;
   }
 }
 

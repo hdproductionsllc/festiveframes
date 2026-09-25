@@ -678,9 +678,13 @@ case the repair was written for. Put repairs in `merge`, and make them return th
   receives paid school orders, send-sheet designs, school requests, school failure
   alerts and the bcc on the parent's confirmation. The school request alert is no
   longer opt-in: it always mails `MSF_ORDER_EMAIL` when `RESEND_API_KEY` is set.
-- **`MSF_EMAIL_FROM` stays UNSET until myschoolframe.com is verified in Resend.**
-  Unset, school mail goes from `EMAIL_FROM`'s mailbox under the display name
-  "MySchoolFrame". Set before verification, every school email fails.
+- **`MSF_EMAIL_FROM`**: myschoolframe.com is VERIFIED in Resend (Henry,
+  2026-09-25). Unset, school mail goes from `EMAIL_FROM`'s mailbox under the
+  display name "MySchoolFrame". Setting it on Railway (e.g.
+  `MySchoolFrame <orders@myschoolframe.com>`) moves ALL school mail to that sender
+  AND switches on the parent's "Email me a link" checkbox (see "Saved school
+  designs" below). The local Resend key is send-only; domain status cannot be read
+  from here.
 - **Retired**: `SCHOOL_ORDERS_EMAIL` and `SCHOOL_REQUEST_EMAIL` (ignored if still set
   on Railway; delete them there).
 - Every recipient is server-fixed. On the send sheet, the school request and the
@@ -699,3 +703,47 @@ case the repair was written for. Put repairs in `merge`, and make them return th
 - `school-no-festive.test.ts` guards the string "festiveframes" on MSF surfaces. The
   localStorage key `festive-frames-school-v1` (SchoolDesigner) is deliberately not
   matched: parents never see it, and renaming it would lose every saved design.
+
+## Saved school designs (2026-09-25) — Send SAVES, the parent gets a link
+
+- **Why**: a school design lived only in the parent's browser, and Send emailed
+  Bill a picture and kept nothing, so neither side could reopen the design they
+  were discussing. Architecture, alternatives weighed and the phase plan:
+  `tasks/school-saved-designs-and-proof-approval.md`.
+- **`lib/school-designs/store.ts`**: `school_designs` (what a link points at),
+  `school_design_revisions` (IMMUTABLE, numbered per design — an edit is a new
+  revision, never an update), `school_artifacts` (print files as bytea, keyed by
+  sha256, stored once). Memory fallback on `globalThis` (a module-scope Map split
+  across routes on a `next dev` hot reload and 404'd a fresh link). Retention 18
+  months after the last revision (owner), swept at most daily.
+- **Names vs keys**: the id, and the short code DERIVED from it (`designCode`,
+  `MSF-7K3Q-X2PA`, Crockford base32, never stored), name a design and unlock
+  nothing — they may go to Bill's inbox, Stripe, logs. The link's 256-bit token is
+  the only key and only its sha256 is stored.
+- **The link is `/s/<slug>#d=<token>`** — in the FRAGMENT, so no server ever logs
+  it. The builder lifts it out of the address bar at once and POSTs it to
+  `/api/school/designs/open` (rate limited in proxy.ts). A device that already
+  holds a design is ASKED before it is replaced; one that doesn't opens it.
+  A link opened on another school's page moves to its own.
+- **`/api/school/submit` saves FIRST, then emails**: a failed save still emails
+  Bill (his email says "NOT SAVED"); a failed email still returns the saved ref so
+  the browser adopts it and the retry is the next revision. Bill's subject and
+  body name `<code> r<n>`. A builder that sends no `design` behaves as before.
+- **The browser remembers its design's link** (`link-memory.ts`,
+  `<persistKey>:saved-link`), so a second Send is revision 2. "Start fresh" forgets it.
+- **Parent links are built on MySchoolFrame's origin, NOT `SITE_URL` env** —
+  production's `SITE_URL` is still `https://www.festiveframes.co` (checked
+  2026-09-25). `MSF_SITE_URL` overrides for a local run. Other MSF pages that read
+  `process.env.SITE_URL` (e.g. /school/thanks) still inherit the holiday origin;
+  changing the Railway var is Henry's call.
+- **The link email is THE one exception to "a parent's address is never a
+  recipient"** (owner-approved; the rule and exception are written in
+  lib/email-msf). Only when the parent ticked the box, only after the team's
+  email succeeded, only while `designLinkEmailAvailable()` (key + `MSF_EMAIL_FROM`),
+  link + code only, replies to `MSF_ORDER_EMAIL`. Never reuse it for anything else.
+- **Phase 2 (before `SCHOOL_CHECKOUT_OPEN` flips)**: recorded proof approval. The
+  `approved_*` columns already exist on revisions, null. Checkout must require an
+  approved revision and `fulfillOrder` must re-hash the panels against it or hold
+  the order. Today the paid path still sends files with no approval on record.
+- Verify locally with `DATABASE_URL= RESEND_API_KEY= npx next dev` — blank values
+  win over `.env.local`, which holds the LIVE database and a live Resend key.

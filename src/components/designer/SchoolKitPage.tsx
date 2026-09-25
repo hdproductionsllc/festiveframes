@@ -41,6 +41,9 @@ export function SchoolKitPage({
   /** The production print-file export in the header. Lab routes only — see
    *  SchoolDesigner's `operatorTools`. */
   operatorTools = false,
+  /** Offer "Email me a link" on the send sheet. Only /s/<slug> passes it, from
+   *  the server's own config (`designLinkEmailAvailable`, lib/email-msf). */
+  offerLinkEmail = false,
 }: {
   kit: SchoolKit;
   frameConfig?: FrameConfig;
@@ -48,6 +51,7 @@ export function SchoolKitPage({
   banner?: React.ReactNode;
   brandScan?: { slug: string; heading?: string; blurb?: React.ReactNode };
   operatorTools?: boolean;
+  offerLinkEmail?: boolean;
 }) {
   const w = kit.welcome;
   return (
@@ -74,6 +78,7 @@ export function SchoolKitPage({
         variant={variant}
         brandScan={brandScan}
         operatorTools={operatorTools}
+        offerLinkEmail={offerLinkEmail}
         hero={w ? (
           <section className="msf-kit-hero">
             {/* The school's own lockup, above its own words. This is the first

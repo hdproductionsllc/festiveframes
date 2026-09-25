@@ -39,7 +39,11 @@ import {
   DesignStoreProvider,
   createDesignStore,
   onPersistQuotaExceeded,
+  loadableDesignOf,
+  type LoadableDesign,
 } from "@/stores/design-store";
+import { readDesignLink, tokenFromHash, writeDesignLink } from "@/lib/school-designs/link-memory";
+import { OpenSavedDesignPrompt, SavedDesignBanner, type SavedDesignInfo } from "./SavedDesignBanners";
 import { composeSchoolFrame, composeSchoolPanels, schoolDesignOf } from "@/lib/utils/compose-school-frame";
 import { makeZip, dataUrlToBytes, type ZipEntry } from "@/lib/utils/zip";
 import { buildPanelPartsList } from "@/lib/order/parts-list";
@@ -157,10 +161,18 @@ export function SchoolDesigner({
   brandScan,
   operatorTools = false,
   persistKey = SCHOOL_PERSIST_KEY,
+  variant,
+  offerLinkEmail = false,
 }: {
   kit?: SchoolKit;
   hero?: React.ReactNode;
   presets?: SchoolPreset[];
+  /** Which frame this is — recorded on every saved revision (the geometry its
+   *  print files were drawn on). */
+  variant?: SchoolVariantId;
+  /** Offer "Email me a link" on the send sheet. The page decides, from the
+   *  server's own config (`designLinkEmailAvailable`). */
+  offerLinkEmail?: boolean;
   /** Show the website scanner FOR THIS SCHOOL — see the mount below. */
   brandScan?: { slug: string; heading?: string; blurb?: React.ReactNode };
   /**
@@ -272,6 +284,14 @@ export function SchoolDesigner({
   const [snappetPreview, setSnappetPreview] = useState<SnappetPreview | null>(null);
   const [storageFull, setStorageFull] = useState(false);
   const [restoredDismissed, setRestoredDismissed] = useState(false);
+  // The saved design (lib/school-designs): what the last Send stored, a link this
+  // page was opened with that waits for "Open it", and the note once one opened.
+  const [savedInfo, setSavedInfo] = useState<SavedDesignInfo | null>(null);
+  const [pendingOpen, setPendingOpen] = useState<
+    null | { token: string; id: string; code: string; design: LoadableDesign }
+  >(null);
+  const [openedCode, setOpenedCode] = useState<string | null>(null);
+  const linkOpenRef = useRef(false);
   // "Make it theirs" intake — the about-ME moment. Three fields that seed the
   // design through the same store actions the editors use, so everything the
   // intake writes is ordinary, fully editable state.
@@ -475,6 +495,61 @@ export function SchoolDesigner({
     // read through its ref so the listener always runs the current one.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // A SAVED DESIGN'S LINK: `/s/<slug>#d=<token>`. The token is in the fragment so
+  // no server ever logs it; it is lifted out of the address bar at once, so it is
+  // not left on screen or re-offered by a reload. The ref makes this run once even
+  // when React mounts effects twice in development.
+  //
+  // It replaces the design on this device, so it ASKS when this device already
+  // holds one (`savedAtLoad`) and opens directly when it doesn't.
+  const openSaved = (found: { token: string; id: string; code: string; design: LoadableDesign }) => {
+    storeApi.getState().loadDesign(found.design);
+    writeDesignLink(persistKey, { id: found.id, token: found.token, code: found.code });
+    setPendingOpen(null);
+    setRestoredDismissed(true);
+    setOpenedCode(found.code);
+  };
+  useEffect(() => {
+    const token = tokenFromHash(window.location.hash);
+    if (!token || linkOpenRef.current) return;
+    linkOpenRef.current = true;
+    window.history.replaceState(null, "", window.location.pathname + window.location.search);
+    void (async () => {
+      try {
+        const res = await fetch("/api/school/designs/open", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token }),
+        });
+        const data = (await res.json().catch(() => ({}))) as {
+          ok?: boolean;
+          id?: string;
+          code?: string;
+          school?: string | null;
+          design?: LoadableDesign;
+          error?: string;
+        };
+        if (!res.ok || !data.ok || !data.id || !data.code || !data.design) {
+          setSubmitState({ kind: "error", msg: data.error || "We couldn't open that saved design." });
+          return;
+        }
+        // A design belongs to its school's builder. A link opened on another
+        // school's page goes to its own, fragment and all.
+        if (data.school && kit && data.school !== kit.slug) {
+          window.location.replace(`/s/${data.school}#d=${token}`);
+          return;
+        }
+        const found = { token, id: data.id, code: data.code, design: data.design };
+        if (savedAtLoad()) setPendingOpen(found);
+        else openSaved(found);
+      } catch {
+        setSubmitState({ kind: "error", msg: "We couldn't open that saved design. Check your connection and try the link again." });
+      }
+    })();
+    // Mount only: a link is read once, on arrival.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [exporting, setExporting] = useState(false);
   // Export result surfaced in a banner so the button is NEVER a silent no-op — and so
   // it carries a REAL tappable download link, which iOS Safari honors (a synthetic
@@ -635,7 +710,7 @@ export function SchoolDesigner({
     setSendSheet(null);
   };
 
-  const handleSubmit = async (contact: OrderContact) => {
+  const handleSubmit = async (contact: OrderContact, opts: { emailLink: boolean }) => {
     const rendered = sendSheet?.rendered;
     if (!rendered || submitting) return;
     setSubmitting(true);
@@ -669,15 +744,47 @@ export function SchoolDesigner({
           artworkRights: s.artworkRights,
           // Who to reply to — required, and checked again by the route.
           contact,
+          // THE SAVED DESIGN: the editable design itself, which saved design this
+          // browser's design already is (so this Send is its next revision), the
+          // frame it was drawn on, and whether to email the parent their link.
+          design: loadableDesignOf(s),
+          link: readDesignLink(persistKey),
+          variant,
+          emailLink: opts.emailLink,
         }),
       });
-      const data = (await res.json().catch(() => ({}))) as { ok?: boolean; reason?: string; error?: string };
+      const data = (await res.json().catch(() => ({}))) as {
+        ok?: boolean;
+        reason?: string;
+        error?: string;
+        saved?: { id: string; token: string; code: string; revision: number; url: string | null } | null;
+        linkEmailed?: boolean;
+      };
+      // Adopt what was saved whatever else happened, so a retry after a failed
+      // email is this design's next revision rather than a second design.
+      if (data.saved) writeDesignLink(persistKey, { id: data.saved.id, token: data.saved.token, code: data.saved.code });
+      const info = (teamSent: boolean): SavedDesignInfo | null =>
+        data.saved
+          ? {
+              code: data.saved.code,
+              revision: data.saved.revision,
+              url: data.saved.url,
+              emailedTo: data.linkEmailed ? contact.email : null,
+              teamSent,
+            }
+          : null;
+      // The new outcome replaces the "opened your saved design" note.
+      if (data.saved) setOpenedCode(null);
       if (res.ok && data.ok) {
         closeSend();
-        setSubmitState({ kind: "ok", msg: `Your design is on its way to our team. We'll reply to ${contact.email}.` });
+        const saved = info(true);
+        if (saved) setSavedInfo(saved);
+        else setSubmitState({ kind: "ok", msg: `Your design is on its way to our team. We'll reply to ${contact.email}.` });
       } else if (data.reason === "email-not-configured") {
         closeSend();
-        setSubmitState({
+        const saved = info(false);
+        if (saved) setSavedInfo(saved);
+        else setSubmitState({
           kind: "not-configured",
           msg: "Sending is not switched on yet, so nothing was sent.",
         });
@@ -898,7 +1005,9 @@ export function SchoolDesigner({
   // means MEMOISED (`savedAtLoad`): the store writes its blob on the first edit of
   // a first visit, and a live read would then announce a restore that never was.
   const wasRestored = useSyncExternalStore(() => () => {}, savedAtLoad, () => false);
-  const restoredNotice = wasRestored && !restoredDismissed;
+  // One question at a time: while a saved design's link asks "Open it?", the
+  // restore notice (a second question about the same slot) waits.
+  const restoredNotice = wasRestored && !restoredDismissed && !pendingOpen;
 
   // NOTE — there is deliberately no "seed the school frame" effect here.
   //
@@ -1047,6 +1156,31 @@ export function SchoolDesigner({
         </div>
       )}
 
+      {savedInfo && <SavedDesignBanner info={savedInfo} onDismiss={() => setSavedInfo(null)} />}
+
+      {pendingOpen && (
+        <OpenSavedDesignPrompt
+          code={pendingOpen.code}
+          onOpen={() => openSaved(pendingOpen)}
+          onKeep={() => {
+            setPendingOpen(null);
+            // "Keep mine" already answered the restore notice's question too.
+            setRestoredDismissed(true);
+          }}
+        />
+      )}
+
+      {openedCode && (
+        <div role="status" className="ff-banner ff-banner-info flex items-start justify-between gap-3 px-4 py-2.5">
+          <p className="text-[13px] leading-snug">
+            Opened your saved design <strong className="whitespace-nowrap">{openedCode}</strong>. Changes stay on this device until you send it again.
+          </p>
+          <button type="button" onClick={() => setOpenedCode(null)} className="ff-chip shrink-0 max-lg:min-h-11">
+            Dismiss
+          </button>
+        </div>
+      )}
+
       {exportResult && (
         <div
           role="status"
@@ -1130,6 +1264,9 @@ export function SchoolDesigner({
                 // dressed demo. The Clear button in QuickActions means the other
                 // thing and passes nothing.
                 clearAll({ reseed: true });
+                // A fresh start is a new design: the next Send must not file it
+                // as the next revision of the one just thrown away.
+                writeDesignLink(persistKey, null);
                 setRestoredDismissed(true);
               }}
               className="ff-btn ff-btn-danger ff-btn-sm max-lg:min-h-11"
@@ -1664,7 +1801,8 @@ export function SchoolDesigner({
           initialFor={buyerId}
           sending={submitting}
           error={sendSheet.error}
-          onSend={(contact) => void handleSubmit(contact)}
+          offerLinkEmail={offerLinkEmail}
+          onSend={(contact, opts) => void handleSubmit(contact, opts)}
           onClose={closeSend}
         />
       )}
@@ -1702,6 +1840,7 @@ export function SchoolBuilder({
   brandScan,
   operatorTools = false,
   frameConfig = schoolVariant(variant).config,
+  offerLinkEmail = false,
 }: {
   kit?: SchoolKit;
   hero?: React.ReactNode;
@@ -1719,6 +1858,8 @@ export function SchoolBuilder({
   /** Override the variant's geometry. Tests and the odd experiment only; a route
    *  should name a variant. */
   frameConfig?: typeof SCHOOL_FRAME_CONFIG;
+  /** Offer "Email me a link" on the send sheet — see SchoolDesigner. */
+  offerLinkEmail?: boolean;
 }) {
   const { presets } = schoolVariant(variant);
   // The store is configured by `schoolStoreOptions` (data/school-store.ts): the
@@ -1739,6 +1880,8 @@ export function SchoolBuilder({
         brandScan={brandScan}
         operatorTools={operatorTools}
         persistKey={persistKey}
+        variant={variant}
+        offerLinkEmail={offerLinkEmail}
       />
     </DesignStoreProvider>
   );

@@ -22,6 +22,14 @@
 // email on the send sheet, a request form's address, a request body field — is
 // ever read into a to/cc/bcc. Their address is printed in the body as "Reply to"
 // so a human can choose to write back.
+//
+// THE ONE DELIBERATE EXCEPTION (owner, 2026-09-25): the parent's own design link.
+// On the send sheet a parent may tick "Email me a link to this design", and ONLY
+// then `sendDesignLinkEmail` mails that link to the address they typed in the
+// same request. It carries the link and the design's code — no files, nothing
+// else — replies go to MySchoolFrame's inbox, and it exists only while
+// `designLinkEmailAvailable()` (a myschoolframe.com sender is configured). No
+// other email may reuse this path; the production email's rule is unchanged.
 // ─────────────────────────────────────────────────────────────
 
 import { SCHOOL_CONTACT_EMAIL } from "@/content/school-contact";
@@ -57,6 +65,16 @@ function addressOf(from: string): string {
  * swapped for MySchoolFrame — the inbox list says MySchoolFrame and delivery
  * rides the domain that is already verified. Otherwise Resend's test sender.
  */
+/**
+ * Whether the parent's "email me my link" may be offered. It needs a send key AND
+ * MySchoolFrame's own sender: a link to a parent from the holiday brand's mailbox
+ * reads as a mix-up at best and phishing at worst, so without MSF_EMAIL_FROM the
+ * checkbox is not shown at all.
+ */
+export function designLinkEmailAvailable(): boolean {
+  return !!process.env.RESEND_API_KEY?.trim() && !!process.env.MSF_EMAIL_FROM?.trim();
+}
+
 export function msfFrom(): string {
   const own = process.env.MSF_EMAIL_FROM?.trim();
   if (own) return own.includes("<") ? own : `${MSF_SENDER_NAME} <${own}>`;
