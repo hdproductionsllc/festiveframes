@@ -1,4 +1,5 @@
 import type { Resend } from "resend";
+import { msfUnverifiedSenderFallback } from "@/lib/email-msf";
 
 // ─── The ONE way this codebase sends an email ────────────────────────────────
 //
@@ -27,9 +28,22 @@ export async function sendOrThrow(
   msg: ResendMessage,
   opts?: { idempotencyKey?: string },
 ): Promise<{ id: string }> {
-  const { data, error } = opts?.idempotencyKey
-    ? await resend.emails.send(msg, { idempotencyKey: opts.idempotencyKey })
-    : await resend.emails.send(msg);
+  const send = (m: ResendMessage, key?: string) =>
+    key ? resend.emails.send(m, { idempotencyKey: key }) : resend.emails.send(m);
+  let { data, error } = await send(msg, opts?.idempotencyKey);
+
+  // THE SAFETY NET: a MySchoolFrame sender Resend will not send from (its domain
+  // is not verified in this key's account) is resent ONCE from the fallback
+  // sender (lib/email-msf `msfUnverifiedSenderFallback`). Its own idempotency key,
+  // because Resend refuses one key reused with different content.
+  const fallback = error && /not verified/i.test(error.message ?? "") ? msfUnverifiedSenderFallback(msg.from) : null;
+  if (fallback) {
+    console.error(
+      `[resend] SENDER REJECTED — "${msg.from}" is not verified in this Resend account. Resending from "${fallback}". Fix MSF_EMAIL_FROM or RESEND_API_KEY.`,
+    );
+    ({ data, error } = await send({ ...msg, from: fallback }, opts?.idempotencyKey ? `${opts.idempotencyKey}/fallback-sender` : undefined));
+  }
+
   if (error || !data) {
     throw new Error(`Resend ${error?.name ?? "error"}: ${error?.message ?? "no result returned"}`);
   }

@@ -7,6 +7,9 @@ const saveDraft = vi.fn().mockResolvedValue(undefined);
 vi.mock("@/lib/order/store", () => ({
   saveDraft: (...a: unknown[]) => saveDraft(...a),
 }));
+// These tests cover the route as it behaves WITH the holiday shop open, so a
+// reopening is still tested; the closed shop has its own: holiday-closed.test.ts.
+vi.mock("@/config/holiday-shop", () => ({ HOLIDAY_SHOP_OPEN: true }));
 
 import { POST } from "./route";
 

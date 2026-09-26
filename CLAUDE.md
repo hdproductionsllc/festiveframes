@@ -678,8 +678,17 @@ case the repair was written for. Put repairs in `merge`, and make them return th
   receives paid school orders, send-sheet designs, school requests, school failure
   alerts and the bcc on the parent's confirmation. The school request alert is no
   longer opt-in: it always mails `MSF_ORDER_EMAIL` when `RESEND_API_KEY` is set.
-- **`MSF_EMAIL_FROM`**: myschoolframe.com is VERIFIED in Resend (Henry,
-  2026-09-25). Unset, school mail goes from `EMAIL_FROM`'s mailbox under the
+- **TWO RESEND ACCOUNTS (found 2026-09-26).** myschoolframe.com is verified in
+  the account Henry logs into; the site's `RESEND_API_KEY` belongs to a DIFFERENT
+  account (the one with festiveframes.co). Setting `MSF_EMAIL_FROM` made every
+  school email fail ("domain is not verified") until it was removed. Fix in
+  progress: a key from the MySchoolFrame account, with `EMAIL_FROM` and
+  `MSF_EMAIL_FROM` both on orders@myschoolframe.com. **Never leave a sender change
+  on without one real test email.** Safety net since: `sendOrThrow` resends a
+  rejected MSF sender once from EMAIL_FROM's mailbox and logs "SENDER REJECTED"
+  (`msfUnverifiedSenderFallback`, lib/email-msf).
+- **`MSF_EMAIL_FROM`**: (history) set 2026-09-26 on "it's verified", removed the
+  same day — see above. Unset, school mail goes from `EMAIL_FROM`'s mailbox under the
   display name "MySchoolFrame". Setting it on Railway (e.g.
   `MySchoolFrame <orders@myschoolframe.com>`) moves ALL school mail to that sender
   AND switches on the parent's "Email me a link" checkbox (see "Saved school
@@ -802,3 +811,18 @@ case the repair was written for. Put repairs in `merge`, and make them return th
 - Verified: 2533 tests; Edge walkthrough of every page on desktop and phone with
   seeded orders in every state; the full SQL path against Postgres built in the
   LIVE shape (legacy table + row) — renamed aside intact, totals correct.
+
+## The holiday shop is CLOSED (2026-09-26)
+
+- `HOLIDAY_SHOP_OPEN = false` (src/config/holiday-shop.ts) is the one switch:
+  /api/checkout refuses every kind but "school-frame" (410), /api/order/draft
+  refuses (410), and /build, /cart, /checkout, /buy redirect to /school (307,
+  temporary on purpose). The holiday code is kept; reopening is that one line.
+  `holiday-closed.test.ts` pins all of it. School checkout keeps its own switch.
+- The parent's order receipt now sets `replyTo` = the team inbox, so a reply
+  reaches a person even when the sender is a send-only address.
+- Railway (2026-09-26): project "My School Frame", service "myschoolframe" (the
+  GitHub repo is still `festiveframes` — leave it; renaming it can break
+  auto-deploy). `SITE_URL` = https://www.myschoolframe.com. `ADMIN_EMAILS` set.
+  festiveframes.co is no longer a Railway domain (old links/QR codes dead unless a
+  Cloudflare redirect is added — Henry's call).

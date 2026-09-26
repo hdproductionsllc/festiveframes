@@ -78,6 +78,30 @@ export function designLinkEmailAvailable(): boolean {
 export function msfFrom(): string {
   const own = process.env.MSF_EMAIL_FROM?.trim();
   if (own) return own.includes("<") ? own : `${MSF_SENDER_NAME} <${own}>`;
+  return msfSharedFrom();
+}
+
+/** EMAIL_FROM's mailbox under the MySchoolFrame name — the sender used before a
+ *  myschoolframe.com sender is configured, and the safety net if it is rejected. */
+function msfSharedFrom(): string {
   const shared = process.env.EMAIL_FROM?.trim();
   return `${MSF_SENDER_NAME} <${shared ? addressOf(shared) : RESEND_TEST_ADDRESS}>`;
+}
+
+/**
+ * THE SAFETY NET (2026-09-26). Where to resend a MySchoolFrame email if Resend
+ * rejects `from` because its domain is not verified in the key's account — or
+ * null when `from` is not the configured MSF sender, or the fallback is the same.
+ *
+ * Why it exists: MSF_EMAIL_FROM was set on the word "it's verified", but the
+ * domain was verified in a different Resend account from the one the site's key
+ * belongs to, and every school email — Bill's orders included — would have failed.
+ * A settings mix-up must cost a sender name, never an order. The retry is logged
+ * loudly (lib/resend-send) so the mix-up is fixed, not lived with.
+ */
+export function msfUnverifiedSenderFallback(from: unknown): string | null {
+  const own = process.env.MSF_EMAIL_FROM?.trim();
+  if (!own || from !== msfFrom()) return null;
+  const fallback = msfSharedFrom();
+  return addressOf(fallback) === addressOf(msfFrom()) ? null : fallback;
 }

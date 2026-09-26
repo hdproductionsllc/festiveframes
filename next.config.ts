@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { HOLIDAY_SHOP_OPEN } from "./src/config/holiday-shop";
 
 // The deployed build's identity, surfaced in the UI (see BuildStamp).
 //
@@ -49,11 +50,19 @@ const nextConfig: NextConfig = {
     // the host. Static `import`s are content-hashed and stay immutable regardless.
     minimumCacheTTL: 86400,
   },
-  // The business is now custom-first: the interactive builder at /build is the
-  // single purchase path. The old kit-purchase page /buy is retired. Permanently
-  // redirect /buy (and any legacy ?kit=... links) straight into the builder. The
-  // kit query is intentionally dropped — the builder owns its own state.
+  // The holiday shop is CLOSED (src/config/holiday-shop.ts): its builder, cart and
+  // checkout pages send visitors to MySchoolFrame instead. Temporary (307) on
+  // purpose — the switch can be flipped back, and a permanent redirect would be
+  // cached by browsers long after. While the shop was open, /buy (the retired kit
+  // page) went permanently to the builder.
   async redirects() {
+    if (!HOLIDAY_SHOP_OPEN) {
+      return ["/build", "/cart", "/checkout", "/buy"].map((source) => ({
+        source,
+        destination: "/school",
+        permanent: false,
+      }));
+    }
     return [
       {
         source: "/buy",

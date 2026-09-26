@@ -32,10 +32,10 @@ unapproved or altered. See `CLAUDE.md` → "Saved school designs".
       by design code + the parent's email, issue a fresh link (the old one stops
       working), Bill sends it by hand. A code alone must never open a design.
       (Review #8.)
-- [ ] **Switch off the old Festive Frames checkout** — the shop is defunct but its
+- [x] **Switch off the old Festive Frames checkout** — DONE 2026-09-26 (`HOLIDAY_SHOP_OPEN`). — the shop is defunct but its
       checkout may still take money for a frame nobody makes. Check first, then
       turn it off.
-- [ ] **Fix the site address setting on Railway** (`SITE_URL` is still
+- [x] **Fix the site address setting on Railway** — DONE 2026-09-26. (`SITE_URL` is still
       `https://www.festiveframes.co`). Parent links already avoid it, but other
       pages (e.g. the post-checkout thank-you page) still use it.
 

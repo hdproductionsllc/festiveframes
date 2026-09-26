@@ -237,3 +237,17 @@ describe("fulfillSchoolOrder", () => {
     expect(alerts()).toHaveLength(1);
   });
 });
+
+describe("the parent's receipt", () => {
+  it("sends replies to the team inbox, not to the (possibly send-only) sender address", async () => {
+    process.env.RESEND_API_KEY = "re_test";
+    process.env.MSF_ORDER_EMAIL = "bill@example.com";
+    sent.length = 0;
+    keys.length = 0;
+    const { session } = await paidOrder();
+    expect(await fulfillSchoolOrder(session)).toBe("sent");
+    const receipt = sent.find((m) => String(m.subject).includes("order is confirmed"))!;
+    expect(receipt.to).toBe("parent@example.com");
+    expect(receipt.replyTo).toEqual(["bill@example.com"]);
+  });
+});

@@ -24,6 +24,7 @@ import { getRevisionByToken } from "@/lib/school-designs/store";
 import { createSchoolOrder } from "@/lib/school-designs/orders";
 import { SITE_URL, season } from "@/config/season";
 import { MSF_THANKS_PATH } from "@/content/msf-pages";
+import { HOLIDAY_SHOP_OPEN } from "@/config/holiday-shop";
 import { getDraft, saveCartDraft, type CartLineRef } from "@/lib/order/store";
 
 export const runtime = "nodejs";
@@ -48,6 +49,15 @@ export async function POST(request: Request): Promise<NextResponse> {
     rawBody = await request.json();
   } catch {
     return badRequest("Invalid request body.");
+  }
+
+  // THE HOLIDAY SHOP IS CLOSED (config/holiday-shop). Only school frames may
+  // start a checkout; a holiday order would take money for a frame nobody makes.
+  if ((rawBody as Record<string, unknown>)?.kind !== "school-frame" && !HOLIDAY_SHOP_OPEN) {
+    return NextResponse.json(
+      { error: "Festive Frames is closed. MySchoolFrame lives at myschoolframe.com." },
+      { status: 410 },
+    );
   }
 
   // Initialize Stripe lazily; missing key degrades gracefully.

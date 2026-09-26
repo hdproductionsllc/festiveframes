@@ -10,6 +10,7 @@
 
 import { NextResponse } from "next/server";
 import { saveDraft } from "@/lib/order/store";
+import { HOLIDAY_SHOP_OPEN } from "@/config/holiday-shop";
 import type { PartsList } from "@/lib/order/parts-list";
 import type { OrderArtifacts } from "@/lib/order/store";
 
@@ -23,6 +24,12 @@ interface DraftBody {
 }
 
 export async function POST(request: Request): Promise<NextResponse> {
+  // The holiday checkout's first step. School orders never use drafts (they are
+  // saved revisions — lib/school-designs), so with the holiday shop closed there
+  // is nothing this route should store.
+  if (!HOLIDAY_SHOP_OPEN) {
+    return NextResponse.json({ error: "Festive Frames is closed." }, { status: 410 });
+  }
   let body: DraftBody;
   try {
     body = (await request.json()) as DraftBody;

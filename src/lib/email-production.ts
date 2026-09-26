@@ -533,6 +533,11 @@ export async function sendProductionEmails(
           from,
           to: o.customerEmail,
           bcc: founderList,
+          // A parent's reply to their receipt ("can you change the name?") must
+          // reach a person. The sender address may be a send-only mailbox, so the
+          // reply goes to the team inbox directly rather than depending on a
+          // forwarder existing on the mail host.
+          replyTo: founderList,
           subject: `Your ${BRAND_NAME[brand]} order is confirmed`,
           html: customerHtml(o),
           text: customerText(o),
