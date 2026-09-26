@@ -10,7 +10,7 @@ vi.mock("next/headers", () => ({
 
 import { ADMIN_COOKIE, createLoginToken, exchangeLoginToken, sessionEmail } from "./auth";
 import { POST as login } from "@/app/api/admin/login/route";
-import { GET as verify } from "@/app/api/admin/verify/route";
+import { GET as verify, POST as verifyPost } from "@/app/api/admin/verify/route";
 import { POST as relink } from "@/app/api/admin/designs/[id]/relink/route";
 import { GET as artifact } from "@/app/api/admin/artifact/[sha]/route";
 import { openSchoolDesign, saveSchoolDesign } from "@/lib/school-designs/store";
@@ -42,7 +42,7 @@ describe("staff sign-in", () => {
     expect(a.message).toBe("If that address is on the staff list, a sign-in link is on its way.");
     expect(a.devLink).toBeUndefined();
     // In development with no email key the staff link is shown for testing — never in production.
-    expect(b.devLink).toMatch(/\/api\/admin\/verify\?t=/);
+    expect(b.devLink).toMatch(/^https:\/\/www\.myschoolframe\.com\/admin\/verify\?t=/);
   });
 
   it("a link works ONCE", async () => {
@@ -51,15 +51,33 @@ describe("staff sign-in", () => {
     expect(await exchangeLoginToken(t)).toBeNull();
   });
 
-  it("the verify link sets an httpOnly session cookie and lands on /admin; a spent link goes back to sign-in", async () => {
+  // What the Sign-in button posts, arriving the way Railway's proxy delivers it:
+  // the app sees ITSELF as localhost:8080 (the live bug of 2026-09-26).
+  const signInPost = (t: string | null) => {
+    const form = new FormData();
+    if (t) form.set("t", t);
+    return verifyPost(new Request("http://localhost:8080/api/admin/verify", { method: "POST", body: form }));
+  };
+
+  it("the emailed link opens a page and spends NOTHING — a mail scanner cannot use it up", async () => {
+    const t = (await createLoginToken("henry@example.com"))!;
+    const res = await verify(new Request(`http://localhost:8080/api/admin/verify?t=${t}`));
+    expect(res.headers.get("location")).toBe(`https://www.myschoolframe.com/admin/verify?t=${t}`);
+    expect(res.headers.get("set-cookie")).toBeNull();
+    // Still unspent: the button works afterwards.
+    expect((await signInPost(t)).headers.get("location")).toBe("https://www.myschoolframe.com/admin");
+  });
+
+  it("the Sign-in button sets an httpOnly session cookie and lands on the REAL site, never localhost", async () => {
     const t = await createLoginToken("henry@example.com");
-    const res = await verify(new Request(`http://localhost/api/admin/verify?t=${t}`));
-    expect(res.headers.get("location")).toMatch(/\/admin$/);
+    const res = await signInPost(t);
+    expect(res.status).toBe(303);
+    expect(res.headers.get("location")).toBe("https://www.myschoolframe.com/admin");
     const cookie = res.headers.get("set-cookie") ?? "";
     expect(cookie).toContain(`${ADMIN_COOKIE}=`);
     expect(cookie.toLowerCase()).toContain("httponly");
-    const again = await verify(new Request(`http://localhost/api/admin/verify?t=${t}`));
-    expect(again.headers.get("location")).toMatch(/\/admin\/login\?e=link$/);
+    const again = await signInPost(t);
+    expect(again.headers.get("location")).toBe("https://www.myschoolframe.com/admin/login?e=link");
   });
 
   it("taking someone off ADMIN_EMAILS signs them out everywhere", async () => {

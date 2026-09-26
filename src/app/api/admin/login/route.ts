@@ -10,7 +10,7 @@
 import { NextResponse } from "next/server";
 import { createLoginToken } from "@/lib/admin/auth";
 import { sendAdminSignInEmail } from "@/lib/email-production";
-import { SITE_URL } from "@/config/season";
+import { msfOrigin } from "@/lib/msf-origin";
 
 export const runtime = "nodejs";
 
@@ -33,8 +33,10 @@ export async function POST(request: Request): Promise<NextResponse> {
   }
   if (!token) return ok;
 
-  const origin = (process.env.MSF_SITE_URL || SITE_URL).replace(/\/$/, "");
-  const url = `${origin}/api/admin/verify?t=${token}`;
+  // The link opens a PAGE with a "Sign in" button (app/admin/verify); only the
+  // button spends the token, so a mail filter that opens every link to scan it
+  // cannot use it up before the person clicks.
+  const url = `${msfOrigin()}/admin/verify?t=${token}`;
   const sent = await sendAdminSignInEmail({ to: email.trim().toLowerCase(), url });
   if (!sent && process.env.NODE_ENV !== "production") {
     console.log(`[admin/login] DEV sign-in link (no email sent): ${url}`);

@@ -7,7 +7,7 @@
 import { NextResponse } from "next/server";
 import { currentAdmin } from "@/lib/admin/session";
 import { rotateDesignToken } from "@/lib/school-designs/store";
-import { SITE_URL } from "@/config/season";
+import { msfOrigin } from "@/lib/msf-origin";
 
 export const runtime = "nodejs";
 
@@ -20,7 +20,6 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   if (!rotated.school) {
     return NextResponse.json({ error: "This design has no school page to open it on." }, { status: 409 });
   }
-  const origin = (process.env.MSF_SITE_URL || SITE_URL).replace(/\/$/, "");
   console.log(`[admin] ${admin} issued a new link for design ${id}.`);
-  return NextResponse.json({ ok: true, url: `${origin}/s/${rotated.school}#d=${rotated.token}` });
+  return NextResponse.json({ ok: true, url: `${msfOrigin()}/s/${rotated.school}#d=${rotated.token}` });
 }

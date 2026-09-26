@@ -20,7 +20,7 @@ import type { TileSpan } from "@/lib/types";
 import { SCHOOL_SHIPPING_VARIANT, SCHOOL_VARIANTS, type SchoolVariantId } from "@/data/school-variants";
 import { resolveSchoolKit } from "@/data/school-resolve";
 import type { SchoolKit } from "@/data/school-kits";
-import { SITE_URL } from "@/config/season";
+import { msfOrigin } from "@/lib/msf-origin";
 import { saveSchoolDesign, type DesignContact, type SavedDesignRef } from "./store";
 
 const DATA_URL_RE = /^data:image\/(png|jpeg);base64,([A-Za-z0-9+/]+={0,2})$/;
@@ -277,6 +277,5 @@ export async function saveSubmission(
  */
 function designLink(s: Submission, token: string): string | null {
   if (!s.kit || s.variant !== SCHOOL_SHIPPING_VARIANT) return null;
-  const origin = (process.env.MSF_SITE_URL || SITE_URL).replace(/\/$/, "");
-  return `${origin}/s/${s.kit.slug}#d=${token}`;
+  return `${msfOrigin()}/s/${s.kit.slug}#d=${token}`;
 }
