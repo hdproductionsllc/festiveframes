@@ -68,6 +68,15 @@ export async function fulfillSchoolOrder(session: Stripe.Checkout.Session): Prom
     });
   }
 
+  // A frame refunded before it was made is not made.
+  if (order.refundedAt !== null && order.status !== "sent") {
+    if (order.status !== "held") {
+      await holdSchoolOrder(orderId, "Refunded before production.");
+      await alert("Refunded before production — nothing was sent to print. No action needed unless the refund was a mistake.");
+    }
+    return "held";
+  }
+
   // 2. The claim.
   const claim = await claimSchoolOrder(orderId);
   if (claim === "sent") return "already";

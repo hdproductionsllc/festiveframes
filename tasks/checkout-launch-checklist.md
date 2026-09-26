@@ -18,12 +18,17 @@ unapproved or altered. See `CLAUDE.md` → "Saved school designs".
 
 ## A. Build before launch (Claude does these; each is a normal code change)
 
-- [ ] **Fundraiser totals survive refunds in any order.** Today a refund that
+- [x] **Fundraiser totals survive refunds in any order.** DONE 2026-09-26: one order
+      record is the ledger; refunds mark the order, which exists before Stripe says
+      anything. See the staff dashboard's Schools page.
+      (Original note:) Today a refund that
       arrives before its purchase record leaves no mark, and the later purchase
       credits the school anyway (Stripe does not promise event order). Record the
       refund regardless, retry failed ledger writes, and add a check that compares
       the ledger with Stripe. (Review 2026-09-25, #7.)
-- [ ] **A way back for a parent who lost their link.** A staff-only tool: look up
+- [x] **A way back for a parent who lost their link.** DONE 2026-09-26: staff
+      dashboard → the design → "Issue a new link".
+      (Original note:) A staff-only tool: look up
       by design code + the parent's email, issue a fresh link (the old one stops
       working), Bill sends it by hand. A code alone must never open a design.
       (Review #8.)
@@ -50,6 +55,8 @@ unapproved or altered. See `CLAUDE.md` → "Saved school designs".
 
 ## C. Settings on launch day (in this order)
 
+0. [ ] Railway → Variables: `ADMIN_EMAILS = <Henry's address>,bill@myschoolframe.com`
+       (who can sign in to /admin — can be set any time, it is not a launch switch).
 1. [ ] Railway → Variables: `MSF_EMAIL_FROM = MySchoolFrame <orders@myschoolframe.com>`
        (turns on the "Email me a link" box; moves all school mail to that sender —
        the domain is already verified in Resend).

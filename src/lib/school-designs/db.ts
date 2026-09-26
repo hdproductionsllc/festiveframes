@@ -90,8 +90,26 @@ export function ensureSchema(): Promise<void> {
       await p.query(
         `CREATE INDEX IF NOT EXISTS school_designs_updated_idx ON school_designs (updated_at)`,
       );
-      // A school ORDER is a paid, approved revision. Its files are the revision's,
-      // which never change — so there is nothing on an order to replace or sweep.
+      // THE ONE RECORD OF A SCHOOL ORDER — and therefore the fundraiser ledger:
+      // every school total is summed from it (orders.ts `schoolTotals`). There
+      // used to be a separate ledger table, and it was ALSO named `school_orders`
+      // with a different shape: whichever was created first silently won and the
+      // other broke. The legacy table (live, 0 rows, checked 2026-09-26) is
+      // renamed aside — never dropped — so no row can ever be lost to this.
+      await p.query(`
+        DO $$
+        BEGIN
+          IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'school_orders')
+             AND NOT EXISTS (SELECT 1 FROM information_schema.columns
+                              WHERE table_name = 'school_orders' AND column_name = 'design_id') THEN
+            ALTER TABLE school_orders RENAME TO school_ledger_legacy;
+          END IF;
+        END $$
+      `);
+      // An order is a paid, approved revision. Its files are the revision's, which
+      // never change — so there is nothing on an order to replace or sweep. It
+      // exists from the moment checkout starts, before Stripe says anything, so a
+      // refund always finds its order whatever order Stripe's events arrive in.
       await p.query(`
         CREATE TABLE IF NOT EXISTS school_orders (
           order_id       uuid PRIMARY KEY,
@@ -99,6 +117,7 @@ export function ensureSchema(): Promise<void> {
           revision       integer NOT NULL,
           proof_sha256   text NOT NULL,
           school_slug    text,
+          donation_cents integer NOT NULL DEFAULT 0,
           status         text NOT NULL,
           session_id     text,
           payment_status text,
@@ -109,7 +128,23 @@ export function ensureSchema(): Promise<void> {
           created_at     timestamptz NOT NULL DEFAULT now(),
           paid_at        timestamptz,
           sent_at        timestamptz,
+          refunded_at    timestamptz,
           FOREIGN KEY (design_id, revision) REFERENCES school_design_revisions(design_id, n)
+        )
+      `);
+      await p.query(
+        `CREATE INDEX IF NOT EXISTS school_orders_school_paid_idx ON school_orders (school_slug, paid_at)`,
+      );
+      // Staff sign-in (lib/admin/auth): one-time emailed links and the sessions
+      // they start. Only sha256 of each token is stored, like a parent's link.
+      await p.query(`
+        CREATE TABLE IF NOT EXISTS admin_tokens (
+          token_hash text PRIMARY KEY,
+          kind       text NOT NULL,
+          email      text NOT NULL,
+          created_at timestamptz NOT NULL DEFAULT now(),
+          expires_at timestamptz NOT NULL,
+          used_at    timestamptz
         )
       `);
     })().catch((err) => {

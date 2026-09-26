@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { schoolTotals, __memOrdersForTest } from "@/lib/order/school-ledger";
 
 // The /thanks relay. The server is the trust boundary: it retrieves the Stripe
 // session itself and fulfils only when the session is paid AND names the order
@@ -45,7 +44,6 @@ const school = (payment_status: string) => ({
 
 beforeEach(() => {
   session = null;
-  __memOrdersForTest.clear();
   fulfillOrder.mockClear();
   fulfillCart.mockClear();
   fulfillSchoolOrder.mockClear();
@@ -69,7 +67,7 @@ describe("POST /api/order/fulfill", () => {
     session = school("unpaid");
     expect((await POST(req({ sessionId: "cs_1", orderId: "o-1" }))).status).toBe(402);
     expect(fulfillOrder).not.toHaveBeenCalled();
-    expect((await schoolTotals("sluh-jr-bills")).frames).toBe(0);
+    expect(fulfillSchoolOrder).not.toHaveBeenCalled();
   });
 
   it("refuses a paid session that names a DIFFERENT order", async () => {
@@ -88,16 +86,12 @@ describe("POST /api/order/fulfill", () => {
     expect(await res.json()).toEqual({ ok: true, result: "sent" });
     expect(fulfillSchoolOrder).toHaveBeenCalledWith(session);
     expect(fulfillOrder).not.toHaveBeenCalled();
-    const t = await schoolTotals("sluh-jr-bills");
-    expect(t.frames).toBe(1);
-    expect(t.raisedCents).toBe(1000);
   });
 
-  it("fulfils a $0 (no_payment_required) order but records NO donation", async () => {
+  it("a $0 (no_payment_required) order still goes to production", async () => {
     session = school("no_payment_required");
     expect((await POST(req({ sessionId: "cs_1", orderId: "o-1" }))).status).toBe(200);
     expect(fulfillSchoolOrder).toHaveBeenCalledTimes(1); // the free frame still ships
-    expect((await schoolTotals("sluh-jr-bills")).frames).toBe(0);
   });
 
   it("routes a cart order to fulfillCart and refuses a cart mismatch", async () => {

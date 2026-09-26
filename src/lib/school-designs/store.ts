@@ -708,6 +708,159 @@ export async function getArtifact(sha256: string): Promise<{ mime: string; bytes
   return res.rows[0] ?? null;
 }
 
+// ── Staff views (the /admin dashboard) ───────────────────────────────────────
+
+export interface DesignSummary {
+  id: string;
+  code: string;
+  school: string | null;
+  contact: DesignContact | null;
+  revisions: number;
+  approvedRevisions: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface DesignDetail extends DesignSummary {
+  history: Array<{
+    n: number;
+    createdAt: number;
+    createdBy: string;
+    proof: StoredImageRef;
+    panels: number;
+    originals: number;
+    approvedAt: number | null;
+  }>;
+}
+
+const t = (v: unknown): number => new Date(v as string | Date).getTime();
+
+/** Saved designs, most recently changed first. */
+export async function listDesigns(limit = 200): Promise<DesignSummary[]> {
+  const mode = storageMode();
+  if (mode === "unavailable") return [];
+  if (mode === "memory") {
+    return [...memDesigns.values()]
+      .sort((a, b) => b.updatedAt - a.updatedAt)
+      .slice(0, limit)
+      .map((d) => ({
+        id: d.id,
+        code: designCode(d.id),
+        school: d.school,
+        contact: d.contact,
+        revisions: d.revisions.length,
+        approvedRevisions: d.revisions.filter((r) => r.approval).length,
+        createdAt: d.createdAt,
+        updatedAt: d.updatedAt,
+      }));
+  }
+  await ensureSchema();
+  const res = await getPool().query(
+    `SELECT d.id, d.school_slug, d.contact, d.created_at, d.updated_at,
+            count(r.n) AS revisions, count(r.approved_at) AS approved
+       FROM school_designs d
+       LEFT JOIN school_design_revisions r ON r.design_id = d.id
+      GROUP BY d.id
+      ORDER BY d.updated_at DESC
+      LIMIT $1`,
+    [limit],
+  );
+  return res.rows.map((r: Record<string, unknown>) => ({
+    id: String(r.id),
+    code: designCode(String(r.id)),
+    school: (r.school_slug as string | null) ?? null,
+    contact: (r.contact as DesignContact | null) ?? null,
+    revisions: Number(r.revisions),
+    approvedRevisions: Number(r.approved),
+    createdAt: t(r.created_at),
+    updatedAt: t(r.updated_at),
+  }));
+}
+
+/** One design and every revision of it. */
+export async function getDesignDetail(id: string): Promise<DesignDetail | null> {
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
+  const mode = storageMode();
+  if (mode === "unavailable") return null;
+  if (mode === "memory") {
+    const d = memDesigns.get(id);
+    if (!d) return null;
+    return {
+      id: d.id,
+      code: designCode(d.id),
+      school: d.school,
+      contact: d.contact,
+      revisions: d.revisions.length,
+      approvedRevisions: d.revisions.filter((r) => r.approval).length,
+      createdAt: d.createdAt,
+      updatedAt: d.updatedAt,
+      history: d.revisions.map((r) => ({
+        n: r.n,
+        createdAt: r.createdAt,
+        createdBy: r.createdBy,
+        proof: r.proof,
+        panels: r.panels.length,
+        originals: r.originals.length,
+        approvedAt: r.approval?.at ?? null,
+      })),
+    };
+  }
+  await ensureSchema();
+  const p = getPool();
+  const d = (await p.query(`SELECT * FROM school_designs WHERE id = $1`, [id])).rows[0];
+  if (!d) return null;
+  const revs = (
+    await p.query(
+      `SELECT n, created_at, created_by, proof, panels, originals, approved_at
+         FROM school_design_revisions WHERE design_id = $1 ORDER BY n DESC`,
+      [id],
+    )
+  ).rows;
+  return {
+    id,
+    code: designCode(id),
+    school: d.school_slug ?? null,
+    contact: d.contact ?? null,
+    revisions: revs.length,
+    approvedRevisions: revs.filter((r: Record<string, unknown>) => r.approved_at).length,
+    createdAt: t(d.created_at),
+    updatedAt: t(d.updated_at),
+    history: revs.map((r: Record<string, unknown>) => ({
+      n: Number(r.n),
+      createdAt: t(r.created_at),
+      createdBy: String(r.created_by),
+      proof: r.proof as StoredImageRef,
+      panels: Array.isArray(r.panels) ? r.panels.length : 0,
+      originals: Array.isArray(r.originals) ? r.originals.length : 0,
+      approvedAt: r.approved_at ? t(r.approved_at) : null,
+    })),
+  };
+}
+
+/**
+ * A FRESH link for a design — for a parent who lost theirs (review #8). The old
+ * link stops working at once; staff send the new one by hand. Only staff can do
+ * this, from the dashboard: a design code alone never opens anything.
+ */
+export async function rotateDesignToken(id: string): Promise<{ token: string; school: string | null } | null> {
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
+  const token = newToken();
+  const mode = storageMode();
+  if (mode === "unavailable") return null;
+  if (mode === "memory") {
+    const d = memDesigns.get(id);
+    if (!d) return null;
+    d.tokenHash = hashToken(token);
+    return { token, school: d.school };
+  }
+  await ensureSchema();
+  const res = await getPool().query<{ school_slug: string | null }>(
+    `UPDATE school_designs SET token_hash = $2 WHERE id = $1 RETURNING school_slug`,
+    [id, hashToken(token)],
+  );
+  return res.rows[0] ? { token, school: res.rows[0].school_slug } : null;
+}
+
 /** Test seams: the in-memory path, same shape as `__memOrdersForTest` on the ledger. */
 export const __memSchoolDesignsForTest = memDesigns;
 export const __memSchoolArtifactsForTest = memArtifacts;

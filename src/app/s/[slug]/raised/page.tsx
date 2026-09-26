@@ -8,7 +8,7 @@ import { getSchoolKit, type SchoolKit } from "@/data/school-kits";
 import { isBuilderOpen, pilotSchoolKits } from "@/data/school-pilot";
 import { SCHOOL_CHECKOUT_OPEN } from "@/config/school-checkout";
 import { SCHOOL_CONTACT_EMAIL } from "@/content/school-contact";
-import { schoolTotals } from "@/lib/order/school-ledger";
+import { schoolTotals } from "@/lib/school-designs/orders";
 
 // ─── The booster page: /s/<slug>/raised ──────────────────────────────────────
 //

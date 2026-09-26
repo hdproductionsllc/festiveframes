@@ -66,7 +66,7 @@ const SURFACE_FILES = [
   "src/lib/order/order-contact.ts",
   "src/lib/order/artwork-rights.ts",
   "src/lib/order/square-badges.ts",
-  "src/lib/order/school-ledger.ts",
+  "src/lib/school-designs/orders.ts",
   "src/lib/school-requests.ts",
   "src/config/school-checkout.ts",
   "src/config/offers.ts",

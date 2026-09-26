@@ -15,7 +15,6 @@ import type Stripe from "stripe";
 import { getStripe } from "@/lib/stripe";
 import { fulfillOrder, fulfillCart } from "@/lib/order/fulfill";
 import { fulfillSchoolOrder } from "@/lib/order/fulfill-school";
-import { recordSchoolOrder } from "@/lib/order/school-ledger";
 import type { PartsList } from "@/lib/order/parts-list";
 import type { OrderArtifacts } from "@/lib/order/store";
 
@@ -80,23 +79,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: "Order mismatch" }, { status: 400 });
   }
 
-  // The fundraiser ledger, recorded here as well as in the webhook. Both paths
-  // fulfill, so both must count, and `recordSchoolOrder` is idempotent by orderId
-  // — whichever arrives second is a no-op. Recording in only one place would make
-  // a school's total depend on which trigger happened to win the race.
   const meta = session.metadata ?? {};
-  // PAID, not merely "not unpaid". A 100%-off promo completes as
-  // `no_payment_required`, which passed this gate and credited the school a
-  // donation on an order that collected nothing — a number the club would be
-  // told it earned and could never be sent. The order still fulfils below;
-  // only the ledger insists on money having changed hands.
-  if (meta.kind === "school-frame" && session.payment_status === "paid" && meta.school) {
-    await recordSchoolOrder({
-      orderId: body.orderId!,
-      school: meta.school,
-      donationCents: Number(meta.donationCents ?? 0),
-    });
-  }
 
   // A school order is produced from its approved revision only; nothing in this
   // request body is read for it.

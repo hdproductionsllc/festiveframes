@@ -37,7 +37,10 @@ export interface SchoolRequestRow {
 const USE_DB = !!process.env.DATABASE_URL;
 
 // ── In-memory fallback (local dev, and every test) ───────────────────────────
-const memRequests = new Map<string, SchoolRequestRow>();
+// On globalThis so every route in one `next dev` process shares it (a module-scope
+// Map split between the form's route and the staff dashboard on a hot reload).
+const memGlobal = globalThis as typeof globalThis & { __msfSchoolRequests?: Map<string, SchoolRequestRow> };
+const memRequests = (memGlobal.__msfSchoolRequests ??= new Map<string, SchoolRequestRow>());
 
 // ── Postgres ─────────────────────────────────────────────────────────────────
 let pool: PgPool | null = null;
@@ -114,6 +117,31 @@ export async function recordSchoolRequest(
       err instanceof Error ? err.message : err,
     );
     return null;
+  }
+}
+
+/** Requests, newest first — the staff dashboard's view. Empty rather than an
+ *  error when storage fails: a dashboard page must still load. */
+export async function listSchoolRequests(limit = 200): Promise<SchoolRequestRow[]> {
+  try {
+    if (!USE_DB) return [...memRequests.values()].sort((a, b) => b.createdAt - a.createdAt).slice(0, limit);
+    await ensureSchema();
+    const res = await getPool().query(
+      `SELECT id, school_name, city, state, email, note, created_at FROM school_requests ORDER BY created_at DESC LIMIT $1`,
+      [limit],
+    );
+    return res.rows.map((r: Record<string, unknown>) => ({
+      id: String(r.id),
+      schoolName: String(r.school_name),
+      city: String(r.city),
+      state: String(r.state),
+      email: (r.email as string | null) ?? null,
+      note: (r.note as string | null) ?? null,
+      createdAt: new Date(r.created_at as string).getTime(),
+    }));
+  } catch (err) {
+    console.error("[school-requests] list failed:", err instanceof Error ? err.message : err);
+    return [];
   }
 }
 

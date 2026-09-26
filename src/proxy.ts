@@ -57,6 +57,9 @@ const RULES: Record<string, Rule> = {
   // alert, so it is the same abuse shape as /api/contact and takes the same gate.
   // Nobody legitimately reports six missing schools in ten minutes.
   "/api/school/request": { windowMs: 10 * 60_000, max: 6, maxBytes: 16 * 1024 },
+  // Staff sign-in: sends an email to an allowlisted address. A person asks for a
+  // link once or twice; a script guessing addresses gets nowhere and is slowed.
+  "/api/admin/login": { windowMs: 10 * 60_000, max: 5, maxBytes: 4 * 1024 },
   "/api/save-design": { windowMs: 5 * 60_000, max: 15, maxBytes: 6 * MB },
   // 20MB, not 12: a school-frame draft carries the assembled overview PLUS four
   // 300-DPI panel PNGs (same payload class as /api/school/submit below).
@@ -125,6 +128,7 @@ export const config = {
     "/api/school/brand-scan",
     "/api/school/brand-asset",
     "/api/school/request",
+    "/api/admin/login",
     "/api/save-design",
     "/api/order/draft",
     "/api/contact",

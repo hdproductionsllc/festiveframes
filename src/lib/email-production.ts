@@ -919,6 +919,35 @@ export async function sendDesignLinkEmail(o: {
 }
 
 /**
+ * A staff member's one-time sign-in link to the /admin dashboard (lib/admin/auth).
+ * The recipient is an address on the SERVER's staff list (ADMIN_EMAILS) — the
+ * caller has already checked — so this keeps the rule that nothing a stranger
+ * types becomes a recipient. Returns whether it went.
+ */
+export async function sendAdminSignInEmail(o: { to: string; url: string }): Promise<boolean> {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) return false;
+  try {
+    await sendOrThrow(new Resend(apiKey), {
+      from: senderFor("myschoolframe"),
+      to: [o.to],
+      subject: "Your MySchoolFrame dashboard sign-in link",
+      text: [
+        "Here is your sign-in link for the MySchoolFrame dashboard:",
+        "",
+        o.url,
+        "",
+        "It works once and expires in 15 minutes. If you didn't ask for it, ignore this email — nobody can use it without access to your inbox.",
+      ].join("\n"),
+    });
+    return true;
+  } catch (err) {
+    console.error("[email-production] admin sign-in email failed:", err);
+    return false;
+  }
+}
+
+/**
  * Plain-text alert that somebody asked for a school we do not have.
  *
  * INTERNAL ONLY: it goes to MySchoolFrame's inbox (MSF_ORDER_EMAIL, default

@@ -36,7 +36,9 @@ import {
   CLAIM_LEASE_MS,
   claimSchoolOrder,
   createSchoolOrder,
+  markSchoolOrderRefunded,
   recordSchoolOrderPayment,
+  schoolTotals,
 } from "@/lib/school-designs/orders";
 
 const PNG_A = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M8AAAMBAQDJ/pLvAAAAAElFTkSuQmCC";
@@ -63,7 +65,7 @@ async function paidOrder(o: { approve?: boolean; metadata?: Record<string, strin
     await approveRevision(saved!.token, saved!.revision, { wordingVersion: "test", ip: null, userAgent: null });
   }
   const rev = (await getRevision(saved!.id, saved!.revision))!;
-  const order = await createSchoolOrder({ designId: saved!.id, revision: rev.n, proofSha256: rev.proof.sha256, school: "ladue-rams" });
+  const order = await createSchoolOrder({ designId: saved!.id, revision: rev.n, proofSha256: rev.proof.sha256, school: "ladue-rams", donationCents: 500 });
   const session = {
     id: `cs_${seq}`,
     payment_status: "paid",
@@ -206,6 +208,26 @@ describe("fulfillSchoolOrder", () => {
     const { session } = await paidOrder({ metadata: { artUploaded: "yes", artRights: "none" } });
     await fulfillSchoolOrder(session);
     expect(production()[0].text).toContain("*** Artwork: Customer-uploaded artwork — NO RIGHTS ATTESTATION ON RECORD");
+  });
+
+  it("a frame refunded BEFORE it was made is held, not sent", async () => {
+    const { order, session } = await paidOrder();
+    await markSchoolOrderRefunded(order.orderId);
+    expect(await fulfillSchoolOrder(session)).toBe("held");
+    expect(production()).toHaveLength(0);
+    expect(__memSchoolOrdersForTest.get(order.orderId)?.status).toBe("held");
+  });
+
+  it("the school's total is summed from its orders: paid counts, $0 and refunded do not", async () => {
+    const before = (await schoolTotals("ladue-rams")).raisedCents;
+    const paid = await paidOrder();
+    await fulfillSchoolOrder(paid.session);
+    const free = await paidOrder({ session: { payment_status: "no_payment_required", amount_total: 0 } });
+    await fulfillSchoolOrder(free.session);
+    const back = await paidOrder();
+    await fulfillSchoolOrder(back.session);
+    await markSchoolOrderRefunded(back.order.orderId);
+    expect((await schoolTotals("ladue-rams")).raisedCents - before).toBe(500);
   });
 
   it("a session naming an order that does not exist alerts a human and sends nothing", async () => {

@@ -4,8 +4,8 @@
 // Verifies the Stripe signature against the RAW request body and the
 // STRIPE_WEBHOOK_SECRET. On checkout.session.completed it logs a
 // structured order record so Henry can prep and ship orders. On
-// charge.refunded it takes a fully refunded school order out of the
-// fundraiser ledger (see handleRefund).
+// charge.refunded it marks a fully refunded school order, which takes it out of
+// its school's total (see handleRefund).
 //
 // IMPORTANT: signature verification requires the unparsed body. We read
 // request.text() and never request.json() here.
@@ -17,7 +17,7 @@ import type Stripe from "stripe";
 import { getStripe } from "@/lib/stripe";
 import { fulfillOrder, fulfillCart, type FulfillResult } from "@/lib/order/fulfill";
 import { fulfillSchoolOrder, type SchoolFulfillResult } from "@/lib/order/fulfill-school";
-import { markSchoolOrderRefunded, recordSchoolOrder } from "@/lib/order/school-ledger";
+import { markSchoolOrderRefunded } from "@/lib/school-designs/orders";
 
 export const runtime = "nodejs";
 
@@ -89,23 +89,11 @@ export async function POST(request: Request): Promise<NextResponse> {
       return NextResponse.json({ received: true }, { status: 200 });
     }
 
-    // ── The fundraiser ledger. Recorded BEFORE fulfillment and independently of
-    // it: what a school is owed is a fact about a PAID order, not about whether
-    // we managed to print it, and the two must never be able to disagree. The
-    // call is idempotent by orderId and swallows its own errors — a failed ledger
-    // write must not make Stripe retry an order that was already fulfilled.
-    // PAID, not merely "not unpaid". A 100%-off promo completes as
-    // `no_payment_required`, which passed this gate and credited the school a
-    // donation on an order that collected nothing — a number the club would be
-    // told it earned and could never be sent. The order still fulfils below;
-    // only the ledger insists on money having changed hands.
-    if (metadata.kind === "school-frame" && session.payment_status === "paid" && metadata.orderId && metadata.school) {
-      await recordSchoolOrder({
-        orderId: metadata.orderId,
-        school: metadata.school,
-        donationCents: Number(metadata.donationCents ?? 0),
-      });
-    }
+    // ── The fundraiser. There is no separate ledger to write: a school's total is
+    // SUMMED from its orders (lib/school-designs/orders), and fulfillSchoolOrder
+    // records the payment on the order as its first step, before and
+    // independently of producing it. A 100%-off order records
+    // `no_payment_required` and so credits the school nothing.
 
     // ── MySchoolFrame order: an approved, immutable revision (lib/order/
     // fulfill-school). Its own path since 2026-09-25 — it never reads a draft.
@@ -238,11 +226,19 @@ async function handleRefund(stripe: Stripe, charge: Stripe.Charge): Promise<Next
   const metadata = session?.metadata ?? {};
   if (metadata.kind !== "school-frame" || !metadata.orderId) return ok;
 
-  const marked = await markSchoolOrderRefunded(metadata.orderId);
-  console.log(
-    marked
-      ? `[stripe-webhook] school order ${metadata.orderId} (${metadata.school ?? "?"}) refunded; removed from the school's total.`
-      : `[stripe-webhook] school order ${metadata.orderId} refunded but was not in the ledger (a $0 order, or its write was lost).`,
-  );
+  // The order row exists from checkout, so this finds it even when Stripe delivers
+  // the refund before the purchase (review 2026-09-25, #7). A storage failure asks
+  // Stripe to redeliver; the mark is idempotent.
+  try {
+    const marked = await markSchoolOrderRefunded(metadata.orderId);
+    console.log(
+      marked
+        ? `[stripe-webhook] school order ${metadata.orderId} (${metadata.school ?? "?"}) refunded; out of the school's total.`
+        : `[stripe-webhook] school order ${metadata.orderId} refunded but no such order exists.`,
+    );
+  } catch (err) {
+    console.error("[stripe-webhook] refund: could not mark the order:", err instanceof Error ? err.message : err);
+    return redeliver();
+  }
   return ok;
 }

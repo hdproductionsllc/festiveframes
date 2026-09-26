@@ -168,6 +168,8 @@ export async function POST(request: Request): Promise<NextResponse> {
         revision: rev.n,
         proofSha256: rev.proof.sha256,
         school: rev.school,
+        // Fixed on the order at checkout: it is what the school is owed for it.
+        donationCents: rev.school ? schoolOffer.schoolDonationCents : 0,
       })).orderId;
     } catch (err) {
       console.error("[checkout] school order could not be created:", err);

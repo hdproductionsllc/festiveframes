@@ -772,3 +772,33 @@ case the repair was written for. Put repairs in `merge`, and make them return th
   defunct; its school branches were removed.
 - Verify locally with `DATABASE_URL= RESEND_API_KEY= npx next dev` — blank values
   win over `.env.local`, which holds the LIVE database and a live Resend key.
+
+## One order record + the staff dashboard (2026-09-26)
+
+- **`school_orders` is THE record of a school order AND the fundraiser ledger.**
+  Every school total is SUMMED from it (`schoolTotals` / `allSchoolTotals` in
+  lib/school-designs/orders): `payment_status = 'paid'`, not refunded. There was a
+  separate ledger (lib/order/school-ledger, deleted) whose table was ALSO named
+  `school_orders` with a different shape — whichever was created first silently
+  won and the other broke. On first use the schema renames that legacy table to
+  `school_ledger_legacy` (never dropped; live had 0 rows, checked 2026-09-26).
+- **Refunds mark the order** (`markSchoolOrderRefunded`). The row exists from
+  checkout, before any Stripe event, so a refund Stripe delivers before the
+  purchase is never lost (review #7 — fixed structurally, not by retries). A frame
+  refunded before production is HELD, not sent. The webhook and /school/thanks no
+  longer write a ledger: `fulfillSchoolOrder` records payment as its first step.
+- **`/admin`** (noindex, disallowed in robots, dynamic): Overview (needs attention
+  = HELD + paid-not-sent over an hour), Orders, Schools (pilot six always listed),
+  Sent designs (+ detail with every revision's proof via
+  `/api/admin/artifact/<sha>`), School requests. Read-only, plus ONE action:
+  **issue a parent a new link** (`rotateDesignToken`; the old link dies; staff
+  send it by hand) — review #8.
+- **Staff sign-in = emailed one-time link to `ADMIN_EMAILS`** (lib/admin/auth).
+  15-minute single-use link → 30-day httpOnly `msf_admin` cookie; only sha256 of
+  tokens stored (`admin_tokens`); removing an address from ADMIN_EMAILS signs it
+  out everywhere; the login form answers identically for strangers; rate limited.
+  Every page calls `requireAdmin()`, every admin API `currentAdmin()`. In local
+  dev with no email key the link is returned on screen (never in production).
+- Verified: 2533 tests; Edge walkthrough of every page on desktop and phone with
+  seeded orders in every state; the full SQL path against Postgres built in the
+  LIVE shape (legacy table + row) — renamed aside intact, totals correct.

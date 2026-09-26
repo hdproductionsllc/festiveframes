@@ -1,3 +1,31 @@
+# One order record + the admin dashboard (2026-09-26) — Henry: "lets go"
+
+Found first: TWO tables named `school_orders` (the fundraiser ledger's, live, 0 rows;
+and the new order record's). Whichever is created first wins and the other breaks.
+Live state checked read-only: ledger table exists (0 rows); saved-design tables not
+created yet (no send since the deploy). Nothing broken for anyone; checkout is off.
+
+## 1. One order record, which IS the fundraiser ledger
+- [x] `school_orders` = the order record (design, revision, status, payment,
+      donation, refund). Fundraiser totals are SUMMED from it — no second table
+- [x] Migration: the legacy ledger table (0 rows live) is renamed aside, never dropped
+- [x] Refunds mark the order (it exists from checkout, before any Stripe event), so
+      event order no longer matters (review #7 dissolves); a refunded order is never sent
+- [x] Webhook / thanks relay stop writing a separate ledger; /raised reads the orders
+
+## 2. Admin dashboard at /admin (staff only)
+- [x] Sign-in by emailed link to an allowlist (`ADMIN_EMAILS`: Henry, Bill) — no
+      passwords, no accounts; signed, expiring cookie; noindex; rate limited
+- [x] Overview: orders needing action (HELD), paid-not-sent, sends this week
+- [x] Orders, Schools (frames + raised per school), Sent designs (code, school,
+      contact, versions, proof image), School requests
+- [x] Read-only v1, plus ONE action: issue a parent a fresh link (review #8)
+
+## Railway (Henry, or Claude on his go)
+- SITE_URL -> https://www.myschoolframe.com ; MSF_EMAIL_FROM ; ADMIN_EMAILS
+
+---
+
 # Saved-design + school-order hardening (2026-09-25) — Henry's go: "fix 1-3 elegantly"
 
 Festive Frames is DEFUNCT (Henry, 2026-09-25): school orders only; the holiday paid
