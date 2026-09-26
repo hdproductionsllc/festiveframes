@@ -41,13 +41,14 @@ unapproved or altered. See `CLAUDE.md` → "Saved school designs".
 
 ## B. Henry's decisions (nothing to build until these are made)
 
-- [ ] **Stripe shows customers a different business.** The Stripe account is shared
-      with Still Beside Me, and its public business name (on the checkout page, the
-      card statement, and Stripe's own receipts) was set to "Festive Frames", with
-      its own support email. That breaks "customers only ever see MySchoolFrame".
-      Options: a separate Stripe account for MySchoolFrame (cleanest — its own
-      name, statement descriptor, support email @myschoolframe.com, payouts), or
-      renaming the shared account (affects Still Beside Me too). Decide before launch.
+- [ ] **Card statement names MySchoolFrame.** Checked 2026-09-26 (read-only): the
+      shared Stripe account shows customers "Frames HDP" (payment page) and
+      "FRAMES HDP" (card statement); no support email; NOT "Festive Frames" (an old
+      note said so — outdated). Acceptable, but an unrecognised statement line is the
+      top cause of disputes. At launch: set a short card-statement prefix in Stripe
+      (Settings → Public details) and add `payment_intent_data.statement_descriptor_suffix`
+      = "MYSCHOOLFRAME" to the SCHOOL checkout session only (Still Beside Me
+      unaffected). Do NOT set an account-wide support email (Still Beside Me shares it).
 
 - [ ] **Price and donation** are confirmed ($24.95, $5 to the school) — re-confirm
       nothing has changed. `src/config/offers.test.ts` fails on purpose when the

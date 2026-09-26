@@ -693,7 +693,8 @@ case the repair was written for. Put repairs in `merge`, and make them return th
   MSF_ORDER_EMAIL list (which may be a personal inbox — blind copies only). There
   is deliberately NO fallback to another sending domain. Enforced by
   `src/lib/customer-addresses.test.ts`, which sets the team inbox to a Gmail on
-  purpose. Stripe is the one place this is NOT yet true — see the checklist.
+  purpose. Stripe (shared with Still Beside Me) shows "Frames HDP" / statement
+  "FRAMES HDP" — checked 2026-09-26, acceptable; a statement suffix is a launch item.
 - **`MSF_EMAIL_FROM`**: (history) set 2026-09-26 on "it's verified", removed the
   same day — see above. Unset, school mail goes from `EMAIL_FROM`'s mailbox under the
   display name "MySchoolFrame". Setting it on Railway (e.g.
