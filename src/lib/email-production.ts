@@ -27,7 +27,7 @@ import { SITE_URL } from "@/config/season";
 import { copy } from "@/content/copy";
 import { SCHOOL_CONTACT_EMAIL } from "@/content/school-contact";
 import { MSF_WARRANTY_PATH } from "@/content/msf-pages";
-import { designLinkEmailAvailable, msfFrom, msfOrderRecipients } from "@/lib/email-msf";
+import { designLinkEmailAvailable, msfCustomerReplyTo, msfFrom, msfOrderRecipients } from "@/lib/email-msf";
 
 // Cartoon sticker palette (matches the homepage).
 const PAGE = "#fff9ec"; // warm cream page background
@@ -534,10 +534,10 @@ export async function sendProductionEmails(
           to: o.customerEmail,
           bcc: founderList,
           // A parent's reply to their receipt ("can you change the name?") must
-          // reach a person. The sender address may be a send-only mailbox, so the
-          // reply goes to the team inbox directly rather than depending on a
-          // forwarder existing on the mail host.
-          replyTo: founderList,
+          // reach a person, and a customer only ever sees a myschoolframe.com
+          // address (the owner's rule, lib/email-msf): the PUBLIC contact, never
+          // the internal team list. The holiday brand keeps its team inbox.
+          replyTo: brand === "myschoolframe" ? msfCustomerReplyTo() : founderList,
           subject: `Your ${BRAND_NAME[brand]} order is confirmed`,
           html: customerHtml(o),
           text: customerText(o),
@@ -911,7 +911,8 @@ export async function sendDesignLinkEmail(o: {
     await sendOrThrow(new Resend(apiKey), {
       from: senderFor("myschoolframe"),
       to: [o.to],
-      replyTo: msfOrderRecipients(),
+      // What the parent sees: the public contact (lib/email-msf, the owner's rule).
+      replyTo: msfCustomerReplyTo(),
       subject: `Your MySchoolFrame design (${o.code})`,
       html,
       text,

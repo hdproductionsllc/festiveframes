@@ -476,7 +476,7 @@ describe("POST /api/school/submit — saves the design and hands back its link",
     // The link email: to the parent alone, from our own sender, no attachments.
     expect(link.to).toEqual([CONTACT.email]);
     expect(link.from).toBe("MySchoolFrame <orders@myschoolframe.com>");
-    expect(link.replyTo).toEqual(["bill@myschoolframe.com"]);
+    expect(link.replyTo).toBe("bill@myschoolframe.com");
     expect(link.attachments).toBeUndefined();
     expect(link.cc).toBeUndefined();
     expect(link.bcc).toBeUndefined();

@@ -41,6 +41,14 @@ unapproved or altered. See `CLAUDE.md` → "Saved school designs".
 
 ## B. Henry's decisions (nothing to build until these are made)
 
+- [ ] **Stripe shows customers a different business.** The Stripe account is shared
+      with Still Beside Me, and its public business name (on the checkout page, the
+      card statement, and Stripe's own receipts) was set to "Festive Frames", with
+      its own support email. That breaks "customers only ever see MySchoolFrame".
+      Options: a separate Stripe account for MySchoolFrame (cleanest — its own
+      name, statement descriptor, support email @myschoolframe.com, payouts), or
+      renaming the shared account (affects Still Beside Me too). Decide before launch.
+
 - [ ] **Price and donation** are confirmed ($24.95, $5 to the school) — re-confirm
       nothing has changed. `src/config/offers.test.ts` fails on purpose when the
       checkout switch flips, so the decision gets written down, not slipped in.

@@ -1,5 +1,4 @@
 import type { Resend } from "resend";
-import { msfUnverifiedSenderFallback } from "@/lib/email-msf";
 
 // ─── The ONE way this codebase sends an email ────────────────────────────────
 //
@@ -28,20 +27,19 @@ export async function sendOrThrow(
   msg: ResendMessage,
   opts?: { idempotencyKey?: string },
 ): Promise<{ id: string }> {
-  const send = (m: ResendMessage, key?: string) =>
-    key ? resend.emails.send(m, { idempotencyKey: key }) : resend.emails.send(m);
-  let { data, error } = await send(msg, opts?.idempotencyKey);
+  const { data, error } = opts?.idempotencyKey
+    ? await resend.emails.send(msg, { idempotencyKey: opts.idempotencyKey })
+    : await resend.emails.send(msg);
 
-  // THE SAFETY NET: a MySchoolFrame sender Resend will not send from (its domain
-  // is not verified in this key's account) is resent ONCE from the fallback
-  // sender (lib/email-msf `msfUnverifiedSenderFallback`). Its own idempotency key,
-  // because Resend refuses one key reused with different content.
-  const fallback = error && /not verified/i.test(error.message ?? "") ? msfUnverifiedSenderFallback(msg.from) : null;
-  if (fallback) {
+  // A sender whose domain is not verified in THIS key's Resend account fails every
+  // email it sends (seen live 2026-09-26: the domain was verified in a different
+  // account). There is deliberately no fallback to another domain — customers only
+  // ever see myschoolframe.com (the owner's rule, lib/email-msf) — so say plainly
+  // what to fix. The order path alerts and retries on the throw below.
+  if (error && /not verified/i.test(error.message ?? "")) {
     console.error(
-      `[resend] SENDER REJECTED — "${msg.from}" is not verified in this Resend account. Resending from "${fallback}". Fix MSF_EMAIL_FROM or RESEND_API_KEY.`,
+      `[resend] SENDER REJECTED — "${String(msg.from)}" is not verified in the Resend account RESEND_API_KEY belongs to. Fix the key or the sender.`,
     );
-    ({ data, error } = await send({ ...msg, from: fallback }, opts?.idempotencyKey ? `${opts.idempotencyKey}/fallback-sender` : undefined));
   }
 
   if (error || !data) {

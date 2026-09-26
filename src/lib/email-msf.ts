@@ -78,30 +78,24 @@ export function designLinkEmailAvailable(): boolean {
 export function msfFrom(): string {
   const own = process.env.MSF_EMAIL_FROM?.trim();
   if (own) return own.includes("<") ? own : `${MSF_SENDER_NAME} <${own}>`;
-  return msfSharedFrom();
-}
-
-/** EMAIL_FROM's mailbox under the MySchoolFrame name — the sender used before a
- *  myschoolframe.com sender is configured, and the safety net if it is rejected. */
-function msfSharedFrom(): string {
   const shared = process.env.EMAIL_FROM?.trim();
   return `${MSF_SENDER_NAME} <${shared ? addressOf(shared) : RESEND_TEST_ADDRESS}>`;
 }
 
 /**
- * THE SAFETY NET (2026-09-26). Where to resend a MySchoolFrame email if Resend
- * rejects `from` because its domain is not verified in the key's account — or
- * null when `from` is not the configured MSF sender, or the fallback is the same.
- *
- * Why it exists: MSF_EMAIL_FROM was set on the word "it's verified", but the
- * domain was verified in a different Resend account from the one the site's key
- * belongs to, and every school email — Bill's orders included — would have failed.
- * A settings mix-up must cost a sender name, never an order. The retry is logged
- * loudly (lib/resend-send) so the mix-up is fixed, not lived with.
+ * THE OWNER'S RULE: every address a customer can SEE — From, Reply-To, and any
+ * address printed in the body — ends in @myschoolframe.com. Internal inboxes
+ * (MSF_ORDER_EMAIL, ADMIN_EMAILS) may be anything, because customers never see
+ * them: they are recipients or blind copies only.
  */
-export function msfUnverifiedSenderFallback(from: unknown): string | null {
-  const own = process.env.MSF_EMAIL_FROM?.trim();
-  if (!own || from !== msfFrom()) return null;
-  const fallback = msfSharedFrom();
-  return addressOf(fallback) === addressOf(msfFrom()) ? null : fallback;
+export const MSF_PUBLIC_DOMAIN = "myschoolframe.com";
+
+export function isMsfAddress(nameOrAddress: string): boolean {
+  return addressOf(nameOrAddress).toLowerCase().endsWith(`@${MSF_PUBLIC_DOMAIN}`);
+}
+
+/** The ONE reply-to a customer sees: the public contact address, never the
+ *  internal team list (which could be anyone's personal inbox). */
+export function msfCustomerReplyTo(): string {
+  return SCHOOL_CONTACT_EMAIL;
 }

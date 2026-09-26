@@ -684,9 +684,16 @@ case the repair was written for. Put repairs in `merge`, and make them return th
   school email fail ("domain is not verified") until it was removed. Fix in
   progress: a key from the MySchoolFrame account, with `EMAIL_FROM` and
   `MSF_EMAIL_FROM` both on orders@myschoolframe.com. **Never leave a sender change
-  on without one real test email.** Safety net since: `sendOrThrow` resends a
-  rejected MSF sender once from EMAIL_FROM's mailbox and logs "SENDER REJECTED"
-  (`msfUnverifiedSenderFallback`, lib/email-msf).
+  on without one real test email.** Fixed the same day: the site now uses a key
+  from the MySchoolFrame account, and EMAIL_FROM + MSF_EMAIL_FROM are both
+  orders@myschoolframe.com. A rejected sender logs "SENDER REJECTED" (resend-send).
+- **THE OWNER'S RULE (2026-09-26): a customer only ever sees @myschoolframe.com.**
+  From, Reply-To and any address in the body. Customer Reply-To is the PUBLIC
+  contact (`msfCustomerReplyTo` = SCHOOL_CONTACT_EMAIL), never the internal
+  MSF_ORDER_EMAIL list (which may be a personal inbox — blind copies only). There
+  is deliberately NO fallback to another sending domain. Enforced by
+  `src/lib/customer-addresses.test.ts`, which sets the team inbox to a Gmail on
+  purpose. Stripe is the one place this is NOT yet true — see the checklist.
 - **`MSF_EMAIL_FROM`**: (history) set 2026-09-26 on "it's verified", removed the
   same day — see above. Unset, school mail goes from `EMAIL_FROM`'s mailbox under the
   display name "MySchoolFrame". Setting it on Railway (e.g.
