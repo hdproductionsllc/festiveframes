@@ -121,3 +121,20 @@ came back as its preview and printed soft. Separately, the server returned the s
 link on a failed send and the screen showed only the error. **Before persisting anything
 server-side, walk every reference in it and ask "does the server hold what this points
 to?"; and when the server returns something on a failure path, render it on that path.**
+
+## 2026-09-26 — A local test cannot see the proxy, and a one-time link must survive a robot
+
+Two live failures on the first real staff sign-in, both invisible locally:
+(1) redirects built from `request.url` sent Henry to https://localhost:8080 — behind
+Railway's proxy the app believes it is localhost; locally it really is, so every test
+passed. (2) The emailed one-time link was already spent — mail filters open links to
+scan them. **Every emailed link and redirect goes through `msfOrigin()`, never
+request.url; a one-time link opens a page and only a button spends it; and a test
+must simulate the proxy (requests arriving as localhost:8080).**
+
+## 2026-09-26 — Verify a sender change with one real email before leaving it on
+
+`MSF_EMAIL_FROM` was set on "it's verified", but the domain was verified in a different
+Resend account from the site's key, and every school email would have failed. **Any
+change to who email is sent from, or with which key, gets one real test send and a log
+check before it is left on.**
