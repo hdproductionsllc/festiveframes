@@ -6,6 +6,7 @@ import { bannerBands, CAP_SEAT_CSS, trackingAt, trackingPx, widthLimitedFont } f
 import { chromeInset, ringCss, textChenilleCss, tileEdgeCss } from "@/lib/utils/tile-theme";
 import { useDesignStore } from "@/stores/design-store";
 import { bannerLogoLayout } from "@/lib/utils/banner-logo";
+import { TileArtImg } from "@/components/tiles/TileArtImg";
 
 // A section's TEXT rendered as a MULTI-LINE block that honors `\n` line breaks and
 // works on a wide top/bottom bar AND a tall/narrow side panel (wing).
@@ -299,21 +300,22 @@ function BannerLogo({
   x: number;
   url: string;
 }) {
+  // Through TileArtImg, like every other piece of art on the frame: the crest is a
+  // PRINT master (Ladue's is 1024 px, 127 KB — measured as the single heaviest
+  // file on a school page, 2026-09-27) drawn here at ~20 CSS px. The optimizer
+  // serves it at the size shown; a remote or data: URL keeps its plain <img>.
   return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={url}
-      alt=""
-      draggable={false}
+    <div
       style={{
         position: "absolute",
         left: x,
         top: layout.y,
         width: layout.size,
         height: layout.size,
-        objectFit: "contain",
         pointerEvents: "none",
       }}
-    />
+    >
+      <TileArtImg src={url} alt="" width={layout.size} height={layout.size} style={{ objectFit: "contain" }} />
+    </div>
   );
 }
