@@ -586,6 +586,14 @@ error of 49/255 where the real figure was under 1/255.
   "HOME OF THE / MILLER": `writePerson` and the hydrate repair
   (`repairDanglingTopLine`) both drop a seeded fragment tagline. Scan-to-kit
   (`apply-brand.ts`) builds the same layout.
+- **Achievements are banner LINES, not badge art** (owner, 2026-09-27): Varsity,
+  Captain, State Champions, State Qualifier, All-State, Scholar Athlete
+  (`ACHIEVEMENT_LINES`, data/frame-buyers). Letter jackets say these in words; no
+  picture means "captain". One "Achievement" chip + a menu, not six chips (a phone
+  row would wrap three times). The two STATE lines never carry the class year — it
+  would claim when the title was won. Staff get only the STATE two. Every line is
+  held to 25 characters by test. JV / MVP / year bars left out on purpose
+  (tasks/achievement-markers-research.md).
 - **Badge background = the horizontal text-panel colour.** All three brand
   colours reach print through ONE picker, `schoolDesignOf` (compose-school-frame).
 - **Send opens a sheet** (`SendDesignSheet`): required email, optional phone,

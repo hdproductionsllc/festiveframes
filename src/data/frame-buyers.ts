@@ -29,7 +29,27 @@ export type BuyerId = "parent" | "self" | "grandparent" | "alum" | "staff";
 // offers, and the buyer's own default tagline is simply its first line — so the
 // chips and the buyer's wording cannot drift into two lists.
 
-export type BannerLineId = "class" | "number" | "senior" | "parent" | "grandparent" | "alum" | "staff" | "custom";
+export type BannerLineId =
+  | "class"
+  | "number"
+  | "senior"
+  | "parent"
+  | "grandparent"
+  | "alum"
+  | "staff"
+  | AchievementLineId
+  | "custom";
+
+/**
+ * ACHIEVEMENTS (owner, 2026-09-27): varsity, captain, state and the rest. Letter
+ * jackets say these in WORDS (CAPT, VARSITY, CHAMPS pins) — no picture means
+ * "captain" — so they are banner lines, not badge art (badges carry no lettering).
+ * Research: tasks/achievement-markers-research.md. Each is an ordinary line (so
+ * saving, restoring and print need nothing new); the builder shows them behind ONE
+ * "Achievement" chip and a menu, because six more chips would wrap a phone's row
+ * three times. JV and MVP were left out on purpose (see the research).
+ */
+export type AchievementLineId = "varsity" | "captain" | "stateChamps" | "stateQualifier" | "allState" | "scholarAthlete";
 
 export interface BannerLineInput {
   year?: string;
@@ -47,6 +67,8 @@ export interface BannerLine {
   asks?: "number" | "text";
   /** The line itself. Empty means "nothing to write yet". */
   tagline: (input: BannerLineInput) => string;
+  /** One of the achievement lines, offered behind the single Achievement chip. */
+  achievement?: true;
 }
 
 /** Class year, led by the number when there is one: "#12 · CLASS OF 2027". */
@@ -58,6 +80,8 @@ function classLine({ year, number }: BannerLineInput): string {
 
 /** A role with the year after it when there is one: "PROUD PARENT · 2027". */
 const roleLine = (role: string) => ({ year }: BannerLineInput) => (year ? `${role} · ${year}` : role);
+/** A status worn with the class: "VARSITY · CLASS OF 2027". */
+const classOfLine = (status: string) => ({ year }: BannerLineInput) => (year ? `${status} · CLASS OF ${year}` : status);
 
 export const BANNER_LINES: Record<BannerLineId, BannerLine> = {
   class: { id: "class", chip: "Class of", tagline: classLine },
@@ -84,6 +108,17 @@ export const BANNER_LINES: Record<BannerLineId, BannerLine> = {
     tagline: ({ year }) => (year ? `ALUMNI · CLASS OF ${year}` : "ALUMNI"),
   },
   staff: { id: "staff", chip: "Faculty & Staff", tagline: () => "FACULTY & STAFF" },
+  varsity: { id: "varsity", chip: "Varsity", achievement: true, tagline: classOfLine("VARSITY") },
+  captain: { id: "captain", chip: "Captain", achievement: true, tagline: classOfLine("CAPTAIN") },
+  // No year on the two STATE lines: the only year the builder knows is the CLASS
+  // year, and "STATE CHAMPIONS · 2027" would claim a title won in 2027. A parent who
+  // wants "STATE CHAMPS 2025" types it as their own words.
+  stateChamps: { id: "stateChamps", chip: "State Champions", achievement: true, tagline: () => "STATE CHAMPIONS" },
+  stateQualifier: { id: "stateQualifier", chip: "State Qualifier", achievement: true, tagline: () => "STATE QUALIFIER" },
+  allState: { id: "allState", chip: "All-State", achievement: true, tagline: classOfLine("ALL-STATE") },
+  // "SCHOLAR ATHLETE · CLASS OF 2027" is 31 characters — too long to read from the
+  // car behind — so this one takes the bare year like PROUD PARENT does.
+  scholarAthlete: { id: "scholarAthlete", chip: "Scholar Athlete", achievement: true, tagline: roleLine("SCHOLAR ATHLETE") },
   custom: {
     id: "custom",
     chip: "Your own words",
@@ -91,6 +126,9 @@ export const BANNER_LINES: Record<BannerLineId, BannerLine> = {
     tagline: ({ text }) => (text ?? "").trim().toUpperCase(),
   },
 };
+
+/** Every achievement line, in menu order. */
+export const ACHIEVEMENT_LINES: AchievementLineId[] = ["varsity", "captain", "stateChamps", "stateQualifier", "allState", "scholarAthlete"];
 
 /** The tagline for a line, or "" when there is nothing to write yet. */
 export function bannerTagline(id: BannerLineId | null | undefined, input: BannerLineInput): string {
@@ -155,7 +193,7 @@ export const BUYERS: Buyer[] = [
     yearLabel: "Class year",
     // PROUD PARENT first: this buyer's frame goes on the PARENT's car, and the
     // "Who's it for?" tap should say so on the banner (owner, 2026-09-24).
-    lines: ["parent", "class", "number", "senior", "custom"],
+    lines: ["parent", "class", "number", "senior", ...ACHIEVEMENT_LINES, "custom"],
     yearRange: "upcoming",
   }),
   buyer({
@@ -165,7 +203,7 @@ export const BUYERS: Buyer[] = [
     namePlaceholder: "e.g. a nickname or first name",
     activityLabel: "What you do",
     yearLabel: "Class year",
-    lines: ["class", "number", "senior", "custom"],
+    lines: ["class", "number", "senior", ...ACHIEVEMENT_LINES, "custom"],
     yearRange: "upcoming",
   }),
   buyer({
@@ -175,7 +213,7 @@ export const BUYERS: Buyer[] = [
     namePlaceholder: "e.g. GRANDMA or #12",
     activityLabel: "What they do",
     yearLabel: "Class year",
-    lines: ["grandparent", "class", "number", "custom"],
+    lines: ["grandparent", "class", "number", ...ACHIEVEMENT_LINES, "custom"],
     yearRange: "upcoming",
   }),
   buyer({
@@ -185,7 +223,7 @@ export const BUYERS: Buyer[] = [
     namePlaceholder: "e.g. ALUMNI or #7",
     activityLabel: "What you did",
     yearLabel: "Class year",
-    lines: ["alum", "class", "number", "custom"],
+    lines: ["alum", "class", "number", ...ACHIEVEMENT_LINES, "custom"],
     yearRange: "past",
   }),
   buyer({
@@ -195,8 +233,9 @@ export const BUYERS: Buyer[] = [
     namePlaceholder: "e.g. COACH",
     activityLabel: "What you coach or teach",
     yearLabel: null,
-    // No class year. FACULTY & STAFF by default, or their own words (COACH).
-    lines: ["staff", "custom"],
+    // No class year. FACULTY & STAFF by default, their own words (COACH), or the
+    // program's STATE result — a coach has no class to be varsity or captain of.
+    lines: ["staff", "stateChamps", "stateQualifier", "custom"],
     yearRange: "upcoming",
   }),
 ];

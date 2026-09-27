@@ -451,6 +451,10 @@ export function SchoolDesigner({
   const setLineText = (lineText: string) => setIntake({ lineText });
   const line: BannerLineId | null =
     lineChoice && buyer.lines.includes(lineChoice) ? lineChoice : (buyer.lines[0] ?? null);
+  // The achievement lines this buyer is offered (a coach gets only the STATE two),
+  // shown behind one chip that opens on the first of them.
+  const achievements = buyer.lines.filter((id) => BANNER_LINES[id].achievement);
+  const onAchievement = !!line && !!BANNER_LINES[line].achievement;
   /** The tagline the intake currently describes, with any field overridden — the
    *  ONE place the intake's fields become words on the banner. */
   const taglineNow = (
@@ -1740,6 +1744,27 @@ export function SchoolDesigner({
                     <div role="radiogroup" aria-labelledby="msf-line" className="msf-pills">
                       {buyer.lines.map((id) => {
                         const option = BANNER_LINES[id];
+                        // The achievement lines share ONE chip, drawn where the first
+                        // of them sits; its menu (below) picks which.
+                        if (option.achievement) {
+                          if (id !== achievements[0]) return null;
+                          const pick = onAchievement && line ? line : id;
+                          return (
+                            <button
+                              key="achievement"
+                              type="button"
+                              role="radio"
+                              aria-checked={onAchievement}
+                              onClick={() => {
+                                setLineChoice(pick);
+                                writeLine({ line: pick });
+                              }}
+                              className="msf-pill"
+                            >
+                              {onAchievement ? BANNER_LINES[pick].chip : "Achievement"}
+                            </button>
+                          );
+                        }
                         const label = id === "class" && kidYear ? `Class of ${kidYear}` : option.chip;
                         return (
                           <button
@@ -1779,6 +1804,27 @@ export function SchoolDesigner({
                           placeholder="12"
                           className="msf-input"
                         />
+                      </label>
+                    )}
+                    {onAchievement && line && (
+                      <label className="msf-field msf-grow">
+                        <span className="msf-label">Achievement</span>
+                        <select
+                          name="kid-achievement"
+                          value={line}
+                          onChange={(e) => {
+                            const id = e.target.value as BannerLineId;
+                            setLineChoice(id);
+                            writeLine({ line: id });
+                          }}
+                          className="msf-input"
+                        >
+                          {achievements.map((id) => (
+                            <option key={id} value={id}>
+                              {BANNER_LINES[id].chip}
+                            </option>
+                          ))}
+                        </select>
                       </label>
                     )}
                     {line && BANNER_LINES[line].asks === "text" && (

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { BANNER_LINES, BUYERS, DEFAULT_BUYER, bannerTagline, getBuyer, yearsFor } from "./frame-buyers";
+import { ACHIEVEMENT_LINES, BANNER_LINES, BUYERS, DEFAULT_BUYER, bannerTagline, getBuyer, yearsFor } from "./frame-buyers";
 
 /**
  * The intake used to be third-person throughout, which assumed a parent buying
@@ -116,3 +116,40 @@ describe("the banner line — one tap each, from one list", () => {
     }
   });
 });
+
+describe("achievements — varsity, captain, state — are banner words, not badge art", () => {
+  it("writes each one the way a letter jacket says it", () => {
+    expect(bannerTagline("varsity", { year: "2027" })).toBe("VARSITY · CLASS OF 2027");
+    expect(bannerTagline("captain", { year: "2027" })).toBe("CAPTAIN · CLASS OF 2027");
+    expect(bannerTagline("allState", { year: "2027" })).toBe("ALL-STATE · CLASS OF 2027");
+    expect(bannerTagline("scholarAthlete", { year: "2027" })).toBe("SCHOLAR ATHLETE · 2027");
+    expect(bannerTagline("varsity", { year: "1994" })).toBe("VARSITY · CLASS OF 1994");
+  });
+
+  it("never puts the CLASS year on a state result — that would claim when it was won", () => {
+    expect(bannerTagline("stateChamps", { year: "2027" })).toBe("STATE CHAMPIONS");
+    expect(bannerTagline("stateQualifier", { year: "2027" })).toBe("STATE QUALIFIER");
+  });
+
+  it("offers them to every buyer, and a coach only the program's state result", () => {
+    for (const b of BUYERS.filter((x) => x.id !== "staff")) {
+      for (const id of ACHIEVEMENT_LINES) expect(b.lines, `${b.id}:${id}`).toContain(id);
+      // Their own words stay last.
+      expect(b.lines[b.lines.length - 1], b.id).toBe("custom");
+    }
+    const staff = getBuyer("staff").lines.filter((id) => BANNER_LINES[id].achievement);
+    expect(staff).toEqual(["stateChamps", "stateQualifier"]);
+  });
+
+  it("keeps EVERY line short enough to read from the car behind (25 characters)", () => {
+    const long: string[] = [];
+    for (const b of BUYERS)
+      for (const id of b.lines)
+        for (const year of b.yearLabel ? yearsFor(b.yearRange).map(String) : [undefined]) {
+          const t = bannerTagline(id, { year, number: "99", text: "X".repeat(24) });
+          if (t.length > 25) long.push(`${b.id}:${id} "${t}" (${t.length})`);
+        }
+    expect(long).toEqual([]);
+  });
+});
+
