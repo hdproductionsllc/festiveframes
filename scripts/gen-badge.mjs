@@ -45,7 +45,13 @@ const STYLE =
   "polished flush with the metal, glossy enamel with a single soft specular " +
   "highlight, crisp hard edges, no gradients inside the enamel, no texture, no " +
   "fabric, no embroidery, no stitching, bold simple shapes readable at one inch, " +
-  "symmetrical centred composition filling the frame, straight-on top-down view, " +
+  // "filling the frame" was here until 2026-09-27: it pushed the model to run art
+  // OFF the canvas, and the palette's brush tips (and the flask neck, the rings'
+  // straps, the medal ribbon) shipped sliced flat at the image edge — cut in the
+  // SOURCE, where no amount of fitting can restore them. Composition only; the
+  // rendering words are unchanged, so the set's look does not drift.
+  "symmetrical centred composition with a clear empty margin on every side, no part " +
+  "of the object touching or crossing the edge of the image, straight-on top-down view, " +
   "flat lay product photograph, isolated on a solid pure magenta #FF00FF " +
   "background, no drop shadow, no reflection, no text, no lettering, no words, " +
   "1:1 square";

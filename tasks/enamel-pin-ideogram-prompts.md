@@ -85,10 +85,17 @@ raised metal linework separating every colour area, recessed enamel colour fill
 polished flush with the metal, glossy enamel with a single soft specular
 highlight, crisp hard edges, no gradients inside the enamel, no texture, no
 fabric, no embroidery, no stitching, bold simple shapes readable at one inch,
-symmetrical centred composition filling the frame, straight-on top-down view,
+symmetrical centred composition with a clear empty margin on every side, no part
+of the object touching or crossing the edge of the image, straight-on top-down view,
 flat lay product photograph, isolated on a solid pure magenta #FF00FF background,
 no drop shadow, no reflection, no text, no lettering, no words, 1:1 square
 ```
+
+**Changed 2026-09-27 (composition only):** "filling the frame" became "a clear empty
+margin on every side…". The old phrase made the model run art off the canvas: the
+palette's brush tips, the flask neck, the rings' straps and the medal ribbon were
+sliced flat at the image edge IN THE SOURCE, and read on the frame as clipped by the
+badge. The rendering words are untouched, so the set's look does not drift.
 
 **Why magenta:** the in-house pipeline keys the backdrop out by chroma plane and
 un-multiplies it from every partial-alpha pixel, so edges carry no matte. Magenta
@@ -253,3 +260,54 @@ so the batch chroma keyer refuses its output BY DESIGN. The shipped cut-outs wen
 through the app's adaptive keyer instead: flatness 1.000, partial-alpha 0.85% /
 3.68% with gold-ramping edges, 702px / 661px after trim. Both cleared the
 one-inch test on navy.
+
+---
+
+## 8. Redraws — art cut off in the source (2026-09-27)
+
+Found by Henry on the frame ("the artwork still sometimes gets clipped — the paint
+brushes with palette"): the palette's brush tips were sliced flat at the image edge
+in the SOURCE file (111 px of ink in column 0). The corner-fitting fix could not help,
+because the missing paint is not in the file. A scan of every badge (a straight run of
+40+ px of ink along an edge) flagged 23; by eye four are genuinely cut, the rest are
+natural flat edges or tangent curves. Generator: Gemini (`scripts/gen-badge.mjs`), then
+`npx vite-node scripts/process-badge.ts <name>`, which REFUSES art that touches the
+image edge before trimming. Colours match the current badges.
+
+**art** (Art Club)
+```
+an artist's painting palette with two slim paintbrushes crossed behind it, a
+kidney-shaped palette with a thumb hole and five round paint wells in vermilion,
+golden yellow, sky blue, green and white, brown enamel palette, both paintbrushes
+complete with their bristle tips and handle ends fully inside the image, cut to the
+silhouette of the subject, NOT inside a circle, disc, medallion or border
+```
+
+**science**
+```
+a chemistry Erlenmeyer flask with a rounded lip at the top of its neck, white enamel
+glass with a teal enamel liquid and three small bubbles, the whole flask including
+the lip of its neck fully inside the image, cut to the silhouette of the subject,
+NOT inside a circle, disc, medallion or border
+```
+
+**gymnastics**
+```
+a pair of gold gymnastics rings hanging from two short navy blue enamel straps with
+small gold buckles, the top of each strap finishing in a neat rounded end fully
+inside the image, cut to the silhouette of the subject, NOT inside a circle, disc,
+medallion or border
+```
+
+**medal**
+```
+a round gold medal with a navy blue enamel star at its centre, hanging from a short
+V-shaped navy blue enamel ribbon whose top finishes in a neat straight end fully
+inside the image with empty space above it, cut to the silhouette of the subject,
+NOT inside a circle, disc, medallion or border
+```
+
+After picking winners: copy to `public/tiles/high-school/<name>.png`, run
+`node scripts/light-enamel.mjs` (science, gymnastics and medal have ivory twins),
+`npm run art:fit`, the test suite, and look at each on a light AND a dark school's
+frame before shipping.
