@@ -1084,6 +1084,20 @@ export const CHIP_PRESET_PIECE: Record<string, string> = {
   pom: "hs:pom",
   "pom squad": "hs:pom",
   "pom team": "hs:pom",
+  "stage crew": "hs:stage-crew",
+  "theatre tech": "hs:stage-crew",
+  "theater tech": "hs:stage-crew",
+  "math team": "hs:math",
+  mathletes: "hs:math",
+  "mu alpha theta": "hs:math",
+  coding: "hs:coding",
+  "computer science": "hs:coding",
+  "bass fishing": "hs:bass-fishing",
+  fishing: "hs:bass-fishing",
+  "unified sports": "hs:inclusive",
+  unified: "hs:inclusive",
+  "key club": "hs:service",
+  "show choir": "hs:choir",
 };
 
 /**

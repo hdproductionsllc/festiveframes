@@ -57,6 +57,14 @@
   with `keyBackground(img, { keyEnclosed: true })` (ring interiors are backdrop);
   uploads keep the default, which protects enclosed art. After replacing a PNG, clear
   `.next/cache/images` before a local screen check, or dev serves the old art.
+- **Polished gold reflects the magenta sweep** (found 2026-09-27, after nine badges
+  had shipped with it): a 1 px PINK HAIRLINE round every metal rim, too opaque for the
+  keyer to unmix. The review had checked the MEAN edge colour, which ramps to gold and
+  hides a one-pixel line — measure the worst pixels, not the average. `process-badge`
+  now despills the outline (a spill pixel takes the nearest clean colour) and REFUSES
+  any candidate with spill left; `sets/badge-spill.test.ts` holds every PNG and twin
+  to zero (bright pink: r > 120, r and b 20+ over g — racquetball's violet rim and the
+  sax's copper glints are dark or barely rose and pass by design).
 - **Shipping format for badge PNGs**: 1000 px square, `png({ compressionLevel: 9,
   palette: true, quality: 92 })` — the library norm (130–380 KB). Gemini 2K output
   trims to 1.2–1.7k px and 1–3 MB truecolor; checked at 2x, quantising is invisible.

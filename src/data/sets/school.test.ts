@@ -49,6 +49,9 @@ describe("school spirit set", () => {
     // even though it needs editing whenever art lands: it is what catches a piece
     // silently dropping out of the palette, which `> 0` would sail past.
     //
+    // 68 -> 73 OFFERED (2026-09-27, Tier 2): Stage Crew, Math Team, Coding, Bass
+    // Fishing, Inclusive Sports.
+    //
     // 63 -> 68 OFFERED (2026-09-27): Flag Football, Pom Squad, Health Sciences,
     // Business and Proud Family — the Tier 1 gaps in tasks/badge-library-gaps.md.
     //
@@ -72,7 +75,7 @@ describe("school spirit set", () => {
     // GENERIC on purpose — a sheaf of wheat and a compass rose — because the FFA
     // emblem and the Scouts' fleur-de-lis are registered marks, exactly like the
     // six above.
-    expect(hs.length).toBe(68);
+    expect(hs.length).toBe(73);
     expect(hs.length + WITHHELD_ART.size).toBe(highSchoolSet.pieces.length);
     expect(hs.map((p) => p.id)).not.toContain("hs:quiz-bowl");
     expect(hs.map((p) => p.id)).not.toContain("hs:model-un");

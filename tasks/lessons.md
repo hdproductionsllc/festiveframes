@@ -138,3 +138,9 @@ must simulate the proxy (requests arriving as localhost:8080).**
 Resend account from the site's key, and every school email would have failed. **Any
 change to who email is sent from, or with which key, gets one real test send and a log
 check before it is left on.**
+
+## 2026-09-27 — Measure the worst pixels, not the average
+- A one-pixel pink hairline shipped on nine badges because my fringe check averaged the
+  edge colour (which ramps to gold). Checking edges = count the pixels that are wrong,
+  and prove the check against a known-bad file before trusting a "clean" result.
+- Before claiming "the old library is clean", run the check on ALL of it, not two files.

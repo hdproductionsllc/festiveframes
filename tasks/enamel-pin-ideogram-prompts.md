@@ -336,3 +336,23 @@ of the subject, NOT inside a circle, disc, medallion or border".
   front of it
 - **proud-family** [#1]: a big glossy red enamel heart with a small navy blue
   graduation mortarboard cap with a gold tassel sitting tilted on its top
+
+## 10. Tier 2 (2026-09-27) — winners in brackets
+
+Same run line and tail as §9.
+
+- **stage-crew** [#1]: a theatre stage spotlight lamp in navy blue enamel with gold
+  metal fittings mounted on a short gold yoke clamp, a bold wedge-shaped beam of pale
+  gold light shining out of its lens diagonally downward
+- **math** [#1]: a gold drawing compass standing open with its two legs apart, crossed
+  over a navy blue enamel triangular set square ruler with small gold tick marks along
+  its edges, no numbers, no letters, no symbols
+- **coding** [#3 — the white-screen one]: an open laptop computer seen from the front,
+  navy blue enamel body with gold metal edges, its screen showing a big bold pair of
+  white angle brackets with a slash between them
+- **bass-fishing** [#3]: a largemouth bass fish leaping in a curved arc with its mouth
+  open, green enamel body with a darker green stripe along its side and a white enamel
+  belly, gold metal fins and outline, a small gold fishing lure near its mouth
+- **inclusive** [#1]: two hands of different skin tones reaching up together to hold
+  one round ball between them, gold metal hands, the ball in white enamel with navy
+  blue seams

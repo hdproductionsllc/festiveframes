@@ -10,6 +10,8 @@
 //      would have caught the palette with its brush tips sliced off (2026-09-27):
 //      art cut in the source reads on the frame as clipped by the badge, and no
 //      fitting can restore it. Complete art keeps a margin until we trim it;
+//   2b. despill: the outline's magenta reflection (a pink hairline on every gold
+//      rim) takes the nearest clean colour; any spill left refuses the candidate;
 //   3. trim to the ink, pad to a centred transparent square (the badge rule);
 //   4. the print gate: at least 595 px on the long side (2x2 at 300 DPI);
 //   5. write scripts/out/processed/<name>-<n>.png and a review sheet
@@ -48,6 +50,18 @@ async function processOne(file: string): Promise<{ file: string; ok: boolean; wh
   for (let y = 0; y < H; y++) touching += +ink(0, y) + +ink(W - 1, y);
   if (touching > 0) return { file, ok: false, why: `art touches the image edge (${touching} px) — cut in the source` };
 
+  // 2b. Magenta SPILL at the silhouette. Polished gold reflects the lit magenta
+  // sweep, so the outermost pixel or two of every metal rim came out pink — too
+  // opaque for the keyer to unmix, invisible at a glance, and a rosy hairline in
+  // print (found 2026-09-27 on every Gemini badge; the older library has none).
+  // Within EDGE px of the outline, a pixel whose red AND blue both stand above its
+  // green is spill — gold (b < g), navy (r < g), red, green, skin and white never
+  // are — and it takes the colour of the nearest clean opaque pixel, keeping its
+  // own alpha, so the edge stays smooth and turns gold.
+  const despilled = despill(img);
+  const left = spillAtEdge(img);
+  if (left > 0) return { file, ok: false, why: `${left} px of magenta spill left at the edge after despill` };
+
   // 3. Trim to the ink, then pad to a centred square.
   const keyed = sharp(Buffer.from(img.data.buffer), { raw: { width: W, height: H, channels: 4 } });
   const trimmed = await keyed.png().toBuffer().then((b) => sharp(b).trim({ threshold: 1 }).png().toBuffer({ resolveWithObject: true }));
@@ -60,7 +74,71 @@ async function processOne(file: string): Promise<{ file: string; ok: boolean; wh
     .toBuffer();
   const out = path.join(DONE, path.basename(file));
   await sharp(square).toFile(out);
-  return { file, ok: true, why: `${side}px square, backdrop ${report.backdrop}, flatness ${report.flatness.toFixed(3)}`, out };
+  return { file, ok: true, why: `${side}px square, backdrop ${report.backdrop}, flatness ${report.flatness.toFixed(3)}, despilled ${despilled} px`, out };
+}
+
+type Img = { data: Uint8ClampedArray; width: number; height: number };
+const EDGE = 8;
+const REACH = 6;
+const spilled = (d: Uint8ClampedArray, i: number) => Math.min(d[i], d[i + 2]) > d[i + 1] + 5;
+
+/** Per pixel: true when a transparent pixel lies within EDGE (square window). */
+function edgeBand({ data, width: W, height: H }: Img): Uint8Array {
+  const clear = new Uint8Array(W * H);
+  for (let p = 0; p < W * H; p++) clear[p] = data[p * 4 + 3] < 20 ? 1 : 0;
+  // Separable dilation: rows, then columns.
+  const rows = new Uint8Array(W * H);
+  for (let y = 0; y < H; y++)
+    for (let x = 0; x < W; x++) {
+      let hit = 0;
+      for (let k = Math.max(0, x - EDGE); k <= Math.min(W - 1, x + EDGE) && !hit; k++) hit = clear[y * W + k];
+      rows[y * W + x] = hit;
+    }
+  const band = new Uint8Array(W * H);
+  for (let x = 0; x < W; x++)
+    for (let y = 0; y < H; y++) {
+      let hit = 0;
+      for (let k = Math.max(0, y - EDGE); k <= Math.min(H - 1, y + EDGE) && !hit; k++) hit = rows[k * W + x];
+      band[y * W + x] = hit;
+    }
+  return band;
+}
+
+function despill(img: Img): number {
+  const { data, width: W, height: H } = img;
+  const band = edgeBand(img);
+  const src = new Uint8ClampedArray(data);
+  let n = 0;
+  for (let y = 0; y < H; y++)
+    for (let x = 0; x < W; x++) {
+      const p = y * W + x, i = p * 4;
+      if (!band[p] || src[i + 3] < 20 || !spilled(src, i)) continue;
+      let best = -1, bd = Infinity;
+      for (let dy = -REACH; dy <= REACH; dy++)
+        for (let dx = -REACH; dx <= REACH; dx++) {
+          const xx = x + dx, yy = y + dy;
+          if (xx < 0 || yy < 0 || xx >= W || yy >= H) continue;
+          const j = (yy * W + xx) * 4;
+          if (src[j + 3] > 230 && !spilled(src, j) && dx * dx + dy * dy < bd) {
+            bd = dx * dx + dy * dy;
+            best = j;
+          }
+        }
+      if (best < 0) continue;
+      data[i] = src[best];
+      data[i + 1] = src[best + 1];
+      data[i + 2] = src[best + 2];
+      n++;
+    }
+  return n;
+}
+
+/** Spill still visible at the outline (alpha >= 40) after despill — must be 0. */
+function spillAtEdge(img: Img): number {
+  const band = edgeBand(img);
+  let n = 0;
+  for (let p = 0; p < img.width * img.height; p++) if (band[p] && img.data[p * 4 + 3] >= 40 && spilled(img.data, p * 4)) n++;
+  return n;
 }
 
 async function sheet(name: string, outs: string[]): Promise<string | null> {

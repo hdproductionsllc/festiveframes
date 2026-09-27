@@ -151,3 +151,10 @@ Research: tasks/badge-library-gaps.md. Clipped-art fix pushed (0f0da0d).
 - [x] Verify: print render + browser on dark & light school; full tests, tsc, lint, build
 - [x] One push; update CLAUDE.md + gaps doc
 - Skipped on purpose: Captain/State (needs words — better as a banner line); see review below
+
+# Badge library Tier 2 (2026-09-27) — Henry: "go ahead for the second tier"
+- [x] Generate: stage crew (spotlight), math (compass + set square, no pi), coding (laptop + brackets), bass fishing, inclusive sports (Unified — Special Olympics' name stays a keyword)
+- [x] Key Club / volunteer: no new art (Service covers it) — keywords instead; also show choir→Choir, speech→Debate, beach→Volleyball
+- [x] Process, one-inch test on 4 fields, ivory twins, art:fit, register + menu + keywords
+- [x] Print + browser check; tests, tsc, lint, build; one push; docs
+- [x] Found + fixed: magenta hairline on every Gemini badge (despill + badge-spill.test.ts); all 14 of today's badges re-cut

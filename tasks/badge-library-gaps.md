@@ -9,6 +9,14 @@
   Film, Ceramics, Culinary, Agriculture, Weightlifting, Crew, Sailing, Skiing.
 - Tray search reads `keywords` (deca/fbla -> Business, hosa/nursing -> Health,
   grandma/mom -> Proud Family).
+- **Tier 2, same day**: Stage Crew (spotlight), Math Team (compass + set square —
+  checked against the Masonic square-and-compasses: theirs is an L-square,
+  interlocked), Coding (white screen so the ivory twin keeps its brackets), Bass
+  Fishing, Inclusive Sports (Unified = Special Olympics' name, a search word only).
+  Inclusive is the weakest at an inch ("hands holding a ball") — owner's keep/cut.
+  Key Club, show choir, speech, beach volleyball: search words on Service, Choir,
+  Debate, Volleyball rather than near-duplicate art.
+- Every badge made today was re-cut after the pink-rim find (see CLAUDE.md).
 - NOT made: Captain / State — without the letters it only says "honour", which Star,
   Honor Roll, Medal and Trophy already say. Better as a banner line (CAPTAIN, STATE
   QUALIFIER) — an owner call.
