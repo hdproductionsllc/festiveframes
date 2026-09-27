@@ -311,3 +311,28 @@ After picking winners: copy to `public/tiles/high-school/<name>.png`, run
 `node scripts/light-enamel.mjs` (science, gymnastics and medal have ivory twins),
 `npm run art:fit`, the test suite, and look at each on a light AND a dark school's
 frame before shipping.
+
+
+## 9. Library additions (2026-09-27) — winners in brackets
+
+Run as `GEN_MODEL=gemini-3-pro-image GEN_SIZE=2K node scripts/gen-badge.mjs <name> 3 "<subject>"`,
+every subject ending "the whole object fully inside the image, cut to the silhouette
+of the subject, NOT inside a circle, disc, medallion or border".
+
+- **flag-football** [#2]: an American football in brown enamel with white laces lying
+  horizontally across a flag-football belt, two long bright gold enamel flags hanging
+  down from the navy blue enamel belt on either side of the ball, the flags clearly
+  visible and as prominent as the ball
+- **pom** — first try read as gold FANS (rejected). Second [pomb #3]: two fluffy shaggy
+  cheer pom-poms crossed at their handles, each pom-pom a big round ball of hundreds of
+  thin wavy crinkled streamers in alternating white and navy blue enamel with gold
+  metal outlines, the streamers fanning out in every direction so each pom-pom looks
+  soft and bushy, short gold handles
+- **health** [#1]: a doctor's stethoscope in navy blue enamel with gold metal fittings,
+  its tubing curved into the shape of a heart, the round chest piece at the bottom of
+  the heart, NO cross, NO red cross, NO medical symbol
+- **business** [#1; #3 had a pink smear]: a navy blue enamel business briefcase with a
+  gold handle and gold clasps, a bold gold upward-trending arrow rising diagonally in
+  front of it
+- **proud-family** [#1]: a big glossy red enamel heart with a small navy blue
+  graduation mortarboard cap with a gold tassel sitting tilted on its top

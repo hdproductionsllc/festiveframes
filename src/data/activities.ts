@@ -43,6 +43,7 @@ export interface Activity {
 const ALL_ACTIVITIES: Activity[] = [
   // ── Sports ────────────────────────────────────────────────────────────────
   { id: "hs:football-patch", label: "Football", group: "Sports", numbered: true },
+  { id: "hs:flag-football", label: "Flag Football", group: "Sports", numbered: true },
   { id: "hs:soccer-patch", label: "Soccer", group: "Sports", numbered: true },
   { id: "hs:basketball-patch", label: "Basketball", group: "Sports", numbered: true },
   { id: "hs:volleyball-patch", label: "Volleyball", group: "Sports", numbered: true },
@@ -63,17 +64,26 @@ const ALL_ACTIVITIES: Activity[] = [
   { id: "hs:gymnastics", label: "Gymnastics", group: "Sports" },
   { id: "hs:bowling", label: "Bowling", group: "Sports" },
   { id: "hs:cheer", label: "Cheer", group: "Sports" },
+  { id: "hs:pom", label: "Pom Squad", group: "Sports" },
   { id: "hs:dance", label: "Dance", group: "Sports" },
   { id: "hs:esports", label: "Esports", group: "Sports" },
+  { id: "hs:weightlifting", label: "Weightlifting", group: "Sports" },
+  { id: "hs:crew", label: "Crew", group: "Sports" },
+  { id: "hs:sailing", label: "Sailing", group: "Sports" },
+  { id: "hs:ski", label: "Skiing", group: "Sports" },
 
   // ── Arts ──────────────────────────────────────────────────────────────────
   { id: "hs:band", label: "Band", group: "Arts" },
   { id: "hs:marching-band", label: "Marching Band", group: "Arts" },
+  { id: "hs:jazz-band", label: "Jazz Band", group: "Arts" },
+  { id: "hs:color-guard", label: "Color Guard", group: "Arts" },
   { id: "hs:orchestra", label: "Orchestra", group: "Arts" },
   { id: "hs:choir", label: "Choir", group: "Arts" },
   { id: "hs:drama", label: "Drama", group: "Arts" },
   { id: "hs:art-club", label: "Art Club", group: "Arts" },
   { id: "hs:photography", label: "Photography", group: "Arts" },
+  { id: "hs:film", label: "Film", group: "Arts" },
+  { id: "hs:ceramics", label: "Ceramics", group: "Arts" },
 
   // ── Academics & clubs ─────────────────────────────────────────────────────
   { id: "hs:yearbook", label: "Yearbook", group: "Academics & clubs" },
@@ -87,6 +97,12 @@ const ALL_ACTIVITIES: Activity[] = [
   { id: "hs:gavel", label: "Student Government", group: "Academics & clubs" },
   { id: "hs:service", label: "Service", group: "Academics & clubs" },
   { id: "hs:rotc", label: "ROTC", group: "Academics & clubs" },
+  // Generic stand-ins for FFA, HOSA and DECA/FBLA (their marks are theirs);
+  // the labels name the activity, never the organisation.
+  { id: "hs:agriculture", label: "Agriculture", group: "Academics & clubs" },
+  { id: "hs:health", label: "Health Sciences", group: "Academics & clubs" },
+  { id: "hs:business", label: "Business", group: "Academics & clubs" },
+  { id: "hs:culinary", label: "Culinary", group: "Academics & clubs" },
   { id: "hs:honor-star", label: "Honor Roll", group: "Academics & clubs" },
 ];
 

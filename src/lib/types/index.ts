@@ -17,6 +17,9 @@ export interface TilePiece {
   id: string; // e.g. "essentials:red", "july4th:flag"
   setId: string;
   name: string;
+  /** Other words a parent types for this badge in the tray's search ("hosa",
+   *  "grandma"). Names only find what we called it; this finds what THEY call it. */
+  keywords?: readonly string[];
   artworkUrl: string; // empty = use emoji fallback
   /** The same badge with its navy enamel re-inked ivory, drawn instead of
    *  `artworkUrl` on a field where ivory reads better. Never read directly —

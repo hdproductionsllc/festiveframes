@@ -49,6 +49,9 @@ describe("school spirit set", () => {
     // even though it needs editing whenever art lands: it is what catches a piece
     // silently dropping out of the palette, which `> 0` would sail past.
     //
+    // 63 -> 68 OFFERED (2026-09-27): Flag Football, Pom Squad, Health Sciences,
+    // Business and Proud Family — the Tier 1 gaps in tasks/badge-library-gaps.md.
+    //
     // 64 -> 65: an UPRIGHT diploma. The existing one lies flat, and a portrait
     // 1x2 is the only badge footprint that fits a one-column wing without
     // spilling into the rail beside it.
@@ -69,7 +72,7 @@ describe("school spirit set", () => {
     // GENERIC on purpose — a sheaf of wheat and a compass rose — because the FFA
     // emblem and the Scouts' fleur-de-lis are registered marks, exactly like the
     // six above.
-    expect(hs.length).toBe(63);
+    expect(hs.length).toBe(68);
     expect(hs.length + WITHHELD_ART.size).toBe(highSchoolSet.pieces.length);
     expect(hs.map((p) => p.id)).not.toContain("hs:quiz-bowl");
     expect(hs.map((p) => p.id)).not.toContain("hs:model-un");

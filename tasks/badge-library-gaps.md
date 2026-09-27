@@ -1,5 +1,22 @@
 # Badge library gaps — research 2026-09-27
 
+## SHIPPED 2026-09-27
+- New art (gemini-3-pro-image 2K, 3-4 candidates each, one-inch test on navy,
+  maroon, light blue and white; print + browser on Ladue / Parkway Central / West):
+  **Flag Football, Pom Squad, Health Sciences, Business, Proud Family**. Prompts:
+  tasks/enamel-pin-ideogram-prompts.md §9.
+- Into the activity menu (art already existed, looked at): Jazz Band, Color Guard,
+  Film, Ceramics, Culinary, Agriculture, Weightlifting, Crew, Sailing, Skiing.
+- Tray search reads `keywords` (deca/fbla -> Business, hosa/nursing -> Health,
+  grandma/mom -> Proud Family).
+- NOT made: Captain / State — without the letters it only says "honour", which Star,
+  Honor Roll, Medal and Trophy already say. Better as a banner line (CAPTAIN, STATE
+  QUALIFIER) — an owner call.
+- The "weak / duplicate" list below was from NAMES only; looked at, Robotics vs
+  Engineering, Star vs Honor Roll and Racquetball vs Tennis are all distinct at an
+  inch. The five graduation pieces are the one real overlap.
+
+
 What parents and students will look for that the library does not have, ranked by
 evidence (NFHS participation, club membership, what letter-pin catalogs and car-decal
 sellers stock as standard). Every new badge still goes through the pipeline in

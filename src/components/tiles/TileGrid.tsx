@@ -68,11 +68,14 @@ export function TileGrid({
   const setPieces = getSetPieces(setId);
   const allPieces = extraPieces.length ? [...extraPieces, ...setPieces] : setPieces;
   // Quick search over the badge library — as the tile catalog grows, typing
-  // "soc" beats scrolling. Names are the catalog (every piece has one); empty
+  // "soc" beats scrolling. Names are the catalog (every piece has one), plus the
+  // piece's own keywords for what parents call it ("deca" finds Business); empty
   // query = the full set, exactly as before.
   const [query, setQuery] = useState("");
   const q = query.trim().toLowerCase();
-  const pieces = q ? allPieces.filter((pc) => pc.name.toLowerCase().includes(q)) : allPieces;
+  const pieces = q
+    ? allPieces.filter((pc) => [pc.name, ...(pc.keywords ?? [])].some((w) => w.toLowerCase().includes(q)))
+    : allPieces;
   const searchBox =
     variant === "grid" ? (
       <input

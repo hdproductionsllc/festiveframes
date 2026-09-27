@@ -1072,6 +1072,18 @@ export const CHIP_PRESET_PIECE: Record<string, string> = {
   "future farmers": "hs:agriculture",
   scouts: "hs:scouts",
   scouting: "hs:scouts",
+  // Same rule, 2026-09-27: HOSA and DECA/FBLA find generic badges, never their marks.
+  hosa: "hs:health",
+  "health sciences": "hs:health",
+  "health occupations": "hs:health",
+  deca: "hs:business",
+  fbla: "hs:business",
+  business: "hs:business",
+  "flag football": "hs:flag-football",
+  "girls flag football": "hs:flag-football",
+  pom: "hs:pom",
+  "pom squad": "hs:pom",
+  "pom team": "hs:pom",
 };
 
 /**

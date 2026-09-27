@@ -320,6 +320,17 @@ export const highSchoolSet: TileSet = {
       backgroundColor: NAVY,
       defaultSpan: PREFERRED,
     },
+    // The fastest-growing girls' sport (NFHS 2025-26: 102k, from 16k in 2021-22). The flags make it; without them it is Football.
+    {
+      id: `${H}:flag-football`,
+      setId: H,
+      name: "Flag Football",
+      keywords: ["flag", "girls flag"],
+      artworkUrl: `${A}/flag-football.png`,
+      emoji: "🏈",
+      backgroundColor: NAVY,
+      defaultSpan: PREFERRED,
+    },
     {
       id: `${H}:basketball-patch`,
       setId: H,
@@ -491,6 +502,17 @@ export const highSchoolSet: TileSet = {
       backgroundColor: NAVY,
       defaultSpan: PREFERRED,
     },
+    // Pom-poms, not a megaphone: Cheer keeps the megaphone so the two stay distinct at an inch.
+    {
+      id: `${H}:pom`,
+      setId: H,
+      name: "Pom Squad",
+      keywords: ["pom", "poms", "pom-pon", "pompon", "dance team"],
+      artworkUrl: `${A}/pom.png`,
+      emoji: "🎉",
+      backgroundColor: NAVY,
+      defaultSpan: PREFERRED,
+    },
     {
       id: `${H}:dance`,
       setId: H,
@@ -612,6 +634,28 @@ export const highSchoolSet: TileSet = {
       backgroundColor: NAVY,
       defaultSpan: PREFERRED,
     },
+    // Generic stand-in for HOSA, like the wheat for FFA: a stethoscope heart, and NO red cross (a protected emblem).
+    {
+      id: `${H}:health`,
+      setId: H,
+      name: "Health Sciences",
+      keywords: ["hosa", "health", "medical", "medicine", "nursing", "pre-med", "doctor"],
+      artworkUrl: `${A}/health.png`,
+      emoji: "🩺",
+      backgroundColor: NAVY,
+      defaultSpan: PREFERRED,
+    },
+    // Generic stand-in for DECA / FBLA, whose marks were withdrawn from the library.
+    {
+      id: `${H}:business`,
+      setId: H,
+      name: "Business",
+      keywords: ["deca", "fbla", "marketing", "entrepreneur", "economics"],
+      artworkUrl: `${A}/business.png`,
+      emoji: "💼",
+      backgroundColor: NAVY,
+      defaultSpan: PREFERRED,
+    },
     {
       id: `${H}:scouts`,
       setId: H,
@@ -665,6 +709,17 @@ export const highSchoolSet: TileSet = {
       name: "Honor Roll",
       artworkUrl: `${A}/honor-star.png`,
       emoji: "⭐",
+      backgroundColor: NAVY,
+      defaultSpan: PREFERRED,
+    },
+    // For the buyer who is not the student: "Proud Mom of a Senior" is the top-selling school decal. The words stay on the banner.
+    {
+      id: `${H}:proud-family`,
+      setId: H,
+      name: "Proud Family",
+      keywords: ["proud", "parent", "mom", "dad", "grandparent", "grandma", "grandpa", "family", "love"],
+      artworkUrl: `${A}/proud-family.png`,
+      emoji: "❤️",
       backgroundColor: NAVY,
       defaultSpan: PREFERRED,
     },

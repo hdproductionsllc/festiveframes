@@ -57,6 +57,12 @@
   with `keyBackground(img, { keyEnclosed: true })` (ring interiors are backdrop);
   uploads keep the default, which protects enclosed art. After replacing a PNG, clear
   `.next/cache/images` before a local screen check, or dev serves the old art.
+- **Shipping format for badge PNGs**: 1000 px square, `png({ compressionLevel: 9,
+  palette: true, quality: 92 })` — the library norm (130–380 KB). Gemini 2K output
+  trims to 1.2–1.7k px and 1–3 MB truecolor; checked at 2x, quantising is invisible.
+- **Search words live on the piece** (`TilePiece.keywords`, read by TileGrid's
+  search). An organisation's name (DECA, FBLA, HOSA, FFA) goes in keywords and the
+  kit alias map, NEVER in a badge name or its art — the generic badge is the product.
 - Style block and per-badge prompts: `tasks/enamel-pin-ideogram-prompts.md`.
   Library gaps, ranked with evidence: `tasks/badge-library-gaps.md`.
   Every new badge still clears the ONE-INCH TEST (100px on navy, look at it)
@@ -668,6 +674,11 @@ case the repair was written for. Put repairs in `merge`, and make them return th
   Both renderers, the tray and every loader go through it; loaders fetch BOTH twins
   (`badgeArtworkUrls`) so they never re-derive the field. Soccer and ice hockey are
   KEEP (their navy is the drawing). Re-run the script whenever badge art changes.
+  **Gloss on navy is navy** (2026-09-27): a highlight is too light for `isNavy` and
+  stayed as a blue blotch on 30 twins. `glossOnNavy` re-inks a light-blue patch only
+  when its border is navy AND it is a pale navy (mean g - r < 40); sky-blue enamel
+  (goggle lens g - r = 82, fenced by its dark recess) stays blue. All 30 compared
+  before/after by eye.
 - **Replacing art under the same URL is supported**: `images.minimumCacheTTL` is one
   day (next.config.ts), so a replaced badge (orchestra, torch, their ivory twins)
   reaches every browser within two. It was a year, and a phone that had seen the old

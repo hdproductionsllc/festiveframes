@@ -136,3 +136,18 @@ Parkway West (Ballwin), Parkway Central (Chesterfield), Ladue Horton Watkins (St
 - [ ] Read the 1-year warranty wording once
 - [ ] Physical sample per school (new keystone size); real on-car photograph
 - [ ] Decide: MISSOURI half-covered by the top runner (RSMo 301.130.5 "plainly visible")
+
+---
+
+# Badge library round (2026-09-27) — Henry: "yes go, make sure you're really happy"
+
+Research: tasks/badge-library-gaps.md. Clipped-art fix pushed (0f0da0d).
+
+- [x] Right-size the 4 redrawn PNGs to ~1000 px (library norm; were 1.2–1.65k, up to 3.4 MB); re-run light-enamel + art:fit
+- [x] Free wins into the activity menu (art exists, looked at): Jazz Band, Color Guard, Film, Ceramics, Culinary, Agriculture, Weightlifting, Crew, Sailing, Skiing
+- [x] Generate Tier 1 (gemini-3-pro-image 2K, ≥3 each): flag football, pom team, health sciences (stethoscope heart, no red cross), business (briefcase + arrow), proud family (heart + grad cap)
+- [x] Process (edge refusal, keyEnclosed), one-inch test on navy + light field, reject anything that reads as another badge
+- [x] Register winners in sets/high-school.ts + activities.ts; ivory twins; art:fit
+- [x] Verify: print render + browser on dark & light school; full tests, tsc, lint, build
+- [x] One push; update CLAUDE.md + gaps doc
+- Skipped on purpose: Captain/State (needs words — better as a banner line); see review below

@@ -54,6 +54,51 @@ const isNavy = (r, g, b) =>
   (b >= r + 10 && b >= g + 2 && Math.max(r, g, b) < 150) ||
   (Math.max(r, g, b) < 120 && b >= r - 4 && b >= g - 6);
 
+/**
+ * The GLOSS on navy enamel: a highlight is too light to pass `isNavy`, so it used
+ * to stay behind as a pale-blue blotch on the ivory twin (the Health badge's heart,
+ * 2026-09-27). Widening `isNavy` would also take light-blue ENAMEL (the palette's
+ * sky-blue well, the sailboat's water). What tells them apart is the metal: every
+ * enamel colour is fenced by a raised metal line, while a highlight sits ON the
+ * enamel. So a connected light-blue patch counts as navy only when (nearly) all of
+ * its border is navy AND it is a pale NAVY, green about level with red. Measured:
+ * gloss runs g - r = 4..9; the swim goggle's sky-blue lens, whose dark recess reads
+ * as navy all round it, is g - r = 82 and must stay blue. Returns one flag per pixel.
+ */
+function glossOnNavy(data, W, H) {
+  const N = W * H;
+  const light = (p) => {
+    const i = p * 4, r = data[i], g = data[i + 1], b = data[i + 2];
+    return data[i + 3] > 200 && !isNavy(r, g, b) && b >= r + 10 && b >= g + 2 && Math.max(r, g, b) < 250;
+  };
+  const navyAt = (p) => data[p * 4 + 3] > 200 && isNavy(data[p * 4], data[p * 4 + 1], data[p * 4 + 2]);
+  const seen = new Uint8Array(N);
+  const out = new Uint8Array(N);
+  const stack = [];
+  for (let s = 0; s < N; s++) {
+    if (seen[s] || !light(s)) continue;
+    const comp = [];
+    let navyEdge = 0, otherEdge = 0, greenOverRed = 0;
+    seen[s] = 1;
+    stack.push(s);
+    while (stack.length) {
+      const p = stack.pop();
+      comp.push(p);
+      greenOverRed += data[p * 4 + 1] - data[p * 4];
+      const x = p % W, y = (p / W) | 0;
+      for (const q of [x > 0 ? p - 1 : -1, x < W - 1 ? p + 1 : -1, y > 0 ? p - W : -1, y < H - 1 ? p + W : -1]) {
+        if (q < 0) { otherEdge++; continue; }
+        if (light(q)) {
+          if (!seen[q]) { seen[q] = 1; stack.push(q); }
+        } else if (navyAt(q)) navyEdge++;
+        else otherEdge++;
+      }
+    }
+    if (navyEdge >= 0.9 * (navyEdge + otherEdge) && greenOverRed / comp.length < 40) for (const p of comp) out[p] = 1;
+  }
+  return out;
+}
+
 if (!report) {
   if (existsSync(OUT)) rmSync(OUT, { recursive: true });
   mkdirSync(OUT, { recursive: true });
@@ -85,8 +130,9 @@ for (const file of readdirSync(DIR).filter((f) => f.endsWith(".png")).sort()) {
   made.push(`${file.replace(/\.png$/, "")} ${(share * 100).toFixed(0)}%`);
   names.push(file.replace(/\.png$/, ""));
   if (report) continue;
+  const gloss = glossOnNavy(data, info.width, info.height);
   for (let i = 0; i < data.length; i += 4) {
-    if (data[i + 3] === 0 || !isNavy(data[i], data[i + 1], data[i + 2])) continue;
+    if (data[i + 3] === 0 || !(isNavy(data[i], data[i + 1], data[i + 2]) || gloss[i >> 2])) continue;
     const k = Math.min(1.04, 0.74 + 0.26 * (data[i + 2] / ref));
     for (let c = 0; c < 3; c++) data[i + c] = Math.min(255, Math.round(IVORY[c] * k));
   }
