@@ -15,6 +15,13 @@ const SRC = readFileSync(path.join(process.cwd(), "scripts/pilot-qr.mjs"), "utf8
 const ROW = /\{ slug: "([^"]+)", name: "([^"]+)", mascot: "([^"]+)", frame: "(#[0-9A-Fa-f]{6})", rim: "(#[0-9A-Fa-f]{6})" \}/g;
 const rows = [...SRC.matchAll(ROW)].map(([, slug, name, mascot, frame, rim]) => ({ slug, name, mascot, frame, rim }));
 
+describe("the pilot QR cards are TRACKABLE", () => {
+  it("encode /q/<school>/card, so the Funnel page can count what % of card scans buy", () => {
+    expect(SRC).toContain('const SCAN_BASE = "https://www.myschoolframe.com/q/";');
+    expect(SRC).toContain('const PLACEMENT = "card";');
+  });
+});
+
 describe("the pilot QR cards match the pilot kits", () => {
   it("lists exactly the pilot schools, in pilot order", () => {
     expect(rows.map((r) => r.slug)).toEqual(pilotSchoolKits().map((k) => k.slug));

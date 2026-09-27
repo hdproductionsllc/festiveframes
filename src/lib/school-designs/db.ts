@@ -135,6 +135,54 @@ export function ensureSchema(): Promise<void> {
       await p.query(
         `CREATE INDEX IF NOT EXISTS school_orders_school_paid_idx ON school_orders (school_slug, paid_at)`,
       );
+      // THE PEOPLE (2026-09-27): a CUSTOMER is the adult who pays (known only by a
+      // PROVEN email — a payment, later an emailed link); a STUDENT is the person a
+      // design celebrates, created silently from the builder's own answers (see
+      // lib/school-designs/people). Minimal on purpose: these are mostly minors.
+      await p.query(`
+        CREATE TABLE IF NOT EXISTS customers (
+          id                  uuid PRIMARY KEY,
+          email               text NOT NULL UNIQUE,
+          verified_at         timestamptz,
+          marketing_opt_in_at timestamptz,
+          created_at          timestamptz NOT NULL DEFAULT now()
+        )
+      `);
+      await p.query(`
+        CREATE TABLE IF NOT EXISTS students (
+          id           uuid PRIMARY KEY,
+          token_hash   text NOT NULL UNIQUE,
+          customer_id  uuid REFERENCES customers(id),
+          display_name text,
+          school_slug  text,
+          grad_year    integer,
+          activity     text,
+          number       text,
+          relation     text,
+          created_at   timestamptz NOT NULL DEFAULT now(),
+          updated_at   timestamptz NOT NULL DEFAULT now()
+        )
+      `);
+      await p.query(`ALTER TABLE school_designs ADD COLUMN IF NOT EXISTS student_id uuid REFERENCES students(id)`);
+      await p.query(`ALTER TABLE school_orders ADD COLUMN IF NOT EXISTS customer_id uuid REFERENCES customers(id)`);
+      // Where the buyer came from, carried from checkout to payment (the funnel).
+      await p.query(`ALTER TABLE school_orders ADD COLUMN IF NOT EXISTS anon_id text`);
+      await p.query(`ALTER TABLE school_orders ADD COLUMN IF NOT EXISTS placement text`);
+      // THE FUNNEL (lib/school-designs/funnel): anonymous events, our own database,
+      // nothing personal — a random per-browser id, the school, the QR placement.
+      await p.query(`
+        CREATE TABLE IF NOT EXISTS events (
+          id          bigserial PRIMARY KEY,
+          at          timestamptz NOT NULL DEFAULT now(),
+          kind        text NOT NULL,
+          anon_id     text,
+          school_slug text,
+          placement   text,
+          design_id   uuid,
+          order_id    uuid
+        )
+      `);
+      await p.query(`CREATE INDEX IF NOT EXISTS events_at_idx ON events (at)`);
       // Staff sign-in (lib/admin/auth): one-time emailed links and the sessions
       // they start. Only sha256 of each token is stored, like a parent's link.
       await p.query(`

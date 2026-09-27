@@ -61,6 +61,9 @@ export interface SchoolOrder {
   paidAt: number | null;
   sentAt: number | null;
   refundedAt: number | null;
+  /** The funnel's anonymous browser id and QR placement, from checkout. */
+  anonId: string | null;
+  placement: string | null;
 }
 
 /** How long a producer holds an order before another may take it over. Long
@@ -97,6 +100,8 @@ function fromRow(r: Record<string, unknown>): SchoolOrder {
     paidAt: ms(r.paid_at),
     sentAt: ms(r.sent_at),
     refundedAt: ms(r.refunded_at),
+    anonId: (r.anon_id as string | null) ?? null,
+    placement: (r.placement as string | null) ?? null,
   };
 }
 
@@ -118,6 +123,8 @@ export async function createSchoolOrder(o: {
   proofSha256: string;
   school: string | null;
   donationCents: number;
+  anonId?: string | null;
+  placement?: string | null;
 }): Promise<SchoolOrder> {
   const order: SchoolOrder = {
     orderId: randomUUID(),
@@ -136,6 +143,8 @@ export async function createSchoolOrder(o: {
     paidAt: null,
     sentAt: null,
     refundedAt: null,
+    anonId: o.anonId ?? null,
+    placement: o.placement ?? null,
   };
   const mode = storageMode();
   if (mode === "unavailable") unavailable();
@@ -145,9 +154,9 @@ export async function createSchoolOrder(o: {
   }
   await ensureSchema();
   await getPool().query(
-    `INSERT INTO school_orders (order_id, design_id, revision, proof_sha256, school_slug, donation_cents, status)
-     VALUES ($1, $2, $3, $4, $5, $6, 'awaiting_payment')`,
-    [order.orderId, order.designId, order.revision, order.proofSha256, order.school, order.donationCents],
+    `INSERT INTO school_orders (order_id, design_id, revision, proof_sha256, school_slug, donation_cents, status, anon_id, placement)
+     VALUES ($1, $2, $3, $4, $5, $6, 'awaiting_payment', $7, $8)`,
+    [order.orderId, order.designId, order.revision, order.proofSha256, order.school, order.donationCents, order.anonId, order.placement],
   );
   return order;
 }

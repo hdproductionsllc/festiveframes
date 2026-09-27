@@ -47,3 +47,35 @@ export function tokenFromHash(hash: string): string | null {
   const m = /[#&]d=([A-Za-z0-9_-]{43})(?:&|$)/.exec(hash);
   return m ? m[1] : null;
 }
+
+// ── The student this browser's designs are for (lib/school-designs/people) ──
+// Kept beside the design link, per builder: the next design for the same person
+// is the same student. A different name on a later design is a different student
+// (the server decides that), so a family with two children needs nothing special.
+
+export interface StudentMemory {
+  id: string;
+  token: string;
+}
+
+const studentKeyFor = (persistKey: string) => `${persistKey}:student`;
+
+export function readStudentRef(persistKey: string): StudentMemory | null {
+  try {
+    const raw = window.localStorage.getItem(studentKeyFor(persistKey));
+    if (!raw) return null;
+    const v = JSON.parse(raw) as Partial<StudentMemory>;
+    return typeof v.id === "string" && typeof v.token === "string" ? { id: v.id, token: v.token } : null;
+  } catch {
+    return null;
+  }
+}
+
+export function writeStudentRef(persistKey: string, ref: StudentMemory | null): void {
+  try {
+    if (ref) window.localStorage.setItem(studentKeyFor(persistKey), JSON.stringify(ref));
+    else window.localStorage.removeItem(studentKeyFor(persistKey));
+  } catch {
+    // Full or blocked storage: the next design simply starts a new student.
+  }
+}

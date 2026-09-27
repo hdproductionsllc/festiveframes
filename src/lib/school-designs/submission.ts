@@ -22,6 +22,8 @@ import { resolveSchoolKit } from "@/data/school-resolve";
 import type { SchoolKit } from "@/data/school-kits";
 import { msfOrigin } from "@/lib/msf-origin";
 import { saveSchoolDesign, type DesignContact, type SavedDesignRef } from "./store";
+import { coerceStudent, type StudentInput, type StudentRef } from "./people";
+import { coerceTrack, type Track } from "./funnel";
 
 const DATA_URL_RE = /^data:image\/(png|jpeg);base64,([A-Za-z0-9+/]+={0,2})$/;
 
@@ -136,6 +138,12 @@ export interface Submission {
   /** The editable design, or null from a builder too old to send it. */
   design: object | null;
   link: { id: string; token: string } | null;
+  /** The person celebrated, from the builder's own answers (allowed facts only). */
+  student: StudentInput | null;
+  /** The student this browser remembers (checked by the store, not here). */
+  studentRef: unknown;
+  /** The anonymous funnel id and QR placement this browser came in by. */
+  track: Track | null;
 }
 
 export type SubmissionCheck = { ok: true; value: Submission } | { ok: false; status: number; body: Record<string, unknown> };
@@ -222,6 +230,9 @@ export function checkSubmission(body: unknown): SubmissionCheck {
       artworkRights: coerceArtworkRights(b.artworkRights),
       design: b.design && typeof b.design === "object" ? (b.design as object) : null,
       link: coerceLink(b.link),
+      student: coerceStudent(b.student),
+      studentRef: b.studentRef ?? null,
+      track: coerceTrack(b.track),
     },
   };
 }
@@ -234,6 +245,8 @@ export interface SavedOut {
   revision: number;
   /** The parent's link, or null (lab frame / no school: nowhere to reopen it). */
   url: string | null;
+  /** Set only when this save CREATED the design's student — for the browser to keep. */
+  studentRef: StudentRef | null;
 }
 
 /**
@@ -259,9 +272,13 @@ export async function saveSubmission(
       variant: s.variant,
       createdBy: "parent",
     },
+    student: { input: s.student, ref: s.studentRef },
   });
   if (!ref) return null;
-  return { ref, out: { id: ref.id, token: ref.token, code: ref.code, revision: ref.revision, url: designLink(s, ref.token) } };
+  return {
+    ref,
+    out: { id: ref.id, token: ref.token, code: ref.code, revision: ref.revision, url: designLink(s, ref.token), studentRef: ref.studentRef },
+  };
 }
 
 /**

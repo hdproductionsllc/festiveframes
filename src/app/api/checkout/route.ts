@@ -22,6 +22,7 @@ import { offer, priceForFramesCents, MAX_CART_FRAMES, schoolOffer, SCHOOL_CHECKO
 import { artworkOrderMetadata, coerceArtworkRights, designHasUploadedArt } from "@/lib/order/artwork-rights";
 import { getRevisionByToken } from "@/lib/school-designs/store";
 import { createSchoolOrder } from "@/lib/school-designs/orders";
+import { coerceTrack, recordEvent } from "@/lib/school-designs/funnel";
 import { SITE_URL, season } from "@/config/season";
 import { MSF_THANKS_PATH } from "@/content/msf-pages";
 import { HOLIDAY_SHOP_OPEN } from "@/config/holiday-shop";
@@ -180,7 +181,12 @@ export async function POST(request: Request): Promise<NextResponse> {
         school: rev.school,
         // Fixed on the order at checkout: it is what the school is owed for it.
         donationCents: rev.school ? schoolOffer.schoolDonationCents : 0,
+        // Where this parent came from, carried to the "paid" step (the funnel).
+        anonId: coerceTrack(body.track)?.anonId ?? null,
+        placement: coerceTrack(body.track)?.placement ?? null,
       })).orderId;
+      const track = coerceTrack(body.track);
+      await recordEvent({ kind: "checkout", anonId: track?.anonId, school: rev.school, placement: track?.placement, orderId });
     } catch (err) {
       console.error("[checkout] school order could not be created:", err);
       return NextResponse.json({ error: "Could not start checkout. Please try again." }, { status: 503 });

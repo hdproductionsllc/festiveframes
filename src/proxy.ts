@@ -60,6 +60,9 @@ const RULES: Record<string, Rule> = {
   // Staff sign-in: sends an email to an allowlisted address. A person asks for a
   // link once or twice; a script guessing addresses gets nowhere and is slowed.
   "/api/admin/login": { windowMs: 10 * 60_000, max: 5, maxBytes: 4 * 1024 },
+  // Funnel beacons ("opened the builder", "did something in it"): two per page
+  // view at most; this only stops a script from inflating the numbers.
+  "/api/t": { windowMs: 10 * 60_000, max: 60, maxBytes: 1024 },
   "/api/save-design": { windowMs: 5 * 60_000, max: 15, maxBytes: 6 * MB },
   // 20MB, not 12: a school-frame draft carries the assembled overview PLUS four
   // 300-DPI panel PNGs (same payload class as /api/school/submit below).
@@ -129,6 +132,7 @@ export const config = {
     "/api/school/brand-asset",
     "/api/school/request",
     "/api/admin/login",
+    "/api/t",
     "/api/save-design",
     "/api/order/draft",
     "/api/contact",

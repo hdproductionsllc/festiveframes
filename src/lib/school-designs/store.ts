@@ -37,6 +37,7 @@ import { createHash, randomBytes, randomUUID, timingSafeEqual } from "node:crypt
 import type { OrderContact } from "@/lib/order/order-contact";
 import { ensureSchema, getPool, storageMode } from "./db";
 import { collectFullResIds } from "./full-res-ids";
+import { resolveStudent, type StudentInput, type StudentRef } from "./people";
 
 export { collectFullResIds };
 
@@ -78,6 +79,11 @@ export interface SavedDesignRef {
   created: boolean;
   /** True when the content matched the latest revision, which was reused. */
   reused: boolean;
+  /** The student this design celebrates (lib/school-designs/people), if any. */
+  studentId: string | null;
+  /** Set only when this save CREATED the student: the browser keeps it, so its
+   *  next design for the same person is the same student. */
+  studentRef: StudentRef | null;
 }
 
 export interface OpenedDesign {
@@ -256,6 +262,7 @@ interface MemDesign {
   tokenHash: string;
   school: string | null;
   contact: DesignContact | null;
+  studentId: string | null;
   createdAt: number;
   updatedAt: number;
   revisions: MemRevision[];
@@ -329,6 +336,9 @@ export async function saveSchoolDesign(input: {
   school: string | null;
   contact: DesignContact | null;
   revision: RevisionInput;
+  /** The person the design celebrates, from the builder's own answers, and the
+   *  student this browser remembers. Resolved in the SAME transaction. */
+  student?: { input: StudentInput | null; ref: unknown } | null;
 }): Promise<SavedDesignRef | null> {
   const prep = prepare(input.revision);
   if (!prep) return null;
@@ -341,7 +351,7 @@ export async function saveSchoolDesign(input: {
   }
 
   try {
-    if (mode === "memory") return saveInMemory(input, prep, link);
+    if (mode === "memory") return await saveInMemory(input, prep, link);
 
     await ensureSchema();
     const client = await getPool().connect();
@@ -384,13 +394,27 @@ export async function saveSchoolDesign(input: {
             WHERE id = $1`,
           [id, input.contact ? JSON.stringify(input.contact) : null, input.school],
         );
+      }
+      // The student, in the same transaction as the design that names it.
+      const current = created
+        ? null
+        : (await client.query<{ student_id: string | null }>(`SELECT student_id FROM school_designs WHERE id = $1`, [id])).rows[0]?.student_id ?? null;
+      const student = await resolveStudent(
+        { input: input.student?.input ?? null, school: input.school, designStudentId: current, ref: input.student?.ref },
+        client,
+      );
+      if (student && student.id !== current) {
+        await client.query(`UPDATE school_designs SET student_id = $2 WHERE id = $1`, [id, student.id]);
+      }
+      const people = { studentId: student?.id ?? null, studentRef: student?.ref ?? null };
+      if (!created) {
         const last = await client.query<{ n: number; fingerprint: string | null }>(
           `SELECT n, fingerprint FROM school_design_revisions WHERE design_id = $1 ORDER BY n DESC LIMIT 1`,
           [id],
         );
         if (last.rows[0] && last.rows[0].fingerprint === prep.fingerprint) {
           await client.query("COMMIT");
-          return { id: id!, code: designCode(id!), revision: Number(last.rows[0].n), token, created: false, reused: true };
+          return { id: id!, code: designCode(id!), revision: Number(last.rows[0].n), token, created: false, reused: true, ...people };
         }
       }
       const next = await client.query<{ n: number }>(
@@ -420,7 +444,7 @@ export async function saveSchoolDesign(input: {
       );
       await client.query("COMMIT");
       void sweep();
-      return { id: id!, code: designCode(id!), revision: n, token, created, reused: false };
+      return { id: id!, code: designCode(id!), revision: n, token, created, reused: false, ...people };
     } catch (err) {
       await client.query("ROLLBACK").catch(() => {});
       throw err;
@@ -433,11 +457,11 @@ export async function saveSchoolDesign(input: {
   }
 }
 
-function saveInMemory(
+async function saveInMemory(
   input: Parameters<typeof saveSchoolDesign>[0],
   prep: Prepared,
   link: { id: string; token: string } | null,
-): SavedDesignRef {
+): Promise<SavedDesignRef> {
   for (const a of prep.artifacts) if (!memArtifacts.has(a.sha256)) memArtifacts.set(a.sha256, a);
   const now = Date.now();
   let d = link ? memDesigns.get(link.id) : undefined;
@@ -446,15 +470,25 @@ function saveInMemory(
   const created = !d;
   if (!d) {
     token = newToken();
-    d = { id: randomUUID(), tokenHash: hashToken(token), school: input.school, contact: input.contact, createdAt: now, updatedAt: now, revisions: [] };
+    d = { id: randomUUID(), tokenHash: hashToken(token), school: input.school, contact: input.contact, studentId: null, createdAt: now, updatedAt: now, revisions: [] };
     memDesigns.set(d.id, d);
   } else {
     d.contact = input.contact ?? d.contact;
     d.school = input.school ?? d.school;
     d.updatedAt = now;
+  }
+  const student = await resolveStudent({
+    input: input.student?.input ?? null,
+    school: input.school,
+    designStudentId: d.studentId,
+    ref: input.student?.ref,
+  });
+  if (student) d.studentId = student.id;
+  const people = { studentId: student?.id ?? null, studentRef: student?.ref ?? null };
+  if (!created) {
     const last = d.revisions[d.revisions.length - 1];
     if (last && last.fingerprint === prep.fingerprint) {
-      return { id: d.id, code: designCode(d.id), revision: last.n, token, created: false, reused: true };
+      return { id: d.id, code: designCode(d.id), revision: last.n, token, created: false, reused: true, ...people };
     }
   }
   const rev = input.revision;
@@ -473,7 +507,7 @@ function saveInMemory(
     fingerprint: prep.fingerprint,
     approval: null,
   });
-  return { id: d.id, code: designCode(d.id), revision: n, token, created, reused: false };
+  return { id: d.id, code: designCode(d.id), revision: n, token, created, reused: false, ...people };
 }
 
 // ── Open ─────────────────────────────────────────────────────────────────────
@@ -690,6 +724,19 @@ export async function getRevision(designId: string, n: number): Promise<Revision
       ? { at: new Date(row.approved_at).getTime(), wordingVersion: row.approval_wording_version ?? "" }
       : null,
   };
+}
+
+/** Who a design belongs to: its student and the contact it was sent with. */
+export async function designPeople(designId: string): Promise<{ studentId: string | null; contact: DesignContact | null } | null> {
+  const mode = storageMode();
+  if (mode === "unavailable") return null;
+  if (mode === "memory") {
+    const d = memDesigns.get(designId);
+    return d ? { studentId: d.studentId, contact: d.contact } : null;
+  }
+  await ensureSchema();
+  const r = (await getPool().query(`SELECT student_id, contact FROM school_designs WHERE id = $1`, [designId])).rows[0];
+  return r ? { studentId: (r.student_id as string | null) ?? null, contact: (r.contact as DesignContact | null) ?? null } : null;
 }
 
 /** The bytes of one stored image — the order path attaches them. */

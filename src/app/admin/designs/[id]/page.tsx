@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireAdmin } from "@/lib/admin/session";
-import { getDesignDetail } from "@/lib/school-designs/store";
+import { designPeople, getDesignDetail } from "@/lib/school-designs/store";
+import { getStudent } from "@/lib/school-designs/people";
 import { listSchoolOrders, type SchoolOrder } from "@/lib/school-designs/orders";
 import { AdminShell, schoolName, StatusPill, when } from "@/components/admin/AdminShell";
 import { RelinkButton } from "@/components/admin/RelinkButton";
@@ -15,6 +16,8 @@ export default async function AdminDesign({ params }: { params: Promise<{ id: st
   const d = await getDesignDetail(id);
   if (!d) notFound();
   const orders = (await listSchoolOrders({ limit: 5000 }).catch(() => [] as SchoolOrder[])).filter((o) => o.designId === id);
+  const people = await designPeople(id).catch(() => null);
+  const student = await getStudent(people?.studentId ?? null).catch(() => null);
 
   return (
     <AdminShell email={email} active="/admin/designs" title={`Design ${d.code}`}>
@@ -28,6 +31,21 @@ export default async function AdminDesign({ params }: { params: Promise<{ id: st
           {d.contact?.phone && <p><span className="text-stone-500">Phone:</span> {d.contact.phone}</p>}
           {d.contact?.forWhom && <p><span className="text-stone-500">For:</span> {d.contact.forWhom}</p>}
           <p><span className="text-stone-500">First saved:</span> {when(d.createdAt)}</p>
+          {d.contact?.futureProductsAt && (
+            <p className="text-emerald-700">Asked to hear about future keepsakes ({when(d.contact.futureProductsAt)})</p>
+          )}
+          {student && (
+            <div className="mt-3 rounded-lg bg-stone-100 p-3">
+              <p className="text-[12px] font-semibold uppercase tracking-wide text-stone-500">Student</p>
+              <p className="font-semibold">{student.displayName ?? "(no name given)"}</p>
+              <p className="text-[13px] text-stone-600">
+                {[student.gradYear && `Class of ${student.gradYear}`, student.activity, student.number && `#${student.number}`, student.relation]
+                  .filter(Boolean)
+                  .join(" · ") || "—"}
+              </p>
+              <p className="text-[12px] text-stone-500">{student.customerId ? "Linked to a paying customer" : "Not linked to a customer yet (links on payment)"}</p>
+            </div>
+          )}
         </div>
         <div className="rounded-xl border border-stone-200 bg-white p-4 text-[14px]">
           <p className="font-semibold">Parent lost their link?</p>

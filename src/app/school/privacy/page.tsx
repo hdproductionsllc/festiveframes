@@ -13,6 +13,12 @@ import { SCHOOL_CONTACT_EMAIL } from "@/content/school-contact";
 // the parent's private link, kept 18 months after its last change; and a parent
 // may tick "Email me a link", the one automatic email to them (lib/email-msf).
 //
+// 2026-09-27: the builder's own answers (first name, class year, activity,
+// number, who is buying) are saved as a STUDENT with the design, linked to a
+// parent only on payment; anonymous visit counting (a random id in the browser,
+// no name or email; lib/school-designs/funnel) replaces "no analytics"; and an
+// UNTICKED box records consent to future keepsake email.
+//
 // LEGAL NOTE: a plain-language starting point, not legal advice. For counsel to
 // review before SCHOOL_CHECKOUT_OPEN flips.
 
@@ -61,6 +67,20 @@ export default function MsfPrivacyPage() {
           on your device until you send it to us or order it.
         </li>
         <li>
+          <strong>Your student&apos;s details, if you give them:</strong> the
+          first name, class year, activity and number you type into the builder.
+          We keep them with your saved design so matching products are easy to
+          make later, and connect them to you only when you place an order. We
+          don&apos;t ask for or keep a birthday, address, phone number or social
+          media for a student.
+        </li>
+        <li>
+          <strong>Visit counts:</strong> to learn how many people who scan our QR
+          codes go on to design or order, the site keeps a random code in your
+          browser and counts visits by it. It isn&apos;t linked to your name or
+          email, isn&apos;t shared with anyone, and isn&apos;t used for ads.
+        </li>
+        <li>
           <strong>A school&apos;s website, if you paste one in:</strong> we read
           that site to pick up the school&apos;s colors, and may remember those
           colors for that school. That&apos;s about the school, not about you.
@@ -76,8 +96,9 @@ export default function MsfPrivacyPage() {
       <p>
         We don&apos;t add you to a mailing list or newsletter, and we won&apos;t
         text you. The only emails our system sends you are about an order you
-        placed, and the link to your saved design if you ask for it when you send
-        one.
+        placed, the link to your saved design if you ask for it when you send
+        one, and — only if you tick the box asking for it — news about new
+        keepsakes for your student, which you can stop at any time.
       </p>
 
       <h2>Who we share it with</h2>

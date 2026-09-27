@@ -17,6 +17,13 @@ export interface OrderContact {
   phone?: string;
   /** Who the frame is for, in the buyer's own chip words ("My student"). */
   forWhom?: string;
+  /**
+   * The parent ticked "Tell me when senior-year products are available" (an
+   * UNTICKED box on the Send sheet). Consent to future product email, dated by
+   * the server — it is honoured only once this same email is proven (a payment),
+   * and nothing is emailed because of it until the owner decides to send.
+   */
+  futureProductsAt?: number;
 }
 
 export const CONTACT_EMAIL_MAX = 254;
@@ -65,9 +72,16 @@ export function coerceOrderContact(
     }
   }
   const forWhom = clean(r.forWhom, CONTACT_FOR_MAX);
+  // Consent must be an explicit `true`; the TIME is the server's, never the body's.
+  const futureProducts = r.futureProducts === true;
   return {
     ok: true,
-    contact: { email, ...(phone ? { phone } : {}), ...(forWhom ? { forWhom } : {}) },
+    contact: {
+      email,
+      ...(phone ? { phone } : {}),
+      ...(forWhom ? { forWhom } : {}),
+      ...(futureProducts ? { futureProductsAt: Date.now() } : {}),
+    },
   };
 }
 

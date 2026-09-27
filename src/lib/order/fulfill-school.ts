@@ -34,6 +34,9 @@ import {
 import { artifactDataUrl, getArtifact, getRevision, sha256Of, type StoredImageRef } from "@/lib/school-designs/store";
 import { sendFulfillmentFailureAlert, sendProductionEmails, type NamedImage, type ProductionOrderInput } from "@/lib/email-production";
 import { orderFacts, shippingLines } from "@/lib/order/fulfill";
+import { recordEvent } from "@/lib/school-designs/funnel";
+import { linkCustomerOnPayment } from "@/lib/school-designs/people";
+import { designPeople } from "@/lib/school-designs/store";
 import type { PartsList } from "@/lib/order/parts-list";
 
 export type SchoolFulfillResult = "sent" | "already" | "in-progress" | "held" | "failed" | "no-order";
@@ -59,13 +62,31 @@ export async function fulfillSchoolOrder(session: Stripe.Checkout.Session): Prom
     return "no-order";
   }
 
-  // 1. Payment — a fact about money, recorded whatever happens next.
+  // 1. Payment — a fact about money, recorded whatever happens next. First time
+  //    only: the funnel's "paid" step, and the buyer becomes a CUSTOMER — their
+  //    email is proven now (Stripe collected it and sends the receipt there), so
+  //    the design's student is linked to them. Never by a typed email.
   if (order.status === "awaiting_payment") {
     await recordSchoolOrderPayment(orderId, {
       sessionId: session.id,
       paymentStatus: session.payment_status ?? "unknown",
       amountCents: session.amount_total ?? 0,
     });
+    await recordEvent({ kind: "paid", anonId: order.anonId, school: order.school, placement: order.placement, orderId });
+    try {
+      const people = await designPeople(order.designId);
+      const sentWith = people?.contact;
+      await linkCustomerOnPayment({
+        email: customerEmail,
+        orderId,
+        studentId: people?.studentId ?? null,
+        // Consent counts only if it was given with this same, now-proven, email.
+        optIn: !!sentWith?.futureProductsAt && sentWith.email.toLowerCase() === (customerEmail ?? "").toLowerCase(),
+      });
+    } catch (err) {
+      // Linking people is bookkeeping; it must never stop an order being made.
+      console.error("[fulfill-school] could not link the customer:", err instanceof Error ? err.message : err);
+    }
   }
 
   // A frame refunded before it was made is not made.

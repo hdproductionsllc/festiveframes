@@ -92,3 +92,22 @@ Real, live, with a 100%-off coupon — never Stripe test mode.
        school's total.
 
 If any step surprises you, stop: checkout goes back off with the same one-line change.
+
+## E. After launch — growth, in order (decided 2026-09-26/27; nothing built yet)
+
+- [ ] **School permission wording (do this with the FIRST school):** ask for "school
+      spirit merchandise, including frames, car accessories and keepsakes" — not
+      just "license plate frames" — so adding products never means re-asking.
+- [ ] **Cost per frame sheet** (Henry + Bill fill in; Claude sets up the math).
+- [ ] **Add-ons at checkout** (magnet, decal first; keychain/ornament later) via a
+      print-on-demand partner with white-label packing (Printful-style); bring
+      winners in-house on Bill's UV printer. Built from the SAME design pieces.
+- [ ] **Senior-year ecosystem** (the big bet): senior portrait frame → diploma
+      frame (per-school diploma size; mat bigger than Bill's bed → framing supplier)
+      → maybe announcements (crowded category). Driven by `students.grad_year`.
+- [ ] **"My Students"** page + "Continue with email" (magic link), then lifecycle
+      email to OPTED-IN customers only.
+- [ ] Trademark "MySchoolFrame" (~$350/class, likely 2 classes) and separate the
+      MySchoolFrame entity/bank/Stripe (both on hold, Henry 2026-09-26).
+- [ ] Plate-frame law: the frame covers the top 0.75" (state-name band) — decide on
+      a redesign or a Missouri lawyer's opinion before scaling past the pilot.

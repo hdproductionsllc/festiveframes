@@ -547,3 +547,44 @@ describe("POST /api/school/submit — saves the design and hands back its link",
     expect(json.saved.url).not.toContain("evil.example");
   });
 });
+
+describe("POST /api/school/submit — the student, the funnel and consent", () => {
+  const base = {
+    printPng: TINY_PNG,
+    designName: "Owen's frame",
+    school: "ladue-rams",
+    variant: "flush",
+    design: { designName: "Owen's frame" },
+    student: { displayName: "Owen", gradYear: "2028", activity: "hs:soccer", number: "12", relation: "parent", birthday: "2010-01-01" },
+    track: { anonId: "anonAAAAAAAAAAAA", placement: "card" },
+  };
+
+  it("saves the student from the builder's answers (allowed facts only) and gives the browser its ref", async () => {
+    process.env.RESEND_API_KEY = "test-key";
+    const { __memStudentsForTest } = await import("@/lib/school-designs/people");
+    const json = await (await POST(req(base))).json();
+    expect(json.saved.studentRef).toMatchObject({ id: expect.any(String), token: expect.any(String) });
+    const s = __memStudentsForTest.get(json.saved.studentRef.id)!;
+    expect(s).toMatchObject({ displayName: "Owen", gradYear: 2028, school: "ladue-rams" });
+    expect(JSON.stringify(s)).not.toContain("2010-01-01");
+  });
+
+  it("records the 'send' step with the browser's anonymous id and QR placement", async () => {
+    process.env.RESEND_API_KEY = "test-key";
+    const { __memEventsForTest } = await import("@/lib/school-designs/funnel");
+    const before = __memEventsForTest.length;
+    await POST(req(base));
+    expect(__memEventsForTest.slice(before)).toContainEqual(
+      expect.objectContaining({ kind: "send", anonId: "anonAAAAAAAAAAAA", placement: "card", school: "ladue-rams" }),
+    );
+  });
+
+  it("dates the future-products consent on the server — only an explicit true counts", async () => {
+    process.env.RESEND_API_KEY = "test-key";
+    const { designPeople } = await import("@/lib/school-designs/store");
+    const yes = (await (await POST(req({ ...base, contact: { ...CONTACT, futureProducts: true } }))).json()).saved;
+    const no = (await (await POST(req({ ...base, design: { designName: "x" }, contact: { ...CONTACT, futureProducts: "yes" } }))).json()).saved;
+    expect((await designPeople(yes.id))!.contact!.futureProductsAt).toEqual(expect.any(Number));
+    expect((await designPeople(no.id))!.contact!.futureProductsAt).toBeUndefined();
+  });
+});

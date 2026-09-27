@@ -3,18 +3,20 @@
 //
 //   node scripts/pilot-qr.mjs [outDir]
 //
-// Default outDir: C:\Users\david\Documents\MySchoolFrame Pilot Kit\qr
+// Default outDir: C:\Users\david\Documents\MySchoolFrame Pilot Kit\qr-tracked
+// (the older untracked cards in ...\qr are left alone: some may already be printed)
 //
 // For every pilot school it writes:
 //   <slug>.svg        vector QR (error correction H, 4-module quiet zone)
 //   <slug>.png        raster QR, >= 1200 px, whole-pixel modules, 300 dpi
 //   <slug>-card.png   4 x 6 in portrait hand-out card at 300 dpi (1200 x 1800)
 //
-// THE URL: https://www.myschoolframe.com/s/<slug>. www is the host the site names
-// as canonical (the Organization @id in app/school/page.tsx), and it serves the
-// builder with 200 and no redirect, so a scan is one hop. The card PRINTS the
-// shorter apex form (myschoolframe.com/s/<slug>) for anyone typing it by hand;
-// that also answers 200 with no redirect.
+// THE URL: https://www.myschoolframe.com/q/<slug>/card — a TRACKABLE link
+// (app/q/[school]/[placement]): the scan is counted, then forwarded to the
+// school's builder, so the dashboard's Funnel page can say what % of card scans
+// bought (2026-09-27). One extra hop, on purpose. PLACEMENT names where the code
+// is printed; a bleacher sign or a newsletter gets its own. The card still PRINTS
+// the short human form (myschoolframe.com/s/<slug>) for anyone typing it.
 //
 // Plain node on purpose: the school list is inline below, not imported from
 // data/school-kits.ts (TypeScript). If a pilot kit's name, mascot or colours
@@ -29,9 +31,12 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const OUT = resolve(process.argv[2] ?? "C:\\Users\\david\\Documents\\MySchoolFrame Pilot Kit\\qr");
+const OUT = resolve(process.argv[2] ?? "C:\\Users\\david\\Documents\\MySchoolFrame Pilot Kit\\qr-tracked");
 
-const SCAN_BASE = "https://www.myschoolframe.com/s/";
+const SCAN_BASE = "https://www.myschoolframe.com/q/";
+/** Where these codes are printed: the hand-out card. */
+const PLACEMENT = "card";
+const scanUrl = (slug) => `${SCAN_BASE}${slug}/${PLACEMENT}`;
 const PRINT_BASE = "myschoolframe.com/s/";
 
 /** Pilot order, as in PILOT_SCHOOL_SLUGS. Colours are the kits' `colors.frame` /
@@ -220,9 +225,9 @@ const lockup = await loadImage(join(REPO, "public", "brand", "msf-logo-3d.webp")
 // Every card at the SAME QR version: the longest URL decides it, and a shorter one
 // is simply encoded with room to spare. Mixed versions made Ladue's box (v5) a
 // different size from the rest (v6), and the whole card below it shifted.
-const version = Math.max(...SCHOOLS.map((s) => QRCode.create(SCAN_BASE + s.slug, { errorCorrectionLevel: ECL }).version));
+const version = Math.max(...SCHOOLS.map((s) => QRCode.create(scanUrl(s.slug), { errorCorrectionLevel: ECL }).version));
 for (const school of SCHOOLS) {
-  const url = SCAN_BASE + school.slug;
+  const url = scanUrl(school.slug);
   const qr = QRCode.create(url, { errorCorrectionLevel: ECL, version });
   const side = await writeStandalone(school, url, qr);
   await writeCard(school, qr, lockup);

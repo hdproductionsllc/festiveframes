@@ -834,3 +834,48 @@ case the repair was written for. Put repairs in `merge`, and make them return th
   auto-deploy). `SITE_URL` = https://www.myschoolframe.com. `ADMIN_EMAILS` set.
   festiveframes.co is no longer a Railway domain (old links/QR codes dead unless a
   Cloudflare redirect is added — Henry's call).
+
+## Students, customers and the funnel (2026-09-27) — the identity layer, invisible
+
+- **Why**: outside advice Henry adopted — the long-term value is a reusable
+  student identity every future product reads (magnet, decal, senior portrait
+  frame, diploma frame, announcements). Built now as DATA only; no UI for parents.
+- **Three things, kept apart** (lib/school-designs/people): CUSTOMER (the adult
+  who pays, `customers`, keyed by a PROVEN email), STUDENT (the person celebrated,
+  `students`: display name, school, class year, activity, number, relation), and
+  DESIGN (`school_designs.student_id`). Orders gain `customer_id`.
+- **Students are created silently from the builder's own answers** (`SchoolIntake`
+  → `student` in the shared Send/Buy body → `coerceStudent`, allowed facts ONLY —
+  no birthday, address, phone, photo). Resolved inside the design save's
+  transaction: the design's own student, else the browser's remembered ref
+  (`<persistKey>:student`, id + token, hashed server-side), else new. **A
+  different name is a different student** (a second child); empty names don't
+  split. Never a form; never a prerequisite.
+- **A parent is linked ONLY on proof**: at payment (`fulfillSchoolOrder` step 1,
+  Stripe's email) → `linkCustomerOnPayment`. The Send sheet's typed email never
+  links a student (a stranger's child would appear under someone else's address).
+  A student stays with the FIRST customer who paid for it.
+- **Consent** (Henry: yes): an UNTICKED "Tell me when senior-year and graduation
+  keepsakes for {name} are available" box on the Send sheet → `contact.
+  futureProductsAt` (dated by the SERVER; only an explicit `true` counts) →
+  `customers.marketing_opt_in_at` at payment, ONLY if the same email paid.
+  Nothing emails anyone because of it; sending anything is a future owner decision.
+- **Funnel** (lib/school-designs/funnel, `events`, our own DB — no Google, no
+  cookie banner): scan (`/q/<school>/<placement>`, server) → open + engage
+  (browser beacons to `/api/t`, only those two kinds accepted) → send (submit
+  route) → checkout (checkout route, anon id + placement stored on the order) →
+  paid (fulfill-school, once). Anonymous per-browser id in localStorage
+  (`msf_anon`) and last QR placement (`msf_via:<school>`, adopted from `?via=`
+  and stripped from the URL). Dashboard: `/admin/funnel` (7/30/90 days, per school
+  × placement, "scan → bought" %). Scans count scans; later steps count distinct
+  browsers.
+- **Pilot QR cards now encode `/q/<slug>/card`** (scripts/pilot-qr.mjs; default
+  output `MySchoolFrame Pilot Kit\qr-tracked`, the older `qr` folder untouched).
+  Cards already printed still work — they count as "direct".
+- Privacy page updated (student details, visit counts, the opt-in).
+- Verified: 2567 tests; Edge walkthrough scan → builder → send with the box
+  ticked → dashboard (funnel 1→1→1→1, student card, consent line); every SQL path
+  on Postgres built from YESTERDAY's db.ts and upgraded in place.
+- **Deferred on purpose**: "My Students" page + "Continue with email" access
+  (magic link, like staff sign-in); lifecycle emails (opted-in customers only);
+  add-on products; `/schools/...` URLs (QR codes are printed with /s and /q).

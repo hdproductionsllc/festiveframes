@@ -1,3 +1,24 @@
+# Student profiles (invisible) + scan-to-sale funnel (2026-09-27) — plan approved
+
+Plan: ~/.claude/plans/thinking-wiggly-sunrise.md. Henry: opt-in checkbox YES (unticked); tracking in our own DB, no Google.
+
+## Part A — student profiles
+- [x] customers + students tables; designs.student_id, orders.customer_id
+- [x] Builder sends the intake as `student`; server coerces; save upserts + links
+- [x] Browser remembers its student (link-memory); a new name = a new student
+- [x] Payment links student + order to a customer by Stripe email (never by typed email)
+- [x] Unticked "tell me about future products" checkbox on Send; stored with date
+- [x] Dashboard: student card on design; students per school
+
+## Part B — funnel
+- [x] /q/<school>/<placement> records a scan, forwards to /s/<school>
+- [x] events table; anonymous browser id; open/engage beacons; send/checkout/paid server-side
+- [x] Dashboard Funnel page (school x placement, 7/30/90 days)
+- [x] Pilot QR cards use /q links
+- [x] Privacy page: tracking, saved students, opt-in
+
+---
+
 # One order record + the admin dashboard (2026-09-26) — Henry: "lets go"
 
 Found first: TWO tables named `school_orders` (the fundraiser ledger's, live, 0 rows;

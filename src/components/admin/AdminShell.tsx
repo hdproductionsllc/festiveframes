@@ -7,6 +7,7 @@ import { resolveSchoolKit } from "@/data/school-resolve";
 
 const NAV = [
   { href: "/admin", label: "Overview" },
+  { href: "/admin/funnel", label: "Funnel" },
   { href: "/admin/orders", label: "Orders" },
   { href: "/admin/schools", label: "Schools" },
   { href: "/admin/designs", label: "Sent designs" },

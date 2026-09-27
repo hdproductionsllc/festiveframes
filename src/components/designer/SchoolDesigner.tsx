@@ -42,7 +42,8 @@ import {
   loadableDesignOf,
   type LoadableDesign,
 } from "@/stores/design-store";
-import { readDesignLink, tokenFromHash, writeDesignLink } from "@/lib/school-designs/link-memory";
+import { readDesignLink, readStudentRef, tokenFromHash, writeDesignLink, writeStudentRef } from "@/lib/school-designs/link-memory";
+import { adoptPlacement, beacon, trackFor } from "@/lib/school-designs/track-client";
 import { collectFullResIds } from "@/lib/school-designs/full-res-ids";
 import { designLettering } from "@/lib/school-designs/lettering";
 import { getFullRes, putFullRes } from "@/lib/utils/image-store";
@@ -190,6 +191,8 @@ interface SavedOut {
   code: string;
   revision: number;
   url: string | null;
+  /** Set when this save created the design's student — kept by this browser. */
+  studentRef?: { id: string; token: string } | null;
 }
 
 export function SchoolDesigner({
@@ -544,6 +547,29 @@ export function SchoolDesigner({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // THE FUNNEL (lib/school-designs/funnel): adopt the QR placement from `?via=`,
+  // count this visit as "opened", and the first tap or keypress as "engaged".
+  // Anonymous; one tiny beacon each; never in the way of the page.
+  useEffect(() => {
+    const school = kit?.slug;
+    if (!school) return;
+    adoptPlacement(school);
+    beacon("open", school);
+    const engage = () => {
+      beacon("engage", school);
+      window.removeEventListener("pointerdown", engage);
+      window.removeEventListener("keydown", engage);
+    };
+    window.addEventListener("pointerdown", engage, { passive: true });
+    window.addEventListener("keydown", engage);
+    return () => {
+      window.removeEventListener("pointerdown", engage);
+      window.removeEventListener("keydown", engage);
+    };
+    // Once per page view, for the school this page is.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // A SAVED DESIGN'S LINK: `/s/<slug>#d=<token>`. The token is in the fragment so
   // no server ever logs it; it is lifted out of the address bar at once, so it is
   // not left on screen or re-offered by a reload. The ref makes this run once even
@@ -818,10 +844,24 @@ export function SchoolDesigner({
       originals: await originalsOf(design),
       link: readDesignLink(persistKey),
       variant,
+      // THE PERSON celebrated, from the answers the parent already gave (no form):
+      // the server keeps only these facts (lib/school-designs/people).
+      student: s.intake
+        ? {
+            displayName: s.intake.name ?? null,
+            gradYear: s.intake.year ?? null,
+            activity: s.intake.activity ?? null,
+            number: s.intake.number ?? null,
+            relation: s.intake.buyerId ?? null,
+          }
+        : null,
+      studentRef: readStudentRef(persistKey),
+      // The funnel: this browser's anonymous id and the QR placement it came by.
+      track: trackFor(kit?.slug),
     };
   };
 
-  const handleSubmit = async (contact: OrderContact, opts: { emailLink: boolean }) => {
+  const handleSubmit = async (contact: OrderContact, opts: { emailLink: boolean; futureProducts: boolean }) => {
     const rendered = sendSheet?.rendered;
     if (!rendered || submitting) return;
     setSubmitting(true);
@@ -832,7 +872,12 @@ export function SchoolDesigner({
         headers: { "Content-Type": "application/json" },
         // Who to reply to (required, checked again by the route) and whether to
         // email the parent their link, on top of the shared body.
-        body: JSON.stringify({ ...(await submissionBody(rendered)), contact, emailLink: opts.emailLink }),
+        body: JSON.stringify({
+          ...(await submissionBody(rendered)),
+          // The future-products consent rides with the contact; the server dates it.
+          contact: { ...contact, futureProducts: opts.futureProducts },
+          emailLink: opts.emailLink,
+        }),
       });
       const data = (await res.json().catch(() => ({}))) as {
         ok?: boolean;
@@ -844,6 +889,7 @@ export function SchoolDesigner({
       // Adopt what was saved whatever else happened, so a retry after a failed
       // email is this design's next revision rather than a second design.
       if (data.saved) writeDesignLink(persistKey, { id: data.saved.id, token: data.saved.token, code: data.saved.code });
+      if (data.saved?.studentRef) writeStudentRef(persistKey, data.saved.studentRef);
       const info = (teamSent: boolean): SavedDesignInfo | null =>
         data.saved
           ? {
@@ -1031,6 +1077,7 @@ export function SchoolDesigner({
         return;
       }
       writeDesignLink(persistKey, { id: data.saved.id, token: data.saved.token, code: data.saved.code });
+      if (data.saved.studentRef) writeStudentRef(persistKey, data.saved.studentRef);
       // Every line of lettering, in reading order, for the parent to check.
       const lettering = designLettering(storeApi.getState());
       setProof({ saved: data.saved, image: printPng, lettering, error: null });
@@ -1057,7 +1104,7 @@ export function SchoolDesigner({
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ kind: "school-frame", token, revision }),
+        body: JSON.stringify({ kind: "school-frame", token, revision, track: trackFor(kit?.slug) }),
       });
       const data = (await res.json().catch(() => ({}))) as { url?: string; error?: string };
       if (res.ok && data.url) {
@@ -1884,6 +1931,7 @@ export function SchoolDesigner({
           error={sendSheet.error}
           savedOnError={sendSheet.saved}
           offerLinkEmail={offerLinkEmail}
+          personName={intake?.name?.trim() || null}
           onSend={(contact, opts) => void handleSubmit(contact, opts)}
           onClose={closeSend}
         />

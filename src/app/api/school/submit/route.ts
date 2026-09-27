@@ -26,6 +26,7 @@ import { sendDesignLinkEmail, sendSchoolOrderEmail } from "@/lib/email-productio
 import { artworkRightsLine } from "@/lib/order/artwork-rights";
 import { CONTACT_PROBLEM_COPY, coerceOrderContact, orderContactLine } from "@/lib/order/order-contact";
 import { checkSubmission, saveSubmission } from "@/lib/school-designs/submission";
+import { recordEvent } from "@/lib/school-designs/funnel";
 
 export const runtime = "nodejs";
 
@@ -81,6 +82,11 @@ export async function POST(request: Request): Promise<NextResponse> {
     result.ok && emailLink === true && url && saved
       ? await sendDesignLinkEmail({ to: who.contact.email, code: saved.ref.code, url, schoolName: s.kit?.schoolName ?? null })
       : false;
+
+  // The funnel's "sent" step: the design reached us (saved, or delivered to the team).
+  if (saved || result.ok) {
+    await recordEvent({ kind: "send", anonId: s.track?.anonId, school: s.schoolSlug, placement: s.track?.placement, designId: saved?.ref.id });
+  }
 
   const savedOut = saved?.out ?? null;
   if (result.ok) return NextResponse.json({ ok: true, saved: savedOut, linkEmailed }, { status: 200 });

@@ -34,6 +34,7 @@ export function SendDesignSheet({
   error,
   savedOnError = null,
   offerLinkEmail = false,
+  personName = null,
   onSend,
   onClose,
 }: {
@@ -51,7 +52,9 @@ export function SendDesignSheet({
   /** Offer "Email me a link to this design" — only while MySchoolFrame's own
    *  sender is configured (`designLinkEmailAvailable`, lib/email-msf). */
   offerLinkEmail?: boolean;
-  onSend: (contact: OrderContact, opts: { emailLink: boolean }) => void;
+  /** The name on the frame, for the future-products question; null asks generally. */
+  personName?: string | null;
+  onSend: (contact: OrderContact, opts: { emailLink: boolean; futureProducts: boolean }) => void;
   onClose: () => void;
 }) {
   const [email, setEmail] = useState("");
@@ -61,6 +64,10 @@ export function SendDesignSheet({
   // link is the one thing that lets them reopen this design somewhere else.
   const [emailLink, setEmailLink] = useState(true);
   const willEmailLink = offerLinkEmail && emailLink;
+  // Consent to future product email: UNTICKED by default, always (Henry,
+  // 2026-09-27). Recorded with a date; nothing is sent because of it until the
+  // owner decides to send something (lib/school-designs/people).
+  const [futureProducts, setFutureProducts] = useState(false);
   // Errors show after the first Send attempt, not on the first keystroke.
   const [tried, setTried] = useState(false);
   const titleId = useId();
@@ -91,7 +98,7 @@ export function SendDesignSheet({
       return;
     }
     if (!preview || sending) return;
-    onSend(verdict.contact, { emailLink: willEmailLink });
+    onSend(verdict.contact, { emailLink: willEmailLink, futureProducts });
   };
 
   if (typeof document === "undefined") return null;
@@ -223,6 +230,20 @@ export function SendDesignSheet({
           </label>
         )}
 
+        <label className="mt-2 flex min-h-11 items-center gap-2.5 text-[13px] text-[var(--ff-ink)]">
+          <input
+            type="checkbox"
+            checked={futureProducts}
+            onChange={(e) => setFutureProducts(e.target.checked)}
+            className="h-5 w-5 shrink-0 accent-stone-900"
+          />
+          <span>
+            {personName
+              ? <>Tell me when senior-year and graduation keepsakes for <strong>{personName}</strong> are available</>
+              : "Tell me when new school keepsakes are available"}
+          </span>
+        </label>
+
         {tried && problem && (
           <p role="alert" className="mt-3 text-[13px] font-semibold text-[var(--ff-danger)]">
             {CONTACT_PROBLEM_COPY[problem]}
@@ -254,9 +275,15 @@ export function SendDesignSheet({
         </div>
         <p className="ff-micro mt-2">
           Your email and phone go to our team with the design so a person can reply.
-          {willEmailLink
-            ? " The only email we'll send you automatically is your link."
-            : " We won't email or text you automatically."}{" "}
+          {/* What will actually reach their inbox, from both boxes — never a promise
+              one of the boxes contradicts. */}
+          {willEmailLink && futureProducts
+            ? " We'll email you your link and, as you asked, news about new keepsakes. Nothing else."
+            : willEmailLink
+              ? " The only email we'll send you automatically is your link."
+              : futureProducts
+                ? " Besides a reply about this design, we'll only email you news about new keepsakes, as you asked."
+                : " We won't email or text you automatically."}{" "}
           <a href={MSF_PRIVACY_PATH} target="_blank" rel="noopener" className="underline">
             Privacy
           </a>

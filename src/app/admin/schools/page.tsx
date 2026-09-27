@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { requireAdmin } from "@/lib/admin/session";
 import { allSchoolTotals, type SchoolTotals } from "@/lib/school-designs/orders";
 import { listDesigns } from "@/lib/school-designs/store";
+import { studentCounts } from "@/lib/school-designs/people";
 import { pilotSchoolKits } from "@/data/school-pilot";
 import { AdminShell, Empty, schoolName, Table, usd, when } from "@/components/admin/AdminShell";
 
@@ -12,7 +13,13 @@ export const metadata: Metadata = { title: "Schools" };
 
 export default async function AdminSchools() {
   const email = await requireAdmin();
-  const [totals, designs] = await Promise.all([allSchoolTotals().catch(() => [] as SchoolTotals[]), listDesigns(5000)]);
+  const [totals, designs, students] = await Promise.all([
+    allSchoolTotals().catch(() => [] as SchoolTotals[]),
+    listDesigns(5000),
+    studentCounts().catch(() => []),
+  ]);
+  const studentsBySchool = new Map<string, number>();
+  for (const s of students) studentsBySchool.set(s.school, (studentsBySchool.get(s.school) ?? 0) + s.students);
   const sends = new Map<string, number>();
   for (const d of designs) if (d.school) sends.set(d.school, (sends.get(d.school) ?? 0) + 1);
   const slugs = new Set<string>([...pilotSchoolKits().map((k) => k.slug), ...totals.map((t) => t.school), ...sends.keys()]);
@@ -21,6 +28,7 @@ export default async function AdminSchools() {
       slug,
       t: totals.find((x) => x.school === slug),
       sends: sends.get(slug) ?? 0,
+      students: studentsBySchool.get(slug) ?? 0,
       pilot: pilotSchoolKits().some((k) => k.slug === slug),
     }))
     .sort((a, b) => (b.t?.raisedCents ?? 0) - (a.t?.raisedCents ?? 0) || b.sends - a.sends);
@@ -34,7 +42,7 @@ export default async function AdminSchools() {
       {rows.length === 0 ? (
         <Empty>No school activity yet.</Empty>
       ) : (
-        <Table head={["School", "Frames sold", "Raised", "Last 30 days", "Designs sent", "Last sale"]}>
+        <Table head={["School", "Frames sold", "Raised", "Last 30 days", "Designs sent", "Students", "Last sale"]}>
           {rows.map((r) => (
             <tr key={r.slug}>
               <td className="px-3 py-2">
@@ -52,6 +60,7 @@ export default async function AdminSchools() {
                 {r.t?.frames30d ?? 0} · {usd(r.t?.raised30dCents ?? 0)}
               </td>
               <td className="px-3 py-2">{r.sends}</td>
+              <td className="px-3 py-2">{r.students}</td>
               <td className="px-3 py-2">{when(r.t?.lastAt ?? null)}</td>
             </tr>
           ))}

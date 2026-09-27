@@ -251,3 +251,50 @@ describe("the parent's receipt", () => {
     expect(receipt.replyTo).toBe("bill@myschoolframe.com"); // the PUBLIC contact, not the team list
   });
 });
+
+describe("payment makes the buyer a customer, and counts as 'paid'", () => {
+  it("links the design's student to the Stripe email, records 'paid' once, honours consent only for the same email", async () => {
+    process.env.RESEND_API_KEY = "re_test";
+    const { __memCustomersForTest, __memStudentsForTest } = await import("@/lib/school-designs/people");
+    const { __memEventsForTest } = await import("@/lib/school-designs/funnel");
+    const store = await import("@/lib/school-designs/store");
+    const orders = await import("@/lib/school-designs/orders");
+
+    const make = async (sentWith: string, optIn: boolean) => {
+      const saved = await store.saveSchoolDesign({
+        school: "ladue-rams",
+        contact: { email: sentWith, ...(optIn ? { futureProductsAt: Date.now() } : {}) },
+        revision: { design: { designName: `Owen ${Math.random()}` }, parts, proof: { name: "O", dataUrl: PNG_A }, panels: [], artworkRights: null, variant: "flush", createdBy: "parent" },
+        student: { input: { displayName: "Owen", gradYear: 2028, activity: null, number: null, relation: "parent" }, ref: null },
+      });
+      await store.approveRevision(saved!.token, 1, { wordingVersion: "v", ip: null, userAgent: null });
+      const rev = (await store.getRevision(saved!.id, 1))!;
+      const order = await orders.createSchoolOrder({ designId: saved!.id, revision: 1, proofSha256: rev.proof.sha256, school: "ladue-rams", donationCents: 500, anonId: "anonPAIDPAIDPAID", placement: "card" });
+      const session = {
+        id: "cs_x", payment_status: "paid", amount_total: 2995, total_details: { amount_discount: 0 },
+        customer_details: { email: "parent@example.com", name: "Pat" },
+        metadata: { kind: "school-frame", orderId: order.orderId, proofSha256: rev.proof.sha256, school: "ladue-rams", donationCents: "500" },
+      } as unknown as import("stripe").Stripe.Checkout.Session;
+      return { saved, order, session };
+    };
+
+    // Consent given with the SAME email that paid → honoured.
+    __memCustomersForTest.clear();
+    const same = await make("Parent@Example.com", true);
+    const before = __memEventsForTest.length;
+    await fulfillSchoolOrder(same.session);
+    await fulfillSchoolOrder(same.session); // a redelivery must not count twice
+    expect(__memEventsForTest.slice(before).filter((e) => e.kind === "paid")).toEqual([
+      expect.objectContaining({ kind: "paid", anonId: "anonPAIDPAIDPAID", placement: "card", orderId: same.order.orderId }),
+    ]);
+    const customer = [...__memCustomersForTest.values()].find((c) => c.email === "parent@example.com")!;
+    expect(customer.marketingOptInAt).not.toBeNull();
+    expect(__memStudentsForTest.get(same.saved!.studentId!)!.customerId).toBe(customer.id);
+
+    // Consent given with a DIFFERENT email than the one that paid → not honoured.
+    __memCustomersForTest.clear();
+    const other = await make("someone.else@example.com", true);
+    await fulfillSchoolOrder(other.session);
+    expect([...__memCustomersForTest.values()][0].marketingOptInAt).toBeNull();
+  });
+});
