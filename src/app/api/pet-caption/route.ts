@@ -8,6 +8,7 @@
 // ─────────────────────────────────────────────────────────────
 
 import { NextResponse } from "next/server";
+import { PET_LAB_OPEN } from "@/config/pet-lab";
 import { generatePetCaption, isCaptionVoice, type CaptionMedia } from "@/lib/pet-caption";
 
 export const runtime = "nodejs";
@@ -24,6 +25,8 @@ function parseDataUrl(dataUrl: string): { b64: string; mime: CaptionMedia } | nu
 }
 
 export async function POST(request: Request): Promise<NextResponse> {
+  // Closed with the pet lab (config/pet-lab.ts): answer before touching a paid key.
+  if (!PET_LAB_OPEN) return NextResponse.json({ error: "This tool is switched off." }, { status: 410 });
   let body: { image?: string; voice?: unknown; petName?: unknown };
   try {
     body = (await request.json()) as typeof body;

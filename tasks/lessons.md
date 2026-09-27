@@ -144,3 +144,8 @@ check before it is left on.**
   edge colour (which ramps to gold). Checking edges = count the pixels that are wrong,
   and prove the check against a known-bad file before trusting a "clean" result.
 - Before claiming "the old library is clean", run the check on ALL of it, not two files.
+
+## 2026-09-27 — Say the dollar total before spending Henry's money
+- "A few cents per image" hid a switch to Gemini 3 Pro 2K (~$0.13) and ~62 images (~$7).
+  Before any paid run: model, unit price, count, total. Keep a running total on redos.
+- No public route on the live site may spend a paid key without a switch (pet lab did).
