@@ -35,7 +35,9 @@ mkdirSync(DONE, { recursive: true });
 async function processOne(file: string): Promise<{ file: string; ok: boolean; why: string; out?: string }> {
   const { data, info } = await sharp(file).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
   const img = { data: new Uint8ClampedArray(data), width: info.width, height: info.height };
-  const report = keyBackground(img);
+  // keyEnclosed: magenta is never in the art, so the inside of a ring is backdrop too
+  // (without it the gymnastics rings kept solid magenta centres, 2026-09-27).
+  const report = keyBackground(img, { keyEnclosed: true });
   if (!report.keyed) return { file, ok: false, why: `not keyed (${report.reason}, flatness ${report.flatness.toFixed(2)})` };
 
   // 2. Complete art only: no ink on the outermost pixel ring.

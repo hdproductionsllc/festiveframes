@@ -48,7 +48,17 @@
   keyer (`src/lib/utils/key-background.ts` — measures the backdrop it is given),
   then `trim({threshold: 1})`. Verified path: flatness 1.000, partial-alpha
   edges ramp to gold not magenta, ≥595px after trim (the 300 DPI 2x2 gate).
+- **Art CUT IN THE SOURCE reads as "clipped by the badge", and no fitting fixes it**
+  (2026-09-27: palette brush tips, flask neck, ring straps, medal ribbon all sliced
+  flat at the PNG edge). Cause: "filling the frame" in the style block. It now asks
+  for a clear margin, and `scripts/process-badge.ts` REFUSES any candidate with ink
+  on its outermost pixel ring. With a margin, 1024 px output trims under the 595
+  gate: generate with `GEN_MODEL=gemini-3-pro-image GEN_SIZE=2K`. Key generated art
+  with `keyBackground(img, { keyEnclosed: true })` (ring interiors are backdrop);
+  uploads keep the default, which protects enclosed art. After replacing a PNG, clear
+  `.next/cache/images` before a local screen check, or dev serves the old art.
 - Style block and per-badge prompts: `tasks/enamel-pin-ideogram-prompts.md`.
+  Library gaps, ranked with evidence: `tasks/badge-library-gaps.md`.
   Every new badge still clears the ONE-INCH TEST (100px on navy, look at it)
   before it ships.
 

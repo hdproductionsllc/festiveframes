@@ -307,3 +307,30 @@ describe("keyBackground on sourced artwork", () => {
     expect(edgeMean(img)).toBeLessThan(115);
   });
 });
+
+describe("keyBackground — enclosed backdrop (generated badge art only)", () => {
+  // A magenta card with a thick gold ring: the ring's large centre is magenta,
+  // enclosed by the ring, and bigger than a letter counter.
+  function ring(): { data: Uint8ClampedArray; width: number; height: number } {
+    const W = 200, H = 200, d = new Uint8ClampedArray(W * H * 4);
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const r = Math.hypot(x - 100, y - 100), i = (y * W + x) * 4;
+      const gold = r > 45 && r < 70;
+      d.set(gold ? [212, 160, 23, 255] : [255, 0, 255, 255], i);
+    }
+    return { data: d, width: W, height: H };
+  }
+  const centreAlpha = (img: { data: Uint8ClampedArray; width: number }) => img.data[(100 * img.width + 100) * 4 + 3];
+
+  it("by default KEEPS a large enclosed region (an upload's mascot body is safe)", () => {
+    const img = ring();
+    keyBackground(img);
+    expect(centreAlpha(img)).toBe(255);
+  });
+
+  it("with keyEnclosed, removes it (generated art: magenta is never the art)", () => {
+    const img = ring();
+    keyBackground(img, { keyEnclosed: true });
+    expect(centreAlpha(img)).toBe(0);
+  });
+});

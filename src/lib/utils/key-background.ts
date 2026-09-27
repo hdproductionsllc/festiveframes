@@ -245,7 +245,19 @@ function alreadyCutOut(img: RGBA): boolean {
  * original and says why, which is far better than handing back a hollowed-out crest
  * and letting someone print it.
  */
-export function keyBackground(img: RGBA): KeyReport {
+export interface KeyOptions {
+  /**
+   * Remove EVERY enclosed backdrop-coloured region, however large. Only for our own
+   * generated badge art (scripts/process-badge.ts): it is painted on magenta, a
+   * colour the art never uses, so an enclosed magenta area — the inside of a
+   * gymnastics ring — is always backdrop. A parent's upload never sets this: there a
+   * large enclosed area in the card's colour is usually the mascot (see
+   * SMALL_HOLE_SHARE), and keeping it is the safe direction.
+   */
+  keyEnclosed?: boolean;
+}
+
+export function keyBackground(img: RGBA, opts: KeyOptions = {}): KeyReport {
   const { rgb, flatness, noise } = analyzeBackdrop(img);
   const backdrop = hex(rgb[0], rgb[1], rgb[2]);
 
@@ -323,7 +335,7 @@ export function keyBackground(img: RGBA): KeyReport {
   for (let p = 0; p < total; p++) {
     if (alpha[p] === 255 || label[p] !== 0) continue;
     const area = fill(alpha, label, W, H, p, KEEP);
-    if (area < smallHole) fill(alpha, label, W, H, p, HOLE, KEEP);
+    if (opts.keyEnclosed || area < smallHole) fill(alpha, label, W, H, p, HOLE, KEEP);
   }
 
   // PASS 3 — SOLVE THE EDGE, then apply.

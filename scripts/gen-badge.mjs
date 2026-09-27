@@ -74,7 +74,14 @@ for (let i = 1; i <= count; i++) {
       headers: { "x-goog-api-key": KEY, "content-type": "application/json" },
       body: JSON.stringify({
         contents: [{ parts: [{ text: `${subject}, ${STYLE}` }] }],
-        generationConfig: { responseModalities: ["IMAGE"], imageConfig: { aspectRatio: "1:1" } },
+        // GEN_SIZE ("2K", "4K") asks a model that supports it (gemini-3-pro-image)
+        // for more pixels. Since art keeps a margin (no longer "filling the frame"),
+        // a 1024 px image trims to ~460–590 px — under the 595 px print gate; a 2K
+        // one clears it with room. 2026-09-27.
+        generationConfig: {
+          responseModalities: ["IMAGE"],
+          imageConfig: { aspectRatio: "1:1", ...(process.env.GEN_SIZE ? { imageSize: process.env.GEN_SIZE } : {}) },
+        },
       }),
     },
   );

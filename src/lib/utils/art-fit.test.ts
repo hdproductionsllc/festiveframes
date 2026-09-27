@@ -101,16 +101,17 @@ function inside(x: number, y: number, w: number, h: number, inset: number, r: Co
   );
 }
 
-/** Ink pixels (alpha above the table's threshold) that land outside the safe region. */
+/** Ink pixels (alpha above the table's threshold) that land outside the safe region.
+ *  `art` is a site path under public/, or raw PNG bytes for a synthetic image. */
 async function strays(
-  url: string,
+  art: string | Buffer,
   w: number,
   h: number,
   radii: CornerRadii,
   bg: string,
-  rect = artRect(w, h, bg, UNIT, radii, url),
+  rect = artRect(w, h, bg, UNIT, radii, typeof art === "string" ? art : undefined),
 ) {
-  const img = await loadImage(readFileSync(join(PUBLIC, url)));
+  const img = await loadImage(typeof art === "string" ? readFileSync(join(PUBLIC, art)) : art);
   const c = createCanvas(w, h);
   const ctx = c.getContext("2d");
   ctx.drawImage(img, rect.x, rect.y, rect.width, rect.height);
@@ -133,11 +134,19 @@ const ORIENTATIONS = (["tl", "tr", "br", "bl"] as const).map((k) => ({
 describe("per-art fit never clips", () => {
   const WORST = ["art", "ice-hockey", "lacrosse", "field-hockey", "orchestra", "torch", "grad-cap"];
 
-  it("the check has teeth: the palette drawn full size on a frame corner is caught", async () => {
-    const url = "/tiles/high-school/art.png";
+  // This used to draw the real palette, whose brush tips ran to its canvas corners.
+  // That art was CUT in the source and was redrawn whole (2026-09-27), so no shipped
+  // badge reaches its corners any more. The check is proved on a full-bleed square
+  // instead, which is the worst case by construction and cannot be "fixed" away.
+  it("the check has teeth: full-bleed art drawn full size on a frame corner is caught", async () => {
+    const bleed = createCanvas(64, 64);
+    const bctx = bleed.getContext("2d");
+    bctx.fillStyle = "#000";
+    bctx.fillRect(0, 0, 64, 64);
+    const png = bleed.toBuffer("image/png");
     const i = artInset(SIDE, SIDE, TILE_BG.white, UNIT);
     const naive = { x: i, y: i, width: SIDE - 2 * i, height: SIDE - 2 * i };
-    const caught = await Promise.all(ORIENTATIONS.map(({ radii }) => strays(url, SIDE, SIDE, radii, TILE_BG.white, naive)));
+    const caught = await Promise.all(ORIENTATIONS.map(({ radii }) => strays(png, SIDE, SIDE, radii, TILE_BG.white, naive)));
     expect(caught.some((n) => n > 0), `${caught}`).toBe(true);
   });
 
