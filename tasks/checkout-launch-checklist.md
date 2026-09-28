@@ -39,6 +39,15 @@ unapproved or altered. See `CLAUDE.md` → "Saved school designs".
       `https://www.festiveframes.co`). Parent links already avoid it, but other
       pages (e.g. the post-checkout thank-you page) still use it.
 
+- [x] **Holiday pages off the MySchoolFrame domain** — DONE 2026-09-28. Six $39
+      patriotic landing pages, gift guides, a blog post and the holiday legal pages
+      were still served on myschoolframe.com and submitted to Google; the site-wide
+      icon, share card, title and 404 were still Festive Frames. One list
+      (`HOLIDAY_ONLY_PATHS`) now drives the redirects and the sitemap; the root brand
+      is MySchoolFrame.
+- [x] **Pet-lab routes off** — DONE 2026-09-27 (`PET_LAB_OPEN`): they spent the Google
+      and Anthropic keys for anyone who called them.
+
 ## B. Henry's decisions (nothing to build until these are made)
 
 - [ ] **Card statement names MySchoolFrame.** Checked 2026-09-26 (read-only): the
@@ -64,9 +73,9 @@ unapproved or altered. See `CLAUDE.md` → "Saved school designs".
 
 ## C. Settings on launch day (in this order)
 
-0. [ ] Railway → Variables: `ADMIN_EMAILS = <Henry's address>,bill@myschoolframe.com`
+0. [x] (DONE 2026-09-26) Railway → Variables: `ADMIN_EMAILS = <Henry's address>,bill@myschoolframe.com`
        (who can sign in to /admin — can be set any time, it is not a launch switch).
-1. [ ] Railway → Variables: `MSF_EMAIL_FROM = MySchoolFrame <orders@myschoolframe.com>`
+1. [x] (DONE 2026-09-26, with a key from the MySchoolFrame Resend account) Railway → Variables: `MSF_EMAIL_FROM = MySchoolFrame <orders@myschoolframe.com>`
        (turns on the "Email me a link" box; moves all school mail to that sender —
        the domain is already verified in Resend).
 2. [ ] Stripe dashboard → the webhook endpoint listens for `checkout.session.completed`
@@ -92,6 +101,13 @@ Real, live, with a 100%-off coupon — never Stripe test mode.
        school's total.
 
 If any step surprises you, stop: checkout goes back off with the same one-line change.
+
+## D2. Optional, any time (Henry, 5 minutes)
+
+- [ ] Google Search Console → Sitemaps: resubmit `https://www.myschoolframe.com/sitemap.xml`
+      so Google drops the old patriotic pages sooner (they now redirect).
+- [ ] When a school is VERIFIED, its builder is automatically indexable AND listed in
+      the sitemap — nothing else to do.
 
 ## E. After launch — growth, in order (decided 2026-09-26/27; nothing built yet)
 

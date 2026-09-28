@@ -158,3 +158,12 @@ Research: tasks/badge-library-gaps.md. Clipped-art fix pushed (0f0da0d).
 - [x] Process, one-inch test on 4 fields, ivory twins, art:fit, register + menu + keywords
 - [x] Print + browser check; tests, tsc, lint, build; one push; docs
 - [x] Found + fixed: magenta hairline on every Gemini badge (despill + badge-spill.test.ts); all 14 of today's badges re-cut
+
+# Production + sales readiness polish (2026-09-28) — Henry: "make sure we are ready when we flip the switch"
+- [x] Crawl the LIVE site: every internal link resolves, no console errors, no holiday brand residue, titles/OG sane
+- [x] Phone walkthrough of the parent path (landing → finder → builder → send sheet) on live, funnel beacons blocked
+- [x] Page weight / speed of the builder on a phone
+- [x] Checkout path LOCALLY with the switch on in-memory (proof sheet → approve), no Stripe call
+- [x] Admin dashboard pages load (live, signed out = login page only)
+- [x] Fix what's small; list what's Henry's; update checkout-launch-checklist.md
+- [x] Full tests, tsc, lint, build; ONE push

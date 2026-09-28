@@ -1,5 +1,5 @@
 import type { NextConfig } from "next";
-import { HOLIDAY_SHOP_OPEN } from "./src/config/holiday-shop";
+import { HOLIDAY_ONLY_PATHS, HOLIDAY_SHOP_OPEN } from "./src/config/holiday-shop";
 
 // The deployed build's identity, surfaced in the UI (see BuildStamp).
 //
@@ -50,16 +50,17 @@ const nextConfig: NextConfig = {
     // the host. Static `import`s are content-hashed and stay immutable regardless.
     minimumCacheTTL: 86400,
   },
-  // The holiday shop is CLOSED (src/config/holiday-shop.ts): its builder, cart and
-  // checkout pages send visitors to MySchoolFrame instead. Temporary (307) on
-  // purpose — the switch can be flipped back, and a permanent redirect would be
-  // cached by browsers long after. While the shop was open, /buy (the retired kit
+  // The holiday shop is CLOSED (src/config/holiday-shop.ts): every address in
+  // HOLIDAY_ONLY_PATHS goes to its MySchoolFrame counterpart. Temporary (307) on
+  // purpose — the switch can be flipped back, and a permanent redirect is cached by
+  // browsers long after. The sitemap reads the same list, so these are also no
+  // longer submitted to Google. While the shop was open, /buy (the retired kit
   // page) went permanently to the builder.
   async redirects() {
     if (!HOLIDAY_SHOP_OPEN) {
-      return ["/build", "/cart", "/checkout", "/buy"].map((source) => ({
+      return Object.entries(HOLIDAY_ONLY_PATHS).map(([source, destination]) => ({
         source,
-        destination: "/school",
+        destination,
         permanent: false,
       }));
     }

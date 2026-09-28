@@ -7,7 +7,8 @@ import { describe, expect, it, vi } from "vitest";
 const create = vi.fn();
 vi.mock("@/lib/stripe", () => ({ getStripe: () => ({ checkout: { sessions: { create } } }) }));
 
-import { HOLIDAY_SHOP_OPEN } from "@/config/holiday-shop";
+import { HOLIDAY_SHOP_OPEN, isHolidayOnlyPath } from "@/config/holiday-shop";
+import sitemap from "../sitemap";
 import { POST as checkout } from "./checkout/route";
 import { POST as draft } from "./order/draft/route";
 import nextConfig from "../../../next.config";
@@ -40,5 +41,26 @@ describe("the holiday shop is closed", () => {
     for (const source of ["/build", "/cart", "/checkout", "/buy"]) {
       expect(rules).toContainEqual({ source, destination: "/school", permanent: false });
     }
+  });
+
+  // Found 2026-09-28: the first closing redirected the checkout path only, and six
+  // patriotic landing pages kept serving on myschoolframe.com at $39, submitted to
+  // Google by the sitemap. One list now drives both.
+  it("redirects the landing pages, gift guides, blog and holiday legal pages too", async () => {
+    const rules = await nextConfig.redirects!();
+    const to = (source: string) => rules.find((r) => r.source === source)?.destination;
+    for (const page of ["/patriotic-license-plate-frame", "/america-250-license-plate-frame", "/veteran-license-plate-frame", "/4th-of-july-license-plate-frame", "/made-in-usa-license-plate-frame", "/red-white-and-blue-license-plate-frame", "/classic", "/gifts/:path*", "/blog/:path*"])
+      expect(to(page), page).toBe("/school");
+    expect(to("/returns")).toBe("/school/warranty");
+    expect(to("/privacy")).toBe("/school/privacy");
+    expect(to("/terms")).toBe("/school/terms");
+    expect(to("/thanks")).toBe("/school/thanks");
+  });
+
+  it("submits none of them to Google", () => {
+    const urls = sitemap().map((e) => new URL(e.url).pathname);
+    const holiday = urls.filter((p) => isHolidayOnlyPath(p));
+    expect(holiday).toEqual([]);
+    expect(urls).toContain("/school/warranty");
   });
 });

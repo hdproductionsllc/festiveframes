@@ -872,6 +872,23 @@ case the repair was written for. Put repairs in `merge`, and make them return th
   festiveframes.co is no longer a Railway domain (old links/QR codes dead unless a
   Cloudflare redirect is added — Henry's call).
 
+## Readiness pass (2026-09-28) — the root brand is MySchoolFrame
+
+- **`HOLIDAY_ONLY_PATHS`** (config/holiday-shop.ts) is the ONE list of holiday
+  addresses; next.config's redirects AND app/sitemap.ts read it. The first closing
+  redirected only the checkout path, and six $39 patriotic pages kept serving on
+  myschoolframe.com, submitted to Google. `holiday-closed.test.ts` pins both halves.
+- **The app ROOT is MySchoolFrame**: layout metadata, icon.svg / apple-icon.png
+  (copies of the school mark), opengraph-image (re-exports /school's card) and
+  not-found (MsfNotFound). `school-brand-surfaces.test.ts` ties that to
+  `HOLIDAY_SHOP_OPEN` — reopen the shop and it tells you to revisit.
+- **The sitemap lists a school's builder only when its kit is `verified` AND its
+  builder is open** — verifying a school is the whole of putting it on Google.
+- **`PET_LAB_OPEN = false`** (config/pet-lab.ts): /api/cartoonize, /api/pet-caption
+  and /api/lab/pet-submit spent paid keys for anyone; all 410 before reading a key.
+- Measured on a phone (production build): landing 345 KB / ~1.2 s, builder 423 KB /
+  ~1.0 s, no console errors on any MSF page. Admin pages 307 to login signed out.
+
 ## Students, customers and the funnel (2026-09-27) — the identity layer, invisible
 
 - **Why**: outside advice Henry adopted — the long-term value is a reusable

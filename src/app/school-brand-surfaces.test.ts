@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
+import { HOLIDAY_SHOP_OPEN } from "@/config/holiday-shop";
 
 /**
  * ONE APP, TWO BRANDS — and the school one kept wearing the other's clothes.
@@ -96,11 +97,17 @@ describe("every MySchoolFrame surface carries its own brand", () => {
     expect(src, "the card ignores the school's colour").toMatch(/colors\.frame/);
   });
 
-  it("leaves the FESTIVE FRAMES surfaces alone", () => {
-    // The root is the other brand's home and must keep its own identity — this is
-    // two brands sharing a deployment, not a rename.
+  it("gives the ROOT to MySchoolFrame while the holiday shop is closed", () => {
+    // Until 2026-09-28 the root was the holiday storefront's home ("two brands
+    // sharing a deployment"). With that shop closed, every fallback — the favicon,
+    // the share card, the 404 — was the defunct brand on myschoolframe.com. The
+    // rule now follows the switch: reopen the shop and this test says to revisit.
+    expect(HOLIDAY_SHOP_OPEN).toBe(false);
     const root = readFileSync(path.join(APP, "icon.svg"), "utf8");
-    expect(root).toContain("Festive Frames");
-    expect(existsSync(path.join(APP, "opengraph-image.tsx"))).toBe(true);
+    expect(root).toContain("MySchoolFrame");
+    expect(root).not.toContain("Festive Frames");
+    for (const f of ["opengraph-image.tsx", "not-found.tsx", "layout.tsx"]) {
+      expect(readFileSync(path.join(APP, f), "utf8"), f).not.toMatch(/\| Festive Frames|brandEntity/);
+    }
   });
 });

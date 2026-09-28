@@ -1,6 +1,9 @@
 import type { MetadataRoute } from "next";
 import { SITE_URL } from "@/config/season";
 import { MSF_PRIVACY_PATH, MSF_TERMS_PATH, MSF_WARRANTY_PATH } from "@/content/msf-pages";
+import { HOLIDAY_SHOP_OPEN, isHolidayOnlyPath } from "@/config/holiday-shop";
+import { allSchoolKits } from "@/data/school-kits";
+import { isBuilderOpen } from "@/data/school-pilot";
 
 // XML sitemap served at /sitemap.xml. Indexable marketing + SEO landing pages.
 // The order page (/thanks), the redirected /buy, and API routes are excluded.
@@ -52,18 +55,35 @@ function lastModified(path: string): Date {
   return new Date(`${LAST_MODIFIED[path]}T00:00:00.000Z`);
 }
 
+/** A page that is listed only while it is served: a closed holiday shop's pages
+ *  redirect (config/holiday-shop.ts), and a sitemap naming them tells Google that
+ *  myschoolframe.com sells $39 patriotic frames. */
+const listed = (path: string) => HOLIDAY_SHOP_OPEN || !isHolidayOnlyPath(path);
+
 export default function sitemap(): MetadataRoute.Sitemap {
   return [
     // The homepage entry IS the MySchoolFrame landing: next.config rewrites "/"
     // on the myschoolframe hosts to /school, so this URL serves that content.
     { url: SITE_URL, lastModified: lastModified("/"), changeFrequency: "weekly", priority: 1 },
-    ...LANDING_PAGES.map((p) => ({
+    ...LANDING_PAGES.filter((p) => listed(p.path)).map((p) => ({
       url: `${SITE_URL}${p.path}`,
       lastModified: lastModified(p.path),
       changeFrequency: "weekly" as const,
       priority: p.priority,
     })),
-    ...POLICY_PAGES.map((path) => ({
+    // A school's builder is indexable once its kit is VERIFIED (colours confirmed
+    // AND written permission for its name and marks — s/[slug]/page.tsx noindexes
+    // the rest) and its builder is open. Listed here by the same two facts, so
+    // verifying a school is the whole of putting it in front of Google. None today.
+    ...allSchoolKits()
+      .filter((k) => k.status === "verified" && isBuilderOpen(k.slug))
+      .map((k) => ({
+        url: `${SITE_URL}/s/${k.slug}`,
+        lastModified: lastModified("/"),
+        changeFrequency: "weekly" as const,
+        priority: 0.8,
+      })),
+    ...POLICY_PAGES.filter(listed).map((path) => ({
       url: `${SITE_URL}${path}`,
       lastModified: lastModified(path),
       changeFrequency: "yearly" as const,
