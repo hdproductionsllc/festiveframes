@@ -57,6 +57,23 @@ describe("the holiday shop is closed", () => {
     expect(to("/thanks")).toBe("/school/thanks");
   });
 
+  // The holiday forms (found 2026-09-28): their pages redirect, but the addresses
+  // behind them still took submissions — and save-design emailed a Festive Frames
+  // restore link to whatever address was typed.
+  it("shuts the holiday forms, so nothing mails on behalf of a closed brand", async () => {
+    const post = (body: unknown) => new Request("http://x/api", { method: "POST", body: JSON.stringify(body) });
+    for (const [name, load] of [
+      ["save-design", () => import("../api/save-design/route")],
+      ["contact", () => import("../api/contact/route")],
+      ["review", () => import("../api/review/route")],
+      ["subscribe", () => import("../api/subscribe/route")],
+    ] as const) {
+      const { POST } = await load();
+      const res = await POST(post({ email: "someone@example.com", name: "x", message: "hi", rating: 5, body: "b" }));
+      expect(res.status, name).toBe(410);
+    }
+  });
+
   it("submits none of them to Google", () => {
     const urls = sitemap().map((e) => new URL(e.url).pathname);
     const holiday = urls.filter((p) => isHolidayOnlyPath(p));

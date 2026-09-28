@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { HOLIDAY_SHOP_OPEN } from "@/config/holiday-shop";
 import { sendContactEmail } from "@/lib/email";
 
 export const runtime = "nodejs";
@@ -9,6 +10,9 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 // emails it to the team via Resend. Stores nothing. No-ops gracefully if email
 // isn't configured; never throws to the client.
 export async function POST(request: Request): Promise<NextResponse> {
+  // The holiday shop is closed (config/holiday-shop.ts): its forms stay shut too,
+  // or a public address keeps mailing on behalf of a brand that is gone.
+  if (!HOLIDAY_SHOP_OPEN) return NextResponse.json({ ok: false, error: "This form is closed." }, { status: 410 });
   let body: unknown;
   try {
     body = await request.json();

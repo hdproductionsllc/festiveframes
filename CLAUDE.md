@@ -744,7 +744,14 @@ case the repair was written for. Put repairs in `merge`, and make them return th
 - Every recipient is server-fixed. On the send sheet, the school request and the
   alerts, a parent's address is printed as "Reply to" and never read into to/cc/bcc
   (`email-production.test.ts` asserts it field by field).
-- **The ONE exception, and an open owner decision**: a PAID school order's
+- **DECIDED (Henry, 2026-09-28): the parent gets OUR receipt, and the team gets a
+  blind copy of EVERY email a customer receives.** Today that is two emails — the
+  paid receipt and the saved-design link — and `lib/customer-copies.test.ts` holds
+  both to a `bcc` of the team list (never `to`/`cc`). Any NEW email to a customer
+  goes in that test. Stripe's own receipt stays off: it is account-wide (shared with
+  Still Beside Me) and reads "Frames HDP". The holiday forms (save-design, contact,
+  review, subscribe) are shut with the holiday shop (410).
+- (History) **The ONE exception, and an open owner decision**: a PAID school order's
   confirmation goes `to` the paying parent (Stripe's `customer_details.email`),
   with `MSF_ORDER_EMAIL` on bcc — the ordinary receipt, same as a holiday order
   (`sendProductionEmails` customer branch; brand set in `order/fulfill.ts`). The

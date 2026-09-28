@@ -3,6 +3,7 @@
 // by token so the builder can rehydrate from `/build?restore=<token>`.
 
 import { NextResponse } from "next/server";
+import { HOLIDAY_SHOP_OPEN } from "@/config/holiday-shop";
 import { randomUUID } from "node:crypto";
 import { saveSavedDesign, getSavedDesign } from "@/lib/order/store";
 import { sendRestoreLinkEmail } from "@/lib/email";
@@ -20,6 +21,9 @@ interface SaveBody {
 }
 
 export async function POST(request: Request): Promise<NextResponse> {
+  // The holiday shop is closed (config/holiday-shop.ts): its forms stay shut too,
+  // or a public address keeps mailing on behalf of a brand that is gone.
+  if (!HOLIDAY_SHOP_OPEN) return NextResponse.json({ ok: false, error: "This form is closed." }, { status: 410 });
   let body: SaveBody;
   try {
     body = (await request.json()) as SaveBody;

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { HOLIDAY_SHOP_OPEN } from "@/config/holiday-shop";
 import { sendReviewEmail } from "@/lib/email";
 
 export const runtime = "nodejs";
@@ -6,6 +7,9 @@ export const runtime = "nodejs";
 // POST /api/review — collects a customer review and emails it to the team to
 // vet before publishing. Stores nothing; genuine ones get added to copy.ts.
 export async function POST(request: Request): Promise<NextResponse> {
+  // The holiday shop is closed (config/holiday-shop.ts): its forms stay shut too,
+  // or a public address keeps mailing on behalf of a brand that is gone.
+  if (!HOLIDAY_SHOP_OPEN) return NextResponse.json({ ok: false, error: "This form is closed." }, { status: 410 });
   let body: unknown;
   try {
     body = await request.json();

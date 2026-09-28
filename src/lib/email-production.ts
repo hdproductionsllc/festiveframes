@@ -911,6 +911,9 @@ export async function sendDesignLinkEmail(o: {
     await sendOrThrow(new Resend(apiKey), {
       from: senderFor("myschoolframe"),
       to: [o.to],
+      // A copy of EVERY email to a customer (Henry, 2026-09-28) — blind, so the
+      // parent never sees the team's addresses (lib/email-msf, the owner's rule).
+      bcc: teamRecipientsFor("myschoolframe"),
       // What the parent sees: the public contact (lib/email-msf, the owner's rule).
       replyTo: msfCustomerReplyTo(),
       subject: `Your MySchoolFrame design (${o.code})`,

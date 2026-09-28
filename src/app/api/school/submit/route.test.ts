@@ -479,7 +479,9 @@ describe("POST /api/school/submit — saves the design and hands back its link",
     expect(link.replyTo).toBe("bill@myschoolframe.com");
     expect(link.attachments).toBeUndefined();
     expect(link.cc).toBeUndefined();
-    expect(link.bcc).toBeUndefined();
+    // A blind copy to the team: we keep every email a customer receives (Henry,
+    // 2026-09-28). Blind, so the parent never sees the team's address.
+    expect(link.bcc).toEqual(["bill@myschoolframe.com"]);
     expect(link.text).toContain(json.saved.url);
     expect(link.text).toContain(json.saved.code);
   });

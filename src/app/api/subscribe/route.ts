@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { HOLIDAY_SHOP_OPEN } from "@/config/holiday-shop";
 import { Resend } from "resend";
 import { sendOrThrow } from "@/lib/resend-send";
 import { recordSubscriber } from "@/lib/order/store";
@@ -50,6 +51,9 @@ async function notifyTeam(email: string): Promise<boolean> {
 }
 
 export async function POST(request: Request) {
+  // The holiday shop is closed (config/holiday-shop.ts): its forms stay shut too,
+  // or a public address keeps mailing on behalf of a brand that is gone.
+  if (!HOLIDAY_SHOP_OPEN) return NextResponse.json({ ok: false, error: "This form is closed." }, { status: 410 });
   let body: SubscribeBody;
   try {
     body = (await request.json()) as SubscribeBody;

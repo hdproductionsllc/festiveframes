@@ -62,7 +62,7 @@ unapproved or altered. See `CLAUDE.md` → "Saved school designs".
 - [ ] **Price and donation** are confirmed ($24.95, $5 to the school) — re-confirm
       nothing has changed. `src/config/offers.test.ts` fails on purpose when the
       checkout switch flips, so the decision gets written down, not slipped in.
-- [ ] **Parent confirmation email**: a paid order currently emails the parent a
+- [x] **DECIDED 2026-09-28: parents get OUR receipt (with the frame picture); the team gets a blind copy of every customer email.** Preview: `MySchoolFrame Pilot Kit/email-previews/parent-receipt.png`. Original question: **Parent confirmation email**: a paid order currently emails the parent a
       receipt (Bill on bcc). The pilot brief said "never to a parent". Keep the
       receipt, or rely on Stripe's own? (CLAUDE.md → "MySchoolFrame mail
       identity" has the one-line change either way.)
