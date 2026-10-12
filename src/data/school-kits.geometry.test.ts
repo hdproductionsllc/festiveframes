@@ -108,6 +108,8 @@ describe("a kit cannot carry a dimension", () => {
     // (an NCES/PSS id). It buys the finder and /s/<slug> one answer to "is this
     // school already authored?" and sizes, positions and re-grids nothing.
     "rosterId",
+    // The same, for a school the federal data lists as more than one campus.
+    "campusRosterIds",
   ]);
 
   for (const kit of allSchoolKits()) {

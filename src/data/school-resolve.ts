@@ -7,7 +7,7 @@ import { thinKitFromRoster } from "@/data/thin-kit";
 // One answer, in one place, for a question three callers ask (the builder page,
 // its metadata, the sample renderer). The order is the product:
 //
-//   1. AN AUTHORED KIT WINS. The 27 carry researched facts, real colours and
+//   1. AN AUTHORED KIT WINS. They carry researched facts, real colours and
 //      sometimes the school's own marks. A roster row for the same school is a
 //      worse page about the same school, so it never gets served.
 //   2. Otherwise the ROSTER, through `thinKitFromRoster` — a working builder in
@@ -41,15 +41,18 @@ function rosterIdIndex(): Map<string, string> {
   if (!authoredByRosterId) {
     authoredByRosterId = new Map();
     for (const kit of allSchoolKits()) {
-      if (kit.rosterId) authoredByRosterId.set(kit.rosterId, kit.slug);
+      for (const id of [kit.rosterId, ...(kit.campusRosterIds ?? [])]) {
+        if (id) authoredByRosterId.set(id, kit.slug);
+      }
     }
   }
   return authoredByRosterId;
 }
 
-/** The authored kit's slug for a roster row, or undefined. Three of the 27 have
- *  no roster row at all (the federal private-school extract does not list them),
- *  so this is a miss for them and they are simply unreachable by roster slug. */
+/** The authored kit's slug for a roster row (its own or a campus's), or undefined.
+ *  A few private schools have no roster row at all (the federal extract does not
+ *  list CBC, Loyola Academy, ...; school-resolve.test.ts names them), so this is a
+ *  miss for them and they are simply unreachable by roster slug. */
 export function authoredSlugForRosterId(rosterId: string): string | undefined {
   return rosterIdIndex().get(rosterId);
 }
