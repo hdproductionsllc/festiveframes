@@ -61,8 +61,9 @@ colours + marks; it only needs opening.
       KNIGHTS WEBSTER HOUNDS FLYERS BOMBERS RAVENS WARRIOR JAGUARS PANTHER TIGERS
       PIRATES VIKINGS — 19 x 3 tries x $0.039 (gemini-2.5-flash-image) = ~$2.25
 - [x] Verify: full test suite, kit-sample renders, phone browser check, finder
-- [ ] Adversarial review (code, facts x2, visual) -> polish pass
-- [ ] One push to master; CLAUDE.md + memory updated
+- [x] Adversarial review (code, facts x2, visual) -> polish pass
+- [x] One push to master (f93bcfa, with Chicagoland's 874642c); live 2026-10-12;
+      CLAUDE.md + memory updated
 
 ---
 

@@ -231,20 +231,20 @@ const KITS: SchoolKit[] = [
     welcome: {
       headline: "Jr. Bills, this one's for the back of the car.",
       message: [
-        "SLUH families have worn the blue since 1818. From soccer in November to racquetball season, the Blue Crew shows up loud.",
+        "SLUH has been part of St. Louis since 1818. From soccer in November to racquetball season, the Blue Crew shows up loud.",
         "This frame is your student's. Their sport or club on the badges, their class year on the banner, all in SLUH blue.",
       ],
       chips: [
         "Soccer",
         "Racquetball",
-        "Water polo",
+        "Water Polo",
         "Rugby",
-        "Swim & dive",
+        "Swim & Dive",
         "Volleyball",
         "Band",
         "Robotics",
         "Theater",
-        "Honor roll",
+        "Honor Roll",
       ],
       ordering:
         "SLUH families: design your frame and send it in, and we'll follow up with ordering details. A set donation from every frame goes back to SLUH.",
@@ -409,7 +409,7 @@ const KITS: SchoolKit[] = [
     welcome: {
       headline: "Welcome, Red Devil families.",
       message: [
-        "Chaminade won its first state basketball title in 2009, and the Red Devils also field a club hockey team in the Mid-States league.",
+        "Chaminade basketball has won state titles in 2009 and 2016, and the Red Devils also field a club hockey team in the Mid-States league.",
         "You can add the things your student does as badges and their class year to the banner, all in cardinal and white.",
       ],
       chips: ["Basketball", "Lacrosse", "Hockey", "Journalism"],
@@ -530,13 +530,13 @@ const KITS: SchoolKit[] = [
     city: "Affton, MO",
     colors: { frame: "#E10719", tileField: "#E10719", rim: "#710D28" },
     banners: { top: "COR JESU ACADEMY", bottom: "CHARGERS", text: "#FFFFFF" },
-    signature: ["hs:racquetball", "hs:field-hockey", "hs:swim-dive", "hs:soccer-patch"],
+    signature: ["hs:soccer-patch", "hs:field-hockey", "hs:swim-dive", "hs:racquetball"],
     // Welcome facts (2026-10-11), each sourced in MySchoolFrame Pilot Kit/
     // school-brand/cor-jesu-academy-chargers/sources.md; anything unsourced was dropped.
     welcome: {
       headline: "Welcome, Charger families.",
       message: [
-        "Cor Jesu racquetball has won four national championships, and every January the Chargers and SJA hold Funderwear, collecting undergarments for St. Patrick Center.",
+        "Cor Jesu soccer won its third straight state title in 2026 without losing a game, and every January the Chargers and SJA hold Funderwear, collecting undergarments for St. Patrick Center.",
         "You can add the things your student does as badges and their class year to the banner, all in red and white.",
       ],
       chips: ["Racquetball", "Field Hockey", "Swim & Dive", "Soccer", "Volleyball", "Lacrosse", "Basketball", "Choir"],
@@ -773,14 +773,15 @@ const KITS: SchoolKit[] = [
     // conformed to 924x467). Read letter by letter; letter PITCH measured even.
     plate: { state: "MO", src: "/plates/missouri-colts-centered.jpg" },
     signature: ["hs:swim-dive", "hs:debate", "hs:soccer-patch", "hs:journalism"],
-    // Welcome facts (voice pass 2026-09-23), each sourced: established 1954, the
-    // first high school built in the new Parkway district (Wikipedia "Parkway Central
-    // High School"; alumni.parkwayschools.net History of Parkway); red, black and
-    // white are the named colours (Wikipedia, MaxPreps; see colorSource).
+    // Welcome facts, each sourced: the district's original high school (the district
+    // was formed in 1954, alumni.parkwayschools.net History of Parkway; the school's
+    // own athletics history says "established in 1961" — "founded in 1954" was the
+    // DISTRICT's date, corrected 2026-10-12); red, black and white are the named
+    // colours (Wikipedia, MaxPreps; see colorSource).
     welcome: {
       headline: "Welcome, Colt families.",
       message: [
-        "Parkway Central was founded in 1954 as the first high school built in the Parkway district, and its colors are red, black and white.",
+        "Parkway Central is the Parkway district's original high school, and its colors are red, black and white.",
         "You can add the things your student does as badges and their class year to the banner, all in Colt red.",
       ],
       chips: ["Swim & Dive", "Speech & Debate", "Scholar Bowl", "Soccer", "Water Polo", "Basketball", "Service"],
@@ -812,8 +813,8 @@ const KITS: SchoolKit[] = [
     signature: ["hs:volleyball-patch", "hs:marching-band", "hs:softball-patch", "hs:cross-country"],
     // Welcome facts (voice pass 2026-09-23), each sourced: the Lancer Regiment is the
     // marching band (lhs.band; Wikipedia); volleyball won six straight state titles
-    // 2011-2016 and its ninth in 2024 (St. Louis American; stltoday 2024 Class 5
-    // final); the 2024 Class 5 softball title on a walk-off home run (SI high
+    // 2011-2016 and four more 2022-2025, ten in all (St. Louis American; West
+    // Newsmagazine "Lancers take 10th state girls volleyball title", 2025-11); the 2024 Class 5 softball title on a walk-off home run (SI high
     // school; stltoday 2024-11-01; West Newsmagazine);
     // the Mayor's Bowl with Marquette every fall (lancerfeed.press 2024; MSHSAA
     // 8/25/2023 — its week varies, so no "finale" claim); the Battle of 109 with Eureka (SI; Wikipedia Suburban Conference).
@@ -822,7 +823,7 @@ const KITS: SchoolKit[] = [
     welcome: {
       headline: "Welcome, Lancer families.",
       message: [
-        "The Lancer Regiment is Lafayette's marching band. The volleyball team won six straight state titles from 2011 to 2016 and its ninth in 2024, the softball team won the 2024 Class 5 state title on a walk-off home run, and every fall the Lancers meet Marquette in the Mayor's Bowl and Eureka in the Battle of 109.",
+        "The Lancer Regiment is Lafayette's marching band. The volleyball team has won ten state titles, six straight from 2011 to 2016 and four more in a row from 2022 to 2025, the softball team won the 2024 Class 5 state title on a walk-off home run, and every fall the Lancers meet Marquette in the Mayor's Bowl and Eureka in the Battle of 109.",
         "You can add the things your student does as badges and their class year to the banner.",
       ],
       chips: ["Volleyball", "Marching Band", "Softball", "Cross Country", "Wrestling", "Field Hockey", "Water Polo", "Service"],
@@ -861,12 +862,15 @@ const KITS: SchoolKit[] = [
     // the Battle of 109 with Lafayette (SI; Wikipedia Suburban Conference); first
     // volleyball state title 2018 (West Newsmagazine 2018-11-13); first girls cross
     // country title 2024 (MileSplit / SI 2024 Class 5); girls lacrosse state titles
-    // 2024 and 2026 (Metro Sports STL 2024-05-28; stltoday 2026). The "more than 500
+    // 2024 (Metro Sports STL 2024-05-28; the 2026 title rests on a paywalled
+    // All-Metro snippet, so it waits for a readable final report). "Opened in 1908"
+    // was Wikipedia's; the district formed in 1908 and the building came in 1909
+    // (rsdmo.org history), so the copy says "dates to". The "more than 500
     // music students" line was dropped: no source could be found for it.
     welcome: {
       headline: "Welcome, Wildcat families.",
       message: [
-        "Eureka opened in 1908 as the first high school in what became the Rockwood School District, and its game with Lafayette is known as the Battle of 109. The volleyball team won its first state title in 2018, the girls cross country team won its first in 2024, and girls lacrosse won state titles in 2024 and 2026.",
+        "Eureka High School dates to 1908 and is the oldest high school in what became the Rockwood School District, and its game with Lafayette is known as the Battle of 109. The volleyball team won its first state title in 2018, the girls cross country team won its first in 2024, and girls lacrosse won the state title in 2024.",
         "You can add the things your student does as badges and their class year to the banner, all in purple and gold.",
       ],
       chips: ["Volleyball", "Marching Band", "Orchestra", "Choir", "Jazz Band", "Color Guard", "Cross Country", "Lacrosse", "Football"],
@@ -970,7 +974,7 @@ const KITS: SchoolKit[] = [
     welcome: {
       headline: "Welcome, Raven families.",
       message: [
-        "Priory opened in 1956, started by Benedictine monks from Ampleforth Abbey in England. Its soccer teams won state titles in 2005 and 2011 without losing a game, and the hockey team has won the Wickenheiser Cup four times.",
+        "Priory opened in 1956, started by Benedictine monks from Ampleforth Abbey in England. Its soccer team has won three state titles, in 2005, 2011 and 2017, the first two without losing a game, and the hockey team has won the Wickenheiser Cup four times.",
         "You can add the things your student does as badges and their class year to the banner, all in the colors of the Priory crest.",
       ],
       chips: ["Soccer", "Hockey", "Golf", "Lacrosse", "Robotics", "Journalism", "Yearbook"],
@@ -1034,7 +1038,7 @@ const KITS: SchoolKit[] = [
     welcome: {
       headline: "Welcome, Jaguar families.",
       message: [
-        "Fort Zumwalt West's girls soccer team won the school's first state title in 2007, and the dance team, first at the UDA national championship in 2009, took silver in hip hop in 2016.",
+        "Fort Zumwalt West's girls soccer team won the school's first state title in 2007, and the dance team, which first competed at the UDA national championship in 2009, brought home a silver medal in hip hop in 2016.",
         "You can add the things your student does as badges and their class year to the banner, all in purple, silver and black.",
       ],
       chips: ["Dance", "Soccer", "Marching Band", "Football", "Wrestling", "Basketball", "Baseball"],
@@ -1066,7 +1070,7 @@ const KITS: SchoolKit[] = [
     welcome: {
       headline: "Welcome, Panther families.",
       message: [
-        "Every Mehlville senior gets a paw print to paint on the path to Jack Jordan Stadium, and the Green Pit student section is there to cheer the Panthers on.",
+        "Mehlville football won the 1999 state championship, beating Rockhurst in the final, and the Panthers play their home games at Jack Jordan Stadium.",
         "You can add the things your student does as badges and their class year to the banner, all in green, white and black.",
       ],
       chips: ["Football", "Journalism", "Wrestling", "Theatre", "Basketball", "Soccer", "Track"],

@@ -799,6 +799,19 @@ function rimLift(hex: string): number {
  */
 const MERROW_MIN_CONTRAST = 0.25;
 
+/** The neutral thread for a school none of whose colours can outline its type. The
+ *  same silver the Chicagoland kits name as their rim when that is the case. */
+export const NEUTRAL_THREAD = "#A7A9AC";
+
+/** How coloured a colour is: 0 for white, grey and black, 1 for a pure hue. */
+function chroma(hex: string): number {
+  const h = hex.replace("#", "");
+  if (h.length !== 6) return 0;
+  const ch = [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16));
+  const max = Math.max(...ch);
+  return max === 0 ? 0 : (max - Math.min(...ch)) / max;
+}
+
 /**
  * The thread colour for the merrow border round banner lettering — the
  * letterman-jacket outline. The school's rim colour substitutes for the gold, on
@@ -841,6 +854,20 @@ export function merrowThread(
 
   const override = stop(rimRamp(rimColor));
   if (reads(override)) return override;
+  const away = lumText > 0.5 ? -1 : 1;
+  // THE RIM ITSELF, a few shades away from the type. A school's own gold is often
+  // printed brighter than white lettering can be outlined with (Eureka's #FFCC00
+  // sits 0.21 from white type), and dropping it fell to a SECOND, different gold
+  // (the brass) beside the school's gold badge rims, or to a near-black keyline on
+  // a "green and gold" school. The same gold a little deeper is still the
+  // school's gold. Only a CHROMATIC rim: a white rim taken deeper is just grey, and
+  // a grey is the silver step below. Capped where a gold starts to read as olive.
+  if (rimColor && chroma(rimColor) >= 0.2) {
+    for (let t = 0.05; t <= 0.45; t += 0.05) {
+      const shade = shift(rimColor, away * t);
+      if (reads(shade)) return shade;
+    }
+  }
   // THE SCHOOL'S OWN COLOUR before the brass. A school frame whose rim fails
   // falling straight to gold put gold lettering outlines on Ladue (blue and white)
   // and Parkway Central (red, black and white), neither of which has any gold —
@@ -848,14 +875,20 @@ export function merrowThread(
   // the type), is still that school's colour and reads as a dark keyline: the
   // shallowest shade that clears both gaps wins, so as much of the hue survives as
   // the rule allows. Only when the school supplied a rim: a frame with none keeps
-  // the brass it was designed with. Where no shade can clear both (SLUH's navy is
-  // too dark to go darker by 0.25) the brass is still the answer.
+  // the brass it was designed with.
   if (rimColor && fieldColour) {
-    const away = lumText > 0.5 ? -1 : 1;
     for (let t = 0.4; t <= 0.95; t += 0.05) {
       const shade = shift(fieldColour, away * t);
       if (reads(shade)) return shade;
     }
+  }
+  // NEUTRAL SILVER before the brass. Where no shade of the banner can clear both
+  // (SLUH's navy is too dark to go darker by 0.25; Kirkwood's, Parkway Central's
+  // and Cor Jesu's reds likewise) the brass put gold outlines on four schools with
+  // no gold in them — the Ladue defect again. Silver claims no school colour.
+  if (rimColor) {
+    const silver = stop(rimRamp(NEUTRAL_THREAD));
+    if (reads(silver)) return silver;
   }
   const brass = stop(BRASS);
   if (reads(brass)) return brass;

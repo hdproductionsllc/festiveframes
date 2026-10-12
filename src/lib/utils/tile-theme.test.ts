@@ -8,6 +8,7 @@ import {
   cornerRadii,
   TILE_BG,
   BRASS,
+  NEUTRAL_THREAD,
   luminance,
   tileBackground,
   bevelMetrics,
@@ -458,10 +459,12 @@ describe("the rim override reaches the lettering, not only the edge", () => {
     // SLUH's rim is #FFFFFF and its banner type is #FFFFFF, so the "thread" came
     // out white on white — not an outline, just 7.5% of an em of extra weight on
     // every glyph. That is what "the bottom banner font is too fat" was, and the
-    // print path never had it because it passed no rim and kept the brass.
-    expect(merrowThread("#FFFFFF", "#FFFFFF")).toBe(BRASS.mid);
+    // print path never had it because it passed no rim and kept the brass. A
+    // school rim that fails falls to neutral silver (see "never a gold the school
+    // does not have" below).
+    expect(merrowThread("#FFFFFF", "#FFFFFF")).toBe(NEUTRAL_THREAD);
     // A pale silver on white type is the same defect, one shade gentler.
-    expect(merrowThread("#FFFFFF", "#D9DCE1")).toBe(BRASS.mid);
+    expect(merrowThread("#FFFFFF", "#D9DCE1")).toBe(NEUTRAL_THREAD);
     // ...and dark type on the same rim is fine, so the guard must not fire there.
     expect(merrowThread("#111111", "#FFFFFF")).toBe(rimRamp("#FFFFFF").light);
   });
@@ -630,8 +633,8 @@ describe("merrowThread reads against the FIELD as well as the type", () => {
     expect(merrowThread(WHITE, red, navy)).not.toBe(red);
   });
 
-  it("falls back to brass, which reads on both", () => {
-    expect(merrowThread(WHITE, "#C8102E", "#002D62")).toBe(BRASS.mid);
+  it("falls back to neutral silver, which reads on both", () => {
+    expect(merrowThread(WHITE, "#C8102E", "#002D62")).toBe(NEUTRAL_THREAD);
   });
 
   it("leaves a rim that already reads exactly as it was", () => {
@@ -648,8 +651,8 @@ describe("merrowThread reads against the FIELD as well as the type", () => {
   });
 
   it("still guards the type, with or without a field", () => {
-    // SLUH: white rim, white type — the original defect, unchanged.
-    expect(merrowThread(WHITE, "#FFFFFF", "#183B67")).toBe(BRASS.mid);
+    // SLUH: white rim, white type — the original defect, still refused.
+    expect(merrowThread(WHITE, "#FFFFFF", "#183B67")).not.toBe("#FFFFFF");
   });
 });
 
@@ -672,9 +675,33 @@ describe("merrowThread prefers a deep shade of the school's own colour to brass"
     expect(b).toBeGreaterThan(r);
   });
 
-  it("still falls back to brass where no shade of the field can clear both gaps", () => {
-    // SLUH's navy is too dark to go 0.25 darker: brass, exactly as shipped.
-    expect(merrowThread(WHITE, "#FFFFFF", "#183B67")).toBe(BRASS.mid);
+  it("falls back to neutral silver, never brass, where no shade of the field can clear both gaps", () => {
+    // SLUH's navy is too dark to go 0.25 darker. It shipped brass, a gold SLUH
+    // does not have; so did Kirkwood, Parkway Central and Cor Jesu (2026-10-12).
+    expect(merrowThread(WHITE, "#FFFFFF", "#183B67")).toBe(NEUTRAL_THREAD); // SLUH
+    expect(merrowThread(WHITE, "#FFFFFF", "#BF1D3B")).toBe(NEUTRAL_THREAD); // Kirkwood
+    expect(merrowThread(WHITE, "#710D28", "#E10719")).toBe(NEUTRAL_THREAD); // Cor Jesu
+  });
+
+  it("keeps a school's own gold, a few shades deeper, when it is too pale to outline", () => {
+    // Eureka's #FFCC00 sits 0.21 from white type. It fell to the brass, a second
+    // gold beside its own gold badge rims; Burroughs' and Lindbergh's fell to a
+    // near-black keyline on a "blue and gold" and a "green and gold" school.
+    for (const [rim, field] of [
+      ["#FFCC00", "#462E8D"], // Eureka
+      ["#FFC240", "#005B8F"], // Burroughs
+      ["#FFD004", "#026637"], // Lindbergh
+    ] as const) {
+      const thread = merrowThread(WHITE, rim, field);
+      expect(Math.abs(luminance(thread) - luminance(WHITE))).toBeGreaterThanOrEqual(0.25);
+      expect(Math.abs(luminance(thread) - luminance(field))).toBeGreaterThanOrEqual(0.25);
+      // Still that gold: the same hue order, red over green over blue...
+      const [r, g, b] = [1, 3, 5].map((i) => parseInt(thread.slice(i, i + 2), 16));
+      expect(r).toBeGreaterThan(g);
+      expect(g).toBeGreaterThan(b);
+      // ...and not the brass.
+      expect(thread).not.toBe(BRASS.mid);
+    }
   });
 
   it("never replaces the brass on a frame that supplied no rim", () => {

@@ -476,6 +476,14 @@ error of 49/255 where the real figure was under 1/255.
   weakest in the catalogue; a kit-level rim change is the fix if the owner wants it.
   Do not move `MERROW_MIN_CONTRAST` to catch it: 0.25 is what every currently-good
   school clears, and raising it restyles schools that look right.
+- **The fallback ladder, and no school gets a gold it does not have (2026-10-12).**
+  When a kit's rim fails: (1) the rim itself a few shades away from the type, if it
+  is a real colour (a too-pale gold stays that school's gold); (2) a deep shade of
+  the banner (Ladue's navy keyline); (3) neutral silver `NEUTRAL_THREAD`; brass only
+  for a frame that supplied no rim. Brass had been outlining SLUH, Kirkwood, Parkway
+  Central and Cor Jesu while every test passed, because the rule's tests pinned
+  sample colours that had gone stale. `school-kits.thread.test.ts` asks the REAL
+  kits; `school-kits.copy.test.ts` holds every kit (both metros) to one copy bar.
 
 ## School colours: what this environment can and cannot get (tested 2026-09-12)
 
