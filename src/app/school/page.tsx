@@ -168,11 +168,14 @@ const STEPS = [
   },
 ];
 
-// "Is my school on it?" names the pilot schools from the same list the finder
-// offers, so the answer cannot drift from what the finder actually shows.
+// "Is my school on it?" counts the pilot schools from the same list the finder
+// offers, so the answer cannot drift from what the finder actually shows. A short
+// list is named in full; 28 names in one sentence is a wall nobody reads, and the
+// finder right above it answers the question faster.
 const PILOT_NAMES = (() => {
   const names = pilotSchoolKits().map((k) => k.shortName);
-  return `${names.length === 6 ? "six" : names.length} St. Louis-area schools: ${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+  if (names.length > 8) return `${names.length} St. Louis-area schools`;
+  return `${COUNT_WORDS[names.length] ?? names.length} St. Louis-area schools: ${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
 })();
 
 const ANSWERS = [
@@ -260,7 +263,7 @@ const ANSWERS = [
   },
 ];
 
-// The pilot six (data/school-pilot.ts), or every authored kit once the national
+// The St. Louis pilot (data/school-pilot.ts), or every authored kit once the national
 // search reopens. Demo kits are included: a demo page is exactly what a parent
 // from that school should land on, and `noindex` keeps it out of search.
 const FIND_SCHOOLS = finderSchools();

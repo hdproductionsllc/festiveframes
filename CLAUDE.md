@@ -372,10 +372,11 @@ error of 49/255 where the real figure was under 1/255.
   authored kit → roster row (a generated **thin kit**) → `notFound()`. A roster
   slug whose school already has an authored kit **redirects** to the authored slug
   — the join is `rosterId` on the kit (NCES/PSS id), not a name match at runtime.
-  **24 of the 27 are joined**; CBC, Nerinx Hall and John Burroughs are not in the
+  CBC, Nerinx Hall, John Burroughs, Loyola Academy and Carmel Catholic are not in the
   federal private extract at all, so they are simply not reachable by a second URL
-  (`school-resolve.test.ts` names all three, so a rebuild that adds them fails
-  loudly rather than half-joining).
+  (`school-resolve.test.ts` names them, so a rebuild that adds them fails loudly
+  rather than half-joining). A school the data lists twice (New Trier's freshman
+  campus) joins both rows via `campusRosterIds`.
 - **The roster is SERVER ONLY and slugs are derived, not stored.** `data/roster.ts`
   reads the file once per process and builds an inverted index (warm query 0.01–0.6 ms
   over 29,467 rows; index build ~230 ms). `rosterSlug` is the ONLY implementation of
@@ -426,6 +427,30 @@ error of 49/255 where the real figure was under 1/255.
   "cbc-cadets has non-appearance field(s): widthInches" (verified by doing it).
 - So the answer to "update one builder" is: change the variant, not 27 kits. There
   is no per-school geometry to forget.
+
+## Chicagoland: the second metro (2026-10-11)
+
+- **30 authored kits in `src/data/kits/chicagoland.ts`** (North Shore first, then
+  the north/northwest/west suburbs and the city's Catholic schools), spread into
+  KITS at the end of school-kits.ts. All `demo`, NONE in the pilot list, so every
+  one shows SchoolNotReady until Henry opens it. `chicagoland.test.ts` holds them to
+  the pilot bar (chips build SHOWN badges, an arts/academic chip, no price, no
+  outside org's name, IL plate state).
+- **Colours are measured** from each school's own logo (fetched 2026-10-11; curl
+  works from Henry's machine, unlike the old sandbox) and cross-checked against the
+  site's theme CSS. Where no school colour can outline white lettering
+  (`merrowThread`), the rim is neutral silver `#A7A9AC`, not the brass fallback.
+- **The adversarial fact-check earned its cost**: about 15 welcome claims were
+  wrong, stale or Wikipedia-only (a "back-to-back" that was one title, counts that
+  moved since Wikipedia, a "regional Emmy" that was a student award). Treat
+  Wikipedia title counts as a lead, and confirm them against IHSA's own
+  `ihsa.org/data/<sport>/records` tables.
+- **Illinois plate**: the registration sticker sits on the upper-right corner of the
+  REAR plate and must be "clearly visible at all times" (625 ILCS 5/3-413). The
+  frame may cover it; unmeasured. Decision and options: tasks/chicagoland-outreach.md.
+  IL previews show a drawn plate; there is no IL stock photo yet.
+- Outreach ranking and doors: tasks/chicagoland-outreach.md. Volunteers' NAMES are
+  kept out of git, in `MySchoolFrame Pilot Kit/chicagoland-contacts.md`.
 
 ## Fonts in the node render — register them or the render lies
 
@@ -565,10 +590,10 @@ error of 49/255 where the real figure was under 1/255.
 
 ## The six-school pilot pass (2026-09-23) — rules it added
 
-- **Scope is the pilot six** (`data/school-pilot.ts`): marquette-mustangs,
-  eureka-wildcats, lafayette-lancers, parkway-west-longhorns, parkway-central-colts,
-  ladue-rams. Any other `/s/<slug>` shows `SchoolNotReady` (request form prefilled)
-  while `SCHOOL_FINDER_SCOPE` is "pilot". No national-coverage claims anywhere.
+- **Scope was the pilot six** (`data/school-pilot.ts`) — since 2026-10-11 it is all
+  28 St. Louis kits; see "The St. Louis push" below. Any other `/s/<slug>` shows
+  `SchoolNotReady` (request form prefilled) while `SCHOOL_FINDER_SCOPE` is "pilot".
+  No national-coverage claims anywhere.
 - **EVERY BADGE IS SQUARE, uploads included.** `FrameConfig.badgeShape: "square"`
   on every school config; `canPlace` refuses a non-square or under-floor footprint
   with reason `"shape"`, and every path that picks a size asks `squareSpansAt`
@@ -940,3 +965,46 @@ case the repair was written for. Put repairs in `merge`, and make them return th
 - **Deferred on purpose**: "My Students" page + "Continue with email" access
   (magic link, like staff sign-in); lifecycle emails (opted-in customers only);
   add-on products; `/schools/...` URLs (QR codes are printed with /s and /q).
+
+## The St. Louis push (2026-10-11) — all 28 St. Louis builders open
+
+- **`PILOT_SCHOOL_SLUGS` is every authored Missouri kit** (pilot six first, then
+  catalogue order). `school-pilot.test.ts` fails if a St. Louis kit is left off;
+  other metros (`data/kits/chicagoland.ts`, authored by a parallel session the same
+  day) stay closed until the owner opens them. Every test that iterates the pilot
+  (chips, presets, chrome contrast, QR sync, plates) now holds all 28 to the pilot
+  six's standard — that is the point; do not narrow a test to make a school pass.
+- **The pipeline per school, now a recipe** (repeat it for any metro):
+  1. Download the school's own logo into `MySchoolFrame Pilot Kit/school-brand/<slug>/`,
+     with `sources.md` (download URL + page found on) and `kit-proposal.json`.
+  2. `npx vite-node scripts/make-kit-mascot.ts <logo> <out.png>` — the app's
+     adaptive keyer, trim, 1024 square with a 5% margin. REFUSES art under the 595 px
+     print gate unless `--screen-only` (then record in colorSource that a vector is owed).
+  3. A mark filled with its own field colour gets a white card
+     (`scripts/card-mark.mjs`) — NEVER recolour a school's mark (a researcher
+     re-inked Cor Jesu's red letters white; rejected, file kept as
+     `badge-mascot-reinked-REJECTED.png`).
+  4. `node scripts/sample-brand-colors.mjs --slug <slug> <logo>`; check the rim with
+     the real `merrowThread`; check the badge-enamel margin
+     (`high-school.light.test.ts` wants |log(ivory/navy contrast)| > 0.2).
+  5. Welcome in the pilot voice, every fact sourced in sources.md; chips must
+     resolve (`chipPiece`) and include one Arts or Academics chip.
+  6. Look at every mascot on its field at 300 px and ~1 inch before it ships.
+- **Held mascots** (kit carries NO `marks`): **Francis Howell** — its Viking head is
+  the Minnesota Vikings "Norseman" recoloured; **Incarnate Word** — no usable Red
+  Knight art exists online. Trademark lookalikes are the recurring risk (Oakville's
+  MaxPreps tiger is the Mizzou logo; the shipped Oakville medallion is the school's
+  own). Many marks are crests/seals or letters because no mascot art exists (De
+  Smet, Chaminade, SJA, Nerinx, Priory, CBC, JBS, FZ West).
+- **Colour calls made on purpose**: Webster's frame is BLACK with an orange rim
+  (its orange WG vanishes on orange); Chaminade takes its seal red one step deeper
+  (#D62A1F) so white type clears AA and the enamel choice is stable — both are said
+  in `colorSource`.
+- **Low-res marks** (fine on screen, need the school's vector before a print run):
+  Clayton, Lindbergh, Burroughs, Whitfield, Vianney, Mehlville, Oakville, Kirkwood.
+- **The finder is a menu only when the list fits** (`menu` in FindMySchool: 8 rows);
+  28 schools is a search. Listing the first 8 under "Tap your school" hid the rest.
+- **QR cards**: `node scripts/pilot-qr.mjs` writes all 28 to `Pilot Kit/qr-tracked`.
+- **Vanity plates**: kits without one fall back to the blurred stock plate and the
+  plate test names them; plate words are in tasks/todo.md.
+

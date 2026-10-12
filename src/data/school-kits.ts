@@ -4,6 +4,7 @@ import { WITHHELD_ART } from "@/data/sets/high-school";
 import { fitBanner } from "@/data/thin-kit";
 import { DEFAULT_BOTTOM_BAR } from "@/lib/constants/defaults";
 import { SCHOOL_HEADLINE_FONT, SCHOOL_TAGLINE_FONT } from "@/lib/constants/defaults";
+import { CHICAGOLAND_KITS } from "@/data/kits/chicagoland";
 
 // ─── Per-school builder kits ─────────────────────────────────────────────────
 //
@@ -48,6 +49,13 @@ export interface SchoolKit {
    * be matched by hand; the kit still works, it is just reachable under two URLs.
    */
   rosterId?: string;
+  /**
+   * Further roster rows that are the SAME school — a campus the federal data lists
+   * separately (New Trier's Northfield freshman campus). They join exactly like
+   * `rosterId`: their roster slugs redirect here and the finder hides them, so a
+   * parent never lands on a second, thinner page for one school.
+   */
+  campusRosterIds?: readonly string[];
   schoolName: string;
   /** What banners and copy call it — "Kirkwood", not the full legal name. */
   shortName: string;
@@ -164,21 +172,37 @@ const KITS: SchoolKit[] = [
     shortName: "Kirkwood",
     mascot: "Pioneers",
     city: "Kirkwood, MO",
-    colors: { frame: "#7A0E1F", tileField: "#7A0E1F", rim: "#FFFFFF" },
+    colors: { frame: "#BF1D3B", tileField: "#BF1D3B", rim: "#FFFFFF" },
     banners: { top: "KIRKWOOD HIGH SCHOOL", bottom: "PIONEERS", text: "#FFFFFF" },
     // "PIONEERS" vanity mockup, generated from the SLUH plate photo via Gemini
     // image editing (scripts/gen-plate.mjs) so every school's plate is the same
     // photograph with new embossing. Conformed to the same 924x467 framing the
     // plate-images.ts scale is tuned against.
     plate: { state: "MO", src: "/plates/missouri-pioneers-centered.jpg" },
-    // PARTLY RESEARCHED — needs a second pass. Only football (the Turkey Day game
-    // against Webster Groves, and the Frisco Bell) and the Kirkwood Call are
-    // sourced. The last two are deliberately NON-CLAIMING: honor roll and service
-    // are true of every school, so they assert nothing about Kirkwood we have not
-    // checked. Do not "improve" them by guessing at programmes.
-    signature: ["hs:football-patch", "hs:journalism", "hs:honor-star", "hs:service"],
+    // Second pass 2026-10-11: football (Turkey Day, the Frisco Bell), the Kirkwood
+    // Call and the yearbook are sourced; service stays as the one non-claiming badge.
+    signature: ["hs:football-patch", "hs:journalism", "hs:yearbook", "hs:service"],
+    // Welcome facts (2026-10-11), each sourced in MySchoolFrame Pilot Kit/
+    // school-brand/kirkwood-pioneers/sources.md; anything unsourced was dropped.
+    welcome: {
+      headline: "Welcome, Pioneer families.",
+      message: [
+        "On Thanksgiving the Pioneers play Webster Groves for the Frisco Bell, a rivalry that began in 1907, and The Kirkwood Call has won national Pacemaker awards.",
+        "You can add the things your student does as badges and their class year to the banner, all in red and white.",
+      ],
+      chips: ["Football", "Journalism", "Yearbook"],
+      ordering:
+        "When you're happy with your frame, send it to us and we'll follow up with ordering details. A set donation from every frame goes back to Kirkwood.",
+    },
+    // Official mark from the school's own artwork (sources: MySchoolFrame Pilot
+    // Kit/school-brand/kirkwood-pioneers/sources.md). Owner's call, 2026-10-11: live on the
+    // St. Louis builders for Bill's demos; taken down the day the school objects.
+    marks: {
+      crest: "/kits/kirkwood-pioneers/mascot.png",
+      badges: [{ key: "mascot", name: "Pioneers", artworkUrl: "/kits/kirkwood-pioneers/mascot.png", emoji: "🧭", field: "navy" }],
+    },
     status: "demo",
-    colorSource: "red/white per MSHSAA + athletics site; shade approx (#C8102E family, deepened for the frame body) — confirm with KHS before print",
+    colorSource: "MEASURED from the school's own seal and athletics K (khs.kirkwoodschools.org, KirkwoodHighSchoolPrimaryLogoImage.png + KHSPioneerAthleticsfavicon.png): red #BF1D3B (51.3% of the seal; the K reads #C62737), with white. The website's #C8102E is the Kirkwood district default and agrees in hue. Raster sources under 300 px; get the vector before a print run.",
   },
   {
     slug: "sluh-jr-bills",
@@ -282,13 +306,30 @@ const KITS: SchoolKit[] = [
     banners: { top: "MICDS", bottom: "RAMS", text: "#FFFFFF" },
     // "RAMS" vanity mockup from the per-school plate pipeline (scripts/gen-plate.mjs).
     plate: { state: "MO", src: "/plates/missouri-rams-centered.jpg" },
-    // PARTLY RESEARCHED — needs a second pass. Lacrosse and football are sourced
-    // only INDIRECTLY, through other schools' records (the 2025 MSLA Class 2 final
-    // against CBC; the 2018 football final against Ladue). The last two are
-    // deliberately non-claiming, as with Kirkwood.
-    signature: ["hs:lacrosse", "hs:football-patch", "hs:honor-star", "hs:service"],
+    // Second pass 2026-10-11: all four sourced (sources.md) — lacrosse's state
+    // titles, the 2026 Class 5 basketball title, field hockey and football.
+    signature: ["hs:lacrosse", "hs:basketball-patch", "hs:field-hockey", "hs:football-patch"],
+    // Welcome facts (2026-10-11), each sourced in MySchoolFrame Pilot Kit/
+    // school-brand/micds-rams/sources.md; anything unsourced was dropped.
+    welcome: {
+      headline: "Welcome, Ram families.",
+      message: [
+        "MICDS boys lacrosse has won 14 state championships, and in 2026 the boys basketball team won the Class 5 state title.",
+        "You can add the things your student does as badges and their class year to the banner, all in MICDS green.",
+      ],
+      chips: ["Lacrosse", "Basketball", "Field Hockey", "Football", "Track", "Robotics"],
+      ordering:
+        "When you're happy with your frame, send it to us and we'll follow up with ordering details. A set donation from every frame goes back to MICDS.",
+    },
+    // Official mark from the school's own artwork (sources: MySchoolFrame Pilot
+    // Kit/school-brand/micds-rams/sources.md). Owner's call, 2026-10-11: live on the
+    // St. Louis builders for Bill's demos; taken down the day the school objects.
+    marks: {
+      crest: "/kits/micds-rams/mascot.png",
+      badges: [{ key: "mascot", name: "Rams", artworkUrl: "/kits/micds-rams/mascot.png", emoji: "🐏", field: "navy" }],
+    },
     status: "demo",
-    colorSource: "OFFICIAL — MICDS Color Palette PDF (red #D12229, forest green #04463D, warm gray #BCBBB6). Demo until brand office authorizes use.",
+    colorSource: "MEASURED from the school's own ram (micds.org, micds-ram.png): maroon #580F20 (63.1%), warm gray #BCBBB7 (17.2%); the school's site stylesheet carries red #D22229, forest green #04463D, maroon #581021 and warm gray #BCBBB6, matching the MICDS colour palette. Cardinal red and forest green are the school colours (Wikipedia). Get the vector ram from the brand kit before a print run.",
   },
   {
     slug: "cbc-cadets",
@@ -296,21 +337,30 @@ const KITS: SchoolKit[] = [
     shortName: "CBC",
     mascot: "Cadets",
     city: "Town and Country, MO",
-    colors: { frame: "#5B2B82", tileField: "#5B2B82", rim: "#C5B358" },
+    colors: { frame: "#4E2683", tileField: "#4E2683", rim: "#C6B683" },
     banners: { top: "CBC HIGH SCHOOL", bottom: "CADETS", text: "#FFFFFF" },
-    signature: ["hs:football-patch", "hs:basketball-patch", "hs:lacrosse", "hs:wrestling"],
+    signature: ["hs:soccer-patch", "hs:football-patch", "hs:lacrosse", "hs:basketball-patch"],
+    // Welcome facts (2026-10-11), each sourced in MySchoolFrame Pilot Kit/
+    // school-brand/cbc-cadets/sources.md; anything unsourced was dropped.
     welcome: {
-      headline: "For the families who fill the purple side of the stands.",
+      headline: "Welcome, Cadet families.",
       message: [
-        "Every Cadet family knows the rhythm — fall Fridays under the lights, a winter that belongs to the gym and the wrestling room, and a spring where half the school is on a field somewhere because nobody gets cut.",
-        "This frame is your student's. Their sport or their club on the badges, their class year on the banner, all in purple and gold.",
+        "CBC soccer is in the Missouri Sports Hall of Fame, and Cadet football has won Class 6 state titles.",
+        "You can add the things your student does as badges and their class year to the banner, all in purple and Vegas gold.",
       ],
-      chips: ["Football", "Basketball", "Wrestling", "Lacrosse", "Racquetball", "Rugby", "Robotics", "Cadet Student Network", "The Guidon", "Service"],
+      chips: ["Soccer", "Football", "Lacrosse", "Basketball", "Theater"],
       ordering:
-        "CBC families: design your frame and send it in, and we will follow up with ordering details. A set donation from every frame goes back to CBC.",
+        "When you're happy with your frame, send it to us and we'll follow up with ordering details. A set donation from every frame goes back to CBC.",
+    },
+    // Official mark from the school's own artwork (sources: MySchoolFrame Pilot
+    // Kit/school-brand/cbc-cadets/sources.md). Owner's call, 2026-10-11: live on the
+    // St. Louis builders for Bill's demos; taken down the day the school objects.
+    marks: {
+      crest: "/kits/cbc-cadets/mascot.png",
+      badges: [{ key: "mascot", name: "CBC", artworkUrl: "/kits/cbc-cadets/mascot.png", emoji: "🎖️", field: "navy" }],
     },
     status: "demo",
-    colorSource: "Purple and Vegas gold are confirmed as the colour NAMES (Wikipedia infobox, MaxPreps); both hex values are our approximations and are NOT from CBC — confirm before print.",
+    colorSource: "MEASURED from the school's athletic CBC letters (Wikimedia Commons, Christian_brothers_hs_logo.png) and seal (cbchs.org): purple #4E2683 (65.4%), Vegas gold #C6B683 (31.2%). The school website's own theme carries purple #431777 and gold #867346, the same hues darker. Purple and Vegas gold are the school colours (Wikipedia). Raster source; get the vector before a print run.",
   },
   {
     slug: "de-smet-spartans",
@@ -319,21 +369,30 @@ const KITS: SchoolKit[] = [
     shortName: "De Smet",
     mascot: "Spartans",
     city: "Creve Coeur, MO",
-    colors: { frame: "#7A1F2E", tileField: "#7A1F2E", rim: "#FFFFFF" },
+    colors: { frame: "#751726", tileField: "#751726", rim: "#C5932E" },
     banners: { top: "DE SMET JESUIT", bottom: "SPARTANS", text: "#FFFFFF" },
-    signature: ["hs:ice-hockey", "hs:football-patch", "hs:basketball-patch", "hs:volleyball-patch"],
+    signature: ["hs:ice-hockey", "hs:basketball-patch", "hs:volleyball-patch", "hs:football-patch"],
+    // Welcome facts (2026-10-11), each sourced in MySchoolFrame Pilot Kit/
+    // school-brand/de-smet-spartans/sources.md; anything unsourced was dropped.
     welcome: {
-      headline: "Built for Spartan Country — the rink, the stands and the drive home.",
+      headline: "Welcome, Spartan families.",
       message: [
-        "You already know which nights are non-negotiable. The rink in February, a Friday in the fall, a gym in March. Same families, same seats, same drive back across New Ballas.",
-        "This frame is your student's. Their sport or their club on the badges, their class year on the banner, all in maroon.",
+        "De Smet won the Class 6 basketball state title in 2026, and Spartan hockey has won the Mid-States Challenge Cup.",
+        "You can add the things your student does as badges and their class year to the banner, all in maroon.",
       ],
-      chips: ["Hockey", "Football", "Basketball", "Volleyball", "Rugby", "Robotics", "Spartan Spectacular", "Men's Club", "Lacrosse", "Service"],
+      chips: ["Hockey", "Basketball", "Volleyball", "Football", "Journalism"],
       ordering:
-        "De Smet families: design your frame and send it in, and we will follow up with ordering details. A set donation from every frame goes back to De Smet.",
+        "When you're happy with your frame, send it to us and we'll follow up with ordering details. A set donation from every frame goes back to De Smet.",
+    },
+    // Official mark from the school's own artwork (sources: MySchoolFrame Pilot
+    // Kit/school-brand/de-smet-spartans/sources.md). Owner's call, 2026-10-11: live on the
+    // St. Louis builders for Bill's demos; taken down the day the school objects.
+    marks: {
+      crest: "/kits/de-smet-spartans/mascot.png",
+      badges: [{ key: "mascot", name: "De Smet", artworkUrl: "/kits/de-smet-spartans/mascot.png", emoji: "🛡️", field: "navy" }],
     },
     status: "demo",
-    colorSource: "Maroon and white are confirmed as the colour NAMES (Wikipedia infobox, spirit store); the maroon hex is our approximation and is NOT from De Smet — confirm before print.",
+    colorSource: "MEASURED from the school's own shield (desmet.org header-logo-seal.svg, vector) and athletics helmet: maroon #751726 (43.5% of the shield), gold #C5932E (shield rim; the helmet reads #D29B00). The school website's theme is maroon #661321 / gold #E0A831. The named colours are maroon and white (Wikipedia); gold is the trim on every De Smet mark.",
   },
   {
     slug: "chaminade-red-devils",
@@ -342,21 +401,30 @@ const KITS: SchoolKit[] = [
     shortName: "Chaminade",
     mascot: "Red Devils",
     city: "Creve Coeur, MO",
-    colors: { frame: "#C8102E", tileField: "#C8102E", rim: "#FFFFFF" },
+    colors: { frame: "#D62A1F", tileField: "#D62A1F", rim: "#FFFFFF" },
     banners: { top: "CHAMINADE COLLEGE PREP", bottom: "RED DEVILS", text: "#FFFFFF" },
-    signature: ["hs:basketball-patch", "hs:ice-hockey", "hs:soccer-patch", "hs:journalism"],
+    signature: ["hs:basketball-patch", "hs:lacrosse", "hs:ice-hockey", "hs:journalism"],
+    // Welcome facts (2026-10-11), each sourced in MySchoolFrame Pilot Kit/
+    // school-brand/chaminade-red-devils/sources.md; anything unsourced was dropped.
     welcome: {
-      headline: "Cardinal and white, for the families who drive to every one of them.",
+      headline: "Welcome, Red Devil families.",
       message: [
-        "Some winters here you plan around a gym, and some you plan around a sheet of ice. Either way the Red Devils section is loud and your car is in the lot.",
-        "This frame is your student's. Their sport or their club on the badges, their class year on the banner, all in cardinal and white.",
+        "Chaminade won its first state basketball title in 2009, and the Red Devils also field a club hockey team in the Mid-States league.",
+        "You can add the things your student does as badges and their class year to the banner, all in cardinal and white.",
       ],
-      chips: ["Basketball", "Ice Hockey", "Soccer", "Cardinal & White", "Robotics", "Model U.N.", "Drama", "Band", "House System", "Service"],
+      chips: ["Basketball", "Lacrosse", "Hockey", "Journalism"],
       ordering:
-        "Chaminade families: design your frame and send it in, and we will follow up with ordering details. A set donation from every frame goes back to Chaminade.",
+        "When you're happy with your frame, send it to us and we'll follow up with ordering details. A set donation from every frame goes back to Chaminade.",
+    },
+    // Official mark from the school's own artwork (sources: MySchoolFrame Pilot
+    // Kit/school-brand/chaminade-red-devils/sources.md). Owner's call, 2026-10-11: live on the
+    // St. Louis builders for Bill's demos; taken down the day the school objects.
+    marks: {
+      crest: "/kits/chaminade-red-devils/mascot.png",
+      badges: [{ key: "mascot", name: "Chaminade", artworkUrl: "/kits/chaminade-red-devils/mascot.png", emoji: "😈", field: "navy" }],
     },
     status: "demo",
-    colorSource: "Cardinal and white are confirmed as the colour NAMES (the school paper is the Cardinal & White; MaxPreps agrees); the red hex is our approximation and is NOT from Chaminade — confirm before print.",
+    colorSource: "MEASURED from the school's own seal (chaminade-stl.org school_seal.png, and the identical 1024 px copy on MaxPreps): red #EE3225 (35.3%), white (55.0%); the header logo agrees (#EE2D20). The frame takes that hue one step deeper, #D62A1F: at #EE3225 white lettering is under 4.5:1 and the badge enamel sits exactly between ivory and navy, so any colour correction would flip every badge. The school names its colour cardinal (Wikipedia; the paper is the Cardinal and White), which is deeper still, so confirm the print red with the school.",
   },
   {
     slug: "vianney-griffins",
@@ -365,21 +433,30 @@ const KITS: SchoolKit[] = [
     shortName: "Vianney",
     mascot: "Griffins",
     city: "Kirkwood, MO",
-    colors: { frame: "#101010", tileField: "#101010", rim: "#FFC72C" },
+    colors: { frame: "#181818", tileField: "#181818", rim: "#FFC425" },
     banners: { top: "ST. JOHN VIANNEY", bottom: "GRIFFINS", text: "#FFFFFF" },
     signature: ["hs:volleyball-patch", "hs:chess", "hs:soccer-patch", "hs:baseball-patch"],
+    // Welcome facts (2026-10-11), each sourced in MySchoolFrame Pilot Kit/
+    // school-brand/vianney-griffins/sources.md; anything unsourced was dropped.
     welcome: {
-      headline: "Black and gold, for the families who go to everything.",
+      headline: "Welcome, Griffin families.",
       message: [
-        "At Vianney the trophy case argues with itself. Volleyball has owned more springs than anyone wants to count, the soccer banners go back decades, and the chess team has come home from nationals with a title — which is a very Griffin way to win something.",
-        "This frame is your student's. Their sport or their club on the badges, their class year on the banner, in the Griffin's own colors.",
+        "Vianney's Griffin was inspired by the griffin statues at the entrance to Tower Grove Park, and in 2026 the volleyball team brought home the program's 18th state title.",
+        "You can add the things your student does as badges and their class year to the banner, all in black and gold.",
       ],
-      chips: ["Volleyball", "Soccer", "Baseball", "Ice Hockey", "Wrestling", "Chess", "Football", "Racquetball", "Bowling", "Lacrosse"],
+      chips: ["Volleyball", "Soccer", "Chess", "Baseball", "Hockey", "Football", "Esports"],
       ordering:
-        "Vianney families: design your frame and send it in, and we will follow up with ordering details. A set donation from every frame goes back to Vianney.",
+        "When you're happy with your frame, send it to us and we'll follow up with ordering details. A set donation from every frame goes back to Vianney.",
+    },
+    // Official mark from the school's own artwork (sources: MySchoolFrame Pilot
+    // Kit/school-brand/vianney-griffins/sources.md). Owner's call, 2026-10-11: live on the
+    // St. Louis builders for Bill's demos; taken down the day the school objects.
+    marks: {
+      crest: "/kits/vianney-griffins/mascot.png",
+      badges: [{ key: "mascot", name: "Griffins", artworkUrl: "/kits/vianney-griffins/mascot.png", emoji: "🦅", field: "navy" }],
     },
     status: "demo",
-    colorSource: "Black and gold are confirmed (the school's mascot page ties the colours to the Griffin); the gold hex is our approximation and the black is lifted off pure black for print — confirm both before print.",
+    colorSource: "MEASURED from the school's own Griffin V mark (StJohnVianneyHS_GriffinV_PMS123C_2ColorOptionA.gif, vianney.com) and header wordmark: gold #FFC324/#FFC424 and black. The gold is corroborated by the school website's theme colour #ffc425 and the file is named for PANTONE 123 C; the frame is the website's near-black #181818. Raster source; get the vector before a print run.",
   },
   {
     slug: "st-josephs-academy-angels",
@@ -388,21 +465,30 @@ const KITS: SchoolKit[] = [
     shortName: "SJA",
     mascot: "Angels",
     city: "Frontenac, MO",
-    colors: { frame: "#00843D", tileField: "#00843D", rim: "#FFFFFF" },
+    colors: { frame: "#367730", tileField: "#367730", rim: "#FFFFFF" },
     banners: { top: "ST. JOSEPH'S ACADEMY", bottom: "ANGELS", text: "#FFFFFF" },
-    signature: ["hs:basketball-patch", "hs:field-hockey", "hs:robotics", "hs:tennis"],
+    signature: ["hs:tennis", "hs:robotics", "hs:field-hockey", "hs:basketball-patch"],
+    // Welcome facts (2026-10-11), each sourced in MySchoolFrame Pilot Kit/
+    // school-brand/st-josephs-academy-angels/sources.md; anything unsourced was dropped.
     welcome: {
-      headline: "Not I, But We — including the carpool line.",
+      headline: "Welcome, Angel families.",
       message: [
-        "Green and white, and the same three letters on every carpool sign. Whether your Angel is on the field hockey turf, in the JoeBotics build space, or waiting on a call time, the drive there and back is most of what you will remember about these four years.",
-        "This frame is your student's. Her sport or her club on the badges, her class year on the banner, all in Angels green.",
+        "SJA tennis has won 19 state titles, and JoeBotics was the first all-girls school team in Missouri to compete in FIRST robotics.",
+        "You can add the things your student does as badges and their class year to the banner, all in green and white.",
       ],
-      chips: ["Basketball", "Field Hockey", "JoeBotics", "Tennis", "Swim & Dive", "Cross Country", "Lacrosse", "Campus Ministry", "Theatre", "Service"],
+      chips: ["Tennis", "Golf", "Soccer", "Volleyball", "Field Hockey", "Robotics", "Basketball", "Racquetball", "Dance", "Swim & Dive"],
       ordering:
-        "SJA families: design your frame and send it in, and we will follow up with ordering details. A set donation from every frame goes back to SJA.",
+        "When you're happy with your frame, send it to us and we'll follow up with ordering details. A set donation from every frame goes back to SJA.",
+    },
+    // Official mark from the school's own artwork (sources: MySchoolFrame Pilot
+    // Kit/school-brand/st-josephs-academy-angels/sources.md). Owner's call, 2026-10-11: live on the
+    // St. Louis builders for Bill's demos; taken down the day the school objects.
+    marks: {
+      crest: "/kits/st-josephs-academy-angels/mascot.png",
+      badges: [{ key: "mascot", name: "SJA", artworkUrl: "/kits/st-josephs-academy-angels/mascot.png", emoji: "😇", field: "navy" }],
     },
     status: "demo",
-    colorSource: "Green and white are confirmed as the colour NAMES (MaxPreps, school profiles); the green hex is our approximation and is NOT from SJA — confirm before print.",
+    colorSource: "MEASURED from the school's own seal artwork: the vector seal on sja1840.org is filled #367730, which is also the website theme's main colour; the Wikimedia copy of the seal samples #3D8840. Green and white are the school's colours (MaxPreps, Wikipedia). Get the brand-guide value before a print run.",
   },
   {
     slug: "nerinx-hall-markers",
@@ -410,21 +496,30 @@ const KITS: SchoolKit[] = [
     shortName: "Nerinx",
     mascot: "Markers",
     city: "Webster Groves, MO",
-    colors: { frame: "#1E5631", tileField: "#1E5631", rim: "#FFFFFF" },
+    colors: { frame: "#008274", tileField: "#008274", rim: "#FFFFFF" },
     banners: { top: "NERINX HALL", bottom: "MARKERS", text: "#FFFFFF" },
-    signature: ["hs:soccer-patch", "hs:drama", "hs:field-hockey", "hs:service"],
+    signature: ["hs:drama", "hs:cross-country", "hs:soccer-patch", "hs:field-hockey"],
+    // Welcome facts (2026-10-11), each sourced in MySchoolFrame Pilot Kit/
+    // school-brand/nerinx-hall-markers/sources.md; anything unsourced was dropped.
     welcome: {
-      headline: "Green and white, from Hey Day to graduation.",
+      headline: "Welcome, Marker families.",
       message: [
-        "From the day the seniors hand over the beanies you are a Marker family — and Marker families drive. To Heagney for the fall play, out to the turf, back down Lockwood again.",
-        "This frame is your student's. Her sport or her club on the badges, her class year on the banner, all in Nerinx green.",
+        "Nerinx has taught young women in Webster Groves since 1924, and the Markers won the Class 4 cross country state title in 2014.",
+        "You can add the things your student does as badges and their class year to the banner, all in green and white.",
       ],
-      chips: ["Soccer", "Field Hockey", "Lacrosse", "Heagney Theatre", "Hey Day", "Service Learning", "Cross Country", "Hallways", "The Key", "A Cappella"],
+      chips: ["Theatre", "Cross Country", "Soccer", "Field Hockey", "Lacrosse", "Racquetball"],
       ordering:
-        "Nerinx families: design your frame and send it in, and we will follow up with ordering details. A set donation from every frame goes back to Nerinx.",
+        "When you're happy with your frame, send it to us and we'll follow up with ordering details. A set donation from every frame goes back to Nerinx.",
+    },
+    // Official mark from the school's own artwork (sources: MySchoolFrame Pilot
+    // Kit/school-brand/nerinx-hall-markers/sources.md). Owner's call, 2026-10-11: live on the
+    // St. Louis builders for Bill's demos; taken down the day the school objects.
+    marks: {
+      crest: "/kits/nerinx-hall-markers/mascot.png",
+      badges: [{ key: "mascot", name: "Nerinx", artworkUrl: "/kits/nerinx-hall-markers/mascot.png", emoji: "✝️", field: "navy" }],
     },
     status: "demo",
-    colorSource: "Green and white are confirmed as the colour NAMES (MaxPreps, MascotDB; the Spirit Shop describes its embroidery as forest green); the green hex is our approximation — confirm before print.",
+    colorSource: "MEASURED from the school's NH monogram (Wikipedia's copy of the logo): teal-green #008274 (99.3%). The school website's theme green is #058943, a truer green; the two do not agree, so confirm which green Nerinx treats as primary. Green and white are the school's colours (Wikipedia, MaxPreps).",
   },
   {
     slug: "cor-jesu-academy-chargers",
@@ -433,21 +528,30 @@ const KITS: SchoolKit[] = [
     shortName: "Cor Jesu",
     mascot: "Chargers",
     city: "Affton, MO",
-    colors: { frame: "#C8102E", tileField: "#C8102E", rim: "#FFFFFF" },
+    colors: { frame: "#E10719", tileField: "#E10719", rim: "#710D28" },
     banners: { top: "COR JESU ACADEMY", bottom: "CHARGERS", text: "#FFFFFF" },
-    signature: ["hs:soccer-patch", "hs:swim-dive", "hs:service", "hs:track"],
+    signature: ["hs:racquetball", "hs:field-hockey", "hs:swim-dive", "hs:soccer-patch"],
+    // Welcome facts (2026-10-11), each sourced in MySchoolFrame Pilot Kit/
+    // school-brand/cor-jesu-academy-chargers/sources.md; anything unsourced was dropped.
     welcome: {
-      headline: "Shine bright. Be brilliant. Drive accordingly.",
+      headline: "Welcome, Charger families.",
       message: [
-        "Chargers — and anyone who has sat through a Funderwear pep rally waiting on the Pants Trophy knows better than to add a word in front of it. First Fridays, spirit week, and a lot of miles down Gravois.",
-        "This frame is your student's. Her sport or her club on the badges, her class year on the banner, all in Charger red.",
+        "Cor Jesu racquetball has won four national championships, and every January the Chargers and SJA hold Funderwear, collecting undergarments for St. Patrick Center.",
+        "You can add the things your student does as badges and their class year to the banner, all in red and white.",
       ],
-      chips: ["Soccer", "Swim & Dive", "Track & Field", "Dance Team", "Funderwear", "Penny Queen", "Corde Players", "Chamber Choir", "The Corette", "Service"],
+      chips: ["Racquetball", "Field Hockey", "Swim & Dive", "Soccer", "Volleyball", "Lacrosse", "Basketball", "Choir"],
       ordering:
-        "Cor Jesu families: design your frame and send it in, and we will follow up with ordering details. A set donation from every frame goes back to Cor Jesu.",
+        "When you're happy with your frame, send it to us and we'll follow up with ordering details. A set donation from every frame goes back to Cor Jesu.",
+    },
+    // Official mark from the school's own artwork (sources: MySchoolFrame Pilot
+    // Kit/school-brand/cor-jesu-academy-chargers/sources.md). Owner's call, 2026-10-11: live on the
+    // St. Louis builders for Bill's demos; taken down the day the school objects.
+    marks: {
+      crest: "/kits/cor-jesu-academy-chargers/mascot.png",
+      badges: [{ key: "mascot", name: "Cor Jesu", artworkUrl: "/kits/cor-jesu-academy-chargers/mascot.png", emoji: "⚡", field: "navy" }],
     },
     status: "demo",
-    colorSource: "Red and white are confirmed as the colour NAMES (MaxPreps, spiritwear, the Atomicdust rebrand write-up); the red hex is our approximation. Cor Jesu has a professional brand system, so an exact value almost certainly exists — ask for it.",
+    colorSource: "MEASURED from the school's own vector artwork on corjesu.org: red #E10719 (heart mark, exact SVG fill) and maroon #710D28 (wordmark, exact SVG fill); the website theme uses #e10719 and #710327. Red and white are the school's named colours (Wikipedia, MaxPreps). Cor Jesu has a professional brand system, so ask for the guide before a print run.",
   },
   {
     slug: "incarnate-word-academy-red-knights",
@@ -456,21 +560,25 @@ const KITS: SchoolKit[] = [
     shortName: "Incarnate Word",
     mascot: "Red Knights",
     city: "Bel-Nor, MO",
-    colors: { frame: "#C8102E", tileField: "#C8102E", rim: "#FFC72C" },
+    colors: { frame: "#CA2530", tileField: "#CA2530", rim: "#EDBC22" },
     banners: { top: "INCARNATE WORD ACADEMY", bottom: "RED KNIGHTS", text: "#FFFFFF" },
     signature: ["hs:basketball-patch", "hs:esports", "hs:robotics", "hs:volleyball-patch"],
+    // Welcome facts (2026-10-11), each sourced in MySchoolFrame Pilot Kit/
+    // school-brand/incarnate-word-academy-red-knights/sources.md; anything unsourced was dropped.
     welcome: {
-      headline: "For the families who fill the Red Knights' side of the gym.",
+      headline: "Welcome, Red Knight families.",
       message: [
-        "Red and gold, and a gym that has been standing room only for years now. Whether your Red Knight is out on that floor, in the STEM lab, or on a late bus back from a meet, you are the one driving her there.",
-        "This frame is your student's. Her sport or her club on the badges, her class year on the banner, in red and gold.",
+        "IWA basketball set the national record for girls high school basketball with 141 straight wins from 2020 to 2025, and won the Class 6 state title again in 2026.",
+        "You can add the things your student does as badges and their class year to the banner, all in red and gold.",
       ],
-      chips: ["Basketball", "Volleyball", "Soccer", "Track & Field", "Cross Country", "Swim & Dive", "Tennis", "Golf", "STEM Lab", "Esports"],
+      chips: ["Basketball", "Volleyball", "Soccer", "Track & Field", "Cross Country", "Swim & Dive", "Tennis", "Golf", "Robotics", "Esports"],
       ordering:
-        "Incarnate Word families: design your frame and send it in, and we will follow up with ordering details. A set donation from every frame goes back to Incarnate Word.",
+        "When you're happy with your frame, send it to us and we'll follow up with ordering details. A set donation from every frame goes back to Incarnate Word.",
     },
+    // NO `marks` ON PURPOSE (2026-10-11): no usable Red Knight art exists online (the
+    // only copy is a 319 px MaxPreps file). GENERIC_MARKS until the school sends one.
     status: "demo",
-    colorSource: "Red and gold are confirmed as the colour NAMES (MaxPreps, MascotDB); both hex values are our approximations. The gold is the risky one — athletic golds run brassy to near-yellow and the difference shows in print.",
+    colorSource: "MEASURED from the school's own header logo (Main_Logo.png, iwacademy.org): red #CA2530 and gold #EDBC22. The website theme variables are #9e1c20 / #e7cc23, darker and yellower, so the two do not match exactly; the logo ink is used. Wikipedia names the colours red and yellow. Raster source; get the vector before a print run.",
   },
   {
     slug: "webster-groves-statesmen",
@@ -479,21 +587,30 @@ const KITS: SchoolKit[] = [
     shortName: "Webster",
     mascot: "Statesmen",
     city: "Webster Groves, MO",
-    colors: { frame: "#E87722", tileField: "#E87722", rim: "#111111" },
+    colors: { frame: "#111111", tileField: "#111111", rim: "#E66C24" },
     banners: { top: "WEBSTER GROVES HIGH", bottom: "STATESMEN", text: "#FFFFFF" },
-    signature: ["hs:football-patch", "hs:basketball-patch", "hs:journalism", "hs:track"],
+    signature: ["hs:football-patch", "hs:soccer-patch", "hs:basketball-patch", "hs:journalism"],
+    // Welcome facts (2026-10-11), each sourced in MySchoolFrame Pilot Kit/
+    // school-brand/webster-groves-statesmen/sources.md; anything unsourced was dropped.
     welcome: {
-      headline: "Statesmen families — orange and black, on the back of the car.",
+      headline: "Welcome, Statesmen families.",
       message: [
-        "In Webster the season has a finish line everybody already knows the date of. The Bell goes home with somebody on Thanksgiving morning, and the rest of the year — the gym in March, the track in May, a show in the new theater — gets talked about in the same breath.",
-        "This frame is your student's. Their sport or their club on the badges, their class year on the banner, all in orange and black.",
+        "Every Thanksgiving the Statesmen play Kirkwood in the Turkey Day Game, and the winner takes home the Frisco Bell. The boys soccer team won state titles in 2014, 2015 and 2022.",
+        "You can add the things your student does as badges and their class year to the banner, all in orange and black.",
       ],
-      chips: ["Football", "Basketball", "Track & Field", "Cross Country", "Marching Band", "Orchestra", "Theater", "The Echo", "Wrestling", "Turkey Day"],
+      chips: ["Football", "Soccer", "Basketball", "Track & Field", "Golf", "Softball", "Marching Band", "Journalism"],
       ordering:
-        "Webster families: design your frame and send it in, and we will follow up with ordering details. A set donation from every frame goes back to Webster.",
+        "When you're happy with your frame, send it to us and we'll follow up with ordering details. A set donation from every frame goes back to Webster.",
+    },
+    // Official mark from the school's own artwork (sources: MySchoolFrame Pilot
+    // Kit/school-brand/webster-groves-statesmen/sources.md). Owner's call, 2026-10-11: live on the
+    // St. Louis builders for Bill's demos; taken down the day the school objects.
+    marks: {
+      crest: "/kits/webster-groves-statesmen/mascot.png",
+      badges: [{ key: "mascot", name: "Webster", artworkUrl: "/kits/webster-groves-statesmen/mascot.png", emoji: "🟧", field: "navy" }],
     },
     status: "demo",
-    colorSource: "Orange and black are confirmed as the colour NAMES (district spirit store, MSHSAA); neither hex is published, so both are our approximations — confirm before print.",
+    colorSource: "MEASURED from the school's WG athletic mark (Wikipedia/Commons Webster_Groves_WG.png): orange #E66C24 (56.0%), black (18.1%). The district website's --secondary-color #E36304 corroborates the orange; orange and black are the colour names (Wikipedia). Raster source; get the vector before a print run.",
   },
   {
     slug: "ladue-rams",
@@ -542,21 +659,30 @@ const KITS: SchoolKit[] = [
     shortName: "Clayton",
     mascot: "Greyhounds",
     city: "Clayton, MO",
-    colors: { frame: "#00529B", tileField: "#00529B", rim: "#F58220" },
+    colors: { frame: "#004A80", tileField: "#004A80", rim: "#F36C21" },
     banners: { top: "CLAYTON HIGH SCHOOL", bottom: "GREYHOUNDS", text: "#FFFFFF" },
-    signature: ["hs:journalism", "hs:soccer-patch", "hs:debate", "hs:yearbook"],
+    signature: ["hs:soccer-patch", "hs:journalism", "hs:debate", "hs:yearbook"],
+    // Welcome facts (2026-10-11), each sourced in MySchoolFrame Pilot Kit/
+    // school-brand/clayton-greyhounds/sources.md; anything unsourced was dropped.
     welcome: {
-      headline: "Greyhound families — something to put the whole four years on.",
+      headline: "Welcome, Greyhound families.",
       message: [
-        "There is a stone globe out front and a Globe that comes out of the newsroom, and at Clayton it is an even bet which one a graduate talks about first. Lately the soccer fields have given everyone something to shout about too.",
-        "This frame is your student's. Their sport or their paper on the badges, their class year on the banner, in Clayton blue and orange.",
+        "Clayton soccer won three state titles in three years: the girls in 2023 and 2025, and the boys in 2024. The Globe, the student newsmagazine, has won two national Brasler Prizes.",
+        "You can add the things your student does as badges and their class year to the banner, all in blue and orange.",
       ],
-      chips: ["The Globe", "Yearbook", "Speech & Debate", "Mock Trial", "Soccer", "Field Hockey", "Basketball", "Tennis", "Track & Field", "Cross Country"],
+      chips: ["Soccer", "Journalism", "Yearbook", "Speech & Debate", "Basketball", "Football", "Hockey", "Tennis", "Track & Field", "Orchestra"],
       ordering:
-        "Clayton families: design your frame and send it in, and we will follow up with ordering details. A set donation from every frame goes back to Clayton.",
+        "When you're happy with your frame, send it to us and we'll follow up with ordering details. A set donation from every frame goes back to Clayton.",
+    },
+    // Official mark from the school's own artwork (sources: MySchoolFrame Pilot
+    // Kit/school-brand/clayton-greyhounds/sources.md). Owner's call, 2026-10-11: live on the
+    // St. Louis builders for Bill's demos; taken down the day the school objects.
+    marks: {
+      crest: "/kits/clayton-greyhounds/mascot.png",
+      badges: [{ key: "mascot", name: "Greyhounds", artworkUrl: "/kits/clayton-greyhounds/mascot.png", emoji: "🐕", field: "navy" }],
     },
     status: "demo",
-    colorSource: "Royal blue and orange are official (MSHSAA, district); no published hex was reachable, so both values are our approximations — confirm before print.",
+    colorSource: "From the school website's theme (chs.claytonschools.net, shared with the district site): blue #004A80, orange #F36C21. The greyhound mark measures the same hues (blue #336699, orange #FF9933) but is a web-palette GIF, so it confirms hue only; blue and orange are the colour names (Wikipedia). Get the athletic mark's vector before a print run.",
   },
   {
     slug: "lindbergh-flyers",
@@ -565,21 +691,30 @@ const KITS: SchoolKit[] = [
     shortName: "Lindbergh",
     mascot: "Flyers",
     city: "St. Louis, MO",
-    colors: { frame: "#006341", tileField: "#006341", rim: "#FFC425" },
+    colors: { frame: "#026637", tileField: "#026637", rim: "#FFD004" },
     banners: { top: "LINDBERGH HIGH SCHOOL", bottom: "FLYERS", text: "#FFFFFF" },
-    signature: ["hs:marching-band", "hs:cross-country", "hs:volleyball-patch", "hs:tennis"],
+    signature: ["hs:marching-band", "hs:cross-country", "hs:tennis", "hs:golf"],
+    // Welcome facts (2026-10-11), each sourced in MySchoolFrame Pilot Kit/
+    // school-brand/lindbergh-flyers/sources.md; anything unsourced was dropped.
     welcome: {
-      headline: "Flyers families — green and gold, right where everyone can see it.",
+      headline: "Welcome, Flyer families.",
       message: [
-        "At Lindbergh the band is not the warm-up act. The Spirit of St. Louis comes down Concord School Road at Homecoming and up the sideline on Friday nights, and Lindy works the crowd in his goggles.",
-        "This frame is your student's. Their sport or their instrument on the badges, their class year on the banner, all in green and gold.",
+        "Lindbergh took its name from Charles Lindbergh in 1952, and that is when its students became the Flyers. The Spirit of St. Louis Marching Band has marched in the Rose Parade three times.",
+        "You can add the things your student does as badges and their class year to the banner, all in green and gold.",
       ],
-      chips: ["Marching Band", "Color Guard", "Cross Country", "Volleyball", "Wrestling", "Tennis", "Swim & Dive", "Golf", "Softball", "Homecoming Parade"],
+      chips: ["Marching Band", "Cross Country", "Tennis", "Golf", "Soccer", "Swim & Dive", "Journalism"],
       ordering:
-        "Lindbergh families: design your frame and send it in, and we will follow up with ordering details. A set donation from every frame goes back to Lindbergh.",
+        "When you're happy with your frame, send it to us and we'll follow up with ordering details. A set donation from every frame goes back to Lindbergh.",
+    },
+    // Official mark from the school's own artwork (sources: MySchoolFrame Pilot
+    // Kit/school-brand/lindbergh-flyers/sources.md). Owner's call, 2026-10-11: live on the
+    // St. Louis builders for Bill's demos; taken down the day the school objects.
+    marks: {
+      crest: "/kits/lindbergh-flyers/mascot.png",
+      badges: [{ key: "mascot", name: "Flyers", artworkUrl: "/kits/lindbergh-flyers/mascot.png", emoji: "✈️", field: "navy" }],
     },
     status: "demo",
-    colorSource: "Green and gold are official and dated — adopted in 1952 when Grandview became Lindbergh, per the district history. Neither hex is published; both values are our approximations.",
+    colorSource: "MEASURED from the school's own athletic mark (golhsflyers.net site logo, L + plane): green #026637 (39.0%), gold #FFD004 (22.2%). The school website's theme (#046A38 / #FBCD00) corroborates both within 4/255; green and gold date to the 1952 renaming (Wikipedia). Raster source; get the vector before a print run.",
   },
   {
     slug: "parkway-west-longhorns",
@@ -795,21 +930,30 @@ const KITS: SchoolKit[] = [
     shortName: "Burroughs",
     mascot: "Bombers",
     city: "Ladue, MO",
-    colors: { frame: "#00205B", tileField: "#00205B", rim: "#C9A227" },
+    colors: { frame: "#005B8F", tileField: "#005B8F", rim: "#FFC240" },
     banners: { top: "JOHN BURROUGHS SCHOOL", bottom: "BOMBERS", text: "#FFFFFF" },
-    signature: ["hs:field-hockey", "hs:football-patch", "hs:soccer-patch", "hs:honor-star"],
+    signature: ["hs:football-patch", "hs:field-hockey", "hs:baseball-patch", "hs:drama"],
+    // Welcome facts (2026-10-11), each sourced in MySchoolFrame Pilot Kit/
+    // school-brand/john-burroughs-bombers/sources.md; anything unsourced was dropped.
     welcome: {
-      headline: "Blue and gold, all the way out to the parking lot.",
+      headline: "Welcome, Bomber families.",
       message: [
-        "Every year the grades put on their assigned colors, the Class Cup gets loud, and the week ends with the bonfire out on Field 4. Burroughs is a small school that takes its own traditions seriously, and parents learn the calendar fast.",
-        "This frame is your student's. Their sport or their club on the badges, their class year on the banner, in blue and gold.",
+        "Every fall Blue & Gold Weekend brings a pep rally, a bonfire and the Bombers against MICDS, a rivalry that goes back to the 1920s. Bomber football has won nine state titles and is in the Missouri Sports Hall of Fame.",
+        "You can add the things your student does as badges and their class year to the banner, all in blue and gold.",
       ],
-      chips: ["Field Hockey", "Football", "Soccer", "Spirit Week", "Pep Rally & Bonfire", "Class Cup", "Student Government", "Cheerleading", "Theatre", "Service"],
+      chips: ["Football", "Field Hockey", "Baseball", "Theatre", "Dance"],
       ordering:
-        "Burroughs families: design your frame and send it in, and we will follow up with ordering details. A set donation from every frame goes back to Burroughs.",
+        "When you're happy with your frame, send it to us and we'll follow up with ordering details. A set donation from every frame goes back to Burroughs.",
+    },
+    // Official mark from the school's own artwork (sources: MySchoolFrame Pilot
+    // Kit/school-brand/john-burroughs-bombers/sources.md). Owner's call, 2026-10-11: live on the
+    // St. Louis builders for Bill's demos; taken down the day the school objects.
+    marks: {
+      crest: "/kits/john-burroughs-bombers/mascot.png",
+      badges: [{ key: "mascot", name: "Burroughs", artworkUrl: "/kits/john-burroughs-bombers/mascot.png", emoji: "💙", field: "navy" }],
     },
     status: "demo",
-    colorSource: "Blue and gold are certain — the school's own Spirit Week is branded Blue & Gold; both hex values are our approximations of a navy and an old gold and are NOT from a brand guide.",
+    colorSource: "From the school's own website theme (jburroughs.org main.css): blue #005B8F, gold #FFC240. The JBS athletic letters (MaxPreps GIF) show the same blue-and-gold hues but in web-palette values, so they confirm hue only; blue and gold are the colour names (Wikipedia, Blue & Gold Weekend). Ask the school for its athletic mark and PMS values.",
   },
   {
     slug: "saint-louis-priory-ravens",
@@ -818,21 +962,30 @@ const KITS: SchoolKit[] = [
     shortName: "Priory",
     mascot: "Ravens",
     city: "Creve Coeur, MO",
-    colors: { frame: "#002D62", tileField: "#002D62", rim: "#C8102E" },
+    colors: { frame: "#0D2345", tileField: "#0D2345", rim: "#F8C815" },
     banners: { top: "SAINT LOUIS PRIORY", bottom: "RAVENS", text: "#FFFFFF" },
-    signature: ["hs:ice-hockey", "hs:soccer-patch", "hs:robotics", "hs:journalism"],
+    signature: ["hs:soccer-patch", "hs:ice-hockey", "hs:robotics", "hs:journalism"],
+    // Welcome facts (2026-10-11), each sourced in MySchoolFrame Pilot Kit/
+    // school-brand/saint-louis-priory-ravens/sources.md; anything unsourced was dropped.
     welcome: {
-      headline: "A Raven for the car that makes every run down to campus.",
+      headline: "Welcome, Raven families.",
       message: [
-        "The year starts in August at the Raven Roundup and the club fair, runs through the Junior School's Rusty Bucket, and lands at the Christmas Classic. Priory keeps its own calendar, in its own way, and parents pick it up quickly.",
-        "This frame is your student's. His sport or his club on the badges, his class year on the banner.",
+        "Priory opened in 1956, started by Benedictine monks from Ampleforth Abbey in England. Its soccer teams won state titles in 2005 and 2011 without losing a game, and the hockey team has won the Wickenheiser Cup four times.",
+        "You can add the things your student does as badges and their class year to the banner, all in the colors of the Priory crest.",
       ],
-      chips: ["Hockey", "Soccer", "Robotics", "The Record", "Raven Roundup", "Rusty Bucket", "Christmas Classic", "Quiz Bowl", "Ultimate Frisbee", "Service"],
+      chips: ["Soccer", "Hockey", "Golf", "Lacrosse", "Robotics", "Journalism", "Yearbook"],
       ordering:
-        "Priory families: design your frame and send it in, and we will follow up with ordering details. A set donation from every frame goes back to Priory.",
+        "When you're happy with your frame, send it to us and we'll follow up with ordering details. A set donation from every frame goes back to Priory.",
+    },
+    // Official mark from the school's own artwork (sources: MySchoolFrame Pilot
+    // Kit/school-brand/saint-louis-priory-ravens/sources.md). Owner's call, 2026-10-11: live on the
+    // St. Louis builders for Bill's demos; taken down the day the school objects.
+    marks: {
+      crest: "/kits/saint-louis-priory-ravens/mascot.png",
+      badges: [{ key: "mascot", name: "Priory", artworkUrl: "/kits/saint-louis-priory-ravens/mascot.png", emoji: "🛡️", field: "navy" }],
     },
     status: "demo",
-    colorSource: "Red and blue are the colour NAMES from several secondary listings; both hex values are our approximations and even which is the body colour is unconfirmed — needs the school.",
+    colorSource: "Taken from the fills of the school's own vector logo (priory.org stl-logo.svg): navy #0D2345, red #BA1F32, gold #F8C815; the website's theme navy #0B2245 corroborates the navy. Red and blue are the school's named colours (Wikipedia); the gold rim comes from the crest.",
   },
   {
     slug: "whitfield-warriors",
@@ -841,21 +994,30 @@ const KITS: SchoolKit[] = [
     shortName: "Whitfield",
     mascot: "Warriors",
     city: "Creve Coeur, MO",
-    colors: { frame: "#00703C", tileField: "#00703C", rim: "#FFFFFF" },
+    colors: { frame: "#286142", tileField: "#286142", rim: "#FFFFFF" },
     banners: { top: "WHITFIELD SCHOOL", bottom: "WARRIORS", text: "#FFFFFF" },
-    signature: ["hs:wrestling", "hs:soccer-patch", "hs:basketball-patch", "hs:esports"],
+    signature: ["hs:soccer-patch", "hs:wrestling", "hs:dance", "hs:basketball-patch"],
+    // Welcome facts (2026-10-11), each sourced in MySchoolFrame Pilot Kit/
+    // school-brand/whitfield-warriors/sources.md; anything unsourced was dropped.
     welcome: {
-      headline: "Green and white, and everybody knows whose car it is.",
+      headline: "Welcome, Warrior families.",
       message: [
-        "Whitfield is small on purpose, and it shows — advisory, assemblies, Spirit Week, and a gym whose banners are mostly soccer and wrestling. Parents here tend to know everybody's kid, not just their own.",
-        "This frame is your student's. The season you actually sit through on the badges, their class year on the banner.",
+        "Whitfield soccer has won state titles for both its teams, the boys most recently in 2021 and the girls in 2022, and the wrestling team won its 11th state title in 2022.",
+        "You can add the things your student does as badges and their class year to the banner, all in green and white.",
       ],
-      chips: ["Wrestling", "Soccer", "Basketball", "Esports", "Climbing Club", "Field Hockey", "Dance", "Spirit Week", "Advisory", "Service"],
+      chips: ["Soccer", "Wrestling", "Dance", "Basketball", "Golf", "Yearbook"],
       ordering:
-        "Whitfield families: design your frame and send it in, and we will follow up with ordering details. A set donation from every frame goes back to Whitfield.",
+        "When you're happy with your frame, send it to us and we'll follow up with ordering details. A set donation from every frame goes back to Whitfield.",
+    },
+    // Official mark from the school's own artwork (sources: MySchoolFrame Pilot
+    // Kit/school-brand/whitfield-warriors/sources.md). Owner's call, 2026-10-11: live on the
+    // St. Louis builders for Bill's demos; taken down the day the school objects.
+    marks: {
+      crest: "/kits/whitfield-warriors/mascot.png",
+      badges: [{ key: "mascot", name: "Warriors", artworkUrl: "/kits/whitfield-warriors/mascot.png", emoji: "⚔️", field: "navy" }],
     },
     status: "demo",
-    colorSource: "Green and white are confirmed (Wikipedia, the school's own athletics branding); the green hex is our approximation. NOTE: white as a rim is the same-colour-edge case CLAUDE.md warns about if the body ever goes light — it is safe here only because the body is dark green.",
+    colorSource: "Taken from the fills of the school's own vector wordmark (whitfieldschool.org, TheWhitfieldSchool_logo.svg): green #286142; the header variant is #266041. Green and white are the school's colours (Wikipedia). The athletic shield (MaxPreps GIF) matches the hue but is web-palette, so it confirms hue only.",
   },
   {
     slug: "fort-zumwalt-west-jaguars",
@@ -864,21 +1026,30 @@ const KITS: SchoolKit[] = [
     shortName: "FZ West",
     mascot: "Jaguars",
     city: "O'Fallon, MO",
-    colors: { frame: "#4B2E83", tileField: "#4B2E83", rim: "#A7A9AC" },
+    colors: { frame: "#6A2A78", tileField: "#6A2A78", rim: "#A7A9AC" },
     banners: { top: "FORT ZUMWALT WEST", bottom: "JAGUARS", text: "#FFFFFF" },
-    signature: ["hs:dance", "hs:marching-band", "hs:soccer-patch", "hs:football-patch"],
+    signature: ["hs:dance", "hs:soccer-patch", "hs:marching-band", "hs:football-patch"],
+    // Welcome facts (2026-10-11), each sourced in MySchoolFrame Pilot Kit/
+    // school-brand/fort-zumwalt-west-jaguars/sources.md; anything unsourced was dropped.
     welcome: {
-      headline: "Purple and silver, parked where everybody can see it.",
+      headline: "Welcome, Jaguar families.",
       message: [
-        "Friday nights out here sound like the Silver Jaguar Brigade coming up the track, and the dance team has the hardware to match. West is a big school that still turns out for its own — band, guard, the soccer field, the mat.",
-        "This frame is your student's. The programme you actually sit for on the badges, their class year on the banner.",
+        "Fort Zumwalt West's girls soccer team won the school's first state title in 2007, and the dance team, first at the UDA national championship in 2009, took silver in hip hop in 2016.",
+        "You can add the things your student does as badges and their class year to the banner, all in purple, silver and black.",
       ],
-      chips: ["Dance Team", "Marching Band", "Color Guard", "Winter Guard", "Soccer", "Football", "Wrestling", "Jazz Bands", "Homecoming Week", "Basketball"],
+      chips: ["Dance", "Soccer", "Marching Band", "Football", "Wrestling", "Basketball", "Baseball"],
       ordering:
-        "FZ West families: design your frame and send it in, and we will follow up with ordering details. A set donation from every frame goes back to FZ West.",
+        "When you're happy with your frame, send it to us and we'll follow up with ordering details. A set donation from every frame goes back to FZ West.",
+    },
+    // Official mark from the school's own artwork (sources: MySchoolFrame Pilot
+    // Kit/school-brand/fort-zumwalt-west-jaguars/sources.md). Owner's call, 2026-10-11: live on the
+    // St. Louis builders for Bill's demos; taken down the day the school objects.
+    marks: {
+      crest: "/kits/fort-zumwalt-west-jaguars/mascot.png",
+      badges: [{ key: "mascot", name: "FZ West", artworkUrl: "/kits/fort-zumwalt-west-jaguars/mascot.png", emoji: "🐆", field: "navy" }],
     },
     status: "demo",
-    colorSource: "Purple, silver and black are confirmed as the colour NAMES (Wikipedia, spirit-wear listings); the purple and silver hex values are our approximations — no brand guide was reachable.",
+    colorSource: "MEASURED from the school's own athletic W (Fort Zumwalt SD, West_High1.png, www.fz.k12.mo.us/o/whs): purple #6A2A78 (61.7%), black (25.7%). The purple is corroborated by the school website's --secondary-color #6A2B78. Silver is a named school colour (MSHSAA) but is not on the mark; the rim #A7A9AC is our approximation of it. Raster source; get the vector before a print run.",
   },
   {
     slug: "mehlville-panthers",
@@ -887,21 +1058,30 @@ const KITS: SchoolKit[] = [
     shortName: "Mehlville",
     mascot: "Panthers",
     city: "Mehlville, MO",
-    colors: { frame: "#00703C", tileField: "#00703C", rim: "#FFFFFF" },
+    colors: { frame: "#00703C", tileField: "#00703C", rim: "#040707" },
     banners: { top: "MEHLVILLE HIGH SCHOOL", bottom: "PANTHERS", text: "#FFFFFF" },
-    signature: ["hs:football-patch", "hs:debate", "hs:drama", "hs:service"],
+    signature: ["hs:football-patch", "hs:journalism", "hs:wrestling", "hs:drama"],
+    // Welcome facts (2026-10-11), each sourced in MySchoolFrame Pilot Kit/
+    // school-brand/mehlville-panthers/sources.md; anything unsourced was dropped.
     welcome: {
-      headline: "Every senior gets a paw print. This one you get to drive.",
+      headline: "Welcome, Panther families.",
       message: [
-        "You know the walk — the painted path up to Jack Jordan Stadium, every paw print done up by somebody's kid, and the Green Pit already going before kickoff. Green and white is not a costume here, it is just what a Friday looks like.",
-        "This frame is your student's. Their sport or their club on the badges, their class year on the banner.",
+        "Every Mehlville senior gets a paw print to paint on the path to Jack Jordan Stadium, and the Green Pit student section is there to cheer the Panthers on.",
+        "You can add the things your student does as badges and their class year to the banner, all in green, white and black.",
       ],
-      chips: ["Football", "Speech & Debate", "Drama Club", "The Green Pit", "Senior Paw Prints", "Art Club", "Service"],
+      chips: ["Football", "Journalism", "Wrestling", "Theatre", "Basketball", "Soccer", "Track"],
       ordering:
-        "Mehlville families: design your frame and send it in, and we will follow up with ordering details. A set donation from every frame goes back to Mehlville.",
+        "When you're happy with your frame, send it to us and we'll follow up with ordering details. A set donation from every frame goes back to Mehlville.",
+    },
+    // Official mark from the school's own artwork (sources: MySchoolFrame Pilot
+    // Kit/school-brand/mehlville-panthers/sources.md). Owner's call, 2026-10-11: live on the
+    // St. Louis builders for Bill's demos; taken down the day the school objects.
+    marks: {
+      crest: "/kits/mehlville-panthers/mascot.png",
+      badges: [{ key: "mascot", name: "Panthers", artworkUrl: "/kits/mehlville-panthers/mascot.png", emoji: "🐾", field: "navy" }],
     },
     status: "demo",
-    colorSource: "Green, white and black are confirmed as the colour NAMES (the student section is literally the Green Pit); neither hex is published, so both are our approximations. Black is the school's third colour and is the alternative rim if the green ever goes lighter.",
+    colorSource: "MEASURED from the school's own panther medallion (Mehlville SD, MHS_new.png, mhs.mehlvilleschooldistrict.com): green #00703C (20.5%), black #040707 (56.0%). The green is corroborated exactly by the school website's --secondary-color #00703C. Black is the school's third colour (green, white and black). Raster source, and the medallion is small (460 px); get the vector before a print run.",
   },
   {
     slug: "oakville-tigers",
@@ -910,21 +1090,30 @@ const KITS: SchoolKit[] = [
     shortName: "Oakville",
     mascot: "Tigers",
     city: "Oakville, MO",
-    colors: { frame: "#101010", tileField: "#101010", rim: "#FFC72C" },
+    colors: { frame: "#231F20", tileField: "#231F20", rim: "#DEB406" },
     banners: { top: "OAKVILLE HIGH SCHOOL", bottom: "TIGERS", text: "#FFFFFF" },
-    signature: ["hs:water-polo", "hs:field-hockey", "hs:marching-band", "hs:football-patch"],
+    signature: ["hs:water-polo", "hs:soccer-patch", "hs:field-hockey", "hs:volleyball-patch"],
+    // Welcome facts (2026-10-11), each sourced in MySchoolFrame Pilot Kit/
+    // school-brand/oakville-tigers/sources.md; anything unsourced was dropped.
     welcome: {
-      headline: "If you own the shirt, you know what Friday is.",
+      headline: "Welcome, Tiger families.",
       message: [
-        "The Cage has been doing this a long time now, and it still works the same way — black and gold on Friday, everybody in it, nobody sitting down. Whatever your kid plays, the pool and the turf and the field hockey pitch all get the same treatment.",
-        "This frame is your student's. Their sport or their club on the badges, their class year on the banner.",
+        "Oakville's girls water polo team won the state championship in 2022, in only its second season.",
+        "You can add the things your student does as badges and their class year to the banner, all in black and gold.",
       ],
-      chips: ["Water Polo", "Field Hockey", "Marching Band", "Color Guard", "Football", "The Tiger Cage", "Quiz Bowl", "Drama Troupe", "Robotics"],
+      chips: ["Water Polo", "Soccer", "Field Hockey", "Volleyball", "Softball", "Wrestling", "Swim & Dive", "Football", "Speech & Debate"],
       ordering:
-        "Oakville families: design your frame and send it in, and we will follow up with ordering details. A set donation from every frame goes back to Oakville.",
+        "When you're happy with your frame, send it to us and we'll follow up with ordering details. A set donation from every frame goes back to Oakville.",
+    },
+    // Official mark from the school's own artwork (sources: MySchoolFrame Pilot
+    // Kit/school-brand/oakville-tigers/sources.md). Owner's call, 2026-10-11: live on the
+    // St. Louis builders for Bill's demos; taken down the day the school objects.
+    marks: {
+      crest: "/kits/oakville-tigers/mascot.png",
+      badges: [{ key: "mascot", name: "Tigers", artworkUrl: "/kits/oakville-tigers/mascot.png", emoji: "🐯", field: "navy" }],
     },
     status: "demo",
-    colorSource: "Black and gold are confirmed by the school itself (the Tiger Cage runs Black-n-Gold days); the gold hex is our approximation and the black is lifted off pure black for print.",
+    colorSource: "MEASURED from the school's own tiger medallion (Mehlville SD, OHS_new.png, ohs.mehlvilleschooldistrict.com): black (49.6%), gold #DEB406 (26.5%). The gold is corroborated by the school website's --secondary-color #DEB407; the frame black #231F20 is the site's --primary-color (shared with Mehlville). Raster source, and the medallion is small (457 px); get the vector before a print run.",
   },
   {
     slug: "pattonville-pirates",
@@ -933,21 +1122,30 @@ const KITS: SchoolKit[] = [
     shortName: "Pattonville",
     mascot: "Pirates",
     city: "Maryland Heights, MO",
-    colors: { frame: "#00693E", tileField: "#00693E", rim: "#FFFFFF" },
+    colors: { frame: "#035E2C", tileField: "#035E2C", rim: "#020202" },
     banners: { top: "PATTONVILLE HIGH SCHOOL", bottom: "PIRATES", text: "#FFFFFF" },
-    signature: ["hs:journalism", "hs:marching-band", "hs:robotics", "hs:football-patch"],
+    signature: ["hs:robotics", "hs:dance", "hs:marching-band", "hs:jazz-band"],
+    // Welcome facts (2026-10-11), each sourced in MySchoolFrame Pilot Kit/
+    // school-brand/pattonville-pirates/sources.md; anything unsourced was dropped.
     welcome: {
-      headline: "Pirates of all ages come out for this one.",
+      headline: "Welcome, Pirate families.",
       message: [
-        "The parade rolls in the morning, the floats match whatever theme they picked this year, and by halftime the drill team and the marching band have the field. Pattonville families tend to show up for all of it, not just the game.",
-        "This frame is your student's. Their sport or their club on the badges, their class year on the banner, in green and white.",
+        "Homecoming at Pattonville brings the annual parade of themed floats, and at halftime the drill team gives its traditional homecoming performance.",
+        "You can add the things your student does as badges and their class year to the banner, all in green and white.",
       ],
-      chips: ["Journalism", "Marching Band", "Robotics", "Drill Team", "Football", "Softball", "Girls Soccer", "Volleyball", "Homecoming Parade"],
+      chips: ["Robotics", "Marching Band", "Dance", "Color Guard", "Jazz Band", "Journalism", "Cheer", "Football", "Baseball", "Softball"],
       ordering:
-        "Pattonville families: design your frame and send it in, and we will follow up with ordering details. A set donation from every frame goes back to Pattonville.",
+        "When you're happy with your frame, send it to us and we'll follow up with ordering details. A set donation from every frame goes back to Pattonville.",
+    },
+    // Official mark from the school's own artwork (sources: MySchoolFrame Pilot
+    // Kit/school-brand/pattonville-pirates/sources.md). Owner's call, 2026-10-11: live on the
+    // St. Louis builders for Bill's demos; taken down the day the school objects.
+    marks: {
+      crest: "/kits/pattonville-pirates/mascot.png",
+      badges: [{ key: "mascot", name: "Pirates", artworkUrl: "/kits/pattonville-pirates/mascot.png", emoji: "🏴‍☠️", field: "navy" }],
     },
     status: "demo",
-    colorSource: "Green and white are confirmed as the colour NAMES; no published hex was reachable, so the green is our approximation — and it must not be allowed to collide with the other green-and-white schools in this catalogue by accident.",
+    colorSource: "MEASURED from the school's own Pirate Pete (Pattonville SD, PiratePete2015FullColor.png, phs.psdr3.org): green #035E2C (9.6%, the bandana), black #020202 (62.9%). The website's --primary-color #007336 is the Pattonville district default and is brighter; confirm which green the school treats as primary. Black is the mark's outline, used as the thread because white cannot read against white lettering.",
   },
   {
     slug: "francis-howell-vikings",
@@ -956,22 +1154,29 @@ const KITS: SchoolKit[] = [
     shortName: "Francis Howell",
     mascot: "Vikings",
     city: "St. Charles, MO",
-    colors: { frame: "#0033A0", tileField: "#0033A0", rim: "#FFC72C" },
+    colors: { frame: "#003777", tileField: "#003777", rim: "#F0BF01" },
     banners: { top: "FRANCIS HOWELL", bottom: "VIKINGS", text: "#FFFFFF" },
-    signature: ["hs:football-patch", "hs:wrestling", "hs:honor-star", "hs:service"],
+    signature: ["hs:wrestling", "hs:football-patch", "hs:ice-hockey", "hs:marching-band"],
+    // Welcome facts (2026-10-11), each sourced in MySchoolFrame Pilot Kit/
+    // school-brand/francis-howell-vikings/sources.md; anything unsourced was dropped.
     welcome: {
-      headline: "The 12th Man never did sit down.",
+      headline: "Welcome, Viking families.",
       message: [
-        "Howell families already know what a season can turn into. The wrestling room made this district's first state champion of any kind long before anybody was watching, and the Friday night that ended in blue and gold confetti still comes up in line at the gas station.",
-        "This frame is your student's. Their sport or their club on the badges, their class year on the banner, in royal and gold.",
+        "Francis Howell's wrestling team won the school's first state championship of any kind in 1982, and the football team went 14-0 to win its first state title in 2022.",
+        "You can add the things your student does as badges and their class year to the banner, all in blue and gold.",
       ],
-      chips: ["Football", "Wrestling", "The 12th Man", "Victor the Viking", "Hockey", "Service"],
+      chips: ["Football", "Wrestling", "Hockey", "Marching Band"],
       ordering:
-        "Francis Howell families: design your frame and send it in, and we will follow up with ordering details. A set donation from every frame goes back to Francis Howell.",
+        "When you're happy with your frame, send it to us and we'll follow up with ordering details. A set donation from every frame goes back to Francis Howell.",
     },
+    // NO `marks` ON PURPOSE (2026-10-11): the school's Viking head is visually the
+    // Minnesota Vikings "Norseman" logo, recoloured. We do not print an NFL mark on a
+    // product we sell; the frame uses GENERIC_MARKS until the school supplies its own.
     status: "demo",
-    colorSource: "Royal and athletic gold are well corroborated as the colour NAMES (several independent spirit-wear retailers); both hex values are our rendering of those standard names, not published brand values.",
+    colorSource: "MEASURED gold #F0BF01 (38.1%) from the school's own Viking logo (FHSD, FrancisHowellHighSchool.gif, fhhs.fhsdschools.org); blue #003777 is the school website's own theme colour (francisHowellHighSchool.css), since the mark's navy is only a 5.6% helmet band. Blue and gold are the colours named in the FHHS student handbook. Raster GIF source; get the vector before a print run.",
   },
+  // The second metro, in its own file (data/kits/chicagoland.ts).
+  ...CHICAGOLAND_KITS,
 ];
 
 const BY_SLUG = new Map(KITS.map((k) => [k.slug, k]));
@@ -1028,6 +1233,12 @@ export const CHIP_PRESET_PIECE: Record<string, string> = {
   "track and field": "hs:track",
   theatre: "hs:drama",
   science: "hs:science",
+  // What Illinois families call it. Search and research may say it; a chip never
+  // does — it is Science Olympiad, Inc.'s name (chicagoland.test.ts).
+  "science olympiad": "hs:science",
+  // IHSA's name for quiz bowl. Its art is withheld, so these chips stay hidden
+  // until the redraw — the mapping is ready for that day.
+  "scholastic bowl": "hs:quiz-bowl",
   yearbook: "hs:yearbook",
   photography: "hs:photography",
   chess: "hs:chess",

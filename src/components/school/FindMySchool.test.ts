@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { rankSchools, norm, type SchoolChoice } from "./FindMySchool";
+import { rankSchools, norm, listsBeforeTyping, authoredLimit, type SchoolChoice } from "./FindMySchool";
+import { finderSchools } from "@/data/school-pilot";
 import { allSchoolKits } from "@/data/school-kits";
 
 /**
@@ -79,5 +80,25 @@ describe("finding a school from what a parent actually types", () => {
       mascot: "Lions", city: "Springfield",
     }));
     expect(rankSchools(many, "lincoln").length).toBe(6);
+  });
+});
+
+describe("menu or search: the pilot finder lists schools only when they fit", () => {
+  it("lists a short pilot before typing, and never the national roster", () => {
+    expect(listsBeforeTyping(false, 6)).toBe(true);
+    expect(listsBeforeTyping(false, 8)).toBe(true);
+    expect(listsBeforeTyping(true, 6)).toBe(false);
+  });
+
+  it("is a search for the St. Louis pilot: listing 8 of 28 hid the other 20", () => {
+    expect(finderSchools().length).toBeGreaterThan(8);
+    expect(listsBeforeTyping(false, finderSchools().length)).toBe(false);
+  });
+
+  it("gives a pilot query every row the finder has, since no roster shares them", () => {
+    expect(authoredLimit(false)).toBe(8);
+    expect(authoredLimit(true)).toBe(6);
+    const hits = rankSchools(finderSchools(), "high", authoredLimit(false));
+    expect(hits.length).toBe(8);
   });
 });

@@ -1,3 +1,71 @@
+# Chicagoland expansion: 30 authored school builders (2026-10-11)
+
+Henry: "start the expansion to chicago area starting with north shore" → "do the custom
+builder buildouts for the top 30 schools in chicagoland" → "have adversarial agents check
+your work and do a polish pass".
+
+Ground rules (from CLAUDE.md): kits carry appearance + identity only; every welcome fact
+sourced; colours honest in `colorSource`; `status: "demo"`; NOT added to the pilot list
+(going live is Henry's call); no marks in public/ without written permission; no email.
+
+## The 30 (North Shore first, then the strongest-identity Chicagoland schools)
+North Shore / north: New Trier, Evanston Township, Glenbrook North, Glenbrook South,
+Highland Park, Deerfield, Lake Forest, Loyola Academy, Stevenson, Libertyville,
+Carmel Catholic, Notre Dame College Prep
+Northwest / near west: Barrington, Prospect, Saint Viator, Maine South, Fenwick, Oak Park
+and River Forest
+West / DuPage: Hinsdale Central, Lyons Township, York, Glenbard West, Wheaton Warrenville
+South, Naperville Central, Naperville North, Neuqua Valley, Benet Academy
+City Catholic: Saint Ignatius College Prep, Mount Carmel, Marist
+
+## Steps
+- [x] Research: 5 agents, sourced facts per school + logo URLs + published hex
+- [x] Illinois plate law / sticker / plate design check (affects the product, not kits)
+- [x] Colours: measure each school's own logo with scripts/sample-brand-colors.mjs
+- [x] Write 30 kits in src/data/school-kits.ts (rosterId joins; Loyola/Carmel have none)
+- [x] Tests: geometry, chips, phrases, no-festive, resolve, kit-sample — all green
+- [x] Render every kit (print path) → contact sheet; browser check of 2+ on a phone width
+- [x] Check the IL preview plate: it is a DRAWN plate, not a photo — IL stock photo is a follow-up
+- [x] Adversarial pass: fact-check welcome copy vs sources; visual/legibility review; code review
+- [x] Polish pass on findings; re-render
+- [x] Outreach catalog: tasks/chicagoland-outreach.md (ranking + best first door per school)
+- [ ] Commit + ONE push together with the St. Louis session — waiting on Henry's go
+
+---
+
+# St. Louis push: bring the other 21 schools up to pilot standard (2026-10-11)
+
+Henry: "complete the ST LOUIS push today… download the mascots, make sure each page
+is appropriately customized." Pilot standard = what Marquette/Eureka/Lafayette/
+West/Central/Ladue have: colours MEASURED from the school's own logo, the school's
+mascot on its builder (marks, Bill's demo call 2026-09-24), sourced welcome copy in
+the pilot voice, its own vanity plate, a QR card, and an OPEN builder.
+
+Schools (21): kirkwood, micds, cbc, de-smet, chaminade, vianney, sja, nerinx,
+cor-jesu, iwa, webster, clayton, lindbergh, burroughs, priory, whitfield, fzw,
+mehlville, oakville, pattonville, francis-howell. SLUH already has measured
+colours + marks; it only needs opening.
+
+- [x] scripts/make-kit-mascot.ts: logo -> 1024 square transparent mascot (app keyer)
+- [x] Research (4 helpers): download each logo to Pilot Kit/school-brand/<slug>/,
+      sources.md, measured colours, thread-checked rim, sourced welcome + chips
+- [x] Review every mascot on its own field by eye (one-inch test) — MICDS edge line
+      fixed; CBC, FZ West, Cor Jesu carded; Francis Howell HELD (NFL Vikings
+      lookalike); Incarnate Word has no usable art
+- [x] Apply to kits: colours, colorSource, welcome, marks, signature
+- [x] Open builders: all 28 St. Louis kits (finder + /s pages); the finder is a
+      search when the list does not fit
+- [x] QR cards: pilot-qr.mjs kit copy synced, 28 cards in Pilot Kit/qr-tracked
+- [ ] Vanity plates: BLOCKED on a Gemini key (Henry: save it to C:/Users/david/.gkey).
+      Words (<=7 chars, MO): CADETS SPARTAN DEVILS GRIFFIN ANGELS MARKERS CHARGER
+      KNIGHTS WEBSTER HOUNDS FLYERS BOMBERS RAVENS WARRIOR JAGUARS PANTHER TIGERS
+      PIRATES VIKINGS — 19 x 3 tries x $0.039 (gemini-2.5-flash-image) = ~$2.25
+- [x] Verify: full test suite, kit-sample renders, phone browser check, finder
+- [ ] Adversarial review (code, facts x2, visual) -> polish pass
+- [ ] One push to master; CLAUDE.md + memory updated
+
+---
+
 # Student profiles (invisible) + scan-to-sale funnel (2026-09-27) — plan approved
 
 Plan: ~/.claude/plans/thinking-wiggly-sunrise.md. Henry: opt-in checkbox YES (unticked); tracking in our own DB, no Google.

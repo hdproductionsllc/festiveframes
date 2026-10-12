@@ -28,7 +28,8 @@ import { assignSurfaces } from "@/lib/school-brand/apply-brand";
 // roster slug for a school that already HAS an authored kit redirects to the
 // authored one, so no school is ever served two pages of itself.
 //
-// DURING THE PILOT (2026-09-23) only the six pilot schools get the builder; every
+// DURING THE PILOT only the St. Louis pilot schools get the builder (six from
+// 2026-09-23, all 28 St. Louis kits from 2026-10-11); every
 // other resolved school gets `SchoolNotReady` — see `isBuilderOpen`, which flips
 // back with the finder's own switch.
 //
@@ -143,7 +144,7 @@ export default async function SchoolKitBuilderPage(
   // The school has a researched page already; this slug is its other name.
   if (r.kind === "redirect") redirect(`/s/${r.to}`);
 
-  // THE PILOT GATE. Outside the six, no builder: a working frame in a school's
+  // THE PILOT GATE. Outside the pilot, no builder: a working frame in a school's
   // name claims a relationship we do not have. One switch reverts it — see
   // `isBuilderOpen`. Checked after the redirect, so a roster slug for an authored
   // school lands on that school's own URL first and is judged there.

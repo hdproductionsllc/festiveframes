@@ -3,7 +3,7 @@ import { finderSchools, isBuilderOpen, pilotSchoolKits, PILOT_SCHOOL_SLUGS, SCHO
 import { allSchoolKits } from "@/data/school-kits";
 import { authoredSlugForRosterId, resolveSchoolSlug } from "@/data/school-resolve";
 
-describe("the six-school pilot", () => {
+describe("the St. Louis pilot", () => {
   it("every pilot school has an authored kit", () => {
     expect(pilotSchoolKits().map((k) => k.slug)).toEqual([...PILOT_SCHOOL_SLUGS]);
   });
@@ -19,15 +19,21 @@ describe("the six-school pilot", () => {
     }
   });
 
-  it("only the pilot six open a builder; everyone else gets the not-ready page", () => {
+  it("only the pilot opens a builder; everyone else gets the not-ready page", () => {
     for (const slug of PILOT_SCHOOL_SLUGS) expect(isBuilderOpen(slug), slug).toBe(true);
-    // An authored kit outside the pilot, and a roster school, are both still
-    // RESOLVED (so the page can name them) but neither opens a builder.
-    expect(resolveSchoolSlug("sluh-jr-bills").kind).toBe("authored");
-    expect(isBuilderOpen("sluh-jr-bills")).toBe(false);
+    // A roster school is still RESOLVED (so the page can name it) but does not
+    // open a builder.
+    expect(resolveSchoolSlug("albertville-high-school-albertville-al").kind).toBe("roster");
     expect(isBuilderOpen("albertville-high-school-albertville-al")).toBe(false);
-    // The gate hides builders; it deletes nothing. Every authored kit is still here.
-    expect(allSchoolKits().length).toBeGreaterThan(PILOT_SCHOOL_SLUGS.length);
+  });
+
+  it("the St. Louis pilot is every authored Missouri kit, each listed once", () => {
+    // A St. Louis kit left off the list is a school we did the homework for and
+    // then show a "not ready" page; a duplicate shows twice in the finder. Other
+    // metros (data/kits/) are authored ahead of opening and stay out.
+    expect(new Set(PILOT_SCHOOL_SLUGS).size).toBe(PILOT_SCHOOL_SLUGS.length);
+    const missouri = allSchoolKits().filter((k) => k.city.endsWith(", MO")).map((k) => k.slug);
+    expect([...PILOT_SCHOOL_SLUGS].sort()).toEqual(missouri.sort());
   });
 
   it("Eureka's federal roster row redirects to its authored kit", () => {

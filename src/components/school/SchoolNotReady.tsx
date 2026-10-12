@@ -6,7 +6,7 @@ import { RequestSchoolForm } from "./RequestSchoolForm";
 
 // ─── /s/<slug> for a school we are not building yet ─────────────────────────
 //
-// During the pilot only six schools get a builder (see `isBuilderOpen` in
+// During the pilot only St. Louis schools get a builder (see `isBuilderOpen` in
 // data/school-pilot.ts). Every other school is still REACHABLE — an old link, a
 // typed URL, a roster school's derived slug — and used to open a working builder
 // in its own name, with "a donation goes back to the school" underneath. That is a

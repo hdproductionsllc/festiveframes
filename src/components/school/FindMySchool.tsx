@@ -28,10 +28,12 @@ import { RequestSchoolForm } from "./RequestSchoolForm";
 // City and state are on every row because names repeat nationally — there are
 // eleven Lincoln High Schools and the name alone does not pick one.
 //
-// PILOT MODE (`national={false}`, see data/school-pilot.ts). During the six-school
-// pilot the national half is switched off: no request is made, the schools we
-// offer are listed before anyone types (six rows is a menu, not a search), and a
-// miss says plainly that we are starting with a few schools and takes a request.
+// PILOT MODE (`national={false}`, see data/school-pilot.ts). During the St. Louis
+// pilot the national half is switched off: no request is made, and a miss says
+// plainly that we are starting with St. Louis-area schools and takes a request.
+// Whether the offered schools are listed BEFORE anyone types depends on how many
+// there are: a list that fits in the finder is a menu (`menu`), a longer one is a
+// search. Listing the first eight of 27 under "Tap your school" hid the other 19.
 
 export interface SchoolChoice {
   slug: string;
@@ -113,6 +115,18 @@ interface Row {
 /** The finder shows at most this many rows. Authored kits take the first places
  *  they earn; the roster fills what is left. */
 const TOTAL = 8;
+
+/** Whether the offered schools are listed BEFORE anyone types: only in pilot mode,
+ *  and only when they fit in the finder. Exported so the test pins what ships. */
+export function listsBeforeTyping(national: boolean, count: number): boolean {
+  return !national && count <= TOTAL;
+}
+
+/** How many authored kits a query may show: in national mode they share the rows
+ *  with the roster; in pilot mode they are the only answer, so they get them all. */
+export function authoredLimit(national: boolean): number {
+  return national ? 6 : TOTAL;
+}
 /** Long enough that a phone keyboard's per-letter burst collapses into one
  *  request, short enough that the list feels like it is keeping up. */
 const DEBOUNCE_MS = 150;
@@ -138,7 +152,8 @@ export function FindMySchool({
   const [roster, setRoster] = useState<{ q: string; hits: RosterHit[] }>({ q: "", hits: [] });
   const router = useRouter();
 
-  const authored = useMemo(() => rankSchools(schools, q), [q, schools]);
+  const authored = useMemo(() => rankSchools(schools, q, authoredLimit(national)), [q, schools, national]);
+  const menu = listsBeforeTyping(national, schools.length);
   const searched = norm(q).length >= 2;
   const trimmed = q.trim();
 
@@ -170,7 +185,7 @@ export function FindMySchool({
 
   const rows: Row[] = useMemo(() => {
     // A pilot's few schools are shown before anyone types.
-    const listed = !national && !searched ? schools : authored;
+    const listed = menu && !searched ? schools : authored;
     const out: Row[] = listed.map((k) => ({
       slug: k.slug,
       title: k.schoolName,
@@ -187,7 +202,7 @@ export function FindMySchool({
       }
     }
     return out.slice(0, TOTAL);
-  }, [authored, roster, trimmed, national, searched, schools]);
+  }, [authored, roster, trimmed, national, searched, schools, menu]);
 
   // The capture only appears once the national search has ANSWERED this query
   // with nothing. Showing it while the request is in flight tells a parent their
@@ -219,7 +234,7 @@ export function FindMySchool({
         aria-describedby="msf-find-help"
       />
 
-      {(searched || !national) && rows.length > 0 ? (
+      {(searched || menu) && rows.length > 0 ? (
         <ul className="msf-find-list">
           {rows.map((r) => (
             <li key={r.slug}>
@@ -244,8 +259,8 @@ export function FindMySchool({
             </p>
           ) : (
             <p>
-              We&apos;re starting with a handful of St.&nbsp;Louis-area schools, and{" "}
-              <strong>{trimmed}</strong> isn&apos;t one of them yet.
+              We&apos;re adding schools a few at a time, and{" "}
+              <strong>{trimmed}</strong> isn&apos;t on yet.
             </p>
           )}
           {/* NOT keyed on the query: the form follows this prefill until the
@@ -258,9 +273,9 @@ export function FindMySchool({
 
       <p className="msf-find-help" id="msf-find-help">
         {!searched
-          ? national
-            ? "Type your school's name, nickname or mascot."
-            : "Tap your school to open its frame."
+          ? menu
+            ? "Tap your school to open its frame."
+            : "Type your school's name, nickname or mascot."
           : rows.length > 0
             ? "Tap your school to open its frame."
             // On a miss the panel above already says what to do, so this must not

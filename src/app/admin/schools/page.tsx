@@ -9,7 +9,7 @@ import { AdminShell, Empty, schoolName, Table, usd, when } from "@/components/ad
 export const metadata: Metadata = { title: "Schools" };
 
 // One row per school with ANY activity, plus every pilot school even at zero —
-// the pilot six are the ones a club is waiting to hear about.
+// the pilot schools are the ones a club is waiting to hear about.
 
 export default async function AdminSchools() {
   const email = await requireAdmin();

@@ -39,7 +39,7 @@ const PLACEMENT = "card";
 const scanUrl = (slug) => `${SCAN_BASE}${slug}/${PLACEMENT}`;
 const PRINT_BASE = "myschoolframe.com/s/";
 
-/** Pilot order, as in PILOT_SCHOOL_SLUGS. Colours are the kits' `colors.frame` /
+/** Pilot order, as in PILOT_SCHOOL_SLUGS (all 28 St. Louis schools since 2026-10-11). Colours are the kits' `colors.frame` /
  *  `colors.rim`, measured from each school's own artwork (see each colorSource). */
 const SCHOOLS = [
   { slug: "marquette-mustangs", name: "Marquette High School", mascot: "Mustangs", frame: "#0D293F", rim: "#068950" },
@@ -48,6 +48,28 @@ const SCHOOLS = [
   { slug: "parkway-west-longhorns", name: "Parkway West High School", mascot: "Longhorns", frame: "#5199CD", rim: "#A40925" },
   { slug: "parkway-central-colts", name: "Parkway Central High School", mascot: "Colts", frame: "#AB1E38", rim: "#FFFFFF" },
   { slug: "ladue-rams", name: "Ladue Horton Watkins High School", mascot: "Rams", frame: "#00599C", rim: "#FFFFFF" },
+  { slug: "kirkwood-pioneers", name: "Kirkwood High School", mascot: "Pioneers", frame: "#BF1D3B", rim: "#FFFFFF" },
+  { slug: "sluh-jr-bills", name: "St. Louis University High School", mascot: "Jr. Bills", frame: "#183B67", rim: "#FFFFFF" },
+  { slug: "micds-rams", name: "MICDS", mascot: "Rams", frame: "#04463D", rim: "#BCBBB6" },
+  { slug: "cbc-cadets", name: "Christian Brothers College High School", mascot: "Cadets", frame: "#4E2683", rim: "#C6B683" },
+  { slug: "de-smet-spartans", name: "De Smet Jesuit High School", mascot: "Spartans", frame: "#751726", rim: "#C5932E" },
+  { slug: "chaminade-red-devils", name: "Chaminade College Preparatory School", mascot: "Red Devils", frame: "#D62A1F", rim: "#FFFFFF" },
+  { slug: "vianney-griffins", name: "St. John Vianney High School", mascot: "Griffins", frame: "#181818", rim: "#FFC425" },
+  { slug: "st-josephs-academy-angels", name: "St. Joseph's Academy", mascot: "Angels", frame: "#367730", rim: "#FFFFFF" },
+  { slug: "nerinx-hall-markers", name: "Nerinx Hall High School", mascot: "Markers", frame: "#008274", rim: "#FFFFFF" },
+  { slug: "cor-jesu-academy-chargers", name: "Cor Jesu Academy", mascot: "Chargers", frame: "#E10719", rim: "#710D28" },
+  { slug: "incarnate-word-academy-red-knights", name: "Incarnate Word Academy", mascot: "Red Knights", frame: "#CA2530", rim: "#EDBC22" },
+  { slug: "webster-groves-statesmen", name: "Webster Groves High School", mascot: "Statesmen", frame: "#111111", rim: "#E66C24" },
+  { slug: "clayton-greyhounds", name: "Clayton High School", mascot: "Greyhounds", frame: "#004A80", rim: "#F36C21" },
+  { slug: "lindbergh-flyers", name: "Lindbergh High School", mascot: "Flyers", frame: "#026637", rim: "#FFD004" },
+  { slug: "john-burroughs-bombers", name: "John Burroughs School", mascot: "Bombers", frame: "#005B8F", rim: "#FFC240" },
+  { slug: "saint-louis-priory-ravens", name: "Saint Louis Priory School", mascot: "Ravens", frame: "#0D2345", rim: "#F8C815" },
+  { slug: "whitfield-warriors", name: "Whitfield School", mascot: "Warriors", frame: "#286142", rim: "#FFFFFF" },
+  { slug: "fort-zumwalt-west-jaguars", name: "Fort Zumwalt West High School", mascot: "Jaguars", frame: "#6A2A78", rim: "#A7A9AC" },
+  { slug: "mehlville-panthers", name: "Mehlville High School", mascot: "Panthers", frame: "#00703C", rim: "#040707" },
+  { slug: "oakville-tigers", name: "Oakville High School", mascot: "Tigers", frame: "#231F20", rim: "#DEB406" },
+  { slug: "pattonville-pirates", name: "Pattonville High School", mascot: "Pirates", frame: "#035E2C", rim: "#020202" },
+  { slug: "francis-howell-vikings", name: "Francis Howell High School", mascot: "Vikings", frame: "#003777", rim: "#F0BF01" },
 ];
 
 const ECL = "H"; // survives ~30% damage: a crease, a thumb, a coffee ring
