@@ -243,7 +243,7 @@ function roundRect(ctx, x, y, w, h, r) {
 }
 
 await mkdir(OUT, { recursive: true });
-const lockup = await loadImage(join(REPO, "public", "brand", "msf-logo-3d.webp"));
+const lockup = await loadImage(join(REPO, "public", "brand", "msf-logo-3d.png"));
 // Every card at the SAME QR version: the longest URL decides it, and a shorter one
 // is simply encoded with room to spare. Mixed versions made Ladue's box (v5) a
 // different size from the rest (v6), and the whole card below it shifted.
