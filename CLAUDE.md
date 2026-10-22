@@ -1016,3 +1016,21 @@ case the repair was written for. Put repairs in `merge`, and make them return th
 - **Vanity plates**: kits without one fall back to the blurred stock plate and the
   plate test names them; plate words are in tasks/todo.md.
 
+
+## Parent gift to the school (2026-10-22)
+
+- **Optional gift on the proof sheet** (`ProofSheet`): No thanks / $5 / $10 / $25 /
+  Other, whole dollars up to $250 (`schoolGift` + `coerceSchoolGiftCents` in
+  config/offers). "No thanks" is chosen every time the sheet opens; never pre-select.
+- **Stored apart from the $5**: `school_orders.gift_cents` is the parent's money
+  passed through; `donation_cents` is a share of OUR price. Both are fixed at checkout,
+  and `schoolOwedCents` / `raisedCents` count both (`giftsCents` is the gift part).
+- **The school gets the gift in full** (Henry): we absorb the card fee, and a promo
+  code never reduces what the school is credited. Stripe spreads a code across every
+  line and cannot exempt one, so the order records the gift as chosen. Any shortfall
+  is ours.
+- **Words**: "gift", never "donation" or "tax-deductible" to a parent (the Stripe line
+  says "Not tax-deductible"). Tests hold the receipt to that.
+- **Open before checkout opens**: payout routine for clubs; counsel/accountant on
+  charitable-sales (co-venturer) rules, which cover the built-in $5 too. Nobody has
+  seen the picker on a phone yet: first look is the end-to-end test payment.
