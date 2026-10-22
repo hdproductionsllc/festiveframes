@@ -18,7 +18,8 @@ import type Stripe from "stripe";
 
 import { getStripe } from "@/lib/stripe";
 import { nonSquareBadgeRows, SCHOOL_BADGES_ARE_SQUARE, SQUARE_RULE_MESSAGE } from "@/lib/order/square-badges";
-import { offer, priceForFramesCents, MAX_CART_FRAMES, schoolOffer, SCHOOL_CHECKOUT_OPEN } from "@/config/offers";
+import { offer, priceForFramesCents, MAX_CART_FRAMES, schoolOffer, SCHOOL_CHECKOUT_OPEN, coerceSchoolGiftCents, formatUsd, schoolGift } from "@/config/offers";
+import { resolveSchoolKit } from "@/data/school-resolve";
 import { artworkOrderMetadata, coerceArtworkRights, designHasUploadedArt } from "@/lib/order/artwork-rights";
 import { getRevisionByToken } from "@/lib/school-designs/store";
 import { createSchoolOrder } from "@/lib/school-designs/orders";
@@ -156,6 +157,15 @@ export async function POST(request: Request): Promise<NextResponse> {
     if (!rev.approval) {
       return NextResponse.json({ error: "Please check and approve your proof first." }, { status: 409 });
     }
+    // The parent's optional gift: whole dollars up to the cap, and only to a
+    // school — a design with no school has nobody to pass it to.
+    const giftCents = coerceSchoolGiftCents(body.giftCents);
+    if (giftCents === null) {
+      return badRequest(`A gift must be whole dollars, up to ${formatUsd(schoolGift.maxCents)}.`);
+    }
+    if (giftCents > 0 && !rev.school) {
+      return badRequest("A gift needs a school to go to.");
+    }
     // THE SQUARE RULE, on the parts list saved with the revision — the same check
     // the save ran. A paid order is the one that reaches a printer, so a revision
     // with no parts list at all is refused too: there is nothing to produce it from.
@@ -181,6 +191,8 @@ export async function POST(request: Request): Promise<NextResponse> {
         school: rev.school,
         // Fixed on the order at checkout: it is what the school is owed for it.
         donationCents: rev.school ? schoolOffer.schoolDonationCents : 0,
+        // The parent's gift, as chosen: credited in full whatever a code later does.
+        giftCents,
         // Where this parent came from, carried to the "paid" step (the funnel).
         anonId: coerceTrack(body.track)?.anonId ?? null,
         placement: coerceTrack(body.track)?.placement ?? null,
@@ -217,6 +229,20 @@ export async function POST(request: Request): Promise<NextResponse> {
               product_data: { name: season.shippingLabel },
             },
           },
+          // The gift on a line of its own, so the receipt says exactly what it was.
+          ...(giftCents > 0
+            ? [{
+                quantity: 1,
+                price_data: {
+                  currency: schoolOffer.currency,
+                  unit_amount: giftCents,
+                  product_data: {
+                    name: `Gift to ${resolveSchoolKit(school)?.schoolName ?? school}`,
+                    description: "Your extra gift. All of it goes to the school. Not tax-deductible.",
+                  },
+                },
+              }]
+            : []),
         ],
         shipping_address_collection: { allowed_countries: ["US"] },
         // MySchoolFrame's own confirmation page, not the holiday /thanks.
@@ -232,6 +258,7 @@ export async function POST(request: Request): Promise<NextResponse> {
           designName,
           school,
           donationCents: String(schoolOffer.schoolDonationCents),
+          giftCents: String(giftCents),
           // Who said they had the right to print this — read off the SAVED design,
           // not the request. The payment record is the one artifact that certainly
           // survives, so the attestation rides on it.

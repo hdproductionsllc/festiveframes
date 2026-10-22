@@ -63,6 +63,32 @@ export const schoolOffer = {
   currency: offer.currency,
 };
 
+// ─── A parent's extra gift to the school (owner-confirmed 2026-10-22) ────────
+//
+// Optional, chosen on the proof sheet, "No thanks" by default. It is the PARENT'S
+// money passed through, NOT a share of our price, so it lives on the order apart
+// from `schoolDonationCents` and both count toward the school's total. The school
+// is credited the gift IN FULL: we absorb the card fee, and a promotion code never
+// comes off it (Stripe spreads a code across every line, so the order records the
+// gift as chosen and any shortfall is ours). Never call it tax-deductible: the
+// gift is made through a business, not to a charity.
+export const schoolGift = {
+  presetsCents: [500, 1000, 2500] as const,
+  maxCents: 25000,
+};
+
+/**
+ * The server's reading of a requested gift: cents, or null when it is not one we
+ * accept. Absent / null / 0 is "no gift". A gift is whole dollars from $1 to the
+ * cap — never a client-supplied price, only a bounded amount the parent chose.
+ */
+export function coerceSchoolGiftCents(v: unknown): number | null {
+  if (v === undefined || v === null || v === 0) return 0;
+  if (typeof v !== "number" || !Number.isInteger(v)) return null;
+  if (v < 100 || v > schoolGift.maxCents || v % 100 !== 0) return null;
+  return v;
+}
+
 /**
  * Is DIRECT CHECKOUT open on the school builder? **Not yet — one step left.**
  *

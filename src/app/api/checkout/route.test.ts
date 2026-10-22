@@ -181,4 +181,68 @@ describe("POST /api/checkout — school-frame", () => {
     expect(res.status).toBe(400);
     expect(create).not.toHaveBeenCalled();
   });
+  // ── The parent's optional gift to the school (config/offers `schoolGift`) ──
+  it("no gift by default: no gift line, and the order records none", async () => {
+    openCheckout();
+    const { POST } = await import("./route");
+    const { __memSchoolOrdersForTest } = await import("@/lib/school-designs/orders");
+    const { token, revision } = await savedRevision();
+    expect((await POST(req({ kind: "school-frame", token, revision }))).status).toBe(200);
+    const args = create.mock.calls[0][0];
+    expect(args.line_items).toHaveLength(2);
+    expect(args.metadata.giftCents).toBe("0");
+    expect(__memSchoolOrdersForTest.get(args.metadata.orderId)!.giftCents).toBe(0);
+  });
+
+  it("a gift rides on its own receipt line, in Stripe's metadata and on the order, apart from the set $5", async () => {
+    openCheckout();
+    const { POST } = await import("./route");
+    const { schoolOffer } = await import("@/config/offers");
+    const { __memSchoolOrdersForTest } = await import("@/lib/school-designs/orders");
+    const { token, revision } = await savedRevision();
+    expect((await POST(req({ kind: "school-frame", token, revision, giftCents: 1000 }))).status).toBe(200);
+    const args = create.mock.calls[0][0];
+    const line = args.line_items[2];
+    expect(line.price_data.unit_amount).toBe(1000);
+    expect(line.price_data.product_data.name).toMatch(/^Gift to /);
+    expect(line.price_data.product_data.description).toMatch(/not tax-deductible/i);
+    expect(args.metadata).toMatchObject({ giftCents: "1000", donationCents: String(schoolOffer.schoolDonationCents) });
+    const order = __memSchoolOrdersForTest.get(args.metadata.orderId)!;
+    expect(order).toMatchObject({ giftCents: 1000, donationCents: schoolOffer.schoolDonationCents });
+  });
+
+  it("takes the cap exactly and refuses anything that is not whole dollars up to it", async () => {
+    openCheckout();
+    const { POST } = await import("./route");
+    const { token, revision } = await savedRevision();
+    expect((await POST(req({ kind: "school-frame", token, revision, giftCents: 25000 }))).status).toBe(200);
+    for (const giftCents of [25100, 1050, 50, -500, 10.5, "1000", true]) {
+      const res = await POST(req({ kind: "school-frame", token, revision, giftCents }));
+      expect(res.status, `giftCents ${JSON.stringify(giftCents)}`).toBe(400);
+    }
+    expect(create).toHaveBeenCalledTimes(1);
+  });
+
+  it("refuses a gift on a design with no school: there is nobody to give it to", async () => {
+    openCheckout();
+    const { POST } = await import("./route");
+    const { saveSchoolDesign, approveRevision } = await import("@/lib/school-designs/store");
+    const saved = await saveSchoolDesign({
+      school: null,
+      contact: null,
+      revision: {
+        design: { designName: "Lab", slots: {} },
+        parts: SQUARE_DRAFT.parts,
+        proof: { name: "OVERVIEW", dataUrl: PNG },
+        panels: [],
+        artworkRights: null,
+        variant: "flush",
+        createdBy: "parent",
+      },
+    });
+    await approveRevision(saved!.token, saved!.revision, { wordingVersion: "test", ip: null, userAgent: null });
+    const res = await POST(req({ kind: "school-frame", token: saved!.token, revision: saved!.revision, giftCents: 500 }));
+    expect(res.status).toBe(400);
+    expect(create).not.toHaveBeenCalled();
+  });
 });

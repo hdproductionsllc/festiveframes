@@ -99,6 +99,7 @@ export default async function RaisedPage(
         <p className="msf-raised-sub">
           from {t.frames} {t.frames === 1 ? "frame" : "frames"}
           {started ? ` since ${started}` : ""}
+          {t.giftsCents > 0 ? `, including ${money(t.giftsCents)} in extra gifts from parents` : ""}
         </p>
 
         {t.frames === 0 ? (

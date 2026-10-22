@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { requireAdmin } from "@/lib/admin/session";
-import { listSchoolOrders, type SchoolOrder } from "@/lib/school-designs/orders";
+import { listSchoolOrders, schoolOwedCents, type SchoolOrder } from "@/lib/school-designs/orders";
 import { designCode } from "@/lib/school-designs/store";
 import { AdminShell, Empty, schoolName, StatusPill, Table, usd, when } from "@/components/admin/AdminShell";
 
@@ -35,7 +35,12 @@ export default async function AdminOrders() {
                 {o.paymentStatus === "no_payment_required" ? "$0 coupon" : usd(o.amountCents)}
                 <span className="block text-[12px] text-stone-500">{when(o.paidAt)}</span>
               </td>
-              <td className="px-3 py-2">{o.paymentStatus === "paid" && o.refundedAt === null ? usd(o.donationCents) : "—"}</td>
+              <td className="px-3 py-2">
+                {o.paymentStatus === "paid" && o.refundedAt === null ? usd(schoolOwedCents(o)) : "—"}
+                {o.giftCents > 0 && (
+                  <span className="block text-[12px] text-stone-500">incl. {usd(o.giftCents)} gift</span>
+                )}
+              </td>
               <td className="px-3 py-2">{o.attempts}</td>
             </tr>
           ))}

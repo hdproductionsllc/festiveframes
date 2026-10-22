@@ -1092,7 +1092,7 @@ export function SchoolDesigner({
     }
   };
 
-  const approveAndPay = async () => {
+  const approveAndPay = async (giftCents: number) => {
     if (!proof || buying) return;
     setBuying(true);
     setProof((cur) => cur && { ...cur, error: null });
@@ -1108,7 +1108,7 @@ export function SchoolDesigner({
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ kind: "school-frame", token, revision, track: trackFor(kit?.slug) }),
+        body: JSON.stringify({ kind: "school-frame", token, revision, giftCents, track: trackFor(kit?.slug) }),
       });
       const data = (await res.json().catch(() => ({}))) as { url?: string; error?: string };
       if (res.ok && data.url) {
@@ -1991,7 +1991,8 @@ export function SchoolDesigner({
           lettering={proof.lettering}
           busy={buying}
           error={proof.error}
-          onApprove={() => void approveAndPay()}
+          giftTo={kit?.shortName ?? null}
+          onApprove={(giftCents) => void approveAndPay(giftCents)}
           onClose={() => setProof(null)}
         />
       )}

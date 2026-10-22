@@ -88,11 +88,13 @@ export function shippingLines(session: Stripe.Checkout.Session): string[] {
 export function orderFacts(session: Stripe.Checkout.Session): OrderFacts {
   const meta = session.metadata ?? {};
   const donation = Number(meta.donationCents ?? 0);
+  const gift = Number(meta.giftCents ?? 0);
   return {
     paymentStatus: session.payment_status ?? null,
     discountCents: session.total_details?.amount_discount ?? 0,
     school: meta.school || null,
     donationCents: Number.isFinite(donation) && donation > 0 ? donation : 0,
+    giftCents: Number.isFinite(gift) && gift > 0 ? gift : 0,
     artwork: artworkRightsLineFromMetadata(meta),
   };
 }

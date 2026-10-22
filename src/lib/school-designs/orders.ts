@@ -50,6 +50,9 @@ export interface SchoolOrder {
   school: string | null;
   /** The per-frame donation promised to the school, in cents, fixed at checkout. */
   donationCents: number;
+  /** The parent's optional extra gift to the school, in cents, fixed at checkout.
+   *  The school is credited it in full (config/offers `schoolGift`). */
+  giftCents: number;
   status: SchoolOrderStatus;
   sessionId: string | null;
   /** Stripe's word: "paid", or "no_payment_required" for a 100%-off code. */
@@ -90,6 +93,7 @@ function fromRow(r: Record<string, unknown>): SchoolOrder {
     proofSha256: String(r.proof_sha256),
     school: (r.school_slug as string | null) ?? null,
     donationCents: Number(r.donation_cents ?? 0),
+    giftCents: Number(r.gift_cents ?? 0),
     status: r.status as SchoolOrderStatus,
     sessionId: (r.session_id as string | null) ?? null,
     paymentStatus: (r.payment_status as string | null) ?? null,
@@ -123,6 +127,7 @@ export async function createSchoolOrder(o: {
   proofSha256: string;
   school: string | null;
   donationCents: number;
+  giftCents?: number;
   anonId?: string | null;
   placement?: string | null;
 }): Promise<SchoolOrder> {
@@ -133,6 +138,7 @@ export async function createSchoolOrder(o: {
     proofSha256: o.proofSha256,
     school: o.school,
     donationCents: Math.max(0, Math.round(o.donationCents)),
+    giftCents: Math.max(0, Math.round(o.giftCents ?? 0)),
     status: "awaiting_payment",
     sessionId: null,
     paymentStatus: null,
@@ -154,9 +160,9 @@ export async function createSchoolOrder(o: {
   }
   await ensureSchema();
   await getPool().query(
-    `INSERT INTO school_orders (order_id, design_id, revision, proof_sha256, school_slug, donation_cents, status, anon_id, placement)
-     VALUES ($1, $2, $3, $4, $5, $6, 'awaiting_payment', $7, $8)`,
-    [order.orderId, order.designId, order.revision, order.proofSha256, order.school, order.donationCents, order.anonId, order.placement],
+    `INSERT INTO school_orders (order_id, design_id, revision, proof_sha256, school_slug, donation_cents, gift_cents, status, anon_id, placement)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, 'awaiting_payment', $8, $9)`,
+    [order.orderId, order.designId, order.revision, order.proofSha256, order.school, order.donationCents, order.giftCents, order.anonId, order.placement],
   );
   return order;
 }
@@ -324,8 +330,11 @@ export interface SchoolTotals {
   school: string;
   /** Paid frames carrying this school. */
   frames: number;
-  /** Total donation owed to the school, in cents. */
+  /** Everything owed to the school, in cents: the set share of every frame plus
+   *  every parent's extra gift. */
   raisedCents: number;
+  /** The part of `raisedCents` that came from parents' extra gifts. */
+  giftsCents: number;
   /** Frames in the last 30 days — what a club wants for "this season". */
   frames30d: number;
   raised30dCents: number;
@@ -347,17 +356,24 @@ function counts(o: SchoolOrder): boolean {
   return o.paymentStatus === "paid" && o.refundedAt === null && o.paidAt !== null;
 }
 
+/** What one order owes its school: the set share plus the parent's gift. */
+export function schoolOwedCents(o: Pick<SchoolOrder, "donationCents" | "giftCents">): number {
+  return o.donationCents + o.giftCents;
+}
+
 function fold(school: string, orders: SchoolOrder[]): SchoolTotals {
   const cut = Date.now() - DAY30_MS;
-  const t: SchoolTotals = { school, frames: 0, raisedCents: 0, frames30d: 0, raised30dCents: 0, firstAt: null, lastAt: null };
+  const t: SchoolTotals = { school, frames: 0, raisedCents: 0, giftsCents: 0, frames30d: 0, raised30dCents: 0, firstAt: null, lastAt: null };
   for (const o of orders) {
     if (!counts(o)) continue;
     const at = o.paidAt!;
+    const owed = schoolOwedCents(o);
     t.frames += 1;
-    t.raisedCents += o.donationCents;
+    t.raisedCents += owed;
+    t.giftsCents += o.giftCents;
     if (at >= cut) {
       t.frames30d += 1;
-      t.raised30dCents += o.donationCents;
+      t.raised30dCents += owed;
     }
     if (t.firstAt === null || at < t.firstAt) t.firstAt = at;
     if (t.lastAt === null || at > t.lastAt) t.lastAt = at;

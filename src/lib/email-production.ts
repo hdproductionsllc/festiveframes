@@ -137,6 +137,9 @@ export interface OrderFacts {
   school: string | null;
   /** The per-frame donation promised to that school, in cents. */
   donationCents: number;
+  /** The parent's extra gift to that school, in cents (0 = none). Optional so a
+   *  record made before gifts existed still reads as "no gift". */
+  giftCents?: number;
   /** The artwork-rights line, and whether uploaded art has NO attestation. */
   artwork: { line: string; unattested: boolean } | null;
   /** The proof the parent approved: design code, revision and when. School
@@ -161,7 +164,10 @@ function moneyHeadline(o: ProductionOrderInput): string {
   }
   const paid = `New paid order · ${usd(o.amountTotalCents)}`;
   const f = o.order;
-  return f?.school && f.donationCents > 0 ? `${paid} · ${usd(f.donationCents)} to ${f.school}` : paid;
+  if (!f?.school) return paid;
+  const gift = f.giftCents ?? 0;
+  if (gift > 0) return `${paid} · ${usd(f.donationCents)} + ${usd(gift)} gift to ${f.school}`;
+  return f.donationCents > 0 ? `${paid} · ${usd(f.donationCents)} to ${f.school}` : paid;
 }
 
 /** The order-record lines under the headline (school, discount, artwork). */
@@ -170,6 +176,9 @@ function orderFactLines(o: ProductionOrderInput): Array<{ label: string; value: 
   if (!f) return [];
   const out: Array<{ label: string; value: string; alarm?: boolean }> = [];
   if (f.school) out.push({ label: "School", value: f.school });
+  if (f.school && (f.giftCents ?? 0) > 0) {
+    out.push({ label: "Parent's gift", value: `${usd(f.giftCents!)} to the school, passed on in full` });
+  }
   if (f.discountCents > 0) out.push({ label: "Discount", value: `${usd(f.discountCents)} (promotion code)` });
   if (f.artwork) out.push({ label: "Artwork", value: f.artwork.line, alarm: f.artwork.unattested });
   if (f.approval) out.push({ label: "Proof approved", value: f.approval });
@@ -248,6 +257,13 @@ const MSF_THANK_YOU_LINES = [
   "Thank you for putting your school on your car.",
 ];
 const MSF_SIGNOFF = "— The MySchoolFrame team";
+
+/** The parent's thank-you for an extra gift, or null when they gave none. Says
+ *  "gift", never "donation" or "tax-deductible" (config/offers `schoolGift`). */
+function giftThanks(o: ProductionOrderInput): string | null {
+  const gift = o.order?.school ? (o.order.giftCents ?? 0) : 0;
+  return gift > 0 ? `Thank you for your ${usd(gift)} gift to the school. All of it goes to them.` : null;
+}
 const MSF_THANK_YOU = `
   <div style="margin:20px 0 0;padding:16px 18px;background:${PAGE};border:3px solid ${INK};border-radius:14px;box-shadow:${SHADOW};">
     <p style="margin:0 0 8px;color:${INK};font-size:14px;line-height:1.6;">${MSF_THANK_YOU_LINES.join(" ")}</p>
@@ -367,6 +383,7 @@ function customerText(o: ProductionOrderInput): string {
     ``,
     ...(o.brand === "myschoolframe"
       ? [
+          ...(giftThanks(o) ? [giftThanks(o)!, ``] : []),
           ...MSF_THANK_YOU_LINES,
           `Your frame is covered by our one-year warranty: ${MSF_WARRANTY_URL}`,
           MSF_SIGNOFF,
@@ -399,6 +416,7 @@ function customerHtml(o: ProductionOrderInput): string {
     ${proofImg}
     <p style="margin:0 0 4px;padding-left:12px;border-left:5px solid ${BLUE};color:${INK};font-size:14px;"><strong>Order:</strong> ${esc(o.orderId)} · <strong>Total:</strong> ${usd(o.amountTotalCents)}</p>
     <div style="margin:16px 0 0;padding:14px 16px;background:${PAGE};border:3px solid ${INK};border-radius:14px;box-shadow:${SHADOW};">${shippingBlock(o.shippingLines)}</div>
+    ${brand === "myschoolframe" && giftThanks(o) ? `<p style="margin:16px 0 0;color:${INK};font-size:14px;line-height:1.6;font-weight:bold;">${esc(giftThanks(o))}</p>` : ""}
     ${brand === "myschoolframe" ? MSF_THANK_YOU : FOUNDERS_THANK_YOU}`,
     brand,
   );

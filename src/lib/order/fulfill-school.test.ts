@@ -47,7 +47,7 @@ const parts = { designName: "Rams", plateState: "MO", tileSizeInches: 1, qr: { e
 
 let seq = 0;
 /** A saved revision (approved unless told otherwise) with an order awaiting payment. */
-async function paidOrder(o: { approve?: boolean; metadata?: Record<string, string>; session?: Record<string, unknown> } = {}) {
+async function paidOrder(o: { approve?: boolean; giftCents?: number; metadata?: Record<string, string>; session?: Record<string, unknown> } = {}) {
   const saved = await saveSchoolDesign({
     school: "ladue-rams",
     contact: null,
@@ -65,7 +65,7 @@ async function paidOrder(o: { approve?: boolean; metadata?: Record<string, strin
     await approveRevision(saved!.token, saved!.revision, { wordingVersion: "test", ip: null, userAgent: null });
   }
   const rev = (await getRevision(saved!.id, saved!.revision))!;
-  const order = await createSchoolOrder({ designId: saved!.id, revision: rev.n, proofSha256: rev.proof.sha256, school: "ladue-rams", donationCents: 500 });
+  const order = await createSchoolOrder({ designId: saved!.id, revision: rev.n, proofSha256: rev.proof.sha256, school: "ladue-rams", donationCents: 500, giftCents: o.giftCents });
   const session = {
     id: `cs_${seq}`,
     payment_status: "paid",
@@ -78,6 +78,7 @@ async function paidOrder(o: { approve?: boolean; metadata?: Record<string, strin
       proofSha256: rev.proof.sha256,
       school: "ladue-rams",
       donationCents: "500",
+      giftCents: String(o.giftCents ?? 0),
       artUploaded: "no",
       artRights: "n/a",
       ...o.metadata,
@@ -228,6 +229,48 @@ describe("fulfillSchoolOrder", () => {
     await fulfillSchoolOrder(back.session);
     await markSchoolOrderRefunded(back.order.orderId);
     expect((await schoolTotals("ladue-rams")).raisedCents - before).toBe(500);
+  });
+
+  it("a parent's gift counts toward the school in full, and leaves with a refund", async () => {
+    const before = await schoolTotals("ladue-rams");
+    const kept = await paidOrder({ giftCents: 1000 });
+    await fulfillSchoolOrder(kept.session);
+    const back = await paidOrder({ giftCents: 2500 });
+    await fulfillSchoolOrder(back.session);
+    await markSchoolOrderRefunded(back.order.orderId);
+    const after = await schoolTotals("ladue-rams");
+    expect(after.raisedCents - before.raisedCents).toBe(500 + 1000);
+    expect(after.giftsCents - before.giftsCents).toBe(1000);
+  });
+
+  it("the gift is credited as chosen even when a promotion code shaved the total", async () => {
+    const before = await schoolTotals("ladue-rams");
+    const { session } = await paidOrder({
+      giftCents: 1000,
+      session: { amount_total: 2000, total_details: { amount_discount: 1995, amount_shipping: 500, amount_tax: 0 } },
+    });
+    await fulfillSchoolOrder(session);
+    expect((await schoolTotals("ladue-rams")).raisedCents - before.raisedCents).toBe(1500);
+  });
+
+  it("Bill's email and the parent's receipt both name the gift", async () => {
+    const { session } = await paidOrder({ giftCents: 1000 });
+    expect(await fulfillSchoolOrder(session)).toBe("sent");
+    const [p] = production();
+    expect(String(p.text)).toContain("$5.00 + $10.00 gift to ladue-rams");
+    expect(String(p.text)).toMatch(/Parent's gift.*\$10\.00 to the school, passed on in full/);
+    const receipt = sent.find((m) => String(m.subject).includes("order is confirmed"))!;
+    expect(String(receipt.text)).toContain("Thank you for your $10.00 gift to the school");
+    expect(String(receipt.html)).toContain("Thank you for your $10.00 gift to the school");
+    expect(String(receipt.text) + String(receipt.html)).not.toMatch(/tax-deductible|donation/i);
+  });
+
+  it("an order with no gift says nothing about one", async () => {
+    const { session } = await paidOrder();
+    await fulfillSchoolOrder(session);
+    const receipt = sent.find((m) => String(m.subject).includes("order is confirmed"))!;
+    expect(String(receipt.text)).not.toMatch(/gift/i);
+    expect(String(production()[0].text)).not.toMatch(/Parent's gift/);
   });
 
   it("a session naming an order that does not exist alerts a human and sends nothing", async () => {

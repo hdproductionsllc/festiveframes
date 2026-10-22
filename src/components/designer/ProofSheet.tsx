@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useId } from "react";
+import { useEffect, useId, useState } from "react";
 import { createPortal } from "react-dom";
 import { PROOF_APPROVAL_STATEMENT } from "@/content/proof-approval";
+import { coerceSchoolGiftCents, formatUsd, schoolGift } from "@/config/offers";
 
 // ─── The proof, before anything is paid for ──────────────────────────────────
 //
@@ -18,6 +19,11 @@ import { PROOF_APPROVAL_STATEMENT } from "@/content/proof-approval";
 // lettering on a frame.
 //
 // Same bottom-sheet / centred-card shape as SendDesignSheet.
+//
+// Under the proof, an OPTIONAL extra gift to the school (config/offers
+// `schoolGift`). "No thanks" is chosen every time the sheet opens: a gift a parent
+// did not pick is not a gift, and a pre-ticked one gets talked about in the
+// team's group chat. The amount travels with the approval; the server re-checks it.
 
 export function ProofSheet({
   proof,
@@ -26,6 +32,7 @@ export function ProofSheet({
   lettering,
   busy,
   error,
+  giftTo,
   onApprove,
   onClose,
 }: {
@@ -37,10 +44,26 @@ export function ProofSheet({
   lettering: string[];
   busy: boolean;
   error: string | null;
-  onApprove: () => void;
+  /** The school a gift would go to, as parents say it ("SLUH"). Null hides the
+   *  gift choice — a design with no school has nobody to give to. */
+  giftTo: string | null;
+  /** Approve this proof and pay, with the chosen gift in cents (0 = none). */
+  onApprove: (giftCents: number) => void;
   onClose: () => void;
 }) {
   const titleId = useId();
+  // "none", a preset in cents, or "other" with the dollars typed.
+  const [giftChoice, setGiftChoice] = useState<"none" | "other" | number>("none");
+  const [otherDollars, setOtherDollars] = useState("");
+  const giftCents: number | null =
+    giftChoice === "none"
+      ? 0
+      : giftChoice === "other"
+        ? /^\d{1,4}$/.test(otherDollars.trim())
+          ? coerceSchoolGiftCents(Number(otherDollars.trim()) * 100)
+          : otherDollars.trim() === "" ? 0 : null
+        : giftChoice;
+  const giftInvalid = giftChoice === "other" && giftCents === null;
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -114,6 +137,53 @@ export function ProofSheet({
           </div>
         )}
 
+        {giftTo && (
+          <fieldset className="mb-3 rounded-[10px] border border-[var(--ff-line-strong)] bg-white p-3">
+            <legend className="px-1 text-[13px] font-semibold text-[var(--ff-ink)]">
+              Add a gift for {giftTo}?
+            </legend>
+            <div className="flex flex-wrap gap-2">
+              {(["none", ...schoolGift.presetsCents, "other"] as const).map((c) => {
+                const on = giftChoice === c;
+                return (
+                  <button
+                    key={String(c)}
+                    type="button"
+                    aria-pressed={on}
+                    disabled={busy}
+                    onClick={() => setGiftChoice(c)}
+                    className={`ff-chip min-h-11 ${on ? "ff-chip-on" : ""}`}
+                  >
+                    {c === "none" ? "No thanks" : c === "other" ? "Other" : formatUsd(c)}
+                  </button>
+                );
+              })}
+            </div>
+            {giftChoice === "other" && (
+              <label className="mt-2 flex items-center gap-2 text-[14px] text-[var(--ff-ink)]">
+                <span aria-hidden>$</span>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="off"
+                  aria-label="Gift amount in dollars"
+                  aria-invalid={giftInvalid}
+                  placeholder="Amount"
+                  value={otherDollars}
+                  disabled={busy}
+                  onChange={(e) => setOtherDollars(e.target.value.replace(/[^\d]/g, "").slice(0, 4))}
+                  className="h-11 w-28 rounded-lg border border-[var(--ff-line-strong)] bg-white px-3 text-[16px] font-normal text-[var(--ff-ink)]"
+                />
+                <span className="ff-micro">Whole dollars, up to {formatUsd(schoolGift.maxCents)}</span>
+              </label>
+            )}
+            <p className="ff-micro mt-2">
+              Optional. All of it goes to {giftTo}, added to what your frame already gives.
+              MySchoolFrame is a business, so the gift isn&apos;t tax-deductible.
+            </p>
+          </fieldset>
+        )}
+
         <p className="text-[13px] leading-snug text-[var(--ff-ink)]">{PROOF_APPROVAL_STATEMENT}</p>
 
         {error && (
@@ -126,7 +196,12 @@ export function ProofSheet({
           <button type="button" onClick={onClose} disabled={busy} className="ff-btn ff-btn-secondary min-h-11 flex-1">
             Keep editing
           </button>
-          <button type="button" onClick={onApprove} disabled={busy} className="ff-btn ff-btn-primary min-h-11 flex-[2]">
+          <button
+            type="button"
+            onClick={() => giftCents !== null && onApprove(giftCents)}
+            disabled={busy || giftInvalid}
+            className="ff-btn ff-btn-primary min-h-11 flex-[2]"
+          >
             {busy ? "One moment…" : "Approve and pay"}
           </button>
         </div>

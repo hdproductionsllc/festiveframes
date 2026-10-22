@@ -168,6 +168,10 @@ export function ensureSchema(): Promise<void> {
       // Where the buyer came from, carried from checkout to payment (the funnel).
       await p.query(`ALTER TABLE school_orders ADD COLUMN IF NOT EXISTS anon_id text`);
       await p.query(`ALTER TABLE school_orders ADD COLUMN IF NOT EXISTS placement text`);
+      // A parent's optional extra gift to the school (config/offers `schoolGift`),
+      // kept apart from `donation_cents`: that is a share of our price, this is the
+      // parent's own money passed through. Both are fixed at checkout.
+      await p.query(`ALTER TABLE school_orders ADD COLUMN IF NOT EXISTS gift_cents integer NOT NULL DEFAULT 0`);
       // THE FUNNEL (lib/school-designs/funnel): anonymous events, our own database,
       // nothing personal — a random per-browser id, the school, the QR placement.
       await p.query(`
