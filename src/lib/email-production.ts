@@ -97,6 +97,10 @@ export interface NamedImage {
 
 export interface ProductionOrderInput {
   orderId: string;
+  /** The reference the CUSTOMER sees and quotes — a school order's design code
+   *  (MSF-XXXX-XXXX), the same one their link email told them to keep. Bill's email
+   *  shows it beside `orderId`, so a parent's quote finds the order. Absent = orderId. */
+  orderRef?: string;
   sessionId: string;
   customerEmail: string | null;
   customerName: string | null;
@@ -316,7 +320,7 @@ function productionHtml(o: ProductionOrderInput, droppedNote?: string | null): s
     <p style="margin:0 0 14px;display:inline-block;padding:6px 14px;background:${noCharge ? GOLD : RED};color:${noCharge ? INK : PAGE};font-size:13px;font-weight:bold;text-transform:uppercase;border:3px solid ${INK};border-radius:99px;">${esc(moneyHeadline(o))}</p>
     ${qty > 1 || (c && c.total > 1) ? makeBadge : ""}
     <p style="margin:0 0 8px;color:${INK};font-size:13px;">
-      ${c && c.total > 1 ? `<strong>Order ref:</strong> ${esc(c.cartId)} (frame ${c.index} of ${c.total})<br/>` : ""}<strong>This design:</strong> ${esc(o.orderId)}<br/>
+      ${c && c.total > 1 ? `<strong>Order ref:</strong> ${esc(c.cartId)} (frame ${c.index} of ${c.total})<br/>` : ""}<strong>Order:</strong> ${o.orderRef ? `${esc(o.orderRef)} · record ${esc(o.orderId)}` : esc(o.orderId)}<br/>
       <strong>Stripe:</strong> ${esc(o.sessionId)}<br/>
       <strong>Customer:</strong> ${esc(o.customerName ?? "—")} &lt;${esc(o.customerEmail ?? "—")}&gt;<br/>
       <strong>Plate:</strong> ${esc(o.parts.plateState)}${o.parts.qr.enabled ? ` · <strong>QR:</strong> ${esc(o.parts.qr.url)}` : ""}${factLines
@@ -350,7 +354,7 @@ function productionText(o: ProductionOrderInput, droppedNote?: string | null): s
       ? `*** FRAME ${c.index} OF ${c.total} — SAME ORDER (ref ${c.cartId}). Make all ${c.total} and SHIP TOGETHER to ${o.customerName ?? o.customerEmail ?? "this customer"}. ***`
       : null,
     ``,
-    `Order: ${o.orderId}`,
+    `Order: ${o.orderRef ? `${o.orderRef} · record ${o.orderId}` : o.orderId}`,
     `Stripe: ${o.sessionId}`,
     `Customer: ${o.customerName ?? "—"} <${o.customerEmail ?? "—"}>`,
     `Plate: ${o.parts.plateState}${o.parts.qr.enabled ? ` · QR: ${o.parts.qr.url}` : ""}`,
@@ -375,7 +379,7 @@ function customerText(o: ProductionOrderInput): string {
     `license-plate frame is now in our shop. A proof of the exact frame you`,
     `designed is attached to this email.`,
     ``,
-    `Order: ${o.orderId}`,
+    `Order: ${o.orderRef ?? o.orderId}`,
     `Total: ${usd(o.amountTotalCents)}`,
     ``,
     `Ship to:`,
@@ -414,7 +418,7 @@ function customerHtml(o: ProductionOrderInput): string {
       license-plate frame you designed:
     </p>
     ${proofImg}
-    <p style="margin:0 0 4px;padding-left:12px;border-left:5px solid ${BLUE};color:${INK};font-size:14px;"><strong>Order:</strong> ${esc(o.orderId)} · <strong>Total:</strong> ${usd(o.amountTotalCents)}</p>
+    <p style="margin:0 0 4px;padding-left:12px;border-left:5px solid ${BLUE};color:${INK};font-size:14px;"><strong>Order:</strong> ${esc(o.orderRef ?? o.orderId)} · <strong>Total:</strong> ${usd(o.amountTotalCents)}</p>
     <div style="margin:16px 0 0;padding:14px 16px;background:${PAGE};border:3px solid ${INK};border-radius:14px;box-shadow:${SHADOW};">${shippingBlock(o.shippingLines)}</div>
     ${brand === "myschoolframe" && giftThanks(o) ? `<p style="margin:16px 0 0;color:${INK};font-size:14px;line-height:1.6;font-weight:bold;">${esc(giftThanks(o))}</p>` : ""}
     ${brand === "myschoolframe" ? MSF_THANK_YOU : FOUNDERS_THANK_YOU}`,
@@ -541,8 +545,10 @@ export async function sendProductionEmails(
   // (skipCustomer) — fulfillCart sends ONE combined confirmation for the whole
   // order instead, so the buyer isn't emailed N times.
   if (o.customerEmail && !opts?.skipCustomer) {
+    // The parent's copy of the proof is named for THEM: the production name says
+    // "do-not-print" to the shop, which reads oddly on a customer's attachment.
     const customerAttachments = proofAttachment
-      ? [{ ...proofAttachment, contentId: "proof" }]
+      ? [{ ...proofAttachment, filename: `${o.orderRef ?? "your"}-frame-proof.png`, contentId: "proof" }]
       : [];
     try {
       await sendOrThrow(
@@ -794,9 +800,9 @@ function schoolOrderHtml(
     ? `<p style="margin:0 0 12px;padding:8px 12px;border:3px solid ${INK};border-radius:12px;background:${artworkAlarm ? "#ffe2e2" : PAGE};color:${INK};font-size:13px;font-weight:${artworkAlarm ? "bold" : "normal"};">${esc(artworkNote)}</p>`
     : "";
   return shell(
-    `New school frame order — ${esc(designName || "Untitled")}`,
+    `School design sent — ${esc(designName || "Untitled")}`,
     `
-    <p style="margin:0 0 14px;display:inline-block;padding:6px 14px;background:${BLUE};color:${PAGE};font-size:13px;font-weight:bold;text-transform:uppercase;border:3px solid ${INK};border-radius:99px;">New school order</p>
+    <p style="margin:0 0 14px;display:inline-block;padding:6px 14px;background:${BLUE};color:${PAGE};font-size:13px;font-weight:bold;text-transform:uppercase;border:3px solid ${INK};border-radius:99px;">Design sent · not paid</p>
     <p style="margin:0 0 8px;color:${INK};font-size:14px;">
       <strong>Design:</strong> ${esc(designName || "Untitled")}
     </p>
@@ -817,7 +823,7 @@ function schoolOrderText(
   saved: SchoolOrderInput["saved"] = null,
 ): string {
   return [
-    `NEW SCHOOL FRAME ORDER`,
+    `SCHOOL DESIGN SENT (not paid)`,
     ``,
     `Design: ${designName || "Untitled"}`,
     `Saved as: ${saved ? `${saved.code} · revision ${saved.revision}` : "NOT SAVED (storage failed) — these attachments are the only copy"}`,
@@ -867,7 +873,7 @@ export async function sendSchoolOrderEmail(o: SchoolOrderInput): Promise<SchoolO
     await sendOrThrow(new Resend(apiKey), {
       from,
       to,
-      subject: `SCHOOL ORDER — ${subjectName}${o.saved ? ` — ${o.saved.code} r${o.saved.revision}` : ""}`,
+      subject: `DESIGN SENT — ${subjectName}${o.saved ? ` — ${o.saved.code} r${o.saved.revision}` : ""}`,
       html: schoolOrderHtml(
         o.designName,
         o.partsList ?? null,

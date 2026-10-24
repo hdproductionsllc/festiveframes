@@ -427,6 +427,10 @@ describe("POST /api/school/submit — saves the design and hands back its link",
     const json = await (await POST(req(body()))).json();
     const arg = sendMock.mock.calls[0][0];
     expect(arg.subject).toContain(`${json.saved.code} r1`);
+    // A Send is a design, not a purchase: Bill's email must never read as an order.
+    expect(arg.subject).toMatch(/^DESIGN SENT — /);
+    expect(arg.html).toContain("not paid");
+    expect(arg.subject).not.toMatch(/ORDER/);
     expect(arg.text).toContain(`Saved as: ${json.saved.code} · revision 1`);
   });
 

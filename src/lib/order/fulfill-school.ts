@@ -137,6 +137,7 @@ export async function fulfillSchoolOrder(session: Stripe.Checkout.Session): Prom
     const approvedOn = new Date(rev.approval.at).toISOString().replace("T", " ").slice(0, 16);
     const input: ProductionOrderInput = {
       orderId,
+      orderRef: rev.code,
       sessionId: session.id,
       customerEmail,
       customerName: session.customer_details?.name ?? null,

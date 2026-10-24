@@ -119,6 +119,20 @@ describe("fulfillSchoolOrder", () => {
     expect(keys).toContain(`msf-order/${order.orderId}/production`);
   });
 
+  it("the parent quotes the design code: their receipt shows it (not the record id) and names their proof for them; Bill's shows both", async () => {
+    const { order, rev, session } = await paidOrder();
+    await fulfillSchoolOrder(session);
+    const receipt = sent.find((m) => m.to === "parent@example.com")!;
+    for (const body of [String(receipt.html), String(receipt.text)]) {
+      expect(body).toContain(rev.code);
+      expect(body).not.toContain(order.orderId);
+    }
+    const files = (receipt.attachments as Array<{ filename: string }>).map((a) => a.filename);
+    expect(files).toEqual([`${rev.code}-frame-proof.png`]);
+    const [p] = production();
+    expect(p.text).toContain(`Order: ${rev.code} · record ${order.orderId}`);
+  });
+
   it("a second trigger after it was sent sends nothing", async () => {
     const { session } = await paidOrder();
     await fulfillSchoolOrder(session);
