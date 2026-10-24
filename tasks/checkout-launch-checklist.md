@@ -75,10 +75,10 @@ unapproved or altered. See `CLAUDE.md` → "Saved school designs".
 
 Full map of the flow, emails and storage: `tasks/order-flow-guide.md`.
 
-- [ ] Stripe LIVE has products `msf_frame` and `msf_shipping` (must exist BEFORE the
-      code that sells them is pushed — staff Buy fails without them).
-- [ ] **Internal test code** created in Stripe live: 100% off, applies ONLY to
-      `msf_frame` + `msf_shipping`. Code: _(filled in when created)_
+- [x] Stripe LIVE has products `msf_frame` and `msf_shipping` (created 2026-10-24).
+- [x] **Internal test code** created 2026-10-24 in Stripe live: coupon `msf_internal_100`,
+      100% off, applies ONLY to `msf_frame` + `msf_shipping`, 25 uses. The code itself is
+      kept OUT of git: `MySchoolFrame Pilot Kit\internal-test-code.md`.
 - [ ] Staff-only Buy is live: sign in at /admin, open a school's builder in the same
       browser → "Buy (staff test)". Parents still see Send only. Run section D this
       way first; flip the public switch (C3) only after D passes.
