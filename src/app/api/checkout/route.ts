@@ -18,7 +18,8 @@ import type Stripe from "stripe";
 
 import { getStripe } from "@/lib/stripe";
 import { nonSquareBadgeRows, SCHOOL_BADGES_ARE_SQUARE, SQUARE_RULE_MESSAGE } from "@/lib/order/square-badges";
-import { offer, priceForFramesCents, MAX_CART_FRAMES, schoolOffer, SCHOOL_CHECKOUT_OPEN, coerceSchoolGiftCents, formatUsd, schoolGift } from "@/config/offers";
+import { offer, priceForFramesCents, MAX_CART_FRAMES, schoolOffer, schoolStripeProducts, coerceSchoolGiftCents, formatUsd, schoolGift } from "@/config/offers";
+import { schoolCheckoutAccess } from "@/lib/school-checkout-access";
 import { resolveSchoolKit } from "@/data/school-resolve";
 import { artworkOrderMetadata, coerceArtworkRights, designHasUploadedArt } from "@/lib/order/artwork-rights";
 import { getRevisionByToken } from "@/lib/school-designs/store";
@@ -135,8 +136,9 @@ export async function POST(request: Request): Promise<NextResponse> {
     // button on the client. A hidden button is not a lock: a direct POST once
     // charged the old placeholder price. The figures are owner-confirmed now, but
     // checkout waits on one end-to-end test payment, and the server holds the
-    // same line until then.
-    if (!SCHOOL_CHECKOUT_OPEN) {
+    // same line until then — for everyone but signed-in staff, who run that test
+    // (lib/school-checkout-access: the same answer the page used to show Buy).
+    if ((await schoolCheckoutAccess()) === "closed") {
       return NextResponse.json(
         { error: "School checkout is not open yet. Send your design instead and we will follow up." },
         { status: 409 },
@@ -210,15 +212,13 @@ export async function POST(request: Request): Promise<NextResponse> {
         line_items: [
           {
             quantity: 1,
+            // Sold AS our fixed products (config/offers `schoolStripeProducts`), so a
+            // coupon limited to them works here and nowhere else on the shared
+            // account. The design's own name is in the metadata and our emails.
             price_data: {
               currency: schoolOffer.currency,
               unit_amount: schoolOffer.schoolPrice,
-              product_data: {
-                name: designName,
-                description: school
-                  ? "MySchoolFrame — custom school license plate frame (includes school donation)"
-                  : "MySchoolFrame — custom school license plate frame",
-              },
+              product: schoolStripeProducts.frame,
             },
           },
           {
@@ -226,7 +226,7 @@ export async function POST(request: Request): Promise<NextResponse> {
             price_data: {
               currency: schoolOffer.currency,
               unit_amount: season.flatShippingCents,
-              product_data: { name: season.shippingLabel },
+              product: schoolStripeProducts.shipping,
             },
           },
           // The gift on a line of its own, so the receipt says exactly what it was.

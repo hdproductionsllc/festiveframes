@@ -71,6 +71,18 @@ unapproved or altered. See `CLAUDE.md` → "Saved school designs".
 - [ ] **Which schools are "verified"**: each needs confirmed colours AND written
       permission to use the school's name and marks. All are `demo` today.
 
+## B2. Live test WITHOUT opening checkout (built 2026-10-24)
+
+Full map of the flow, emails and storage: `tasks/order-flow-guide.md`.
+
+- [ ] Stripe LIVE has products `msf_frame` and `msf_shipping` (must exist BEFORE the
+      code that sells them is pushed — staff Buy fails without them).
+- [ ] **Internal test code** created in Stripe live: 100% off, applies ONLY to
+      `msf_frame` + `msf_shipping`. Code: _(filled in when created)_
+- [ ] Staff-only Buy is live: sign in at /admin, open a school's builder in the same
+      browser → "Buy (staff test)". Parents still see Send only. Run section D this
+      way first; flip the public switch (C3) only after D passes.
+
 ## C. Settings on launch day (in this order)
 
 0. [x] (DONE 2026-09-26) Railway → Variables: `ADMIN_EMAILS = <Henry's address>,bill@myschoolframe.com`
@@ -83,9 +95,10 @@ unapproved or altered. See `CLAUDE.md` → "Saved school designs".
 3. [ ] Flip `SCHOOL_CHECKOUT_OPEN` to `true` (one-line code change + push; update
        `offers.test.ts` in the same change).
 
-## D. The launch test (right after C, before telling anyone)
+## D. The launch test (staff-only, BEFORE C3; repeat once after C3)
 
-Real, live, with a 100%-off coupon — never Stripe test mode.
+Real, live, with the internal 100%-off code — never Stripe test mode. Every email this
+should produce is previewed in `MySchoolFrame Pilot Kit\email-previews\marquette\`.
 
 1. [ ] **Send** a design to your own email with "Email me a link" ticked → Bill's
        email arrives naming the code and version; your link email arrives from

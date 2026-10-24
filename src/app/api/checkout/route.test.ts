@@ -75,23 +75,44 @@ async function savedRevision(o: {
   return { token: saved!.token, revision: saved!.revision, code: saved!.code, proofSha: rev!.proof.sha256 };
 }
 
-const openCheckout = () =>
-  vi.doMock("@/config/offers", async (importOriginal) => ({
-    ...(await importOriginal<typeof import("@/config/offers")>()),
-    SCHOOL_CHECKOUT_OPEN: true,
-  }));
+// Who may buy is ONE answer (lib/school-checkout-access), shared with the page
+// that shows Buy. These tests set that answer; its own test covers how it is made.
+const checkoutAccess = (a: "open" | "staff" | "closed") =>
+  vi.doMock("@/lib/school-checkout-access", () => ({ schoolCheckoutAccess: async () => a }));
+const openCheckout = () => checkoutAccess("open");
 
 describe("POST /api/checkout — school-frame", () => {
   it("refuses a school order on the server while checkout is parked (the client hides the button; this is the lock)", async () => {
-    vi.doMock("@/config/offers", async (importOriginal) => ({
-      ...(await importOriginal<typeof import("@/config/offers")>()),
-      SCHOOL_CHECKOUT_OPEN: false,
-    }));
+    checkoutAccess("closed");
     const { POST } = await import("./route");
     const { token, revision } = await savedRevision();
     const res = await POST(req({ kind: "school-frame", token, revision }));
     expect(res.status).toBe(409);
     expect(create).not.toHaveBeenCalled();
+  });
+
+  it("takes the order from signed-in STAFF while parked: the live launch test", async () => {
+    checkoutAccess("staff");
+    const { POST } = await import("./route");
+    const { token, revision } = await savedRevision();
+    const res = await POST(req({ kind: "school-frame", token, revision }));
+    expect(res.status).toBe(200);
+    expect(create).toHaveBeenCalledOnce();
+  });
+
+  it("sells the frame and shipping AS the fixed MySchoolFrame products, so a coupon limited to them works here only; the gift stays a one-off line no code can reach", async () => {
+    openCheckout();
+    const { POST } = await import("./route");
+    const { schoolStripeProducts, schoolOffer } = await import("@/config/offers");
+    const { token, revision } = await savedRevision();
+    expect((await POST(req({ kind: "school-frame", token, revision, giftCents: 500 }))).status).toBe(200);
+    const [frame, shipping, gift] = create.mock.calls[0][0].line_items;
+    expect(frame.price_data).toEqual({ currency: schoolOffer.currency, unit_amount: schoolOffer.schoolPrice, product: schoolStripeProducts.frame });
+    expect(shipping.price_data.product).toBe(schoolStripeProducts.shipping);
+    expect(shipping.price_data.product_data).toBeUndefined();
+    expect(gift.price_data.product).toBeUndefined();
+    expect(Object.values(schoolStripeProducts)).not.toContain(gift.price_data.product);
+    expect(create.mock.calls[0][0].allow_promotion_codes).toBe(true);
   });
 
   it("refuses a revision the parent has NOT approved", async () => {

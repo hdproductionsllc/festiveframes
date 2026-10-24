@@ -26,6 +26,7 @@ import {
   type BuyerId,
 } from "@/data/frame-buyers";
 import { SCHOOL_CHECKOUT_OPEN } from "@/config/offers";
+import type { SchoolCheckoutAccess } from "@/lib/school-checkout-access";
 import { presetsFor, presetBlurb, getPreset, layPreset as layPresetOn, SCHOOL_PRESETS, type SchoolPreset } from "@/data/school-presets";
 import { schoolVariant, type SchoolVariantId } from "@/data/school-variants";
 import { schoolStoreOptions } from "@/data/school-store";
@@ -208,6 +209,7 @@ export function SchoolDesigner({
   persistKey = SCHOOL_PERSIST_KEY,
   variant,
   offerLinkEmail = false,
+  checkout = SCHOOL_CHECKOUT_OPEN ? "open" : "closed",
 }: {
   kit?: SchoolKit;
   hero?: React.ReactNode;
@@ -218,6 +220,10 @@ export function SchoolDesigner({
   /** Offer "Email me a link" on the send sheet. The page decides, from the
    *  server's own config (`designLinkEmailAvailable`). */
   offerLinkEmail?: boolean;
+  /** Who may Buy — the server's answer (lib/school-checkout-access). "staff" is a
+   *  signed-in staff test on a parked checkout; the button says so. Absent = the
+   *  public switch, so the lab routes behave as they always have. */
+  checkout?: SchoolCheckoutAccess;
   /** Show the website scanner FOR THIS SCHOOL — see the mount below. */
   brandScan?: { slug: string; heading?: string; blurb?: React.ReactNode };
   /**
@@ -232,6 +238,8 @@ export function SchoolDesigner({
    *  below). Read to tell a restored design from a first visit. */
   persistKey?: string;
 } = {}) {
+  // Buy exists for parents once checkout opens, and for signed-in staff before.
+  const buyOpen = checkout !== "closed";
   // This school's own crest/mascot badges. Memoised on the kit so the palette
   // isn't handed a fresh array on every render of a page that never changes kit.
   const kitMarks = useMemo(() => kitMarkPieces(kit), [kit]);
@@ -1236,7 +1244,7 @@ export function SchoolDesigner({
             disabled={submitting || exporting || buying}
             title="Send your finished design to our team without ordering"
             aria-haspopup="dialog"
-            className={`ff-btn ${SCHOOL_CHECKOUT_OPEN ? "ff-btn-secondary" : "ff-btn-primary"} ff-btn-sm shrink-0 whitespace-nowrap max-lg:min-h-11`}
+            className={`ff-btn ${buyOpen ? "ff-btn-secondary" : "ff-btn-primary"} ff-btn-sm shrink-0 whitespace-nowrap max-lg:min-h-11`}
           >
             {submitting ? (
               "Sending..."
@@ -1252,15 +1260,19 @@ export function SchoolDesigner({
               pricing. The switch and the reasoning live together in
               config/offers.ts (SCHOOL_CHECKOUT_OPEN) rather than as a bare `false`
               here, so the reason travels with the code that obeys it. */}
-          {SCHOOL_CHECKOUT_OPEN && (
+          {buyOpen && (
             <button
               type="button"
               onClick={handleBuy}
               disabled={buying || submitting || exporting}
-              title="Order this frame, secure checkout"
+              title={checkout === "staff" ? "Staff test: checkout is still closed to parents" : "Order this frame, secure checkout"}
               className="ff-btn ff-btn-primary ff-btn-sm shrink-0 whitespace-nowrap max-lg:min-h-11"
             >
-              {buying ? "Starting checkout..." : <span>Buy<span className="hidden sm:inline"> this frame</span></span>}
+              {buying ? "Starting checkout..." : checkout === "staff" ? (
+                <span>Buy<span className="hidden sm:inline"> this frame</span> (staff test)</span>
+              ) : (
+                <span>Buy<span className="hidden sm:inline"> this frame</span></span>
+              )}
             </button>
           )}
         </div>
@@ -1363,7 +1375,7 @@ export function SchoolDesigner({
           <p className="text-[13px] leading-snug">
             This browser&apos;s storage is full, so your latest change may not be saved
             for next time. A smaller image may help, or you&apos;re welcome to{" "}
-            {SCHOOL_CHECKOUT_OPEN ? "order this design now" : "send us this design now"} so
+            {buyOpen ? "order this design now" : "send us this design now"} so
             nothing gets lost.
           </p>
           <button type="button" onClick={() => setStorageFull(false)} className="ff-chip shrink-0">
@@ -2031,6 +2043,7 @@ export function SchoolBuilder({
   operatorTools = false,
   frameConfig = schoolVariant(variant).config,
   offerLinkEmail = false,
+  checkout,
 }: {
   kit?: SchoolKit;
   hero?: React.ReactNode;
@@ -2050,6 +2063,8 @@ export function SchoolBuilder({
   frameConfig?: typeof SCHOOL_FRAME_CONFIG;
   /** Offer "Email me a link" on the send sheet — see SchoolDesigner. */
   offerLinkEmail?: boolean;
+  /** Who may Buy — see SchoolDesigner. */
+  checkout?: SchoolCheckoutAccess;
 }) {
   const { presets } = schoolVariant(variant);
   // The store is configured by `schoolStoreOptions` (data/school-store.ts): the
@@ -2072,6 +2087,7 @@ export function SchoolBuilder({
         persistKey={persistKey}
         variant={variant}
         offerLinkEmail={offerLinkEmail}
+        checkout={checkout}
       />
     </DesignStoreProvider>
   );

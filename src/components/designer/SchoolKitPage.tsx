@@ -4,6 +4,7 @@ import type { FrameConfig } from "@/lib/types";
 import type { SchoolVariantId } from "@/data/school-variants";
 import { BuilderFontsDeferred } from "@/app/BuilderFontsDeferred";
 import { SchoolBuilder } from "@/components/designer/SchoolDesigner";
+import type { SchoolCheckoutAccess } from "@/lib/school-checkout-access";
 import { chipPiece, type SchoolKit } from "@/data/school-kits";
 import { schoolChromeVars } from "@/lib/utils/school-chrome";
 
@@ -44,6 +45,8 @@ export function SchoolKitPage({
   /** Offer "Email me a link" on the send sheet. Only /s/<slug> passes it, from
    *  the server's own config (`designLinkEmailAvailable`, lib/email-msf). */
   offerLinkEmail = false,
+  /** Who may Buy here — the server's answer (lib/school-checkout-access). */
+  checkout,
 }: {
   kit: SchoolKit;
   frameConfig?: FrameConfig;
@@ -52,6 +55,7 @@ export function SchoolKitPage({
   brandScan?: { slug: string; heading?: string; blurb?: React.ReactNode };
   operatorTools?: boolean;
   offerLinkEmail?: boolean;
+  checkout?: SchoolCheckoutAccess;
 }) {
   const w = kit.welcome;
   return (
@@ -79,6 +83,7 @@ export function SchoolKitPage({
         brandScan={brandScan}
         operatorTools={operatorTools}
         offerLinkEmail={offerLinkEmail}
+        checkout={checkout}
         hero={w ? (
           <section className="msf-kit-hero">
             {/* The school's own lockup, above its own words. This is the first

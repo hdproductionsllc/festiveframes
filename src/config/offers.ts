@@ -63,14 +63,23 @@ export const schoolOffer = {
   currency: offer.currency,
 };
 
+// The Stripe products the frame and shipping lines are sold AS. Fixed, with our own
+// ids (created once in each Stripe mode — tasks/order-flow-guide.md), because a
+// coupon can only be limited to named products: every MySchoolFrame code is made
+// `applies_to` these two, so it discounts a MySchoolFrame order and nothing else on
+// the Stripe account we share with Still Beside Me — and never the parent's gift,
+// which stays a one-off line on purpose.
+export const schoolStripeProducts = { frame: "msf_frame", shipping: "msf_shipping" } as const;
+
 // ─── A parent's extra gift to the school (owner-confirmed 2026-10-22) ────────
 //
 // Optional, chosen on the proof sheet, "No thanks" by default. It is the PARENT'S
 // money passed through, NOT a share of our price, so it lives on the order apart
 // from `schoolDonationCents` and both count toward the school's total. The school
 // is credited the gift IN FULL: we absorb the card fee, and a promotion code never
-// comes off it (Stripe spreads a code across every line, so the order records the
-// gift as chosen and any shortfall is ours). Never call it tax-deductible: the
+// comes off it (codes are limited to `schoolStripeProducts`, which the gift line is
+// not; and should a code ever be made without that limit, the order still records
+// the gift as chosen and any shortfall is ours). Never call it tax-deductible: the
 // gift is made through a business, not to a charity.
 export const schoolGift = {
   presetsCents: [500, 1000, 2500] as const,

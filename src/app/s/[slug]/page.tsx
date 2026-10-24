@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { designLinkEmailAvailable } from "@/lib/email-msf";
+import { schoolCheckoutAccess } from "@/lib/school-checkout-access";
 import { notFound, redirect } from "next/navigation";
 // Same three-layer stylesheet stack as /lab/school, same order, same reasons —
 // see that page's header comments. The builder is ONE engine; this route only
@@ -176,6 +177,7 @@ export default async function SchoolKitBuilderPage(
       kit={kit}
       variant={SCHOOL_SHIPPING_VARIANT}
       offerLinkEmail={designLinkEmailAvailable()}
+      checkout={await schoolCheckoutAccess()}
       brandScan={
         r.kind === "roster"
           ? {

@@ -1034,3 +1034,24 @@ case the repair was written for. Put repairs in `merge`, and make them return th
 - **Open before checkout opens**: payout routine for clubs; counsel/accountant on
   charitable-sales (co-venturer) rules, which cover the built-in $5 too. Nobody has
   seen the picker on a phone yet: first look is the end-to-end test payment.
+
+## Launch testing: staff-only Buy, product-locked coupons (2026-10-24)
+
+- **`schoolCheckoutAccess()`** (lib/school-checkout-access) is THE answer to "may this
+  request buy": `open` (the switch is on), `staff` (parked, but a /admin session — Buy
+  shows as "Buy (staff test)"), `closed`. The /s page and /api/checkout both ask it, so
+  the button and the lock cannot disagree. Wording-only pages (landing, raised, llms)
+  keep reading the bare `SCHOOL_CHECKOUT_OPEN`: a staff test must never tell parents
+  they can order.
+- **Frame and shipping are sold AS fixed Stripe products** `msf_frame` / `msf_shipping`
+  (`schoolStripeProducts`, config/offers). The Stripe account is shared with Still
+  Beside Me, so every MySchoolFrame coupon is `applies_to` those two products: it
+  cannot discount anything else on the account, and it never reaches the parent's gift
+  line (still a one-off product). The products must exist in a Stripe mode before
+  checkout runs in it.
+- **Staff QR codes**: /admin/schools → link + QR (SVG/PNG) per school and placement,
+  from `lib/school-qr` (always the production address; a test scans the PNG).
+- **Email previews**: `src/lib/email-previews.preview.test.ts` drives the REAL send →
+  approve → checkout → fulfil path in memory and writes every email to files
+  (`EMAIL_PREVIEW_OUT`). Re-run it after any email change and look at the result.
+  Guide for humans: tasks/order-flow-guide.md.
