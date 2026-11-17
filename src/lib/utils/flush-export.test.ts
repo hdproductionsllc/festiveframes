@@ -1,5 +1,8 @@
 // ─── The flush frame's PRINT FILES, as the exporter cuts them ────────────────
 //
+// These tests pin the original physical crop geometry BEFORE print-only height
+// correction and final orientation. school-export-orientation.test.ts exercises
+// the actual PNG entry points and their final output dimensions.
 // `composeSchoolPanels` is browser-only (it needs `document`), so this re-runs its
 // exact recipe in node — the same `panelBleedBox` + `panelRowsPx` crop, the same
 // 1:1 `drawImage`, the same `clearOutsideTab` and landscape rotation — and pins the
@@ -81,7 +84,7 @@ function cutPanel(full: Canvas, id: SectionId): Canvas {
 const alphaAt = (ctx: SKRSContext2D, x: number, y: number) =>
   ctx.getImageData(Math.round(x), Math.round(y), 1, 1).data[3];
 
-describe("flush frame: the print files", () => {
+describe("flush frame: physical crop baseline", () => {
   const { width: W, height: H } = schoolCanvasSize(C, DPI);
   const full = createCanvas(W, H) as Canvas;
   drawSchoolFrame(full.getContext("2d") as unknown as CanvasRenderingContext2D, seededDesign(), emptyBundle(), W);
@@ -104,7 +107,7 @@ describe("flush frame: the print files", () => {
     ["wing-right", 6.75, 2.25],
   ];
 
-  it.each(PARTS)("%s exports at %s x %s in", (id, wIn, hIn) => {
+  it.each(PARTS)("%s physical crop baseline is %s x %s in", (id, wIn, hIn) => {
     const panel = cutPanel(full, id);
     expect(panel.width / DPI).toBeCloseTo(wIn, 6);
     expect(panel.height / DPI).toBeCloseTo(hIn, 6);

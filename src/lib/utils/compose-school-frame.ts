@@ -1362,6 +1362,35 @@ async function renderSchoolFrameCanvas(
   return { canvas, width: W, height: H };
 }
 
+/** Final output rotation requested for production; preserves every pixel and alpha. */
+export function rotateSchoolExportClockwise(src: HTMLCanvasElement): HTMLCanvasElement {
+  const out = document.createElement("canvas");
+  out.width = src.height;
+  out.height = src.width;
+  const ctx = out.getContext("2d");
+  if (!ctx) throw new Error("Unable to create rotated school export");
+  ctx.translate(src.height, 0);
+  ctx.rotate(Math.PI / 2);
+  ctx.drawImage(src, 0, 0);
+  return out;
+}
+
+/** Print-only correction: top-bar art is 5% taller, with unchanged width.
+ * Apply before orientation normalization so height means the original artwork axis.
+ * Integer pixels are rounded to the nearest pixel at the requested print DPI. */
+export function finishSchoolPanelExport(src: HTMLCanvasElement, id: SectionId): HTMLCanvasElement {
+  let art = src;
+  if (id === "top") {
+    art = document.createElement("canvas");
+    art.width = src.width;
+    art.height = Math.max(1, Math.round(src.height * 1.05));
+    const ctx = art.getContext("2d");
+    if (!ctx) throw new Error("Unable to create taller top-bar export");
+    ctx.drawImage(src, 0, 0, src.width, src.height, 0, 0, art.width, art.height);
+  }
+  return rotateSchoolExportClockwise(rotateToLandscape(art));
+}
+
 /** Rotate a canvas 90° when it's portrait, so its long axis lies horizontal (fits the
  *  bed / a fixed drop orientation). Returns the same canvas when already landscape. */
 function rotateToLandscape(src: HTMLCanvasElement): HTMLCanvasElement {
@@ -1379,7 +1408,7 @@ function rotateToLandscape(src: HTMLCanvasElement): HTMLCanvasElement {
 
 /**
  * Render a school design to a print-ready PNG data URL (browser only) — the ASSEMBLED
- * frame, rotated to lie along the 16.5" bed axis and DPI-stamped. Returns "" on the
+ * frame, rotated 90 degrees clockwise from the former bed-oriented export and DPI-stamped. Returns "" on the
  * server (no document).
  */
 export async function composeSchoolFrame(
@@ -1389,7 +1418,8 @@ export async function composeSchoolFrame(
   const dpi = opts.dpi ?? SCHOOL_PRINT_DPI;
   const r = await renderSchoolFrameCanvas(design, dpi);
   if (!r) return "";
-  const out = shouldRotateForBed(r.width, r.height) ? rotateToLandscape(r.canvas) : r.canvas;
+  const baseline = shouldRotateForBed(r.width, r.height) ? rotateToLandscape(r.canvas) : r.canvas;
+  const out = rotateSchoolExportClockwise(baseline);
   const { setPngDpi } = await import("@/lib/utils/eufy-print-core");
   return setPngDpi(out.toDataURL("image/png"), dpi);
 }
@@ -1398,7 +1428,7 @@ export async function composeSchoolFrame(
 export interface SchoolPanelPng {
   id: SectionId;
   label: string;
-  /** DPI-stamped PNG data URL, rotated to landscape, transparent background. */
+  /** DPI-stamped PNG data URL, 90 degrees clockwise from former landscape output. */
   dataUrl: string;
   /** Final printed size (after bleed + rotation), inches. */
   widthInches: number;
@@ -1412,7 +1442,8 @@ export interface SchoolPanelPng {
  *
  * Each panel is cropped from the full render at its `panelRects` rectangle, drawn a
  * hair oversize to add overspray BLEED, rotated to landscape (`auto-rotate to fit`),
- * and DPI-stamped. Panels with NO ink (fully transparent) are skipped — an empty panel
+ * then turned another 90 degrees clockwise and DPI-stamped. The top panel alone
+ * is stretched 5% taller before rotation. Panels with NO ink (fully transparent) are skipped — an empty panel
  * has nothing to print. Browser only; returns [] on the server.
  */
 export async function composeSchoolPanels(
@@ -1476,7 +1507,7 @@ export async function composeSchoolPanels(
     // Skip a panel that carries no ink at all (nothing to print).
     if (isCanvasBlank(cx, outW, outH)) continue;
 
-    const fin = rotateToLandscape(c);
+    const fin = finishSchoolPanelExport(c, id);
     out.push({
       id,
       label: SECTION_LABELS[id],
