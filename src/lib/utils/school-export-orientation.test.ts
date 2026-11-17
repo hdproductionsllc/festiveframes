@@ -43,14 +43,14 @@ describe("school print export orientation", () => {
     const old = rotateSchoolExportClockwise(html(src)) as unknown as Canvas;
     assertClockwise(old, finishSchoolPanelExport(html(src), "wing-left") as unknown as Canvas);
   });
-  it("stretches only top height by 5% before rotation, keeping its original width", () => {
+  it("stretches only top height by 10% before rotation, keeping its original width", () => {
     stubCanvasDocument();
     const src = createCanvas(220, 100);
     const ctx = src.getContext("2d");
     ctx.fillStyle = "red"; ctx.fillRect(0, 0, 110, 100);
     ctx.fillStyle = "blue"; ctx.fillRect(110, 0, 110, 100);
     const out = finishSchoolPanelExport(html(src), "top") as unknown as Canvas;
-    expect([out.width, out.height]).toEqual([105, 220]);
+    expect([out.width, out.height]).toEqual([110, 220]);
     expect([...out.getContext("2d").getImageData(50, 10, 1, 1).data]).toEqual([255, 0, 0, 255]);
     expect([...out.getContext("2d").getImageData(50, 210, 1, 1).data]).toEqual([0, 0, 255, 255]);
     const other = finishSchoolPanelExport(html(src), "bottom") as unknown as Canvas;
@@ -66,7 +66,7 @@ describe("school print export orientation", () => {
     expect([assembled.width, assembled.height]).toEqual([2025, 4650]);
     const panels = await composeSchoolPanels(design, { dpi: 300 });
     expect(panels).toHaveLength(4);
-    const expected = { top: [236, 3300], bottom: [540, 3300], "wing-left": [675, 2025], "wing-right": [675, 2025] };
+    const expected = { top: [248, 3300], bottom: [540, 3300], "wing-left": [675, 2025], "wing-right": [675, 2025] };
     for (const panel of panels) {
       const png = await loadImage(panel.dataUrl);
       expect([png.width, png.height]).toEqual(expected[panel.id]);

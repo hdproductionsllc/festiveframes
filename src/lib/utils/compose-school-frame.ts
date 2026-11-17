@@ -1375,7 +1375,7 @@ export function rotateSchoolExportClockwise(src: HTMLCanvasElement): HTMLCanvasE
   return out;
 }
 
-/** Print-only correction: top-bar art is 5% taller, with unchanged width.
+/** Print-only correction: top-bar art is 10% taller, with unchanged width.
  * Apply before orientation normalization so height means the original artwork axis.
  * Integer pixels are rounded to the nearest pixel at the requested print DPI. */
 export function finishSchoolPanelExport(src: HTMLCanvasElement, id: SectionId): HTMLCanvasElement {
@@ -1383,7 +1383,7 @@ export function finishSchoolPanelExport(src: HTMLCanvasElement, id: SectionId): 
   if (id === "top") {
     art = document.createElement("canvas");
     art.width = src.width;
-    art.height = Math.max(1, Math.round(src.height * 1.05));
+    art.height = Math.max(1, Math.round(src.height * 1.10));
     const ctx = art.getContext("2d");
     if (!ctx) throw new Error("Unable to create taller top-bar export");
     ctx.drawImage(src, 0, 0, src.width, src.height, 0, 0, art.width, art.height);
@@ -1443,7 +1443,7 @@ export interface SchoolPanelPng {
  * Each panel is cropped from the full render at its `panelRects` rectangle, drawn a
  * hair oversize to add overspray BLEED, rotated to landscape (`auto-rotate to fit`),
  * then turned another 90 degrees clockwise and DPI-stamped. The top panel alone
- * is stretched 5% taller before rotation. Panels with NO ink (fully transparent) are skipped — an empty panel
+ * is stretched 10% taller before rotation. Panels with NO ink (fully transparent) are skipped — an empty panel
  * has nothing to print. Browser only; returns [] on the server.
  */
 export async function composeSchoolPanels(
