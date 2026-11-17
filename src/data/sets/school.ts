@@ -49,6 +49,11 @@ export const schoolSet: TileSet = {
     // Minus art withheld until it is redrawn (see WITHHELD_ART).
     ...highSchoolSet.pieces.filter((p) => !WITHHELD_ART.has(p.id)),
 
+    // Printable corner badge: opaque white includes the QR four-module quiet zone.
+    { id: `${S}:qr-myschoolframe`, setId: S, name: "MySchoolFrame QR",
+      keywords: ["qr", "code", "scan", "website", "corner"],
+      artworkUrl: "/tiles/school/myschoolframe-qr.png", emoji: "▦", backgroundColor: "#FFFFFF" },
+
     // ─── Spirit icons: REMOVED ─────────────────────────────────
     // Twenty Twemoji cartoons (star, pennant, trophy, mascot balls…) stood in until
     // real art existed. They now sit next to Becky's collection in the same palette,
