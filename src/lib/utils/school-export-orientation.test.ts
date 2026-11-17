@@ -62,6 +62,8 @@ describe("school print export orientation", () => {
       frameConfig: SCHOOL_FLUSH_FRAME_CONFIG, slots: {}, textBars: [],
       qrCode: { enabled: false, url: "", size: 0 }, plateState: "MO", sections: {}, frameColor: "#1f2a5c",
     } as unknown as SchoolDesign;
+    const preview = await loadImage(await composeSchoolFrame(design, { dpi: 300, orientation: "preview" }));
+    expect([preview.width, preview.height]).toEqual([4650, 2025]);
     const assembled = await loadImage(await composeSchoolFrame(design, { dpi: 300 }));
     expect([assembled.width, assembled.height]).toEqual([2025, 4650]);
     const panels = await composeSchoolPanels(design, { dpi: 300 });

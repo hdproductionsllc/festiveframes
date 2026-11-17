@@ -1413,13 +1413,14 @@ function rotateToLandscape(src: HTMLCanvasElement): HTMLCanvasElement {
  */
 export async function composeSchoolFrame(
   design: SchoolDesign,
-  opts: ComposeSchoolOptions = {},
+  opts: ComposeSchoolOptions & { orientation?: "print" | "preview" } = {},
 ): Promise<string> {
   const dpi = opts.dpi ?? SCHOOL_PRINT_DPI;
   const r = await renderSchoolFrameCanvas(design, dpi);
   if (!r) return "";
   const baseline = shouldRotateForBed(r.width, r.height) ? rotateToLandscape(r.canvas) : r.canvas;
-  const out = rotateSchoolExportClockwise(baseline);
+  // Display previews retain the original upright frame; only attachments rotate.
+  const out = opts.orientation === "preview" ? r.canvas : rotateSchoolExportClockwise(baseline);
   const { setPngDpi } = await import("@/lib/utils/eufy-print-core");
   return setPngDpi(out.toDataURL("image/png"), dpi);
 }

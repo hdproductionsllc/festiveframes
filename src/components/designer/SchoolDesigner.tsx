@@ -783,7 +783,7 @@ export function SchoolDesigner({
   const [sendSheet, setSendSheet] = useState<
     | null
     | {
-        rendered: { printPng: string; panels: { name: string; dataUrl: string }[] } | null;
+        rendered: { previewPng: string; printPng: string; panels: { name: string; dataUrl: string }[] } | null;
         failed: boolean;
         error: string | null;
         /** Saved even though delivery failed — shown with the error, so the parent
@@ -804,14 +804,15 @@ export function SchoolDesigner({
       const design = schoolDesignOf(storeApi.getState());
       // The assembled sheet is the OVERVIEW; the 4 panel PNGs are the print files
       // (each positioned separately on the bed — the seams are hard to hit assembled).
-      const [printPng, panelPngs] = await Promise.all([
+      const [printPng, panelPngs, previewPng] = await Promise.all([
         composeSchoolFrame(design),
         composeSchoolPanels(design),
+        composeSchoolFrame(design, { orientation: "preview" }),
       ]);
       if (run !== sendRun.current) return; // closed (and maybe reopened) meanwhile
       setSendSheet((cur) =>
-        cur && printPng
-          ? { ...cur, rendered: { printPng, panels: panelPngs.map((p) => ({ name: p.id, dataUrl: p.dataUrl })) } }
+        cur && printPng && previewPng
+          ? { ...cur, rendered: { previewPng, printPng, panels: panelPngs.map((p) => ({ name: p.id, dataUrl: p.dataUrl })) } }
           : cur && { ...cur, failed: true },
       );
     } catch {
@@ -1072,8 +1073,8 @@ export function SchoolDesigner({
     try {
       // Every brand colour the screen paints with — see `schoolDesignOf`.
       const design = schoolDesignOf(storeApi.getState());
-      const [printPng, panelPngs] = await Promise.all([composeSchoolFrame(design), composeSchoolPanels(design)]);
-      if (!printPng) {
+      const [printPng, panelPngs, previewPng] = await Promise.all([composeSchoolFrame(design), composeSchoolPanels(design), composeSchoolFrame(design, { orientation: "preview" })]);
+      if (!printPng || !previewPng) {
         setSubmitState({ kind: "error", msg: "Couldn't render your frame's print file. Try again." });
         return;
       }
@@ -1092,7 +1093,7 @@ export function SchoolDesigner({
       if (data.saved.studentRef) writeStudentRef(persistKey, data.saved.studentRef);
       // Every line of lettering, in reading order, for the parent to check.
       const lettering = designLettering(storeApi.getState());
-      setProof({ saved: data.saved, image: printPng, lettering, error: null });
+      setProof({ saved: data.saved, image: previewPng, lettering, error: null });
     } catch {
       setSubmitState({ kind: "error", msg: "Something went wrong starting checkout. Please try again." });
     } finally {
@@ -1982,7 +1983,7 @@ export function SchoolDesigner({
 
       {sendSheet && (
         <SendDesignSheet
-          preview={sendSheet.rendered?.printPng ?? null}
+          preview={sendSheet.rendered?.previewPng ?? null}
           renderFailed={sendSheet.failed}
           initialFor={buyerId}
           sending={submitting}
